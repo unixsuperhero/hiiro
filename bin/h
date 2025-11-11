@@ -1,0 +1,290 @@
+#!/usr/bin/env ruby
+
+require "pry"
+require "fileutils"
+require "yaml"
+
+class Hiiro
+  def self.init(*args, plugins: [], &block)
+    new($0, *args).tap do |hiiro|
+      hiiro.load_plugins(*plugins)
+
+      hiiro.add_subcmd(:edit) { |*args|
+        system(ENV['EDITOR'] || 'nvim', hiiro.bin)
+      }
+
+      block.call(hiiro) if block
+    end
+  end
+
+  def self.load_env
+    Config.plugin_files.each do |plugin_file|
+      require plugin_file
+    end
+  end
+
+  attr_reader :bin, :bin_name, :all_args
+  attr_reader :subcmd, :args
+  attr_reader :loaded_plugins
+
+  def initialize(bin, *args)
+    @bin = bin
+    @bin_name = File.basename(bin)
+    @all_args = args
+    @subcmd, *@args = args # normally i would never do this
+    @loaded_plugins = []
+  end
+
+  def run
+    return if @all_args.count == 0
+
+    if runner
+      puts runner: runner;
+      result = runner.run(*args)
+
+      handle_result(result)
+    else
+      help
+    end
+    
+    exit 1
+  rescue => e
+    puts "ERROR: #{e.message}"
+    puts e.backtrace
+    exit 1
+  end
+
+  def handle_result(result)
+    exit 0 if result.nil? || result
+
+    exit 1
+  end
+
+  def runner
+    runners.runner
+  end
+
+  def runners
+    @runners ||= Runners.new(self)
+  end
+
+  def add_subcommand(name, &block)
+    runners.add_subcommand(name, block)
+  end
+  alias add_subcmd add_subcommand
+
+  def full_name
+    runner&.full_name || [bin_name, subcmd].join(?-)
+  end
+
+  def subcommand_names
+    runners.subcommand_names
+  end
+
+  def pins = @pins ||= Pin.new(self)
+
+  def load_plugins(*plugins)
+    plugins.flatten.each { |plugin| load_plugin(plugin) }
+  end
+
+  def load_plugin(plugin_const)
+    return if @loaded_plugins.include?(plugin_const)
+
+    plugin_const.load(self)
+    @loaded_plugins.push(plugin_const)
+  end
+
+  def help
+    log "Subcommand #{subcmd.inspect} not found!"
+    log ""
+    log "Possible subcommands:"
+
+    subcommand_names.each { |n| log "  #{n}" }
+  end
+
+  def log(message)
+    puts "[Hiiro: #{bin_name} #{(runner&.subcommand_name || subcmd).inspect}]: #{message}"
+  end
+
+  class Config
+    class << self
+      def plugin_files
+        Dir.glob(File.join(plugin_dir, '*'))
+      end
+
+      def plugin_dir
+        config_dir('plugins')
+      end
+
+      def config_dir(subdir=nil)
+        File.join(Dir.home, '.config/hiiro', *[subdir].compact).tap do |config_path|
+          FileUtils.mkdir_p(config_path) unless Dir.exist?(config_path)
+        end
+      end
+    end
+  end
+
+  class Runners
+    attr_reader :hiiro, :bin_name, :subcmd, :subcommands
+
+    def initialize(hiiro)
+      @hiiro = hiiro
+      @bin_name = hiiro.bin_name
+      @subcmd = hiiro.subcmd
+      @subcommands = {}
+    end
+
+    def runner
+      matching_bin || matching_subcommand
+    end
+
+    def partial
+      [bin_name, subcmd].join(?-)
+    end
+
+    def subcommand_names
+      [*all_bins, *subcommands.values].map(&:subcommand_name)
+    end
+
+    def paths
+      @paths ||= ENV['PATH'].split(?:).uniq
+    end
+
+    def bins
+      pattern = format('{%s}/%s*', paths.join(?,), partial)
+
+      Dir.glob(pattern).map { |path| Bin.new(bin_name, path) }
+    end
+
+    def all_bins
+      pattern = format('{%s}/%s-*', paths.join(?,), bin_name)
+
+      Dir.glob(pattern).map { |path| Bin.new(bin_name, path) }
+    end
+
+    def add_subcommand(name, handler)
+      @subcommands[name] = Subcommand.new(bin_name, name, handler)
+    end
+
+    # normally i would call this: bin ...but that's already an attr
+    def matching_bin
+      return exact_bin if exact_bin
+
+      matching_bins.first if matching_bins.count == 1
+    end
+
+    def exact_bin
+      bins.find { |b| b.exact_match?(partial) }
+    end
+
+    def matching_bins
+      all_matching_bins.reject { |b|
+        all_matching_bins.any? { |ob|
+          ob != b && b.name.start_with?(ob.name + ?-)
+        }
+      }
+    end
+
+    def all_matching_bins
+      bins.select { |b| b.match?(partial) }
+    end
+
+    # normally i would call this: subcommand ...but that's already an attr
+    # the reason is: i want the simplest/most direct word to be the thing i really want
+    # i don't want the matched subcommand to be something like: Hiiro#best_matching_subcommand
+    # i want it to be Hiiro#subcommand
+    # i actually might change @subcommand to something like @partial_subcommand
+    # so that i can rename this to subcommand
+    def matching_subcommand
+      return if subcmd.nil?
+      return exact_subcommand if exact_subcommand
+
+      if matching_subcommands.count > 1
+        hiiro.log("Multiple matching subcommands:")
+        matching_subcommands.each { |m| hiiro.log("  #{m.name}") }
+      end
+
+      return matching_subcommands.first
+    end
+
+    def exact_subcommand
+      subcommands.values.find { |v| v.exact_match?(subcmd) }
+    end
+
+    def matching_subcommands
+      subcommands.values.select { |v| v.match?(subcmd) }
+    end
+
+    # if i wanted to reduce the lines of code, i could combine Bin/Subcommand
+    # but i would have to introduce a new attr and arg to the constructor: @type
+    # then for methods like #full_name and #run i would have to branch off of
+    # @type
+    class Bin
+      attr_reader :bin_name, :path, :name
+      alias full_name name
+
+      def initialize(bin_name, path)
+        @bin_name = bin_name
+        @path = path
+        @name = File.basename(path)
+      end
+
+      def run(*args)
+        system(path, *args)
+      end
+
+      def exact_match?(partial)
+        name == partial
+      end
+
+      def match?(partial)
+        name.start_with?(partial)
+      end
+      
+      def subcommand_name
+        name.sub("#{bin_name}-", '')
+      end
+    end
+
+    class Subcommand
+      attr_reader :bin_name, :name, :handler
+      alias subcommand_name name
+
+      def initialize(bin_name, name, handler)
+        @bin_name = bin_name
+        @name = name.to_s
+        @handler = handler
+      end
+
+      def run(*args)
+        handler.call(*args)
+      end
+
+      def exact_match?(subcmd)
+        name == subcmd.to_s
+      end
+
+      def match?(subcmd)
+        name.start_with?(subcmd.to_s)
+      end
+
+      def full_name
+        [bin_name, name].join(?-)
+      end
+    end
+  end
+end
+
+Hiiro.load_env
+
+# only run the runner if being called from the commandline
+if __FILE__ == $0
+  hiiro = Hiiro.init(*ARGV, plugins: [Tmux, Pins, Project])
+
+  hiiro.add_subcommand(:good) { |*args|
+    puts "inside :good #{args.inspect}"
+  }
+
+  hiiro.run
+end
+
