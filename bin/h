@@ -5,7 +5,7 @@ require "fileutils"
 require "yaml"
 
 class Hiiro
-  def self.init(*args, plugins: [], &block)
+  def self.init(*args, plugins: [], logging: false, &block)
     new($0, *args).tap do |hiiro|
       hiiro.load_plugins(*plugins)
 
@@ -26,20 +26,19 @@ class Hiiro
   attr_reader :bin, :bin_name, :all_args
   attr_reader :subcmd, :args
   attr_reader :loaded_plugins
+  attr_reader :logging
 
-  def initialize(bin, *args)
+  def initialize(bin, *args, logging: false)
     @bin = bin
     @bin_name = File.basename(bin)
     @all_args = args
     @subcmd, *@args = args # normally i would never do this
     @loaded_plugins = []
+    @logging = logging
   end
 
   def run
-    return if @all_args.count == 0
-
     if runner
-      puts runner: runner;
       result = runner.run(*args)
 
       handle_result(result)
@@ -95,14 +94,21 @@ class Hiiro
   end
 
   def help
-    log "Subcommand #{subcmd.inspect} not found!"
-    log ""
-    log "Possible subcommands:"
+    if subcmd.nil?
+      puts "Subcommand required."
+    else
+      puts "Subcommand #{subcmd.inspect} not found!"
+    end
 
-    subcommand_names.each { |n| log "  #{n}" }
+    puts ""
+    puts "Possible subcommands:"
+
+    subcommand_names.each { |n| puts "  #{n}" }
   end
 
   def log(message)
+    return unless logging
+
     puts "[Hiiro: #{bin_name} #{(runner&.subcommand_name || subcmd).inspect}]: #{message}"
   end
 
@@ -135,6 +141,8 @@ class Hiiro
     end
 
     def runner
+      return if subcmd.nil?
+
       matching_bin || matching_subcommand
     end
 
@@ -281,8 +289,8 @@ Hiiro.load_env
 if __FILE__ == $0
   hiiro = Hiiro.init(*ARGV, plugins: [Tmux, Pins, Project])
 
-  hiiro.add_subcommand(:good) { |*args|
-    puts "inside :good #{args.inspect}"
+  hiiro.add_subcommand(:ping) { |*args|
+    puts "pong"
   }
 
   hiiro.run
