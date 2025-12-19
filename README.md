@@ -1,96 +1,228 @@
-# hiiro
+# Hiiro
 
-Extensible CLI utilities.
+A lightweight, extensible CLI framework for Ruby. Build your own multi-command tools similar to `git` or `docker`.
 
-# Install
+## Features
 
-Copy `bin/h` to somewhere in your `$PATH`
-Copy any plugins into `~/.config/hiiro/plugins/`
+- **Subcommand dispatch** - Route commands to executables or Ruby blocks
+- **Abbreviation matching** - Type `h ex hel` instead of `h example hello`
+- **Plugin system** - Extend functionality with reusable modules
+- **Per-command storage** - Each command gets its own pin/config namespace
 
-# Usage
+## Installation
 
 ```sh
-$> h
-Subcommand required.
+# Copy the main script
+cp bin/h ~/bin/h
+chmod +x ~/bin/h
 
-Possible subcommands:
-  yt
-  pin
-  project
-  edit
-  ping
-
-$> h ping
-pong
+# Copy plugins (optional)
+mkdir -p ~/.config/hiiro/plugins
+cp plugins/*.rb ~/.config/hiiro/plugins/
 ```
 
-# Extending
+Ensure `~/bin` is in your `$PATH`.
 
-There are 2 ways to add subcommands.
+### Dependencies
 
-1. Executables
-2. Subcommands
+```sh
+gem install pry
+# For notify plugin (macOS)
+brew install terminal-notifier
+```
 
-## Executables
+## Quick Start
 
-Add an executable to your path in the format of `basecmd-subcommand`.
+```sh
+# List available subcommands
+h
 
-Here are some examples:
+# Built-in ping test
+h ping
+# => pong
 
-- `h-example` - this will allow you to run `h example`
-- `h-example-subsubcommand` - if `h-example` uses hiiro, then it will
-recognize `subsubcommand` as a valid subcommand.
+# Edit the main h script
+h edit
+```
 
-## Subcommands
+## Adding Subcommands
 
-Using hiiro in a new script looks like this:
+### Method 1: External Executables
 
-> ~/bin/h-example
+Create an executable named `h-<subcommand>` anywhere in your `$PATH`:
+
+```sh
+# ~/bin/h-greet
+#!/bin/bash
+echo "Hello, $1!"
+```
+
+```sh
+h greet World
+# => Hello, World!
+```
+
+For nested subcommands, use hiiro in your script:
 
 ```ruby
 #!/usr/bin/env ruby
+# ~/bin/h-example
 
 load File.join(Dir.home, 'bin/h')
 
-executable = Hiiro.init(*ARGV) do |hiiro|
-  hiiro.add_subcommand(:hello) do |*args|
-    puts "Hi!"
-  end
+Hiiro.init(*ARGV) do |hiiro|
+  hiiro.add_subcommand(:hello) { puts "Hi!" }
+  hiiro.add_subcommand(:bye)   { puts "Goodbye!" }
+end.run
+```
 
-  hiiro.add_subcommand(:foo) do |*args|
-    puts "Foobar"
+```sh
+h example hello  # => Hi!
+h example bye    # => Goodbye!
+```
+
+### Method 2: Inline Subcommands
+
+Modify `bin/h` directly to add subcommands to the base `h` command:
+
+```ruby
+hiiro = Hiiro.init(*ARGV) do |hiiro|
+  hiiro.add_subcommand(:hello) do |*args|
+    puts "Hello, #{args.first || 'World'}!"
   end
 end
 ```
 
-Now example has the 2 subcommands `hello` and `foo`.
+## Abbreviations
+
+Any subcommand can be abbreviated as long as the prefix uniquely matches:
 
 ```sh
-$> h example hello
-Hi!
-
-$> h example foo
-Foobar
+h ex hel    # matches h example hello
+h pi        # matches h ping (if unique)
 ```
 
-## Shorthand
+If multiple commands match, the first match wins and a warning is logged (when logging is enabled).
 
-You can abbreviate any subcommand, as long as the abbreviation
-uniquely matches to one subcommand.
+## Built-in Plugins
+
+### Pins
+
+Key-value storage persisted per command:
 
 ```sh
-$> h ex hel
-Hi!
+h pin                     # List all pins
+h pin mykey               # Get value
+h pin mykey myvalue       # Set value
+h pin set mykey myvalue   # Set value (explicit)
+h pin rm mykey            # Remove pin
 ```
 
-In this example, `ex` will match `example` and `hel` with match `hello`.
+Pins are stored in `~/.config/hiiro/pins/<command>.yml`.
 
-# Plugins
+### Tmux
 
-....
+Session management:
 
-# In Practice
+```sh
+h session myproject       # Create/attach to tmux session
+```
 
-This allows me to make useful multi-use tools.  Similar to how `git`
-or `docker` are central tools that have many uses.
+### Project
 
+Quick project navigation with tmux integration:
+
+```sh
+h project myproj          # cd to ~/proj/myproj and start tmux session
+```
+
+Projects can be configured in `~/.config/hiiro/projects.yml`:
+
+```yaml
+myproject: /path/to/project
+work: ~/work/main
+```
+
+### Task
+
+Manage development tasks across git worktrees in `~/work/`:
+
+```sh
+h task list               # Show trees and their active tasks
+h task start TICKET-123   # Start working on a task
+h task status             # Show current task info
+h task app frontend       # Open app directory in new tmux window
+h task save               # Save current tmux window state
+h task stop               # Release tree for other tasks
+```
+
+Configure apps in `~/.config/hiiro/apps.yml`:
+
+```yaml
+frontend: apps/frontend
+api: services/api
+admin: admin_portal/admin
+```
+
+### Notify (macOS)
+
+Desktop notifications via `terminal-notifier`:
+
+```sh
+h notify "Build complete"
+h notify "Click me" "https://example.com"
+```
+
+## Writing Plugins
+
+Plugins are Ruby modules that extend Hiiro instances:
+
+```ruby
+# ~/.config/hiiro/plugins/myplugin.rb
+
+module MyPlugin
+  def self.load(hiiro)
+    attach_methods(hiiro)
+    add_subcommands(hiiro)
+  end
+
+  def self.add_subcommands(hiiro)
+    hiiro.add_subcmd(:mycmd) do |*args|
+      # command logic
+    end
+  end
+
+  def self.attach_methods(hiiro)
+    hiiro.instance_eval do
+      def my_helper
+        # helper method available to other plugins
+      end
+    end
+  end
+end
+```
+
+Load plugins in your command:
+
+```ruby
+Hiiro.init(*ARGV, plugins: [MyPlugin]) do |hiiro|
+  # ...
+end
+```
+
+## Configuration
+
+All configuration lives in `~/.config/hiiro/`:
+
+```
+~/.config/hiiro/
+  plugins/        # Plugin files (auto-loaded)
+  pins/           # Pin storage (per command)
+  tasks/          # Task metadata
+  projects.yml    # Project aliases
+  apps.yml        # App directory mappings
+```
+
+## License
+
+MIT
