@@ -112,18 +112,29 @@ class Hiiro
   end
 
   def help
-    subcmd_msg = "Subcommand required!"
-    subcmd_msg = "Subcommand #{subcmd.inspect} not found!" if subcmd
+    ambiguous = runners.ambiguous_matches
 
-    puts subcmd_msg
-    puts ""
-    puts "Possible subcommands:"
+    if ambiguous.any?
+      puts "Ambiguous subcommand #{subcmd.inspect}!"
+      puts ""
+      puts "Did you mean one of these?"
+      list_runners(ambiguous)
+    else
+      subcmd_msg = "Subcommand required!"
+      subcmd_msg = "Subcommand #{subcmd.inspect} not found!" if subcmd
 
-    all = runners.all_runners
-    max_name = all.map { |r| r.subcommand_name.length }.max || 0
-    max_type = all.map { |r| r.type.to_s.length }.max || 0
+      puts subcmd_msg
+      puts ""
+      puts "Possible subcommands:"
+      list_runners(runners.all_runners)
+    end
+  end
 
-    all.each do |r|
+  def list_runners(list)
+    max_name = list.map { |r| r.subcommand_name.length }.max || 0
+    max_type = list.map { |r| r.type.to_s.length }.max || 0
+
+    list.each do |r|
       name = r.subcommand_name.ljust(max_name)
       type = "(#{r.type})".ljust(max_type + 2)
       puts "  #{name}  #{type}  #{r.location}"
@@ -175,19 +186,15 @@ class Hiiro
     def runner
       return default_subcommand if subcmd.to_s == ''
 
-      matching_bin || matching_subcommand
+      exact_runner || unambiguous_runner
     end
 
     def default_subcommand
       Subcommand.new(bin_name, :default, lambda { hiiro.help; false })
     end
 
-    def partial
-      [bin_name, subcmd].join(?-)
-    end
-
     def subcommand_names
-      [*all_bins, *subcommands.values].map(&:subcommand_name)
+      all_runners.map(&:subcommand_name)
     end
 
     def all_runners
@@ -196,12 +203,6 @@ class Hiiro
 
     def paths
       @paths ||= ENV['PATH'].split(?:).uniq
-    end
-
-    def bins
-      pattern = format('{%s}/%s*', paths.join(?,), partial)
-
-      Dir.glob(pattern).map { |path| Bin.new(bin_name, path) }
     end
 
     def all_bins
@@ -214,53 +215,40 @@ class Hiiro
       @subcommands[name] = Subcommand.new(bin_name, name, handler, values)
     end
 
-    # normally i would call this: bin ...but that's already an attr
-    def matching_bin
-      return exact_bin if exact_bin
-
-      matching_bins.first if matching_bins.count == 1
+    def exact_runner
+      all_runners.find { |r| r.exact_match?(subcmd) }
     end
 
-    def exact_bin
-      bins.find { |b| b.exact_match?(partial) }
+    def unambiguous_runner
+      return nil if subcmd.nil?
+
+      matches = matching_runners
+      return matches.first if matches.count == 1
+
+      nil
     end
 
-    def matching_bins
-      all_matching_bins.reject { |b|
-        all_matching_bins.any? { |ob|
-          ob != b && b.name.start_with?(ob.name + ?-)
-        }
-      }
+    def ambiguous_matches
+      return [] if subcmd.nil?
+
+      matches = matching_runners
+      return matches if matches.count > 1
+
+      []
     end
 
-    def all_matching_bins
-      bins.select { |b| b.match?(partial) }
+    def matching_runners
+      remove_child_runners(all_matching_runners)
     end
 
-    # normally i would call this: subcommand ...but that's already an attr
-    # the reason is: i want the simplest/most direct word to be the thing i really want
-    # i don't want the matched subcommand to be something like: Hiiro#best_matching_subcommand
-    # i want it to be Hiiro#subcommand
-    # i actually might change @subcommand to something like @partial_subcommand
-    # so that i can rename this to subcommand
-    def matching_subcommand
-      return if subcmd.nil?
-      return exact_subcommand if exact_subcommand
+    def all_matching_runners
+      all_runners.select { |r| r.match?(subcmd) }
+    end
 
-      if matching_subcommands.count > 1
-        hiiro.log("Multiple matching subcommands:")
-        matching_subcommands.each { |m| hiiro.log("  #{m.name}") }
+    def remove_child_runners(list)
+      list.reject do |r|
+        list.any? { |other| r != other && r.full_name.start_with?(other.full_name + ?-) }
       end
-
-      return matching_subcommands.first
-    end
-
-    def exact_subcommand
-      subcommands.values.find { |v| v.exact_match?(subcmd) }
-    end
-
-    def matching_subcommands
-      subcommands.values.select { |v| v.match?(subcmd) }
     end
 
     # if i wanted to reduce the lines of code, i could combine Bin/Subcommand
@@ -281,14 +269,14 @@ class Hiiro
         system(path, *args)
       end
 
-      def exact_match?(partial)
-        name == partial
+      def exact_match?(subcmd)
+        subcommand_name == subcmd.to_s
       end
 
-      def match?(partial)
-        name.start_with?(partial)
+      def match?(subcmd)
+        subcommand_name.start_with?(subcmd.to_s)
       end
-      
+
       def subcommand_name
         name.sub("#{bin_name}-", '')
       end
