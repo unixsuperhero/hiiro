@@ -133,11 +133,15 @@ class Hiiro
   def list_runners(list)
     max_name = list.map { |r| r.subcommand_name.length }.max || 0
     max_type = list.map { |r| r.type.to_s.length }.max || 0
+    max_params = list.map { |r| r.params_string.to_s.length }.max || 0
 
     list.each do |r|
       name = r.subcommand_name.ljust(max_name)
       type = "(#{r.type})".ljust(max_type + 2)
-      puts "  #{name}  #{type}  #{r.location}"
+      params = r.params_string
+      params_col = params ? params.ljust(max_params) : ''.ljust(max_params)
+      location = r.location
+      puts "  #{name}  #{params_col}  #{type}  #{location}"
     end
   end
 
@@ -292,6 +296,10 @@ class Hiiro
       def location
         path
       end
+
+      def params_string
+        nil
+      end
     end
 
     class Subcommand
@@ -327,6 +335,26 @@ class Hiiro
 
       def location
         handler.source_location&.join(':')
+      end
+
+      def params_string
+        return nil unless handler.respond_to?(:parameters)
+
+        params = handler.parameters
+        return nil if params.empty?
+        return nil if params == [[:rest]] || params == [[:rest, :args]]
+
+        params.map { |type, name|
+          case type
+          when :req then "<#{name}>"
+          when :opt then "[#{name}]"
+          when :rest then "[*#{name}]" if name
+          when :keyreq then "<#{name}:>"
+          when :key then "[#{name}:]"
+          when :keyrest then "[**#{name}]" if name
+          when :block then "[&#{name}]" if name
+          end
+        }.compact.join(' ')
       end
     end
   end
