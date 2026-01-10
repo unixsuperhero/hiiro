@@ -37,12 +37,17 @@ brew install terminal-notifier
 # List available subcommands
 h
 
-# Built-in ping test
-h ping
-# => pong
+# Built-in test command
+h test
+# => test successful
 
 # Edit the main h script
 h edit
+
+# Get paths
+h path      # Print current directory
+h ppath     # Print project root (git repo root + relative dir)
+h rpath     # Print relative directory from git root
 ```
 
 ## Adding Subcommands
@@ -86,10 +91,20 @@ h example bye    # => Goodbye!
 Modify `bin/h` directly to add subcommands to the base `h` command:
 
 ```ruby
-hiiro = Hiiro.init(*ARGV) do |hiiro|
-  hiiro.add_subcommand(:hello) do |*args|
-    puts "Hello, #{args.first || 'World'}!"
-  end
+hiiro = Hiiro.init(*ARGV, plugins: [Tmux, Pins, Project, Task], cwd: Dir.pwd)
+
+hiiro.add_subcommand(:hello) do |*args|
+  puts "Hello, #{args.first || 'World'}!"
+end
+
+hiiro.run
+```
+
+Global values (like `cwd`) are passed to all subcommand handlers via keyword arguments:
+
+```ruby
+hiiro.add_subcommand(:pwd) do |*args, **values|
+  puts values[:cwd]  # Access the cwd passed during init
 end
 ```
 
@@ -99,7 +114,8 @@ Any subcommand can be abbreviated as long as the prefix uniquely matches:
 
 ```sh
 h ex hel    # matches h example hello
-h pi        # matches h ping (if unique)
+h te        # matches h test (if unique)
+h pp        # matches h ppath
 ```
 
 If multiple commands match, the first match wins and a warning is logged (when logging is enabled).
