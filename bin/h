@@ -119,7 +119,15 @@ class Hiiro
     puts ""
     puts "Possible subcommands:"
 
-    subcommand_names.reverse.each { |n| puts "  #{n}" }
+    all = runners.all_runners
+    max_name = all.map { |r| r.subcommand_name.length }.max || 0
+    max_type = all.map { |r| r.type.to_s.length }.max || 0
+
+    all.each do |r|
+      name = r.subcommand_name.ljust(max_name)
+      type = "(#{r.type})".ljust(max_type + 2)
+      puts "  #{name}  #{type}  #{r.location}"
+    end
   end
 
   def log(message)
@@ -180,6 +188,10 @@ class Hiiro
 
     def subcommand_names
       [*all_bins, *subcommands.values].map(&:subcommand_name)
+    end
+
+    def all_runners
+      [*all_bins, *subcommands.values]
     end
 
     def paths
@@ -284,6 +296,14 @@ class Hiiro
       def values
         {}
       end
+
+      def type
+        :bin
+      end
+
+      def location
+        path
+      end
     end
 
     class Subcommand
@@ -311,6 +331,14 @@ class Hiiro
 
       def full_name
         [bin_name, name].join(?-)
+      end
+
+      def type
+        :subcommand
+      end
+
+      def location
+        handler.source_location&.join(':')
       end
     end
   end
