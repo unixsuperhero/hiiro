@@ -382,12 +382,8 @@ Hiiro.load_env
 if __FILE__ == $0
   hiiro = Hiiro.init(*ARGV, plugins: [Pins, Project, Task], cwd: Dir.pwd)
 
-  hiiro.add_subcommand(:good) { |*args|
-    puts "inside :good #{args.inspect}"
-  }
-
-  hiiro.add_subcommand(:test) { |*args|
-    puts 'test successful'
+  hiiro.add_subcommand(:ping) { |*args|
+    puts "pong"
   }
 
   hiiro.run
