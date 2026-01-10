@@ -13,16 +13,16 @@ class Hiiro
         system(ENV['EDITOR'] || 'nvim', hiiro.bin)
       }
 
-      hiiro.add_subcmd(:ppath) { |*args, **v|
-        print File.join(`git rev-parse --show-toplevel`.strip, v[:rdir])
+      hiiro.add_subcmd(:ppath) { |*args|
+        print File.join(`git rev-parse --show-toplevel`.strip, hiiro.get_value(:rdir))
       }
 
-      hiiro.add_subcmd(:rpath) { |*args, **v|
-        print v[:rdir]
+      hiiro.add_subcmd(:rpath) { |*args|
+        print hiiro.get_value(:rdir)
       }
 
-      hiiro.add_subcmd(:path) { |*args, **v|
-        print v[:dir]
+      hiiro.add_subcmd(:path) { |*args|
+        print hiiro.get_value(:dir)
       }
 
       block.call(hiiro) if block
@@ -130,6 +130,10 @@ class Hiiro
 
   def parsed_args
     i = Args.new(*args)
+  end
+
+  def get_value(name)
+    runner&.values&.[](name)
   end
 
   class Config
@@ -276,6 +280,10 @@ class Hiiro
       def subcommand_name
         name.sub("#{bin_name}-", '')
       end
+
+      def values
+        {}
+      end
     end
 
     class Subcommand
@@ -290,7 +298,7 @@ class Hiiro
       end
 
       def run(*args)
-        handler.call(*args, **values)
+        handler.call(*args)
       end
 
       def exact_match?(subcmd)
@@ -362,7 +370,7 @@ if __FILE__ == $0
     puts "inside :good #{args.inspect}"
   }
 
-  hiiro.add_subcommand(:test) { |*args, **v|
+  hiiro.add_subcommand(:test) { |*args|
     puts 'test successful'
   }
 
