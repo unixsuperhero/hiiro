@@ -16,7 +16,119 @@ end
 
 o.add_subcmd(:info) { |ifile|
   raise 'Missing required argument: input_file' if ifile.nil? || ifile.strip == ''
-  system('ffprobe', ifile)
+  require 'json'
+  require 'open3'
+
+  json, status = Open3.capture2('ffprobe', '-v', 'error', '-print_format', 'json', '-show_format', '-show_streams', ifile)
+  raise "ffprobe failed: #{status}" unless status.success?
+
+  data = JSON.parse(json)
+  format = data['format'] || {}
+  streams = data['streams'] || []
+
+  # Format file size nicely
+  format_size = ->(bytes) {
+    return 'unknown' unless bytes
+    bytes = bytes.to_f
+    units = ['B', 'KB', 'MB', 'GB']
+    unit = 0
+    while bytes >= 1024 && unit < units.length - 1
+      bytes /= 1024
+      unit += 1
+    end
+    "%.2f %s" % [bytes, units[unit]]
+  }
+
+  # Format duration nicely
+  format_duration = ->(seconds) {
+    return 'unknown' unless seconds
+    seconds = seconds.to_f
+    hours = (seconds / 3600).to_i
+    minutes = ((seconds % 3600) / 60).to_i
+    secs = (seconds % 60).to_i
+    ms = ((seconds % 1) * 1000).to_i
+    if hours > 0
+      "%d:%02d:%02d.%03d" % [hours, minutes, secs, ms]
+    else
+      "%02d:%02d.%03d" % [minutes, secs, ms]
+    end
+  }
+
+  # Format bitrate nicely
+  format_bitrate = ->(bps) {
+    return nil unless bps
+    bps = bps.to_f
+    if bps >= 1_000_000
+      "%.2f Mbps" % (bps / 1_000_000)
+    else
+      "%.0f kbps" % (bps / 1000)
+    end
+  }
+
+  puts "=" * 60
+  puts "FILE: #{File.basename(ifile)}"
+  puts "=" * 60
+  puts "Format:    #{format['format_long_name'] || format['format_name'] || 'unknown'}"
+  puts "Duration:  #{format_duration.call(format['duration'])}"
+  puts "Size:      #{format_size.call(format['size'])}"
+  puts "Bitrate:   #{format_bitrate.call(format['bit_rate']) || 'unknown'}"
+
+  video_streams = streams.select { |s| s['codec_type'] == 'video' }
+  audio_streams = streams.select { |s| s['codec_type'] == 'audio' }
+  sub_streams = streams.select { |s| s['codec_type'] == 'subtitle' }
+
+  video_streams.each_with_index do |v, i|
+    puts "-" * 60
+    puts "VIDEO #{i}: #{v['codec_long_name'] || v['codec_name']}"
+    puts "  Resolution:  #{v['width']}x#{v['height']}"
+    if v['display_aspect_ratio']
+      puts "  Aspect:      #{v['display_aspect_ratio']}"
+    end
+    if v['r_frame_rate']
+      num, den = v['r_frame_rate'].split('/').map(&:to_f)
+      fps = den > 0 ? (num / den).round(2) : 0
+      puts "  FPS:         #{fps}"
+    end
+    if v['bit_rate']
+      puts "  Bitrate:     #{format_bitrate.call(v['bit_rate'])}"
+    end
+    if v['pix_fmt']
+      puts "  Pixel fmt:   #{v['pix_fmt']}"
+    end
+  end
+
+  audio_streams.each_with_index do |a, i|
+    puts "-" * 60
+    lang = a.dig('tags', 'language')
+    title = a.dig('tags', 'title')
+    label = [lang, title].compact.join(' - ')
+    label = label.empty? ? '' : " (#{label})"
+    puts "AUDIO #{i}:#{label} #{a['codec_long_name'] || a['codec_name']}"
+    if a['channels']
+      channel_layout = a['channel_layout'] || "#{a['channels']}ch"
+      puts "  Channels:    #{channel_layout}"
+    end
+    if a['sample_rate']
+      puts "  Sample rate: #{a['sample_rate']} Hz"
+    end
+    if a['bit_rate']
+      puts "  Bitrate:     #{format_bitrate.call(a['bit_rate'])}"
+    end
+  end
+
+  if sub_streams.any?
+    puts "-" * 60
+    puts "SUBTITLES:"
+    sub_streams.each_with_index do |s, i|
+      lang = s.dig('tags', 'language') || 'unknown'
+      title = s.dig('tags', 'title')
+      codec = s['codec_name']
+      label = title ? "#{lang} - #{title}" : lang
+      puts "  #{i}: [#{codec}] #{label}"
+    end
+  end
+
+  puts "=" * 60
 }
 
 o.add_subcmd(:streams) { |ifile|
@@ -339,7 +451,7 @@ o.add_subcmd(:help) { |*args|
     h-video - FFmpeg wrapper for common video operations
 
     INFO / INSPECTION:
-      info <file>                         Full ffprobe output
+      info <file>                         Human-readable video summary
       streams <file>                      List all streams (video, audio, subs)
       duration <file>                     Get video duration
       metadata <file>                     Show metadata as JSON
