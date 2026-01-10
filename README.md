@@ -9,12 +9,17 @@ A lightweight, extensible CLI framework for Ruby. Build your own multi-command t
 - **Plugin system** - Extend functionality with reusable modules
 - **Per-command storage** - Each command gets its own pin/config namespace
 
+See [docs/](docs/) for detailed documentation on all subcommands.
+
 ## Installation
 
 ```sh
 # Copy the main script
 cp bin/h ~/bin/h
 chmod +x ~/bin/h
+
+# Copy subcommands (optional)
+cp bin/h-* ~/bin/
 
 # Copy plugins (optional)
 mkdir -p ~/.config/hiiro/plugins
@@ -37,10 +42,6 @@ brew install terminal-notifier
 # List available subcommands
 h
 
-# Built-in test command
-h test
-# => test successful
-
 # Edit the main h script
 h edit
 
@@ -48,6 +49,10 @@ h edit
 h path      # Print current directory
 h ppath     # Print project root (git repo root + relative dir)
 h rpath     # Print relative directory from git root
+
+# Simple test
+h ping
+# => pong
 ```
 
 ## Adding Subcommands
@@ -91,7 +96,7 @@ h example bye    # => Goodbye!
 Modify `bin/h` directly to add subcommands to the base `h` command:
 
 ```ruby
-hiiro = Hiiro.init(*ARGV, plugins: [Tmux, Pins, Project, Task], cwd: Dir.pwd)
+hiiro = Hiiro.init(*ARGV, plugins: [Pins, Project, Task], cwd: Dir.pwd)
 
 hiiro.add_subcommand(:hello) do |*args|
   puts "Hello, #{args.first || 'World'}!"
@@ -136,12 +141,15 @@ h pin rm mykey            # Remove pin
 
 Pins are stored in `~/.config/hiiro/pins/<command>.yml`.
 
-### Tmux
+### Tmux Subcommands
 
-Session management:
+Hiiro includes several tmux wrapper commands for managing sessions, windows, panes, and buffers. See [docs/](docs/) for full documentation.
 
 ```sh
-h session myproject       # Create/attach to tmux session
+h session ls              # List tmux sessions
+h window new              # Create new window
+h pane split              # Split current pane
+h buffer ls               # List paste buffers
 ```
 
 ### Project
@@ -187,6 +195,30 @@ Desktop notifications via `terminal-notifier`:
 ```sh
 h notify "Build complete"
 h notify "Click me" "https://example.com"
+```
+
+### Video
+
+FFmpeg wrapper for common video operations:
+
+```sh
+h video info movie.mp4        # Human-readable video summary
+h video resize720 movie.mp4   # Resize to 720p
+h video clip movie.mp4 00:01:30 60  # Extract 60s clip starting at 1:30
+h video gif movie.mp4         # Create animated GIF
+h video help                  # Full command list
+```
+
+See [docs/h-video.md](docs/h-video.md) for complete documentation.
+
+### Plugin
+
+Manage hiiro plugins:
+
+```sh
+h plugin ls                   # List installed plugins
+h plugin edit pins            # Edit a plugin file
+h plugin rg "some_method"     # Search plugin code
 ```
 
 ## Writing Plugins
