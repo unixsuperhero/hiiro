@@ -1,0 +1,7 @@
+#!/bin/bash
+
+rsync -avz bin/ $HOME/bin/
+
+mkdir -pv $HOME/.config/hiiro/plugins
+rsync -avz plugins/ $HOME/.config/hiiro/plugins/
+
