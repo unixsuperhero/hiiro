@@ -3,8 +3,6 @@
 require "hiiro"
 require "fileutils"
 
-Hiiro.load_env
-
 hiiro = Hiiro.init(*ARGV, cwd: Dir.pwd)
 
 hiiro.add_subcommand(:ping) { |*args|

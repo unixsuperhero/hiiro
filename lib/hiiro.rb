@@ -5,6 +5,7 @@ require_relative "hiiro/version"
 
 class Hiiro
   def self.init(*args, plugins: [], logging: false, **values, &block)
+    load_env
     args = ARGV if args.empty?
 
     new($0, *args, logging: logging, **values).tap do |hiiro|
