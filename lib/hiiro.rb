@@ -1,18 +1,11 @@
-#!/usr/bin/env ruby
+require "fileutils"
+require "yaml"
 
-require "pry"
-
-# Use the gem if installed, otherwise define inline
-begin
-  require "hiiro"
-rescue LoadError
-  require "fileutils"
-  require "yaml"
-end
+require_relative "hiiro/version"
 
 class Hiiro
   def self.init(*args, plugins: [], logging: false, **values, &block)
-    args = $ARGV if args.empty?
+    args = ARGV if args.empty?
 
     new($0, *args, logging: logging, **values).tap do |hiiro|
       hiiro.load_plugins(*plugins)
@@ -51,7 +44,7 @@ class Hiiro
     result = runner.run(*args)
 
     handle_result(result)
-    
+
     exit 1
   rescue => e
     puts "ERROR: #{e.message}"
@@ -251,10 +244,6 @@ class Hiiro
       end
     end
 
-    # if i wanted to reduce the lines of code, i could combine Bin/Subcommand
-    # but i would have to introduce a new attr and arg to the constructor: @type
-    # then for methods like #full_name and #run i would have to branch off of
-    # @type
     class Bin
       attr_reader :bin_name, :path, :name
       alias full_name name
@@ -398,18 +387,3 @@ class Hiiro
     end
   end
 end
-
-Hiiro.load_env
-
-
-# only run the runner if being called from the commandline
-if __FILE__ == $0
-  hiiro = Hiiro.init(*ARGV, plugins: [Pins, Project, Task], cwd: Dir.pwd)
-
-  hiiro.add_subcommand(:ping) { |*args|
-    puts "pong"
-  }
-
-  hiiro.run
-end
-
