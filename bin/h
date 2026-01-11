@@ -6,23 +6,13 @@ require "yaml"
 
 class Hiiro
   def self.init(*args, plugins: [], logging: false, **values, &block)
+    args = $ARGV if args.empty?
+
     new($0, *args, logging: logging, **values).tap do |hiiro|
       hiiro.load_plugins(*plugins)
 
       hiiro.add_subcmd(:edit, **values) { |*args|
         system(ENV['EDITOR'] || 'nvim', hiiro.bin)
-      }
-
-      hiiro.add_subcmd(:ppath) { |*args|
-        print File.join(`git rev-parse --show-toplevel`.strip, hiiro.get_value(:rdir))
-      }
-
-      hiiro.add_subcmd(:rpath) { |*args|
-        print hiiro.get_value(:rdir)
-      }
-
-      hiiro.add_subcmd(:path) { |*args|
-        print hiiro.get_value(:dir)
       }
 
       block.call(hiiro) if block
