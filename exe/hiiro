@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+
+Hiiro.load_env
+
+hiiro = Hiiro.init(*ARGV, cwd: Dir.pwd)
+
+hiiro.add_subcommand(:ping) { |*args|
+  puts "pong"
+}
+
+hiiro.run
