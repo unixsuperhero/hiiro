@@ -19,3 +19,7 @@ puts "\nERROR: unable to build gem\n" unless built
 pushed = system('gem', 'push', "hiiro-#{new_version}.gem")
 
 puts "\nERROR: unable to push\n" unless pushed
+
+system 'git', 'add', '--all'
+system 'git', 'commit', '-m', "publishing v#{new_version}"
+
