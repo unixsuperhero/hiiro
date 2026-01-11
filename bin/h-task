@@ -19,7 +19,7 @@ class TaskManager
     puts
     puts "Subcommands:"
     puts "  list, ls              List all worktrees and their active tasks"
-    puts "  start TASK            Start a task (reuses available worktree or creates new)"
+    puts "  start TASK [APP]      Start a task (reuses available worktree or creates new)"
     puts "  switch TASK           Switch to an existing task"
     puts "  app APP_NAME          Open a tmux window for an app in current worktree"
     puts "  apps                  List configured apps from apps.yml"
@@ -57,30 +57,18 @@ class TaskManager
   end
 
   # Start working on a task
-  def start_task(task_name, tree: nil)
+  def start_task(task_name, app: nil)
     # Check if task already exists as a worktree
     existing_tree = tree_for_task(task_name)
     if existing_tree
       puts "Task '#{task_name}' already active in tree '#{existing_tree}'"
       puts "Switching to existing session..."
-      switch_to_task(task_name, existing_tree)
+      switch_to_task(task_name, existing_tree, app: app)
       return true
     end
 
-    # If a specific tree was requested, verify it exists and isn't reserved
-    if tree
-      if !trees.include?(tree)
-        puts "ERROR: Worktree '#{tree}' not found"
-        return false
-      end
-      if RESERVED_WORKTREES.key?(tree)
-        puts "ERROR: Worktree '#{tree}' is reserved and cannot be used for tasks"
-        return false
-      end
-    end
-
     # Find an available worktree to reuse, or create a new one
-    available_tree = tree || find_available_tree
+    available_tree = find_available_tree
 
     if available_tree
       # Rename the available worktree to the task name
@@ -122,10 +110,26 @@ class TaskManager
     # Create/switch to tmux session
     session_name = session_name_for(task_name)
 
-    Dir.chdir(final_tree_path)
+    # Determine base path (app path if specified, otherwise tree root)
+    base_path = final_tree_path
+    if app
+      result = find_app_path(final_tree_name, app)
+      case result
+      in nil
+        puts "WARNING: App '#{app}' not found, using tree root"
+      in [:ambiguous, matches]
+        puts "WARNING: '#{app}' matches multiple apps: #{matches.join(', ')}"
+        puts "Using tree root instead"
+      in [resolved_name, app_path]
+        base_path = app_path
+        puts "Using app '#{resolved_name}' as base path"
+      end
+    end
+
+    Dir.chdir(base_path)
     hiiro.start_tmux_session(session_name)
 
-    save_task_metadata(task_name, tree: final_tree_name, session: session_name)
+    save_task_metadata(task_name, tree: final_tree_name, session: session_name, app: app)
 
     puts "Started task '#{task_name}' in worktree '#{final_tree_name}'"
     true
@@ -502,10 +506,22 @@ class TaskManager
     { task: task_name, tree: tree, session: session }
   end
 
-  def switch_to_task(task_name, tree)
+  def switch_to_task(task_name, tree, app: nil)
     session = session_name_for(task_name)
-    tree_path = tree_path(tree)
-    Dir.chdir(tree_path)
+    base_path = tree_path(tree)
+
+    if app
+      result = find_app_path(tree, app)
+      case result
+      in [resolved_name, app_path]
+        base_path = app_path
+        puts "Using app '#{resolved_name}' as base path"
+      else
+        # Ignore errors on switch, just use tree root
+      end
+    end
+
+    Dir.chdir(base_path)
     hiiro.start_tmux_session(session)
   end
 
@@ -616,7 +632,7 @@ tasks = TaskManager.new(hiiro)
 hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
 hiiro.add_subcmd(:list) { tasks.list_trees }
 hiiro.add_subcmd(:ls) { tasks.list_trees }
-hiiro.add_subcmd(:start) { |task_name, tree=nil| tasks.start_task(task_name, tree: tree) }
+hiiro.add_subcmd(:start) { |task_name, app=nil| tasks.start_task(task_name, app: app) }
 hiiro.add_subcmd(:switch) { |task_name| tasks.switch_task(task_name) }
 hiiro.add_subcmd(:app) { |app_name| tasks.open_app(app_name) }
 hiiro.add_subcmd(:path) { |app_name=nil, task=nil| tasks.app_path(app_name, task: task) }
