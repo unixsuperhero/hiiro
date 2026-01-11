@@ -5,6 +5,10 @@ require "fileutils"
 
 hiiro = Hiiro.init(*ARGV, cwd: Dir.pwd)
 
+hiiro.add_subcommand(:version) { |*args|
+  puts Hiiro::VERSION
+}
+
 hiiro.add_subcommand(:ping) { |*args|
   puts "pong"
 }
