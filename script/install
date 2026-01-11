@@ -1,7 +1,16 @@
 #!/bin/bash
 
-rsync -avz bin/ $HOME/bin/
+function install_hiiro() {
+  echo -n "This is destructive, are you sure you want to continue? [Y/n] "
+  read confirmation
 
-mkdir -pv $HOME/.config/hiiro/plugins
-rsync -avz plugins/ $HOME/.config/hiiro/plugins/
+  test $confirmation = "n" || test $confirmation = "N" && return 1
+
+  rsync -avz bin/ $HOME/bin/
+
+  mkdir -pv $HOME/.config/hiiro/plugins
+  rsync -avz plugins/ $HOME/.config/hiiro/plugins/
+}
+
+install_hiiro
 
