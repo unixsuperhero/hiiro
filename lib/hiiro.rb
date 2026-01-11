@@ -389,4 +389,6 @@ class Hiiro
       end
     end
   end
+
+  load_env
 end
