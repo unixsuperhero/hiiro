@@ -13,6 +13,23 @@ See [docs/](docs/) for detailed documentation on all subcommands.
 
 ## Installation
 
+### Via RubyGems
+
+```sh
+gem install hiiro
+
+# Install plugins and subcommands
+hiiro setup
+```
+
+This installs:
+- Plugins to `~/.config/hiiro/plugins/`
+- Subcommands (`h-video`, `h-buffer`, etc.) to `~/bin/`
+
+Ensure `~/bin` is in your `$PATH`.
+
+### Manual Installation
+
 ```sh
 # Copy the main script
 cp bin/h ~/bin/h
@@ -26,12 +43,9 @@ mkdir -p ~/.config/hiiro/plugins
 cp plugins/*.rb ~/.config/hiiro/plugins/
 ```
 
-Ensure `~/bin` is in your `$PATH`.
-
 ### Dependencies
 
 ```sh
-gem install pry
 # For notify plugin (macOS)
 brew install terminal-notifier
 ```
