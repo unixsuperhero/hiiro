@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+
+major, minor, patch = Hiiro::VERSION.split(?.)
+
+new_version = [major, minor, patch.to_i + 1].join(?.)
+
+File.open('lib/hiiro/version.rb', 'w+') do |f|
+  f.puts 'class Hiiro'
+  f.puts "  VERSION = #{new_version.inspect}"
+  f.puts 'end'
+end
+
+built = system('gem', 'build', 'hiiro.gemspec')
+
+puts "\nERROR: unable to build gem\n" unless built
+
+pushed = system('gem', 'push', "hiiro-#{new_version}.gem")
+
+puts "\nERROR: unable to push\n" unless pushed
