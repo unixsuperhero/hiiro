@@ -23,6 +23,8 @@ class Hiiro
     Config.plugin_files.each do |plugin_file|
       require plugin_file
     end
+
+    self
   end
 
   attr_reader :bin, :bin_name, :all_args
