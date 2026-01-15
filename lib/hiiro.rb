@@ -74,7 +74,7 @@ class Hiiro
   end
 
   def add_default(**values, &handler)
-    runners.add_subcommand(:DEFAULT, handler, **global_values, **values)
+    runners.add_default(handler, **global_values, **values)
   end
 
   def add_subcommand(name, **values, &handler)
@@ -169,6 +169,14 @@ class Hiiro
     end
   end
 
+  def default_subcommand
+    Runners::Subcommand.new(
+      bin_name,
+      :DEFAULT,
+      lambda { help; false },
+    )
+  end
+
   class Runners
     attr_reader :hiiro, :bin_name, :subcmd, :subcommands
 
@@ -177,16 +185,23 @@ class Hiiro
       @bin_name = hiiro.bin_name
       @subcmd = hiiro.subcmd
       @subcommands = {}
+      @default_subcommand = hiiro.default_subcommand
+    end
+
+    def add_default(handler, **values)
+      @default_subcommand = Subcommand.new(
+        bin_name,
+        :DEFAULT,
+        handler,
+        **values
+      )
     end
 
     def runner
-      return default_subcommand if subcmd.to_s == ''
+      return exact_runner if exact_runner
+      return unambiguous_runner if unambiguous_runner
 
-      exact_runner || unambiguous_runner
-    end
-
-    def default_subcommand
-      Subcommand.new(bin_name, :default, lambda { hiiro.help; false })
+      @default_subcommand
     end
 
     def subcommand_names
