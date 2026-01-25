@@ -173,7 +173,7 @@ class Hiiro
     Runners::Subcommand.new(
       bin_name,
       :DEFAULT,
-      lambda { help; false },
+      lambda { |*args| help; false },
     )
   end
 
