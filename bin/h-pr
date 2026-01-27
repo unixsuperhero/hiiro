@@ -1,0 +1,257 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+require "fileutils"
+require "yaml"
+require "json"
+
+Hiiro.load_env
+hiiro = Hiiro.init(*ARGV, plugins: [Task])
+
+class PRManager
+  attr_reader :hiiro
+
+  def initialize(hiiro)
+    @hiiro = hiiro
+  end
+
+  def help
+    puts "Usage: h pr <subcommand> [args]"
+    puts
+    puts "Subcommands:"
+    puts "  save [PR_NUMBER]      Record PR for this task (auto-detects if omitted)"
+    puts "  history               List PR history (oldest to newest)"
+    puts "  history --worktree=X  Filter by worktree"
+    puts "  history --task=X      Filter by task"
+    puts "  history --session=X   Filter by tmux session"
+    puts "  current               Show current branch's PR info"
+    puts "  open [PR_NUMBER]      Open PR in browser"
+    puts "  view [PR_NUMBER]      View PR details in terminal"
+  end
+
+  def save(pr_number = nil)
+    pr_info = fetch_pr_info(pr_number)
+    unless pr_info
+      puts "ERROR: Could not find PR"
+      puts "Make sure you have the gh CLI installed and authenticated."
+      return false
+    end
+
+    entry = build_entry(pr_info)
+    unless entry[:task]
+      puts "WARNING: Not in a task session, saving without task info"
+    end
+
+    data = load_data
+    data['prs'] ||= []
+
+    # Check if this PR is already recorded for this task
+    existing = data['prs'].find do |p|
+      p['number'] == pr_info['number'] && p['task'] == entry[:task]
+    end
+
+    if existing
+      # Update existing entry
+      existing.merge!(entry.transform_keys(&:to_s))
+      existing['updated_at'] = Time.now.iso8601
+      puts "Updated PR ##{pr_info['number']} for task '#{entry[:task]}'"
+    else
+      # Add new entry
+      data['prs'] << entry.transform_keys(&:to_s).merge('created_at' => Time.now.iso8601)
+      puts "Saved PR ##{pr_info['number']} for task '#{entry[:task]}'"
+    end
+
+    save_data(data)
+    show_entry(entry)
+    true
+  end
+
+  def history(args = [])
+    filters = parse_filters(args)
+    data = load_data
+    prs = data['prs'] || []
+
+    if prs.empty?
+      puts "No PRs recorded."
+      puts "Use 'h pr save' to record the current PR."
+      return
+    end
+
+    # Apply filters
+    prs = filter_entries(prs, filters)
+
+    if prs.empty?
+      puts "No PRs match the given filters."
+      return
+    end
+
+    # Sort by created_at (oldest first)
+    prs = prs.sort_by { |p| p['created_at'] || '' }
+
+    puts "PR history (oldest to newest):"
+    puts
+    prs.each_with_index do |pr, idx|
+      puts format_entry(pr, idx + 1)
+    end
+  end
+
+  def current
+    pr_info = fetch_pr_info
+    unless pr_info
+      puts "No PR found for current branch."
+      puts "Create one with 'gh pr create' or specify a PR number."
+      return false
+    end
+
+    entry = build_entry(pr_info)
+    puts "Current PR info:"
+    puts
+    show_entry(entry)
+  end
+
+  def open(pr_number = nil)
+    if pr_number
+      system('gh', 'pr', 'view', pr_number.to_s, '--web')
+    else
+      system('gh', 'pr', 'view', '--web')
+    end
+  end
+
+  def view(pr_number = nil)
+    if pr_number
+      system('gh', 'pr', 'view', pr_number.to_s)
+    else
+      system('gh', 'pr', 'view')
+    end
+  end
+
+  private
+
+  def fetch_pr_info(pr_number = nil)
+    cmd = if pr_number
+      ['gh', 'pr', 'view', pr_number.to_s, '--json', 'number,title,url,headRefName,state']
+    else
+      ['gh', 'pr', 'view', '--json', 'number,title,url,headRefName,state']
+    end
+
+    output = `#{cmd.join(' ')} 2>/dev/null`
+    return nil if output.empty?
+
+    JSON.parse(output)
+  rescue JSON::ParserError
+    nil
+  end
+
+  def build_entry(pr_info)
+    task_info = hiiro.task_manager.send(:current_task)
+    tmux_info = capture_tmux_info
+
+    {
+      number: pr_info['number'],
+      title: pr_info['title'],
+      url: pr_info['url'],
+      branch: pr_info['headRefName'],
+      state: pr_info['state'],
+      worktree: task_info&.[](:tree),
+      task: task_info&.[](:task),
+      tmux: tmux_info
+    }
+  end
+
+  def capture_tmux_info
+    return nil unless ENV['TMUX']
+
+    {
+      'session' => `tmux display-message -p '#S'`.strip,
+      'window' => `tmux display-message -p '#W'`.strip,
+      'pane' => ENV['TMUX_PANE']
+    }
+  end
+
+  def parse_filters(args)
+    filters = {}
+    args.each do |arg|
+      case arg
+      when /^--worktree=(.+)$/
+        filters[:worktree] = $1
+      when /^--task=(.+)$/
+        filters[:task] = $1
+      when /^--session=(.+)$/
+        filters[:session] = $1
+      when /^-w(.+)$/
+        filters[:worktree] = $1
+      when /^-t(.+)$/
+        filters[:task] = $1
+      when /^-s(.+)$/
+        filters[:session] = $1
+      end
+    end
+    filters
+  end
+
+  def filter_entries(entries, filters)
+    entries.select do |entry|
+      next false if filters[:worktree] && !entry['worktree']&.include?(filters[:worktree])
+      next false if filters[:task] && !entry['task']&.include?(filters[:task])
+      next false if filters[:session] && entry.dig('tmux', 'session') != filters[:session]
+      true
+    end
+  end
+
+  def format_entry(entry, num)
+    lines = []
+    lines << "#{num}. PR ##{entry['number']}: #{entry['title']}"
+    lines << "   Branch: #{entry['branch']}"
+    lines << "   State: #{entry['state']}"
+    lines << "   Task: #{entry['task'] || '(none)'}"
+    lines << "   Worktree: #{entry['worktree'] || '(none)'}"
+    if entry['tmux']
+      lines << "   Tmux: #{entry['tmux']['session']}/#{entry['tmux']['window']}"
+    end
+    lines << "   Created: #{entry['created_at']}"
+    lines << "   URL: #{entry['url']}"
+    lines.join("\n")
+  end
+
+  def show_entry(entry)
+    puts "  PR: ##{entry[:number]}"
+    puts "  Title: #{entry[:title]}"
+    puts "  Branch: #{entry[:branch]}"
+    puts "  State: #{entry[:state]}"
+    puts "  URL: #{entry[:url]}"
+    puts "  Task: #{entry[:task] || '(none)'}"
+    puts "  Worktree: #{entry[:worktree] || '(none)'}"
+    if entry[:tmux]
+      puts "  Tmux session: #{entry[:tmux]['session']}"
+      puts "  Tmux window: #{entry[:tmux]['window']}"
+      puts "  Tmux pane: #{entry[:tmux]['pane']}"
+    end
+  end
+
+  def data_file
+    File.join(Dir.home, '.config', 'hiiro', 'prs.yml')
+  end
+
+  def load_data
+    return {} unless File.exist?(data_file)
+    YAML.safe_load_file(data_file) || {}
+  end
+
+  def save_data(data)
+    FileUtils.mkdir_p(File.dirname(data_file))
+    File.write(data_file, YAML.dump(data))
+  end
+end
+
+manager = PRManager.new(hiiro)
+
+hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
+hiiro.add_subcmd(:save) { |pr_number=nil| manager.save(pr_number) }
+hiiro.add_subcmd(:history) { |*args| manager.history(args) }
+hiiro.add_subcmd(:current) { manager.current }
+hiiro.add_subcmd(:open) { |pr_number=nil| manager.open(pr_number) }
+hiiro.add_subcmd(:view) { |pr_number=nil| manager.view(pr_number) }
+
+hiiro.add_default { manager.help }
+
+hiiro.run
