@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
-load '/Users/unixsuperhero/bin/h'
+
+require "hiiro"
 
 o = Hiiro.init(*ARGV)
 
@@ -42,8 +43,8 @@ end
 o.add_subcmd(:open) { |project_name|
   re = /#{project_name}/i
 
-  conf_matches = projects_from_config.select { |k, v| k.match?(re) }
-  dir_matches = project_dirs.select { |proj, path| proj.match?(re) }
+  conf_matches = (projects_from_config || {}).select { |k, v| k.match?(re) }
+  dir_matches = (project_dirs || {}).select { |proj, path| proj.match?(re) }
 
   matches = dir_matches.merge(conf_matches)
   if matches.count > 1
@@ -164,10 +165,6 @@ o.add_subcmd(:help) { |*args|
       If still ambiguous, all matches are displayed.
   HELP
 }
-
-# === DEFAULT SUBCOMMAND ===
-
-o.default_subcommand(:open)
 
 if o.runnable?
   o.run
