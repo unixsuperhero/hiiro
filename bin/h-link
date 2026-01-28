@@ -119,7 +119,7 @@ o.add_subcmd(:search) do |*args|
       link['shorthand']
     ].compact.join(' ').downcase
 
-    terms.any? { |term| searchable.include?(term) }
+    terms.all? { |term| searchable.include?(term) }
   end
 
   if matches.empty?
