@@ -15,6 +15,7 @@ class Hiiro
     args = $ARGV if args.empty?
 
     new($0, *args, logging: logging, **values).tap do |hiiro|
+      History.load(hiiro)
       hiiro.load_plugins(*plugins)
 
       hiiro.add_subcmd(:edit, **values) { |*args|
