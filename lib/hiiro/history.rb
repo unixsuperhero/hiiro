@@ -170,7 +170,11 @@ class Hiiro
     end
 
     def add_manual(description, hiiro: nil)
-      add(description: description, source: 'manual')
+      add(
+        description: description,
+        source: 'manual',
+        cmd: hiiro.full_command,
+      )
       puts "Added history entry: #{description}"
       true
     end
