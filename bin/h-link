@@ -39,9 +39,15 @@ def hash_matches?(links, *args)
   end
 end
 
-def link_matches?(link, *args)
+def search_links(links, *args)
   terms = args.map(&:downcase)
 
+  links.select do |link|
+    link_matches?(link, *terms)
+  end
+end
+
+def link_matches?(link, *terms)
   searchable = [
     link['url'],
     link['description'],
@@ -234,6 +240,8 @@ o.add_subcmd(:open) do |*args|
   if args.empty?
     lines = load_link_hash(links)
 
+    exit_code = 1
+
     if args.any?
       lines = hash_matches?(lines, *args)
     end
@@ -244,11 +252,22 @@ o.add_subcmd(:open) do |*args|
     if status.success? && !selected.strip.empty?
       if selected =~ /^\s*(\d+)\.\s+(\S+)/
         system('open', $2)
+        exit_code = 0
       end
     end
+
+    exit exit_code
   end
 
   idx, link = find_link_by_ref(args.first, links)
+
+  if link.nil? 
+    matches = search_links(links, *args)
+
+    if matches.count == 1
+      link = matches.first
+    end
+  end
 
   if link.nil?
     puts "Link not found: #{args.first}"
