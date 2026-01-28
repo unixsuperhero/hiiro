@@ -48,7 +48,10 @@ class Hiiro
         time_str = Time.parse(timestamp).strftime('%Y-%m-%d %H:%M')
         desc = description || cmd || '(no description)'
         desc = desc[0..60] + '...' if desc.length > 63
-        format('%3d  %s  %s', index, time_str, desc)
+        [
+          format('%3d  %s  %s', index, time_str, desc),
+          format('   cmd: %s', cmd),
+        ].join("\n")
       end
 
       def full_display
@@ -57,6 +60,7 @@ class Hiiro
         lines << "Timestamp:   #{timestamp}"
         lines << "Description: #{description}" if description
         lines << "Command:     #{cmd}" if cmd
+        lines << "PWD:         #{pwd}" if pwd
         lines << "Source:      #{source}" if source
         lines << ""
         lines << "Tmux:"
