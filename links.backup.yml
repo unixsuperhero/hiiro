@@ -1,0 +1,13 @@
+---
+- url: http://auth.unixsuperhero.com:9969
+  description: stash
+  shorthand: fap
+  created_at: '2026-01-27T00:58:36-05:00'
+- url: http://auth.unixsuperhero.com:8012
+  description: utorrent
+  shorthand: utor
+  created_at: '2026-01-27T22:10:55-05:00'
+- url: http://auth.unixsuperhero.com:3005
+  description: sandbox nas
+  shorthand: sandbox
+  created_at: '2026-01-27T22:12:16-05:00'
