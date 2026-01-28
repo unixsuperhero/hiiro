@@ -52,7 +52,7 @@ class Hiiro
     @global_values = values
     @full_command = [
       bin,
-      all_args,
+      *all_args,
     ].map(&:shellescape).join(' ')
   end
 
