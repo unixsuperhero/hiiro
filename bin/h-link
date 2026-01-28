@@ -3,10 +3,19 @@
 require 'yaml'
 require 'fileutils'
 require 'time'
-
+require 'pry'
+require 'tempfile'
 require "hiiro"
 
 LINKS_FILE = File.join(Dir.home, '.config/hiiro/links.yml')
+LINK_TEMPLATE = {
+  'url' => 'http://EXAMPLE',
+  'description' => '',
+  'shorthand' => nil,
+  'created_at' => Time.now.iso8601,
+}
+
+
 
 o = Hiiro.init(*ARGV, plugins: [Tmux, Pins], links_file: LINKS_FILE)
 
@@ -19,6 +28,19 @@ end
 def load_links
   ensure_links_file
   YAML.load_file(LINKS_FILE) || []
+end
+
+def edit_link(link=LINK_TEMPLATE)
+  tmpfile = Tempfile.new(['link-edit-', '.yml'])
+  tmpfile.write(link.to_yaml)
+  tmpfile.close
+
+  system(ENV['EDITOR'] || 'vim', tmpfile.path)
+
+  updated = YAML.load_file(tmpfile.path)
+  tmpfile.unlink
+
+  updated
 end
 
 def save_links(links)
@@ -38,16 +60,20 @@ def find_link_by_ref(ref, links)
   [nil, nil]
 end
 
-o.add_subcmd(:save) do |*args|
+o.add_subcmd(:add) do |*args|
+  links = load_links
+
   if args.empty?
-    puts "Usage: h link save <url> [description...]"
-    exit 1
+    updated = edit_link
+
+    links << updated
+    save_links(links)
+    exit 0
   end
 
   url = args.shift
   description = args.join(' ')
 
-  links = load_links
   links << {
     'url' => url,
     'description' => description,
@@ -145,15 +171,7 @@ o.add_subcmd(:edit) do |*args|
     exit 1
   end
 
-  require 'tempfile'
-  tmpfile = Tempfile.new(['link-edit-', '.yml'])
-  tmpfile.write(link.to_yaml)
-  tmpfile.close
-
-  system(ENV['EDITOR'] || 'vim', tmpfile.path)
-
-  updated = YAML.load_file(tmpfile.path)
-  tmpfile.unlink
+  updated = edit_link(link)
 
   links[idx] = updated
   save_links(links)
