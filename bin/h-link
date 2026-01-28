@@ -126,7 +126,7 @@ o.add_subcmd(:select) do |*args|
 
   if status.success? && !selected.strip.empty?
     if selected =~ /^\s*(\d+)\.\s+(\S+)/
-      print $2
+      puts $2
     end
   end
 end
