@@ -25,6 +25,32 @@ def ensure_links_file
   File.write(LINKS_FILE, [].to_yaml) unless File.exist?(LINKS_FILE)
 end
 
+def hash_matches?(links, *args)
+  terms = args.map(&:downcase)
+
+  links.select do |line, link|
+    searchable = [
+      link['url'],
+      link['description'],
+      link['shorthand']
+    ].compact.join(' ').downcase
+
+    terms.all? { |term| searchable.include?(term) }
+  end
+end
+
+def link_matches?(link, *args)
+  terms = args.map(&:downcase)
+
+  searchable = [
+    link['url'],
+    link['description'],
+    link['shorthand']
+  ].compact.join(' ').downcase
+
+  terms.all? { |term| searchable.include?(term) }
+end
+
 def load_links
   ensure_links_file
   YAML.load_file(LINKS_FILE) || []
@@ -141,19 +167,35 @@ o.add_subcmd(:select) do |*args|
     exit 1
   end
 
-  lines = links.each_with_index.map do |link, idx|
+  lines = links.each_with_index.each_with_object({}) do |(link, idx), h|
     num = (idx + 1).to_s.rjust(3)
     desc = link['description'].to_s.empty? ? "" : " - #{link['description']}"
-    "#{num}. #{link['url']}#{desc}"
+    h["#{num}. #{link['url']}#{desc}"] = link
+  end
+
+  if args.any?
+    lines = hash_matches?(lines, *args)
   end
 
   require 'open3'
-  selected, status = Open3.capture2('sk', stdin_data: lines.join("\n"))
+  selected, status = Open3.capture2('sk', stdin_data: lines.keys.join("\n"))
 
   if status.success? && !selected.strip.empty?
     if selected =~ /^\s*(\d+)\.\s+(\S+)/
       puts $2
     end
+  end
+end
+
+o.add_subcmd(:editall) do |*args|
+  links_before = load_links
+  system(ENV['EDITOR'] || 'vim', LINKS_FILE)
+
+  begin
+    links_after = load_links
+  rescue => e
+    puts "ERROR: Unable to read updated file...reverting."
+    save_links(links_before)
   end
 end
 
