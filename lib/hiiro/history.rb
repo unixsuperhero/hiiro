@@ -98,10 +98,11 @@ class Hiiro
         end
       end
 
-      def log(description: nil, cmd: nil, source: nil, task: nil, subtask: nil)
+      def log(description: nil, pwd: Dir.pwd, cmd: nil, source: nil, task: nil, subtask: nil)
         new.add(
           description: description,
           cmd: cmd,
+          pwd: pwd,
           source: source,
           task: task,
           subtask: subtask
@@ -170,12 +171,14 @@ class Hiiro
       true
     end
 
-    def add(description: nil, cmd: nil, source: nil, task: nil, subtask: nil)
+    def add(description: nil, cmd: nil, source: nil, task: nil, subtask: nil, pwd: Dir.pwd)
+      cmd ||= 
       entry_data = {
         'id' => generate_id,
         'timestamp' => Time.now.iso8601,
         'description' => description,
         'cmd' => cmd,
+        'pwd' => pwd,
         'source' => source,
         'tmux_session' => current_tmux_session,
         'tmux_window' => current_tmux_window,
