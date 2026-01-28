@@ -13,6 +13,7 @@ class Hiiro
       attr_reader :task, :subtask
 
       def initialize(data)
+        data ||= {}
         @id = data['id']
         @timestamp = data['timestamp']
         @source = data['source']
