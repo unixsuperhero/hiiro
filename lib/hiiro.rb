@@ -19,6 +19,12 @@ class Hiiro
     end
   end
 
+  def self.run(*args, plugins: [], logging: false, **values, &block)
+    hiiro = init(*args, plugins:,logging:,**values, &block)
+
+    hiiro.run
+  end
+
   def self.load_env
     Config.plugin_files.each do |plugin_file|
       require plugin_file
@@ -81,6 +87,11 @@ class Hiiro
     runners.add_subcommand(name, handler, **global_values, **values)
   end
   alias add_subcmd add_subcommand
+
+  def run_subcommand(name, *)
+    runners.run_subcommand(name, *)
+  end
+  alias run_subcmd run_subcommand
 
   def full_name
     runner&.full_name || [bin_name, subcmd].join(?-)
@@ -224,6 +235,12 @@ class Hiiro
 
     def add_subcommand(name, handler, **values)
       @subcommands[name] = Subcommand.new(bin_name, name, handler, values)
+    end
+
+    def run_subcommand(name, *)
+      cmd = subcommands[name]
+
+      cmd&.run(*)
     end
 
     def exact_runner
