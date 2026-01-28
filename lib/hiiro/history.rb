@@ -46,7 +46,7 @@ class Hiiro
       end
 
       def short_line(index)
-        time_str = Time.parse(timestamp).strftime('%Y-%m-%d %H:%M')
+        time_str = timestamp ? Time.parse(timestamp).strftime('%Y-%m-%d %H:%M') : Time.now.iso8601
         desc = description || cmd || '(no description)'
         desc = desc[0..60] + '...' if desc.length > 63
         [
@@ -181,7 +181,6 @@ class Hiiro
     end
 
     def add(description: nil, cmd: nil, source: nil, task: nil, subtask: nil, pwd: Dir.pwd)
-      cmd ||= 
       entry_data = {
         'id' => generate_id,
         'timestamp' => Time.now.iso8601,
