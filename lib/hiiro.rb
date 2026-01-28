@@ -88,8 +88,8 @@ class Hiiro
   end
   alias add_subcmd add_subcommand
 
-  def run_subcommand(name, *)
-    runners.run_subcommand(name, *)
+  def run_subcommand(name, *args)
+    runners.run_subcommand(name, *args)
   end
   alias run_subcmd run_subcommand
 
@@ -237,10 +237,10 @@ class Hiiro
       @subcommands[name] = Subcommand.new(bin_name, name, handler, values)
     end
 
-    def run_subcommand(name, *)
+    def run_subcommand(name, *args)
       cmd = subcommands[name]
 
-      cmd&.run(*)
+      cmd&.run(*args)
     end
 
     def exact_runner
