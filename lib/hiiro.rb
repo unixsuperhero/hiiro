@@ -1,5 +1,6 @@
 require "fileutils"
 require "yaml"
+require "shellwords"
 
 require_relative "hiiro/version"
 require_relative "hiiro/history"
@@ -10,6 +11,7 @@ class Hiiro
     args = ARGV if args.empty?
 
     new($0, *args, logging: logging, **values).tap do |hiiro|
+      History.load(hiiro)
       hiiro.load_plugins(*plugins)
 
       hiiro.add_subcmd(:edit, **values) { |*args|
@@ -34,23 +36,32 @@ class Hiiro
     self
   end
 
-  attr_reader :bin, :bin_name, :all_args
+  attr_reader :bin, :bin_name, :all_args, :full_command
   attr_reader :subcmd, :args
   attr_reader :loaded_plugins
   attr_reader :logging
   attr_reader :global_values
 
-  def initialize(bin, *args, logging: false, **values)
+  def initialize(bin, *all_args, logging: false, **values)
     @bin = bin
     @bin_name = File.basename(bin)
-    @all_args = args
-    @subcmd, *@args = args # normally i would never do this
+    @all_args = all_args
+    @subcmd, *@args = all_args # normally i would never do this
     @loaded_plugins = []
     @logging = logging
     @global_values = values
+    @full_command = [
+      bin,
+      all_args,
+    ].map(&:shellescape).join(' ')
+  end
+
+  def history
+    @history ||= History.new
   end
 
   def run
+    log(description: 'hiiro: ran command')
     result = runner.run(*args)
 
     handle_result(result)
@@ -60,6 +71,15 @@ class Hiiro
     puts "ERROR: #{e.message}"
     puts e.backtrace
     exit 1
+  end
+
+  def log(**opts)
+    history.add(
+      description: 'command ran',
+      cmd: full_command,
+      source: 'hiiro',
+      **opts,
+    )
   end
 
   def handle_result(result)
