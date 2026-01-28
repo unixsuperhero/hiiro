@@ -2,8 +2,6 @@
 
 module Pins
   def self.load(hiiro)
-    hiiro.log "Plugin loaded: #{name}"
-
     attach_methods(hiiro)
     add_subcommands(hiiro)
   end

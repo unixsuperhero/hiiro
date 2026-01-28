@@ -61,7 +61,7 @@ class Hiiro
   end
 
   def run
-    log(description: 'hiiro: ran command')
+    log_event('hiiro: ran command')
     result = runner.run(*args)
 
     handle_result(result)
@@ -73,13 +73,8 @@ class Hiiro
     exit 1
   end
 
-  def log(**opts)
-    history.add(
-      description: 'command ran',
-      cmd: full_command,
-      source: 'hiiro',
-      **opts,
-    )
+  def log_event(message)
+    history.add_manual(message || 'command ran', hiiro: self)
   end
 
   def handle_result(result)
