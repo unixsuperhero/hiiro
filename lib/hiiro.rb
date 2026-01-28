@@ -2,6 +2,7 @@ require "fileutils"
 require "yaml"
 
 require_relative "hiiro/version"
+require_relative "hiiro/history"
 
 class Hiiro
   def self.init(*args, plugins: [], logging: false, **values, &block)
