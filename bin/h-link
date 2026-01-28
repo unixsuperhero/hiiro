@@ -1,0 +1,190 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'fileutils'
+require 'time'
+
+require "hiiro"
+
+LINKS_FILE = File.join(Dir.home, '.config/hiiro/links.yml')
+
+o = Hiiro.init(*ARGV, plugins: [Tmux, Pins], links_file: LINKS_FILE)
+
+def ensure_links_file
+  dir = File.dirname(LINKS_FILE)
+  FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
+  File.write(LINKS_FILE, [].to_yaml) unless File.exist?(LINKS_FILE)
+end
+
+def load_links
+  ensure_links_file
+  YAML.load_file(LINKS_FILE) || []
+end
+
+def save_links(links)
+  ensure_links_file
+  File.write(LINKS_FILE, links.to_yaml)
+end
+
+def find_link_by_ref(ref, links)
+  if ref =~ /^\d+$/
+    idx = ref.to_i - 1
+    return [idx, links[idx]] if idx >= 0 && idx < links.length
+  else
+    links.each_with_index do |link, idx|
+      return [idx, link] if link['shorthand'] == ref
+    end
+  end
+  [nil, nil]
+end
+
+o.add_subcmd(:save) do |*args|
+  if args.empty?
+    puts "Usage: h link save <url> [description...]"
+    exit 1
+  end
+
+  url = args.shift
+  description = args.join(' ')
+
+  links = load_links
+  links << {
+    'url' => url,
+    'description' => description,
+    'shorthand' => nil,
+    'created_at' => Time.now.iso8601
+  }
+  save_links(links)
+
+  puts "Saved link ##{links.length}: #{url}"
+end
+
+o.add_subcmd(:ls) do |*args|
+  links = load_links
+  if links.empty?
+    puts "No links saved."
+  else
+    links.each_with_index do |link, idx|
+      num = (idx + 1).to_s.rjust(3)
+      shorthand = link['shorthand'] ? " [#{link['shorthand']}]" : ""
+      desc = link['description'].to_s.empty? ? "" : " - #{link['description']}"
+      puts "#{num}.#{shorthand} #{link['url']}#{desc}"
+    end
+  end
+end
+
+o.add_subcmd(:list) do |*args|
+  o.run_subcmd(:ls, *args)
+end
+
+o.add_subcmd(:search) do |*args|
+  if args.empty?
+    puts "Usage: h link search <term> [term...]"
+    exit 1
+  end
+
+  links = load_links
+  terms = args.map(&:downcase)
+
+  matches = links.each_with_index.select do |link, idx|
+    searchable = [
+      link['url'],
+      link['description'],
+      link['shorthand']
+    ].compact.join(' ').downcase
+
+    terms.any? { |term| searchable.include?(term) }
+  end
+
+  if matches.empty?
+    puts "No links found matching: #{args.join(' ')}"
+  else
+    matches.each do |link, idx|
+      num = (idx + 1).to_s.rjust(3)
+      shorthand = link['shorthand'] ? " [#{link['shorthand']}]" : ""
+      desc = link['description'].to_s.empty? ? "" : " - #{link['description']}"
+      puts "#{num}.#{shorthand} #{link['url']}#{desc}"
+    end
+  end
+end
+
+o.add_subcmd(:select) do |*args|
+  links = load_links
+  if links.empty?
+    STDERR.puts "No links saved."
+    exit 1
+  end
+
+  lines = links.each_with_index.map do |link, idx|
+    num = (idx + 1).to_s.rjust(3)
+    desc = link['description'].to_s.empty? ? "" : " - #{link['description']}"
+    "#{num}. #{link['url']}#{desc}"
+  end
+
+  require 'open3'
+  selected, status = Open3.capture2('sk', stdin_data: lines.join("\n"))
+
+  if status.success? && !selected.strip.empty?
+    if selected =~ /^\s*(\d+)\.\s+(\S+)/
+      print $2
+    end
+  end
+end
+
+o.add_subcmd(:edit) do |*args|
+  if args.empty?
+    puts "Usage: h link edit <number|shorthand>"
+    exit 1
+  end
+
+  links = load_links
+  idx, link = find_link_by_ref(args.first, links)
+
+  if link.nil?
+    puts "Link not found: #{args.first}"
+    exit 1
+  end
+
+  require 'tempfile'
+  tmpfile = Tempfile.new(['link-edit-', '.yml'])
+  tmpfile.write(link.to_yaml)
+  tmpfile.close
+
+  system(ENV['EDITOR'] || 'vim', tmpfile.path)
+
+  updated = YAML.load_file(tmpfile.path)
+  tmpfile.unlink
+
+  links[idx] = updated
+  save_links(links)
+
+  puts "Updated link ##{idx + 1}"
+end
+
+o.add_subcmd(:open) do |*args|
+  if args.empty?
+    puts "Usage: h link open <number|shorthand>"
+    exit 1
+  end
+
+  links = load_links
+  idx, link = find_link_by_ref(args.first, links)
+
+  if link.nil?
+    puts "Link not found: #{args.first}"
+    exit 1
+  end
+
+  system('open', link['url'])
+end
+
+o.add_subcmd(:path) do |*args|
+  print LINKS_FILE
+end
+
+begin
+  o.run
+rescue => e
+  require 'pry'
+  binding.pry
+end
