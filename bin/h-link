@@ -51,6 +51,16 @@ def link_matches?(link, *args)
   terms.all? { |term| searchable.include?(term) }
 end
 
+def load_link_hash(links=nil)
+  links ||= load_links
+
+  links.each_with_index.each_with_object({}) do |(link, idx), h|
+    num = (idx + 1).to_s.rjust(3)
+    desc = link['description'].to_s.empty? ? "" : " - #{link['description']}"
+    h["#{num}. #{link['url']}#{desc}"] = link
+  end
+end
+
 def load_links
   ensure_links_file
   YAML.load_file(LINKS_FILE) || []
@@ -162,16 +172,13 @@ end
 
 o.add_subcmd(:select) do |*args|
   links = load_links
+
   if links.empty?
     STDERR.puts "No links saved."
     exit 1
   end
 
-  lines = links.each_with_index.each_with_object({}) do |(link, idx), h|
-    num = (idx + 1).to_s.rjust(3)
-    desc = link['description'].to_s.empty? ? "" : " - #{link['description']}"
-    h["#{num}. #{link['url']}#{desc}"] = link
-  end
+  lines = load_link_hash(links)
 
   if args.any?
     lines = hash_matches?(lines, *args)
@@ -222,12 +229,25 @@ o.add_subcmd(:edit) do |*args|
 end
 
 o.add_subcmd(:open) do |*args|
+  links = load_links
+
   if args.empty?
-    puts "Usage: h link open <number|shorthand>"
-    exit 1
+    lines = load_link_hash(links)
+
+    if args.any?
+      lines = hash_matches?(lines, *args)
+    end
+
+    require 'open3'
+    selected, status = Open3.capture2('sk', stdin_data: lines.keys.join("\n"))
+
+    if status.success? && !selected.strip.empty?
+      if selected =~ /^\s*(\d+)\.\s+(\S+)/
+        system('open', $2)
+      end
+    end
   end
 
-  links = load_links
   idx, link = find_link_by_ref(args.first, links)
 
   if link.nil?
