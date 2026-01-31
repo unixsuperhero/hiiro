@@ -8,7 +8,7 @@ set -e
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
 
-OTHER_DIR="$REPO_DIR/../home/"
+OTHER_DIR="$HOME"
 
 echo "Comparing directories with $OTHER_DIR"
 echo "Repository: $REPO_DIR ($0)"
