@@ -1,12 +1,13 @@
 #!/usr/bin/env ruby
 
 require "hiiro"
+require "time"
 require "fileutils"
 require "yaml"
 require "json"
 
 Hiiro.load_env
-hiiro = Hiiro.init(*ARGV, plugins: [Task])
+hiiro = Hiiro.init(*ARGV, plugins: [Task, Tmux, Pins])
 
 class PRManager
   attr_reader :hiiro
@@ -243,7 +244,76 @@ class PRManager
   end
 end
 
+WATCH_BLOCK = lambda { |original_pr_number=nil, *args|
+  watch = hiiro.get_value(:watch)
+  fail_fast = hiiro.get_value(:fail_fast)
+
+  pr_valid = false
+  pr_number = nil
+  if !original_pr_number.nil? && pin_value = hiiro.pins.get(original_pr_number)
+    pr_valid = true
+    pr_number = pin_value
+  end
+
+  pr_args = [pr_valid ? pr_number : original_pr_number].compact
+  args = [*pr_args, *args]
+
+  base_cmd = %w[gh pr checks]
+  base_cmd << '--watch' if watch
+  base_cmd << '--fail-fast' if fail_fast
+
+  command = [
+    *base_cmd,
+    *args,
+  ]
+
+  puts command: command, base_cmd: base_cmd, args: args;
+
+  result = system(*command)
+
+  pr_info = JSON.parse(`gh pr view #{pr_args.first} --json url,number,title`)
+  pr_url = pr_info['url']
+  pr_number = pr_info['number']
+  pr_title = pr_info['title']
+
+  if result
+    system('say', 'pr good')
+    system('terminal-notifier', '-title', 'PR Good', '-message', "##{pr_number}: #{pr_title}", '-open', pr_url)
+  else
+    system('say', 'pr bad')
+    system('terminal-notifier', '-title', 'PR Bad', '-message', "##{pr_number}: #{pr_title}", '-open', pr_url)
+  end
+}
+
 manager = PRManager.new(hiiro)
+
+hiiro.add_subcmd(:check, &WATCH_BLOCK)
+hiiro.add_subcmd(:watch, watch: true, &WATCH_BLOCK)
+hiiro.add_subcmd(:fwatch, watch: true, fail_fast: true, &WATCH_BLOCK)
+
+hiiro.add_subcmd(:number) { |*args|
+  stdout = `gh pr view`
+
+  number = stdout[/number:\s*(\d+)/, 1]
+
+  if number
+    print number
+  else
+    puts stdout
+  end
+}
+
+hiiro.add_subcmd(:link) { |*args|
+  stdout = `gh pr view`
+
+  number = stdout[/number:\s*(\d+)/, 1]
+
+  if number
+    print ['https://github.com/instacart/carrot/pull/', number].join
+  else
+    puts stdout
+  end
+}
 
 hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
 hiiro.add_subcmd(:save) { |pr_number=nil| manager.save(pr_number) }
@@ -252,6 +322,6 @@ hiiro.add_subcmd(:current) { manager.current }
 hiiro.add_subcmd(:open) { |pr_number=nil| manager.open(pr_number) }
 hiiro.add_subcmd(:view) { |pr_number=nil| manager.view(pr_number) }
 
-hiiro.add_default { manager.help }
+# hiiro.add_default { manager.help }
 
 hiiro.run
