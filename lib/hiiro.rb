@@ -51,7 +51,7 @@ class Hiiro
     @logging = logging
     @global_values = values
     @full_command = [
-      bin,
+      bin_name,
       *all_args,
     ].map(&:shellescape).join(' ')
   end

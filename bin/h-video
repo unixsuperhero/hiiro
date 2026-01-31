@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
-load '/Users/unixsuperhero/bin/h'
+
+require 'hiiro'
 
 o = Hiiro.init(*ARGV)
 

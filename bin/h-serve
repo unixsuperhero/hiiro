@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+system('miniserve', '-p', '1111')
+
