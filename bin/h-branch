@@ -207,6 +207,24 @@ hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
 hiiro.add_subcmd(:save) { manager.save }
 hiiro.add_subcmd(:history) { |*args| manager.history(args) }
 hiiro.add_subcmd(:current) { manager.current }
+hiiro.add_subcmd(:select) do |*args|
+  branches = `git branch -i --sort=authordate`.lines(chomp: true)
+
+  lines = branches.each_with_object({}) do |ln,h|
+    h[ln] = ln.sub(/../, '')
+  end
+
+  if args.any?
+    lines = hash_matches?(lines, *args)
+  end
+
+  require 'open3'
+  selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: lines.keys.join("\n"))
+
+  if status.success? && !selected.strip.empty?
+    puts lines[selected.chomp]
+  end
+end
 
 hiiro.add_default { manager.help }
 

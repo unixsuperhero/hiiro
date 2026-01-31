@@ -3,6 +3,7 @@
 require "hiiro"
 require "fileutils"
 require "yaml"
+require "pathname"
 
 Hiiro.load_env
 hiiro = Hiiro.init(*ARGV, plugins: [Tmux])
@@ -20,7 +21,7 @@ class TaskManager
     puts "Subcommands:"
     puts "  list, ls              List all worktrees and their active tasks"
     puts "  start TASK [APP]      Start a task (reuses available worktree or creates new)"
-    puts "  switch TASK           Switch to an existing task"
+    puts "  switch [TASK]         Switch to an existing task (interactive if no task given)"
     puts "  app APP_NAME          Open a tmux window for an app in current worktree"
     puts "  apps                  List configured apps from apps.yml"
     puts "  save                  Save current tmux session info for this task"
@@ -42,17 +43,37 @@ class TaskManager
 
     current = current_task
     active, available = trees.partition { |tree_name| task_for_tree(tree_name) }
+    sessions = tmux_sessions
 
     active.each do |tree_name|
       task = task_for_tree(tree_name)
       marker = (current && current[:tree] == tree_name) ? "*" : " "
-      puts format("%s %-20s => %s", marker, tree_name, task)
+
+      # Check if there's a tmux session for this task
+      session_name = session_name_for(task)
+      has_session = sessions.include?(session_name)
+      session_marker = has_session ? "+" : " "
+      session_info = has_session ? " (#{session_name})" : ""
+
+      puts format("%s%s %-20s => %s%s", marker, session_marker, tree_name, task, session_info)
     end
 
     puts if active.any? && available.any?
 
     available.each do |tree_name|
-      puts format("  %-20s    (available)", tree_name)
+      puts format("   %-20s    (available)", tree_name)
+    end
+
+    # List tmux sessions without associated tasks
+    associated_sessions = active.map { |tree_name| session_name_for(task_for_tree(tree_name)) }
+    unassociated_sessions = sessions - associated_sessions
+
+    if unassociated_sessions.any?
+      puts
+      puts "Tmux sessions without tasks:"
+      unassociated_sessions.each do |session|
+        puts format("  %s", session)
+      end
     end
   end
 
@@ -136,7 +157,13 @@ class TaskManager
   end
 
   # Start working on a task
-  def switch_task(task_name)
+  def switch_task(task_name = nil)
+    # If no task name provided, use interactive selection
+    if task_name.nil? || task_name.empty?
+      task_name = select_task_interactive
+      return false unless task_name
+    end
+
     tree, task = assignments.find { |tree, task| task.start_with?(task_name) } || []
 
     unless task
@@ -148,6 +175,34 @@ class TaskManager
 
     puts "Started task '#{task}' in tree '#{tree}'"
     true
+  end
+
+  # Interactive task selection using sk
+  def select_task_interactive
+    active_tasks = trees.select { |tree_name| task_for_tree(tree_name) }
+
+    if active_tasks.empty?
+      puts "No active tasks found."
+      return nil
+    end
+
+    # Build selection lines
+    lines = active_tasks.map do |tree_name|
+      task = task_for_tree(tree_name)
+      "#{tree_name.ljust(20)} => #{task}"
+    end
+
+    require 'open3'
+    selected, status = Open3.capture2('sk', stdin_data: lines.join("\n"))
+
+    if status.success? && !selected.strip.empty?
+      # Parse the selected line to extract the task name
+      if selected =~ /=>\s*(\S+)/
+        return $1
+      end
+    end
+
+    nil
   end
 
   # Open an app window within the current tree
@@ -337,7 +392,8 @@ class TaskManager
       puts printable_apps.keys.sort.map{|k| format("%#{longest_app_name}s => %s", k, printable_apps[k]) }
       exit 1
     when 1
-      print File.join(tree_root, apps_config[matching_apps.first])
+      pwd_to_root = Pathname.new(tree_root).relative_path_from(Pathname.pwd)
+      print File.join(pwd_to_root, apps_config[matching_apps.first])
       exit 0
     else
       puts "Multiple matches found:"
@@ -623,6 +679,13 @@ class TaskManager
       { 'index' => idx, 'name' => name, 'path' => path }
     }
   end
+
+  # Get all tmux sessions
+  def tmux_sessions
+    output = `tmux list-sessions -F '\#{session_name}' 2>/dev/null`
+    return [] unless $?.success?
+    output.lines.map(&:strip)
+  end
 end
 
 # Create task manager instance
@@ -633,7 +696,7 @@ hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
 hiiro.add_subcmd(:list) { tasks.list_trees }
 hiiro.add_subcmd(:ls) { tasks.list_trees }
 hiiro.add_subcmd(:start) { |task_name, app=nil| tasks.start_task(task_name, app: app) }
-hiiro.add_subcmd(:switch) { |task_name| tasks.switch_task(task_name) }
+hiiro.add_subcmd(:switch) { |task_name=nil| tasks.switch_task(task_name) }
 hiiro.add_subcmd(:app) { |app_name| tasks.open_app(app_name) }
 hiiro.add_subcmd(:path) { |app_name=nil, task=nil| tasks.app_path(app_name, task: task) }
 hiiro.add_subcmd(:cd) { |*args| tasks.cd_app(*args) }
