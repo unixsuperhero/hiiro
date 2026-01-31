@@ -383,21 +383,49 @@ module Task
       puts "       h subtask <subcommand> [args]"
       puts
       puts "Subcommands:"
-      puts "  ls                    List subtasks for current task"
+      puts "  list, ls              List subtasks for current task"
       puts "  new SUBTASK_NAME      Start a new subtask (creates worktree and session)"
       puts "  switch SUBTASK_NAME   Switch to subtask's tmux session"
+      puts "  app APP_NAME          Open a tmux window for an app in current subtask"
+      puts "  apps                  List configured apps from apps.yml"
+      puts "  cd [APP_NAME]         Change directory to app in current subtask"
+      puts "  path [APP_NAME]       Print app path in current subtask"
+      puts "  status, st            Show current subtask status"
+      puts "  save                  Save current subtask session info"
+      puts "  stop [SUBTASK_NAME]   Stop working on current/named subtask"
+      puts "  current               Print current subtask name"
     end
 
     def handle_subtask(*args)
       case args
       in []
         subtask_help
-      in ['ls']
+      in ['list'] | ['ls']
         list_subtasks
       in ['new', subtask_name]
         new_subtask(subtask_name)
       in ['switch', subtask_name]
         switch_subtask(subtask_name)
+      in ['app', app_name]
+        subtask_open_app(app_name)
+      in ['apps']
+        list_configured_apps
+      in ['cd', *cd_args]
+        subtask_cd_app(*cd_args)
+      in ['path']
+        subtask_app_path
+      in ['path', app_name]
+        subtask_app_path(app_name)
+      in ['status'] | ['st']
+        subtask_status
+      in ['save']
+        save_subtask
+      in ['stop']
+        stop_subtask
+      in ['stop', subtask_name]
+        stop_subtask(subtask_name)
+      in ['current']
+        print current_subtask_name
       else
         puts "Unknown subtask command: #{args.inspect}"
         subtask_help
@@ -539,6 +567,122 @@ module Task
       true
     end
 
+    # Show status for the current subtask
+    def subtask_status
+      current = current_task
+      unless current
+        puts "Not currently in a task session"
+        return
+      end
+
+      parent_task = parent_task_name(current[:task])
+      subtask_name = current_subtask_name_from(current[:task])
+
+      puts "Parent task: #{parent_task}"
+      if subtask_name
+        puts "Subtask: #{subtask_name}"
+      else
+        puts "Subtask: (main)"
+      end
+      puts "Worktree: #{current[:tree]}"
+      puts "Path: #{tree_path(current[:tree])}"
+      puts "Session: #{current[:session]}"
+    end
+
+    # Save current subtask tmux session state
+    def save_subtask
+      current = current_task
+      unless current
+        puts "ERROR: Not currently in a task session"
+        return false
+      end
+
+      parent_task = parent_task_name(current[:task])
+      session = current[:session]
+
+      windows = capture_tmux_windows(session)
+
+      save_task_metadata(parent_task,
+        tree: current[:tree],
+        session: session,
+        windows: windows,
+        saved_at: Time.now.iso8601
+      )
+
+      puts "Saved subtask session state (#{windows.count} windows)"
+      true
+    end
+
+    # Stop a subtask (remove from parent's subtask list, unassign tree)
+    def stop_subtask(subtask_name = nil)
+      current = current_task
+      unless current
+        puts "Not currently in a task session"
+        return false
+      end
+
+      parent_task = parent_task_name(current[:task])
+
+      if subtask_name.nil?
+        # Stop the current subtask
+        subtask_name = current_subtask_name_from(current[:task])
+        unless subtask_name
+          puts "Not currently in a subtask (in main task)"
+          return false
+        end
+      end
+
+      subtask = find_subtask(parent_task, subtask_name)
+      unless subtask
+        puts "Subtask '#{subtask_name}' not found for task '#{parent_task}'"
+        return false
+      end
+
+      tree_name = subtask['worktree']
+      if tree_name
+        unassign_task_from_tree(tree_name)
+      end
+
+      # Mark subtask as inactive in parent metadata
+      meta = task_metadata(parent_task) || {}
+      if meta['subtasks']
+        meta['subtasks'].each do |s|
+          if s['name'].start_with?(subtask_name)
+            s['active'] = false
+          end
+        end
+        FileUtils.mkdir_p(task_dir)
+        File.write(task_metadata_file(parent_task), YAML.dump(meta))
+      end
+
+      puts "Stopped subtask '#{subtask_name}' (worktree available for reuse)"
+      true
+    end
+
+    # Print the current subtask name
+    def current_subtask_name
+      current = current_task
+      return nil unless current
+
+      subtask_name = current_subtask_name_from(current[:task])
+      subtask_name || current[:task]
+    end
+
+    # Open an app window scoped to the current subtask's tree
+    def subtask_open_app(app_name)
+      open_app(app_name)
+    end
+
+    # cd to app in current subtask's tree
+    def subtask_cd_app(*args)
+      cd_app(*args)
+    end
+
+    # Print app path in current subtask's tree
+    def subtask_app_path(app_name = nil, task: nil)
+      app_path(app_name, task: task || current_task&.dig(:task))
+    end
+
     private
 
     def subtasks_for_task(task_name)
@@ -558,6 +702,18 @@ module Task
       meta['subtasks'] << subtask_data
       FileUtils.mkdir_p(task_dir)
       File.write(task_metadata_file(parent_task), YAML.dump(meta))
+    end
+
+    # Extract parent task name from a potentially nested task/subtask name
+    def parent_task_name(task_name)
+      task_name.include?('/') ? task_name.split('/').first : task_name
+    end
+
+    # Extract subtask name from a nested task name (returns nil if main)
+    def current_subtask_name_from(task_name)
+      return nil unless task_name.include?('/')
+      parts = task_name.split('/', 2)
+      parts.last == 'main' ? nil : parts.last
     end
 
     public
