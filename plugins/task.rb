@@ -143,14 +143,10 @@ module Task
         return true
       end
 
-      # If a specific tree was requested, verify it exists and isn't reserved
+      # If a specific tree was requested, verify it exists
       if tree
         if !trees.include?(tree)
           puts "ERROR: Worktree '#{tree}' not found"
-          return false
-        end
-        if RESERVED_WORKTREES.key?(tree)
-          puts "ERROR: Worktree '#{tree}' is reserved and cannot be used for tasks"
           return false
         end
       end
@@ -366,11 +362,6 @@ module Task
     def stop_task(task_name)
       tree = tree_for_task(task_name)
       task_name = task_for_tree(tree)
-
-      if RESERVED_WORKTREES.key?(tree)
-        puts "Cannot stop reserved task '#{task_name}'"
-        return false
-      end
 
       unassign_task_from_tree(tree)
       puts "Stopped task '#{task_name}' (worktree '#{tree}' now available for reuse)"
@@ -833,12 +824,9 @@ module Task
       worktree_info[tree_name] || File.join(Dir.home, 'work', tree_name)
     end
 
-    # Worktrees with permanent task assignments (worktree => task)
-    RESERVED_WORKTREES = { 'carrot' => 'master' }.freeze
-
     # Find an available tree (one without an active task)
     def find_available_tree
-      trees.find { |tree| task_for_tree(tree).nil? && !RESERVED_WORKTREES.key?(tree) }
+      trees.find { |tree| task_for_tree(tree).nil? }
     end
 
     # Get the task currently assigned to a tree
@@ -868,7 +856,6 @@ module Task
 
     # Unassign task from tree
     def unassign_task_from_tree(tree_name)
-      return if RESERVED_WORKTREES.key?(tree_name)
       data = assignments.dup
       data.delete(tree_name)
       save_assignments(data)
@@ -885,8 +872,7 @@ module Task
       else
         {}
       end
-      # Always include reserved worktree assignments
-      RESERVED_WORKTREES.merge(data)
+      data
     end
 
     def save_assignments(data)
