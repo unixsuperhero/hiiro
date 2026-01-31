@@ -69,6 +69,78 @@ h ping
 # => pong
 ```
 
+## Subcommands
+
+### Base Commands
+
+| Command | Description |
+|---------|-------------|
+| `h version` | Display the Hiiro version |
+| `h ping` | Simple test command (returns "pong") |
+| `h setup` | Install plugins and subcommands to system paths |
+| `h edit` | Open the h script in your editor |
+| `h path` | Print the current directory |
+| `h ppath` | Print project path (git root + relative dir) |
+| `h rpath` | Print relative path from git root |
+| `h pin` | Per-command key-value storage (via Pins plugin) |
+| `h project` | Project navigation with tmux integration (via Project plugin) |
+| `h task` | Task management across git worktrees (via Task plugin) |
+| `h notify` | macOS desktop notifications via terminal-notifier (via Notify plugin) |
+
+### External Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `h branch` | Record and manage git branch history for tasks |
+| `h buffer` | Tmux paste buffer management |
+| `h dot` | Compare directories and generate symlink/diff commands |
+| `h dotfiles` | Manage dotfiles in ~/proj/home |
+| `h home` | Manage home directory files with edit and search |
+| `h html` | Generate an HTML index of MP4 videos in current directory |
+| `h link` | Manage saved links with URL, description, and shorthand |
+| `h mic` | Control macOS microphone input volume |
+| `h note` | Create, edit, list, and display notes |
+| `h pane` | Tmux pane management |
+| `h plugin` | Manage hiiro plugins (list, edit, search) |
+| `h pr` | Record PR information linked to tasks |
+| `h pr-monitor` | Monitor pull requests |
+| `h pr-watch` | Watch pull requests for updates |
+| `h project` | Open projects with tmux session management |
+| `h runtask` | Run templated task scripts |
+| `h serve` | Start a miniserve HTTP server on port 1111 |
+| `h session` | Tmux session management |
+| `h sha` | Extract short SHA from git log |
+| `h subtask` | Shorthand for task subtask management |
+| `h task` | Comprehensive task manager for git worktrees |
+| `h video` | Video inspection and operations via ffprobe/ffmpeg |
+| `h vim` | Manage nvim configuration with edit and search |
+| `h window` | Tmux window management |
+| `h wtree` | Git worktree management |
+
+## Abbreviations
+
+Any subcommand can be abbreviated as long as the prefix uniquely matches:
+
+```sh
+h ex hel    # matches h example hello
+h te        # matches h test (if unique)
+h pp        # matches h ppath
+```
+
+If multiple commands match, the first match wins and a warning is logged (when logging is enabled).
+
+## Plugins
+
+Plugins are Ruby modules loaded from `~/.config/hiiro/plugins/`:
+
+| Plugin | Description |
+|--------|-------------|
+| Pins | Per-command YAML key-value storage |
+| Project | Project directory navigation with tmux session management |
+| Task | Task lifecycle management across git worktrees with subtask support |
+| Tmux | Tmux session helpers used by Project and Task |
+| Notify | macOS desktop notifications via terminal-notifier |
+
 ## Adding Subcommands
 
 ### Method 1: External Executables
@@ -125,114 +197,6 @@ Global values (like `cwd`) are passed to all subcommand handlers via keyword arg
 hiiro.add_subcommand(:pwd) do |*args, **values|
   puts values[:cwd]  # Access the cwd passed during init
 end
-```
-
-## Abbreviations
-
-Any subcommand can be abbreviated as long as the prefix uniquely matches:
-
-```sh
-h ex hel    # matches h example hello
-h te        # matches h test (if unique)
-h pp        # matches h ppath
-```
-
-If multiple commands match, the first match wins and a warning is logged (when logging is enabled).
-
-## Built-in Plugins
-
-### Pins
-
-Key-value storage persisted per command:
-
-```sh
-h pin                     # List all pins
-h pin mykey               # Get value
-h pin mykey myvalue       # Set value
-h pin set mykey myvalue   # Set value (explicit)
-h pin rm mykey            # Remove pin
-```
-
-Pins are stored in `~/.config/hiiro/pins/<command>.yml`.
-
-### Tmux Subcommands
-
-Hiiro includes several tmux wrapper commands for managing sessions, windows, panes, and buffers. See [docs/](docs/) for full documentation.
-
-```sh
-h session ls              # List tmux sessions
-h window new              # Create new window
-h pane split              # Split current pane
-h buffer ls               # List paste buffers
-```
-
-### Project
-
-Quick project navigation with tmux integration:
-
-```sh
-h project myproj          # cd to ~/proj/myproj and start tmux session
-```
-
-Projects can be configured in `~/.config/hiiro/projects.yml`:
-
-```yaml
-myproject: /path/to/project
-work: ~/work/main
-```
-
-### Task
-
-Manage development tasks across git worktrees in `~/work/`:
-
-```sh
-h task list               # Show trees and their active tasks
-h task start TICKET-123   # Start working on a task
-h task status             # Show current task info
-h task app frontend       # Open app directory in new tmux window
-h task save               # Save current tmux window state
-h task stop               # Release tree for other tasks
-```
-
-Configure apps in `~/.config/hiiro/apps.yml`:
-
-```yaml
-frontend: apps/frontend
-api: services/api
-admin: admin_portal/admin
-```
-
-### Notify (macOS)
-
-Desktop notifications via `terminal-notifier`:
-
-```sh
-h notify "Build complete"
-h notify "Click me" "https://example.com"
-```
-
-### Video
-
-FFmpeg wrapper for common video operations:
-
-```sh
-h video info movie.mp4        # Human-readable video summary
-h video resize720 movie.mp4   # Resize to 720p
-h video clip movie.mp4 00:01:30 60  # Extract 60s clip starting at 1:30
-h video gif movie.mp4         # Create animated GIF
-h video help                  # Full command list
-```
-
-See [docs/h-video.md](docs/h-video.md) for complete documentation.
-
-### Plugin
-
-Manage hiiro plugins:
-
-```sh
-h plugin ls                   # List installed plugins
-h plugin edit pins            # Edit a plugin file
-h plugin rg "some_method"     # Search plugin code
 ```
 
 ## Writing Plugins
