@@ -708,6 +708,103 @@ class TaskManager
     return [] unless $?.success?
     output.lines.map(&:strip)
   end
+
+  # Migrate flat worktrees (~/work/task) to nested (~/work/task/main)
+  def migrate_worktrees
+    # Find flat worktrees that need migration (not already nested, not reserved)
+    flat_trees = trees.reject { |name| name.include?('/') || RESERVED_WORKTREES.key?(name) }
+
+    if flat_trees.empty?
+      puts "No flat worktrees to migrate."
+      return
+    end
+
+    sessions = tmux_sessions
+
+    puts "Worktrees to migrate:"
+    puts
+    flat_trees.each do |name|
+      task = task_for_tree(name)
+      session_marker = sessions.include?(session_name_for(task || name)) ? " (tmux session running)" : ""
+      puts format("  %-20s => %s/main%s", name, name, session_marker)
+    end
+    puts
+
+    flat_trees.each do |name|
+      task = task_for_tree(name)
+      old_path = tree_path(name)
+      temp_name = "__migrating_#{name}"
+      temp_path = File.join(Dir.home, 'work', temp_name)
+      new_tree_name = "#{name}/main"
+      new_path = File.join(Dir.home, 'work', new_tree_name)
+
+      puts "Migrating '#{name}' -> '#{new_tree_name}'..."
+
+      # Step 1: Move worktree to temp location (frees up the directory name)
+      result = system('git', '-C', main_repo_path, 'worktree', 'move', old_path, temp_path)
+      unless result
+        puts "  ERROR: Failed to move to temp location, skipping"
+        next
+      end
+
+      # Step 2: Create parent directory and move to final nested location
+      FileUtils.mkdir_p(File.join(Dir.home, 'work', name))
+      result = system('git', '-C', main_repo_path, 'worktree', 'move', temp_path, new_path)
+      unless result
+        puts "  ERROR: Failed to move to final location, rolling back..."
+        system('git', '-C', main_repo_path, 'worktree', 'move', temp_path, old_path)
+        next
+      end
+
+      # Step 3: Update assignments (tree name changes, task name stays)
+      if task
+        data = load_assignments
+        data.delete(name)
+        data[new_tree_name] = task
+        save_assignments(RESERVED_WORKTREES.merge(data))
+      end
+
+      # Step 4: Update task metadata
+      if task
+        meta = task_metadata(task)
+        if meta
+          meta['tree'] = new_tree_name
+          FileUtils.mkdir_p(task_dir)
+          File.write(task_metadata_file(task), YAML.dump(meta))
+        end
+      end
+
+      # Step 5: Update tmux panes if a session is running
+      session_name = session_name_for(task || name)
+      if sessions.include?(session_name)
+        update_tmux_panes(session_name, old_path, new_path)
+      end
+
+      clear_worktree_cache
+      @assignments = nil
+      puts "  Done."
+    end
+
+    puts
+    puts "Migration complete."
+  end
+
+  # Send `cd` to tmux panes whose cwd is under the old path
+  def update_tmux_panes(session_name, old_path, new_path)
+    output = `tmux list-panes -s -t '#{session_name}' -F '\#{pane_id}:\#{pane_current_path}' 2>/dev/null`
+    return unless $?.success?
+
+    output.lines.each do |line|
+      pane_id, pane_path = line.strip.split(':', 2)
+      next unless pane_path
+
+      if pane_path == old_path || pane_path.start_with?(old_path + '/')
+        updated_path = pane_path.sub(old_path, new_path)
+        system('tmux', 'send-keys', '-t', pane_id, "cd #{updated_path}", 'Enter')
+        puts "  Updated pane #{pane_id}: cd #{updated_path}"
+      end
+    end
+  end
 end
 
 # Create task manager instance
@@ -728,5 +825,6 @@ hiiro.add_subcmd(:st) { tasks.status }
 hiiro.add_subcmd(:save) { tasks.save_current }
 hiiro.add_subcmd(:stop) { |task_name=nil| task_name ? tasks.stop_task(task_name) : tasks.stop_current }
 hiiro.add_subcmd(:current) { print tasks.task_name }
+hiiro.add_subcmd(:migrate) { tasks.migrate_worktrees }
 
 hiiro.run
