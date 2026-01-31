@@ -90,13 +90,18 @@ class TaskManager
     # Find an available worktree to reuse, or create a new one
     available_tree = find_available_tree
 
-    if available_tree
-      # Rename the available worktree to the task name
-      old_path = tree_path(available_tree)
-      new_path = File.join(File.dirname(old_path), task_name)
+    # New tasks get a nested structure: task_name/main
+    # so subtasks can live alongside as task_name/subtask_name
+    subtree_name = "#{task_name}/main"
 
-      if available_tree != task_name
-        puts "Renaming worktree '#{available_tree}' to '#{task_name}'..."
+    if available_tree
+      # Rename the available worktree to the task's main subtree
+      old_path = tree_path(available_tree)
+      new_path = File.join(Dir.home, 'work', subtree_name)
+
+      if available_tree != subtree_name
+        puts "Renaming worktree '#{available_tree}' to '#{subtree_name}'..."
+        FileUtils.mkdir_p(File.dirname(new_path))
         result = system('git', '-C', main_repo_path, 'worktree', 'move', old_path, new_path)
         unless result
           puts "ERROR: Failed to rename worktree"
@@ -105,14 +110,15 @@ class TaskManager
         clear_worktree_cache
       end
 
-      final_tree_name = task_name
+      final_tree_name = subtree_name
       final_tree_path = new_path
     else
       # No available worktree, create a new one
       puts "Creating new worktree for '#{task_name}'..."
-      new_path = File.join(Dir.home, 'work', task_name)
+      new_path = File.join(Dir.home, 'work', subtree_name)
 
       # Create worktree from main branch (detached to avoid branch conflicts)
+      FileUtils.mkdir_p(File.dirname(new_path))
       result = system('git', '-C', main_repo_path, 'worktree', 'add', '--detach', new_path)
       unless result
         puts "ERROR: Failed to create worktree"
@@ -120,7 +126,7 @@ class TaskManager
       end
       clear_worktree_cache
 
-      final_tree_name = task_name
+      final_tree_name = subtree_name
       final_tree_path = new_path
     end
 
@@ -421,6 +427,9 @@ class TaskManager
       info = {}
       current_path = nil
 
+      work_dir = File.join(Dir.home, 'work')
+      work_prefix = work_dir + '/'
+
       output.lines.each do |line|
         line = line.strip
         if line.start_with?('worktree ')
@@ -431,7 +440,13 @@ class TaskManager
         elsif line.start_with?('branch ') || line == 'detached'
           # Capture worktree (both named branches and detached HEAD)
           if current_path && current_path != main_repo_path
-            name = File.basename(current_path)
+            # Use relative path from ~/work/ to support nested worktrees
+            # e.g. ~/work/my-task/main -> "my-task/main"
+            name = if current_path.start_with?(work_prefix)
+              current_path.sub(work_prefix, '')
+            else
+              File.basename(current_path)
+            end
             info[name] = current_path
           end
           current_path = nil
