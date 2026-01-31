@@ -176,7 +176,6 @@ class Hiiro
         source: 'manual',
         cmd: hiiro.full_command,
       )
-      puts "Added history entry: #{description}"
       true
     end
 
