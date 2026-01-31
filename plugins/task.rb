@@ -58,6 +58,8 @@ module Task
         tasks.new_subtask(subtask_name)
       in ['subtask', 'switch', subtask_name]
         tasks.switch_subtask(subtask_name)
+      in ['subtask', 'switch']
+        tasks.switch_subtask
       in [subcmd, *sargs]
         match = runner_map.keys.find { |full_subcmd| full_subcmd.to_s.start_with?(subcmd) }
 
@@ -119,16 +121,50 @@ module Task
       current = current_task
       active, available = trees.partition { |tree_name| task_for_tree(tree_name) }
 
+      # Group active trees by parent task
+      groups = {}
       active.each do |tree_name|
         task = task_for_tree(tree_name)
-        marker = (current && current[:tree] == tree_name) ? "*" : " "
-        puts format("%s %-20s => %s", marker, tree_name, task)
+        parent = task.include?('/') ? task.split('/').first : task
+        groups[parent] ||= []
+        groups[parent] << { tree: tree_name, task: task }
       end
 
-      puts if active.any? && available.any?
+      first_group = true
+      groups.each do |parent, entries|
+        puts unless first_group
+        first_group = false
 
-      available.each do |tree_name|
-        puts format("  %-20s    (available)", tree_name)
+        # Sort so the main entry (parent itself or parent/main) comes first
+        entries.sort_by! { |e| e[:task] == parent || e[:task].end_with?('/main') ? 0 : 1 }
+
+        entries.each_with_index do |entry, i|
+          tree_name = entry[:tree]
+          task = entry[:task]
+          marker = (current && current[:tree] == tree_name) ? "*" : " "
+          branch = worktree_branch(tree_name)
+          branch_str = branch ? "  [#{branch}]" : ""
+
+          if i == 0
+            # Parent task line
+            display_name = parent
+            puts format("%s %s%s", marker, display_name, branch_str)
+          else
+            # Subtask line: align /child_name under the parent name
+            child_name = task.include?('/') ? task.split('/', 2).last : task
+            padding = " " * parent.length
+            puts format("%s %s/%s%s", marker, padding, child_name, branch_str)
+          end
+        end
+      end
+
+      if available.any?
+        puts
+        available.each do |tree_name|
+          branch = worktree_branch(tree_name)
+          branch_str = branch ? "  [#{branch}]" : ""
+          puts format("  %-20s  (available)%s", tree_name, branch_str)
+        end
       end
     end
 
@@ -395,6 +431,8 @@ module Task
         list_subtasks
       in ['new', subtask_name]
         new_subtask(subtask_name)
+      in ['switch']
+        switch_subtask
       in ['switch', subtask_name]
         switch_subtask(subtask_name)
       in ['app', app_name]
@@ -437,22 +475,27 @@ module Task
       end
       subtasks = subtasks_for_task(parent_task)
 
-      if subtasks.empty?
-        puts "No subtasks for task '#{parent_task}'."
-        puts
-        puts "Create one with 'h subtask new SUBTASK_NAME'"
-        return
-      end
-
       puts "Subtasks for '#{parent_task}':"
       puts
+
+      # Always show the parent (main) task first
+      parent_tree = tree_for_task(parent_task)
+      current_tree = current[:tree]
+      parent_marker = (parent_tree && parent_tree == current_tree) ? "*" : " "
+      parent_branch = worktree_branch(parent_tree) if parent_tree
+      branch_info = parent_branch ? "  branch: #{parent_branch}" : ""
+      puts format("%s %-25s  tree: %-15s%s", parent_marker, "(main)", parent_tree || '(none)', branch_info)
+
       subtasks.each do |subtask|
-        marker = subtask['active'] ? "*" : " "
-        puts format("%s %-25s  tree: %-15s  created: %s",
+        marker = (subtask['worktree'] == current_tree) ? "*" : " "
+        st_branch = worktree_branch(subtask['worktree']) if subtask['worktree']
+        st_branch_info = st_branch ? "  branch: #{st_branch}" : ""
+        puts format("%s %-25s  tree: %-15s  created: %s%s",
           marker,
           subtask['name'],
           subtask['worktree'] || '(none)',
-          subtask['created_at']&.split('T')&.first || '?'
+          subtask['created_at']&.split('T')&.first || '?',
+          st_branch_info
         )
       end
     end
@@ -519,7 +562,7 @@ module Task
       true
     end
 
-    def switch_subtask(subtask_name)
+    def switch_subtask(subtask_name = nil)
       current = current_task
       unless current
         puts "ERROR: Not currently in a task session"
@@ -531,6 +574,41 @@ module Task
       # Handle if we're in a subtask - get the parent
       if parent_task.include?('/')
         parent_task = parent_task.split('/').first
+      end
+
+      # If no subtask name, use interactive selection
+      if subtask_name.nil? || subtask_name.empty?
+        subtask_name = select_subtask_interactive(parent_task)
+        return false unless subtask_name
+      end
+
+      # Switch to parent task if "main" or "parent"
+      if subtask_name == 'main' || subtask_name == 'parent'
+        session_name = session_name_for(parent_task)
+        tree_name = tree_for_task(parent_task)
+
+        unless tree_name
+          puts "ERROR: Parent task '#{parent_task}' has no worktree"
+          return false
+        end
+
+        session_exists = system('tmux', 'has-session', '-t', session_name, err: File::NULL)
+
+        if session_exists
+          hiiro.start_tmux_session(session_name)
+        else
+          path = tree_path(tree_name)
+          if Dir.exist?(path)
+            Dir.chdir(path)
+            hiiro.start_tmux_session(session_name)
+          else
+            puts "ERROR: Worktree path '#{path}' does not exist"
+            return false
+          end
+        end
+
+        puts "Switched to parent task '#{parent_task}'"
+        return true
       end
 
       subtask = find_subtask(parent_task, subtask_name)
@@ -563,6 +641,36 @@ module Task
 
       puts "Switched to subtask '#{subtask_name}'"
       true
+    end
+
+    # Interactive subtask selection using sk
+    def select_subtask_interactive(parent_task)
+      subtasks = subtasks_for_task(parent_task)
+      parent_tree = tree_for_task(parent_task)
+
+      # Build selection lines: include parent (main) and all subtasks
+      lines = []
+      lines << "(main)" if parent_tree
+      subtasks.each do |subtask|
+        next unless subtask['active']
+        lines << subtask['name']
+      end
+
+      if lines.empty?
+        puts "No subtasks to switch to."
+        return nil
+      end
+
+      require 'open3'
+      selected, status = Open3.capture2('sk', stdin_data: lines.join("\n"))
+
+      if status.success? && !selected.strip.empty?
+        choice = selected.strip
+        return 'main' if choice == '(main)'
+        return choice
+      end
+
+      nil
     end
 
     # Show status for the current subtask
@@ -774,11 +882,11 @@ module Task
       worktree_info.keys.sort
     end
 
-    # Parse git worktree list output into { name => path } hash
-    def worktree_info
-      @worktree_info ||= begin
+    # Parse git worktree list output into { name => { path:, branch: } } hash
+    def worktree_details
+      @worktree_details ||= begin
         output = `git -C #{main_repo_path} worktree list --porcelain 2>/dev/null`
-        info = {}
+        details = {}
         current_path = nil
 
         work_dir = File.join(Dir.home, 'work')
@@ -792,6 +900,12 @@ module Task
             # Skip bare repo
             current_path = nil
           elsif line.start_with?('branch ') || line == 'detached'
+            branch = if line.start_with?('branch ')
+              line.sub('branch refs/heads/', '')
+            else
+              '(detached)'
+            end
+
             # Capture worktree (both named branches and detached HEAD)
             if current_path && current_path != main_repo_path
               # Use relative path from ~/work/ to support nested worktrees
@@ -801,17 +915,28 @@ module Task
               else
                 File.basename(current_path)
               end
-              info[name] = current_path
+              details[name] = { path: current_path, branch: branch }
             end
             current_path = nil
           end
         end
 
-        info
+        details
       end
     end
 
+    # Backward-compatible { name => path } hash
+    def worktree_info
+      @worktree_info ||= worktree_details.transform_values { |v| v[:path] }
+    end
+
+    # Get branch name for a worktree
+    def worktree_branch(tree_name)
+      worktree_details.dig(tree_name, :branch)
+    end
+
     def clear_worktree_cache
+      @worktree_details = nil
       @worktree_info = nil
     end
 
