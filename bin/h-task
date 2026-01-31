@@ -701,8 +701,8 @@ class TaskManager
 
   # Migrate flat worktrees (~/work/task) to nested (~/work/task/main)
   def migrate_worktrees
-    # Find flat worktrees that need migration (not already nested, not reserved)
-    flat_trees = trees.reject { |name| name.include?('/') || RESERVED_WORKTREES.key?(name) }
+    # Find flat worktrees that need migration (not already nested)
+    flat_trees = trees.reject { |name| name.include?('/') }
 
     if flat_trees.empty?
       puts "No flat worktrees to migrate."
@@ -751,7 +751,7 @@ class TaskManager
         data = load_assignments
         data.delete(name)
         data[new_tree_name] = task
-        save_assignments(RESERVED_WORKTREES.merge(data))
+        save_assignments(data)
       end
 
       # Step 4: Update task metadata
