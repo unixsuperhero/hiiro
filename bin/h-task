@@ -44,23 +44,55 @@ class TaskManager
     active, available = trees.partition { |tree_name| task_for_tree(tree_name) }
     sessions = tmux_sessions
 
+    # Group active trees by parent task
+    groups = {}
     active.each do |tree_name|
       task = task_for_tree(tree_name)
-      marker = (current && current[:tree] == tree_name) ? "*" : " "
-
-      # Check if there's a tmux session for this task
-      session_name = session_name_for(task)
-      has_session = sessions.include?(session_name)
-      session_marker = has_session ? "+" : " "
-      session_info = has_session ? " (#{session_name})" : ""
-
-      puts format("%s%s %-20s => %s%s", marker, session_marker, tree_name, task, session_info)
+      parent = task.include?('/') ? task.split('/').first : task
+      groups[parent] ||= []
+      groups[parent] << { tree: tree_name, task: task }
     end
 
-    puts if active.any? && available.any?
+    first_group = true
+    groups.each do |parent, entries|
+      puts unless first_group
+      first_group = false
 
-    available.each do |tree_name|
-      puts format("   %-20s    (available)", tree_name)
+      # Sort so the main entry (parent itself or parent/main) comes first
+      entries.sort_by! { |e| e[:task] == parent || e[:task].end_with?('/main') ? 0 : 1 }
+
+      entries.each_with_index do |entry, i|
+        tree_name = entry[:tree]
+        task = entry[:task]
+        marker = (current && current[:tree] == tree_name) ? "*" : " "
+        branch = worktree_branch(tree_name)
+        branch_str = branch ? "  [#{branch}]" : ""
+
+        # Check if there's a tmux session for this task
+        session_name = session_name_for(task)
+        has_session = sessions.include?(session_name)
+        session_marker = has_session ? "+" : " "
+
+        if i == 0
+          # Parent task line
+          display_name = parent
+          puts format("%s%s %s%s", marker, session_marker, display_name, branch_str)
+        else
+          # Subtask line: align /child_name under the parent name
+          child_name = task.include?('/') ? task.split('/', 2).last : task
+          padding = " " * parent.length
+          puts format("%s%s %s/%s%s", marker, session_marker, padding, child_name, branch_str)
+        end
+      end
+    end
+
+    if available.any?
+      puts
+      available.each do |tree_name|
+        branch = worktree_branch(tree_name)
+        branch_str = branch ? "  [#{branch}]" : ""
+        puts format("   %-20s  (available)%s", tree_name, branch_str)
+      end
     end
 
     # List tmux sessions without associated tasks
@@ -415,11 +447,11 @@ class TaskManager
     worktree_info.keys.sort
   end
 
-  # Parse git worktree list output into { name => path } hash
-  def worktree_info
-    @worktree_info ||= begin
+  # Parse git worktree list output into { name => { path:, branch: } } hash
+  def worktree_details
+    @worktree_details ||= begin
       output = `git -C #{main_repo_path} worktree list --porcelain 2>/dev/null`
-      info = {}
+      details = {}
       current_path = nil
 
       work_dir = File.join(Dir.home, 'work')
@@ -433,6 +465,12 @@ class TaskManager
           # Skip bare repo
           current_path = nil
         elsif line.start_with?('branch ') || line == 'detached'
+          branch = if line.start_with?('branch ')
+            line.sub('branch refs/heads/', '')
+          else
+            '(detached)'
+          end
+
           # Capture worktree (both named branches and detached HEAD)
           if current_path && current_path != main_repo_path
             # Use relative path from ~/work/ to support nested worktrees
@@ -442,17 +480,28 @@ class TaskManager
             else
               File.basename(current_path)
             end
-            info[name] = current_path
+            details[name] = { path: current_path, branch: branch }
           end
           current_path = nil
         end
       end
 
-      info
+      details
     end
   end
 
+  # Backward-compatible { name => path } hash
+  def worktree_info
+    @worktree_info ||= worktree_details.transform_values { |v| v[:path] }
+  end
+
+  # Get branch name for a worktree
+  def worktree_branch(tree_name)
+    worktree_details.dig(tree_name, :branch)
+  end
+
   def clear_worktree_cache
+    @worktree_details = nil
     @worktree_info = nil
   end
 
