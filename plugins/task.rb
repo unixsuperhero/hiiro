@@ -440,6 +440,10 @@ module Task
       end
 
       parent_task = current[:task]
+      # Handle if we're in a subtask - get the parent
+      if parent_task.include?('/')
+        parent_task = parent_task.split('/').first
+      end
       subtasks = subtasks_for_task(parent_task)
 
       if subtasks.empty?
@@ -472,13 +476,16 @@ module Task
 
       parent_task = current[:task]
 
-      # Avoid nesting worktrees: if parent_task is itself a worktree,
-      # use parent_task_subtasks/ as the directory instead of parent_task/
-      parent_dir = if worktree_info.key?(parent_task)
-        "#{parent_task}_subtasks"
-      else
-        parent_task
+      if parent_task.include?('/')
+        parent_task = parent_task.split('/').first
       end
+
+      parent_dir =
+        if worktree_info.key?(parent_task)
+          "#{parent_task}_subtasks"
+        else
+          parent_task
+        end
       full_subtask_name = "#{parent_dir}/#{subtask_name}"
 
       # Check if subtask already exists
