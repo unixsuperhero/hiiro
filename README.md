@@ -19,7 +19,7 @@ See [docs/](docs/) for detailed documentation on all subcommands.
 gem install hiiro
 
 # Install plugins and subcommands
-hiiro setup
+h setup
 ```
 
 This installs:
@@ -28,26 +28,15 @@ This installs:
 
 Ensure `~/bin` is in your `$PATH`.
 
-### Manual Installation
-
-```sh
-# Copy the main script
-cp bin/h ~/bin/h
-chmod +x ~/bin/h
-
-# Copy subcommands (optional)
-cp bin/h-* ~/bin/
-
-# Copy plugins (optional)
-mkdir -p ~/.config/hiiro/plugins
-cp plugins/*.rb ~/.config/hiiro/plugins/
-```
 
 ### Dependencies
 
 ```sh
 # For notify plugin (macOS)
 brew install terminal-notifier
+
+# For fuzzy-finder
+brew install sk
 ```
 
 ## Quick Start
@@ -55,14 +44,6 @@ brew install terminal-notifier
 ```sh
 # List available subcommands
 h
-
-# Edit the main h script
-h edit
-
-# Get paths
-h path      # Print current directory
-h ppath     # Print project root (git repo root + relative dir)
-h rpath     # Print relative directory from git root
 
 # Simple test
 h ping
