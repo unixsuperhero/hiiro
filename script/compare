@@ -1,9 +1,9 @@
 #!/bin/bash
 
 diff_dirs() {
-  diff -qrs ~/bin/ bin/ | egrep '\bbin(: |\/)h(\b|-)' | egrep -v 'identical'
+  diff -qrs bin/ ~/bin/ | egrep '\bbin(: |\/)h(\b|-)' | egrep -v 'identical'
 
-  diff -qrs ~/.config/hiiro/plugins/ plugins/ | egrep -v 'identical'
+  diff -qrs plugins/ ~/.config/hiiro/plugins/ | egrep -v 'identical'
 }
 
 # s@Only in \(bin|plugins\): \(.*\)@cp -v \1/\2 $HOME/\1/@;
