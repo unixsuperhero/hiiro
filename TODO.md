@@ -15,7 +15,7 @@ tasks:
   tree: tree_name
   root: repo_root/tree_name
 ```
-- [ ] refactor plugin to not be procedural AI slop
+- [ ] refactor task plugin to not be procedural AI slop
 - [ ] convert to js and using node
-- [ ] 
+- [ ] h-config {vim,zsh,tmux}
 - [ ] 
