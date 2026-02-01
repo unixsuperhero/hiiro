@@ -16,6 +16,6 @@ tasks:
   root: repo_root/tree_name
 ```
 - [ ] refactor plugin to not be procedural AI slop
+- [ ] convert to js and using node
 - [ ] 
 - [ ] 
-
