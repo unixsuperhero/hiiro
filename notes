@@ -1,0 +1,224 @@
+
+# Principles to use for refactoring
+
+- Separate data from behavior - create domain objects and any relevant value objects
+
+
+# Goals
+
+- same code to manage tasks/subtasks
+  - just scoped differently
+  - if scope is `:task` then consider all tasks, if scope is :subtask then only consider the tasks associated with the parent task
+- extract data objects
+  - so our procedures are human and easy af
+- more composable
+- separate presentation layer from the data
+
+
+# features we want
+
+- list tasks/subtasks
+- start a new one (wtree/tmux session)
+- switch between them
+- cd to an app's directory
+- stop a task
+- use yml files to track things
+
+turn @plugins/tasks.rb into a plugin similar to @plugins/task.rb
+
+but in add_subcommands(hiiro) i want to define 2 subtasks:
+1. `:task`
+2. `:subtask`
+
+both subcommands should initialize `Tasks.new(hiiro_instance, :task)` or
+`Tasks.new(hiiro_instance, :subtask)` if the subtask subcmd was called
+
+then uses the instance of Tasks to either do all the things that it needs to
+do... or just use it to get the data it needs, so that it can do the high level
+things like running tmux or git worktree commands.
+if it doesn't put those things inside Tasks, that would be better, so I can use
+these objects in other places like inside @bin/h-link
+
+use the following interface as a guide for how to organize things inside the
+new Tasks plugin
+
+# Interface
+
+class Environment
+  def self.current  # => Environment - makes new instance
+  def all_tasks     # => Task[] - call Task.all and memo cache the result
+  def all_sessions  # => Session[] - call TmuxSession.all and memo cache the result
+  def all_trees     # => Tree[] - call Tree.all and memo cache the result
+  def task          # => Task - move Task.current's behavior into this method, and memo cache the result
+  def session       # => Session - move TmuxSession.current here and memo cache the result
+  def tree          # => Tree - move Tree.current here and memo cache the result
+
+class Tree
+  attr_reader :path, :task, :session
+
+  def self.current  # => Tree - move to Environment#tree
+  def self.all      # => Tree[]
+
+class Session
+  attr_reader :name, :task
+
+  def self.current  # => Session - move to Environment#session
+  def self.all      # => Session[]
+
+class Task
+  attr_reader :name, :tree, :session, :parent, :subtasks
+
+  def self.current  # => Task - move to Environment#task
+  def self.all      # => Task[]
+
+class App
+  attr_reader :name, :path
+  def self.current      # => App[]
+  def self.all          # => App[]
+
+class Tasks
+  attr_reader :hiiro, :scope, :environment
+
+  def tasks                           # => Task[]
+  def subtasks(task)                  # => Task[]
+  def task_by_name(name)              # => Task
+  def task_by_tree(tree_name)         # => Task
+  def task_by_session(session_name)   # => Task
+  def current_task                    # => Task
+  def current_session                 # => Session
+  def current_tree                    # => Tree
+
+  def start_task(name, path)          # => Task
+  def switch_to_task(task)            # => nil
+  def stop_task(task)                 # => nil
+  def list(tasks)                     # => nil # print to screen
+  def cd_to_task(task)                # => nil
+  def cd_to_app(app_name)             # => nil
+
+  class Config
+    attr_reader :path
+
+
+
+
+# Follow-up prompts
+
+## i forget
+
+> when initializing an instance of `Task`...it shouldn't have a `parent_task` or `parent_name` kwarg.  it derive that context from the name given.  if the name has a `/` in it...then it
+is a subtask and the left side is the parent name and the right side is the subtask name.
+
+
+## lots of updates
+
+here are some updates i'd like to make:
+
+- all arguments received from the user should looking that object using
+    - something like `start_with?` so they can abbreviate the names of things to
+      match
+    - the only special one is task_name or subtask_name...if there is a `/` the
+      left side will do the abbreviation lookup on a parent name and the right
+      side will do a lookup on the subtask name
+        - you might want to add `#find_tree(abbreviated_name)` method to
+        Environment
+        - you might want to add `#find_session(abbreviated_name)` method to
+        Environment
+        - you might want to add `#find_app(abbreviated_name)` method to
+        Environment
+        - you might want to add `#find_task(abbreviated_name)` method to
+        Environment, where it does the left/right abbreviation lookups
+        - these new methods should help clean up and simplify all the lookups in
+          the other methods that typically use `.find{ ... }`
+      
+- get rid of methods like `apps_hash` and in the places that used it...
+    - just use the array returned from `#apps` and the attr_reader methods
+    for things like name and path or other values that there are attr_readers
+    for.
+    - always favor an instance method or attr_reader over exporting something
+    like hash
+
+- `#start_task` shouldn't take an optional `tree_path` keyword arg
+    - instead it should take an optional `app_name` kwarg and set the tmux
+    session's base directory to the matching app's configured directory
+      
+- `#switch_task` should also take an optional `app_name` kwarg. if a tmux
+    session already exists, just update the configs, associating the task 
+    with that app.  if the tmux session doesn't exist, use the app's path as the
+    base_directory.
+
+
+here's one fix i really want to get right.
+
+right now TasksPlugin has a dispatch method that uses a case statement to
+handle the subcommands.  what i'd like instead is for tasks plugin to initialize
+a new instance of `Hiiro` but instead of it receiving it's usual `*ARGV` as
+positional args, you should pass-in t `*hiiro.args` using the existing `hiiro`
+instance.  then for the new `Hiiro` instance...before you call `#run` on
+it...add each of the subcommands defined in the case statement using the
+`add_subcmd` method and have the block passed in be the handler for those
+subcommands
+
+so something like this:
+
+```ruby
+module TasksPlugin
+  # ...
+
+  def self.add_subcommands(hiiro)
+    hiiro.add_subcmd(:task) do |*args|
+      mgr = Tasks.new(hiiro, scope: :task)
+      new_hiiro = task_hiiro(hiiro, mgr)
+      new_hiiro.run
+    end
+
+    hiiro.add_subcmd(:subtask) do |*args|
+      mgr = Tasks.new(hiiro, scope: :subtask)
+      new_hiiro = task_hiiro(hiiro, mgr)
+      new_hiiro.run
+    end
+  end
+
+  def self.task_hiiro(parent_hiiro, mgr)
+    Hiiro.init(*parent_hiiro.args, mgr: mgr) do |task_hiiro|
+      task_hiiro.add_subcmd(:ls) do |*args|
+        # TODO: the logic to print out the task list based on mgr's values
+      end
+
+      task_hiiro.add_subcmd(:start) do |task_name, app_name=nil|
+        # TODO: the logic to print out the task list based on mgr's values
+        #       like:
+        mgr.start_task(task_name, app_name: app_name)
+      end
+
+      task_hiiro.add_subcmd(:switch) do |task_name, app_name=nil|
+        # TODO: the logic to print out the task list based on mgr's values
+        mgr.switch_to_task(task_name, app_name: app_name)
+
+        # but if you need to add logic, i would do it here...like:
+        task = mgr.find_task(task_name)
+
+        if task
+          # run cmds to switch to task here...
+        else
+          # print some msg like no task found
+        end
+      end
+
+      # ...
+    end
+  end
+
+  # ...
+end
+```
+
+## third prompt
+
+for things like listing and switching subtasks
+always consider the main/parent task as a potential subtask to switch to.
+for lookups, treat the task name as parent name and `main` as the subtask name
+so something like `nameofparent/main`
+
+
+
+
