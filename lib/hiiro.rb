@@ -19,9 +19,15 @@ class String
 end
 
 class Hiiro
-  def self.init(*args, plugins: [], logging: false, **values, &block)
+  def self.init(*oargs, plugins: [], logging: false, **values, &block)
     load_env
-    args = ARGV if args.empty?
+
+    if values[:args]
+      args = values[:args]
+    else
+      args ||= oargs
+      args = ARGV if args.empty?
+    end
 
     new($0, *args, logging: logging, **values).tap do |hiiro|
       History.load(hiiro)
