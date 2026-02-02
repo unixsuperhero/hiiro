@@ -763,14 +763,6 @@ module Tasks
     bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
 
     Hiiro.init(bin_name:, args: parent_hiiro.args) do |h|
-      puts "parent_hiiro: all_args: #{parent_hiiro.all_args}"
-      puts "parent_hiiro: parent_cmd: #{parent_hiiro.subcmd}"
-      puts "parent_hiiro: args: #{parent_hiiro.args}"
-
-      puts "subhiiro: all_args: #{h.all_args}"
-      puts "subhiiro: subcmd: #{h.subcmd}"
-      puts "subhiiro: args: #{h.args}"
-
       h.add_subcmd(:list) { mgr.list }
       h.add_subcmd(:ls) { mgr.list }
 
