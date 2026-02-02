@@ -289,7 +289,12 @@ class TaskManager
       assignments_file = File.join(File.dirname(tasks_file), 'assignments.yml')
       if File.exist?(assignments_file)
         raw = YAML.safe_load_file(assignments_file) || {}
-        data = { 'tasks' => raw.map { |path, name| { 'name' => name, 'tree' => path } } }
+        tasks = raw.map do |tree_path, task_name|
+          h = { 'name' => task_name, 'tree' => tree_path }
+          h['session'] = task_name if task_name.include?('/')
+          h
+        end
+        data = { 'tasks' => tasks }
         save_tasks(data)
         return data
       end
