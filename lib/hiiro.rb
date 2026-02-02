@@ -5,6 +5,19 @@ require "shellwords"
 require_relative "hiiro/version"
 require_relative "hiiro/history"
 
+class String
+  def underscore(camel_cased_word=self)
+    regex = /(?:(?<=([A-Za-z\d]))|\b)((?-mix:(?=a)b))(?=\b|[^a-z])/
+    return camel_cased_word.to_s.dup unless /[A-Z-]|::/.match?(camel_cased_word)
+    word = camel_cased_word.to_s.gsub("::", "/")
+    word.gsub!(regex) { "#{$1 && '_' }#{$2.downcase}" }
+    word.gsub!(/(?<=[A-Z])(?=[A-Z][a-z])|(?<=[a-z\d])(?=[A-Z])/, "_")
+    word.tr!("-", "_")
+    word.downcase!
+    word
+  end
+end
+
 class Hiiro
   def self.init(*args, plugins: [], logging: false, **values, &block)
     load_env
