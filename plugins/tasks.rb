@@ -282,8 +282,19 @@ class TaskManager
     private
 
     def load_tasks
-      return { 'tasks' => [] } unless File.exist?(tasks_file)
-      YAML.safe_load_file(tasks_file) || { 'tasks' => [] }
+      if File.exist?(tasks_file)
+        return YAML.safe_load_file(tasks_file) || { 'tasks' => [] }
+      end
+
+      assignments_file = File.join(File.dirname(tasks_file), 'assignments.yml')
+      if File.exist?(assignments_file)
+        raw = YAML.safe_load_file(assignments_file) || {}
+        data = { 'tasks' => raw.map { |path, name| { 'name' => name, 'tree' => path } } }
+        save_tasks(data)
+        return data
+      end
+
+      { 'tasks' => [] }
     end
 
     def save_tasks(data)
