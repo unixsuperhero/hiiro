@@ -212,7 +212,14 @@ class Environment
       parent_prefix, child_prefix = abbreviated.split('/', 2)
       parent = all_tasks.select(&:top_level?).find { |t| t.name.start_with?(parent_prefix) }
       return nil unless parent
-      all_tasks.select { |t| t.parent_name == parent.name }.find { |t| t.short_name.start_with?(child_prefix) }
+
+      subtask = all_tasks.select { |t| t.parent_name == parent.name }.find { |t| t.short_name.start_with?(child_prefix) }
+      return subtask if subtask
+
+      # "main" refers to the parent task itself
+      return parent if 'main'.start_with?(child_prefix)
+
+      nil
     else
       all_tasks.find { |t| t.name.start_with?(abbreviated) }
     end
@@ -303,7 +310,9 @@ class TaskManager
     if scope == :subtask
       parent = current_parent_task
       return [] unless parent
-      environment.all_tasks.select { |t| t.parent_name == parent.name }
+      main_task = Task.new(name: "#{parent.name}/main", tree: parent.tree_name, session: parent.session_name)
+      subtask_list = environment.all_tasks.select { |t| t.parent_name == parent.name }
+      [main_task, *subtask_list]
     else
       environment.all_tasks.select(&:top_level?)
     end
