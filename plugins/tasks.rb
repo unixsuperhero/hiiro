@@ -2,7 +2,7 @@ require 'yaml'
 require 'fileutils'
 require 'open3'
 
-WORK_DIR = File.join(Dir.home, 'work')
+WORK_DIR = File.join(Dir.home, 'work2')
 REPO_PATH = File.join(WORK_DIR, '.bare')
 
 class TmuxSession
@@ -167,7 +167,7 @@ class Environment
   end
 
   def config
-    @config ||= Tasks::Config.new
+    @config ||= TaskManager::Config.new
   end
 
   def all_tasks
@@ -234,7 +234,7 @@ class Environment
   end
 end
 
-class Tasks
+class TaskManager
   TASKS_DIR = File.join(Dir.home, '.config', 'hiiro', 'tasks')
   APPS_FILE = File.join(Dir.home, '.config', 'hiiro', 'apps.yml')
 
@@ -714,7 +714,7 @@ class Tasks
   end
 end
 
-module TasksPlugin
+module Tasks
   def self.load(hiiro)
     hiiro.load_plugin(Tmux)
     add_subcommands(hiiro)
@@ -722,14 +722,14 @@ module TasksPlugin
 
   def self.add_subcommands(hiiro)
     hiiro.add_subcmd(:task) do |*args|
-      mgr = Tasks.new(hiiro, scope: :task)
-      task_hiiro = TasksPlugin.build_hiiro(hiiro, mgr)
+      mgr = TaskManager.new(hiiro, scope: :task)
+      task_hiiro = Tasks.build_hiiro(hiiro, mgr)
       task_hiiro.run
     end
 
     hiiro.add_subcmd(:subtask) do |*args|
-      mgr = Tasks.new(hiiro, scope: :subtask)
-      task_hiiro = TasksPlugin.build_hiiro(hiiro, mgr)
+      mgr = TaskManager.new(hiiro, scope: :subtask)
+      task_hiiro = Tasks.build_hiiro(hiiro, mgr)
       task_hiiro.run
     end
   end
@@ -790,8 +790,6 @@ module TasksPlugin
       h.add_subcmd(:edit) do
         system(ENV['EDITOR'] || 'nvim', __FILE__)
       end
-
-      h.add_subcmd(:help) { mgr.help }
     end
   end
 end
