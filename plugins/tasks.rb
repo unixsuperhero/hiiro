@@ -154,3 +154,55 @@ class App
     name
   end
 end
+
+class Environment
+  attr_reader :path
+
+  def self.current
+    new(path: Dir.pwd)
+  end
+
+  def initialize(path: Dir.pwd, config: nil)
+    @path = path
+    @config = config
+  end
+
+  def config
+    @config ||= Tasks::Config.new
+  end
+
+  def all_tasks
+    @all_tasks ||= config.tasks
+  end
+
+  def all_sessions
+    @all_sessions ||= TmuxSession.all
+  end
+
+  def all_trees
+    @all_trees ||= Tree.all
+  end
+
+  def all_apps
+    @all_apps ||= config.apps
+  end
+
+  def task
+    @task ||= begin
+      s = session
+      t = tree
+      all_tasks.find { |task|
+        (s && task.session_name == s.name) ||
+          (t && task.tree_name == t.name)
+      }
+    end
+  end
+
+  def session
+    @session ||= TmuxSession.current
+  end
+
+  def tree
+    @tree ||= all_trees.find { |t| t.match?(path) }
+  end
+end
