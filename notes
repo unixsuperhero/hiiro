@@ -1,0 +1,89 @@
+
+# Principles to use for refactoring
+
+- Separate data from behavior
+- Encapsulation
+- Interfaces > Implementation
+- Classes were made to be used
+- Start with the code you want to write
+  - levels of abstraction
+
+
+# Goals
+
+- same code to manage tasks/subtasks
+  - just scoped differently
+- extract data objects
+  - so our procedures are human and easy af
+- more composable
+
+
+# features we want
+
+- list tasks/subtasks
+- start a new one (wtree/tmux session)
+- switch between them
+- cd to an app's directory
+- stop a task
+- use yml files to track things
+
+
+
+---
+
+# Interface
+
+class Environment
+  def self.current  # => Environment
+  def task          # => Task
+  def session       # => Session
+  def tree          # => Tree
+
+class Tree
+  attr_reader :path, :task, :session
+
+  def self.current  # => Tree
+  def self.all      # => Tree[]
+
+class Session
+  attr_reader :name, :task
+
+  def self.current  # => Session
+  def self.all      # => Session[]
+
+class Task
+  attr_reader :name, :tree, :session, :parent, :subtasks
+
+  def self.current  # => Task
+  def self.all      # => Task[]
+
+class App
+  attr_reader :name, :path
+  def self.current      # => App[]
+  def self.all          # => App[]
+
+Tasks
+  attr_reader :hiiro, :scope, :environment
+
+  def tasks                           # => Task[]
+  def subtasks(task)                  # => Task[]
+  def task_by_name(name)              # => Task
+  def task_by_tree(tree_name)         # => Task
+  def task_by_session(session_name)   # => Task
+  def current_task                    # => Task
+  def current_session                 # => Session
+  def current_tree                    # => Tree
+
+  def start_task(name, path)          # => Task
+  def switch_to_task(task)            # => nil
+  def stop_task(task)                 # => nil
+  def list(tasks)                     # => nil # print to screen
+  def cd_to_task(task)                # => nil
+  def cd_to_app(app_name)             # => nil
+
+  class Config
+    attr_reader :path
+
+
+
+
