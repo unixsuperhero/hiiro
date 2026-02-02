@@ -211,3 +211,10 @@ module TasksPlugin
   # ...
 end
 ```
+
+## third prompt
+
+for things like listing and switching subtasks
+always consider the main/parent task as a potential subtask to switch to.
+for lookups, treat the task name as parent name and `main` as the subtask name
+so something like `nameofparent/main`
