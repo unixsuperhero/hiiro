@@ -7,7 +7,7 @@ require "yaml"
 require "json"
 
 Hiiro.load_env
-hiiro = Hiiro.init(*ARGV, plugins: [Task, Tmux, Pins])
+hiiro = Hiiro.init(*ARGV, plugins: [OldTask, Tmux, Pins])
 
 class PRManager
   attr_reader :hiiro
