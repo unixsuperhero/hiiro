@@ -92,29 +92,29 @@ class Tree
 end
 
 class Task
-  attr_reader :name, :parent_name, :tree_name, :session_name
+  attr_reader :name, :tree_name, :session_name
 
-  def initialize(name:, parent_task: nil, tree: nil, session: nil)
+  def initialize(name:, tree: nil, session: nil, **_)
     @name = name
-    @parent_name = parent_task
     @tree_name = tree
     @session_name = session || name
   end
 
+  def parent_name
+    return nil unless subtask?
+    name.split('/').first
+  end
+
+  def short_name
+    subtask? ? name.split('/', 2).last : name
+  end
+
   def subtask?
-    !parent_name.nil?
+    name.include?('/')
   end
 
   def top_level?
     !subtask?
-  end
-
-  def full_name
-    if subtask?
-      "#{parent_name}/#{name}"
-    else
-      name
-    end
   end
 
   def ==(other)
@@ -127,7 +127,6 @@ class Task
 
   def to_h
     h = { 'name' => name }
-    h['parent_task'] = parent_name if parent_name
     h['tree'] = tree_name if tree_name
     h['session'] = session_name if session_name != name
     h
@@ -294,7 +293,10 @@ class Tasks
   def task_by_name(name)
     return slash_lookup(name) if name.include?('/')
 
-    tasks.find { |t| t.name.start_with?(name) }
+    tasks.find { |t|
+      match_name = (scope == :subtask) ? t.short_name : t.name
+      match_name.start_with?(name)
+    }
   end
 
   def task_by_tree(tree_name)
@@ -327,8 +329,8 @@ class Tasks
       return
     end
 
+    task_name = scope == :subtask ? "#{current_parent_task.name}/#{name}" : name
     subtree_name = scope == :subtask ? "#{current_parent_task.name}/#{name}" : "#{name}/main"
-    parent_name = scope == :subtask ? current_parent_task.name : nil
 
     target_path = File.join(WORK_DIR, subtree_name)
 
@@ -366,14 +368,14 @@ class Tasks
       end
     end
 
-    session_name = scope == :subtask ? "#{current_parent_task.name}/#{name}" : name
-    task = Task.new(name: name, parent_task: parent_name, tree: subtree_name, session: session_name)
+    session_name = task_name
+    task = Task.new(name: task_name, tree: subtree_name, session: session_name)
     config.save_task(task)
 
     Dir.chdir(target_path)
     hiiro.start_tmux_session(session_name)
 
-    puts "Started task '#{name}' in worktree '#{subtree_name}'"
+    puts "Started task '#{task_name}' in worktree '#{subtree_name}'"
   end
 
   def switch_to_task(task)
@@ -398,7 +400,7 @@ class Tasks
       return
     end
 
-    puts "Switched to '#{task.full_name}'"
+    puts "Switched to '#{task.name}'"
   end
 
   def stop_task(task)
@@ -438,7 +440,7 @@ class Tasks
       branch = tree&.branch || (tree&.detached? ? '(detached)' : nil)
       branch_str = branch ? "  [#{branch}]" : ""
 
-      display_name = scope == :subtask ? task.name : task.full_name
+      display_name = scope == :subtask ? task.short_name : task.name
       puts format("%s %-25s  tree: %-20s%s", marker, display_name, task.tree_name || '(none)', branch_str)
 
       # Show subtask count for top-level tasks
@@ -450,7 +452,7 @@ class Tasks
           sub_branch = sub_tree&.branch || (sub_tree&.detached? ? '(detached)' : nil)
           sub_branch_str = sub_branch ? "  [#{sub_branch}]" : ""
           padding = " " * task.name.length
-          puts format("%s %s/%-*s  tree: %-20s%s", sub_marker, padding, 25 - task.name.length - 1, st.name, st.tree_name || '(none)', sub_branch_str)
+          puts format("%s %s/%-*s  tree: %-20s%s", sub_marker, padding, 25 - task.name.length - 1, st.short_name, st.tree_name || '(none)', sub_branch_str)
         end
       end
     end
@@ -475,7 +477,7 @@ class Tasks
       return
     end
 
-    puts "Task: #{task.full_name}"
+    puts "Task: #{task.name}"
     puts "Worktree: #{task.tree_name}"
     tree = environment.all_trees.find { |t| t.name == task.tree_name }
     puts "Path: #{tree&.path || '(unknown)'}"
@@ -606,7 +608,7 @@ class Tasks
   # --- Interactive selection with sk ---
 
   def select_task_interactive(prompt = nil)
-    names = tasks.map { |t| scope == :subtask ? t.name : t.full_name }
+    names = tasks.map { |t| scope == :subtask ? t.short_name : t.name }
     return nil if names.empty?
 
     sk_select(names)
@@ -625,7 +627,7 @@ class Tasks
     return nil unless parent
 
     environment.all_tasks.select { |t| t.parent_name == parent.name }.find { |t|
-      t.name.start_with?(child_prefix)
+      t.short_name.start_with?(child_prefix)
     }
   end
 
