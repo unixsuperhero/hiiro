@@ -1,21 +1,18 @@
 
 # Principles to use for refactoring
 
-- Separate data from behavior
-- Encapsulation
-- Interfaces > Implementation
-- Classes were made to be used
-- Start with the code you want to write
-  - levels of abstraction
+- Separate data from behavior - create domain objects and any relevant value objects
 
 
 # Goals
 
 - same code to manage tasks/subtasks
   - just scoped differently
+  - if scope is `:task` then consider all tasks, if scope is :subtask then only consider the tasks associated with the parent task
 - extract data objects
   - so our procedures are human and easy af
 - more composable
+- separate presentation layer from the data
 
 
 # features we want
@@ -27,34 +24,51 @@
 - stop a task
 - use yml files to track things
 
+turn @plugins/tasks.rb into a plugin similar to @plugins/task.rb
 
+but in add_subcommands(hiiro) i want to define 2 subtasks:
+1. `:task`
+2. `:subtask`
 
----
+both subcommands should initialize `Tasks.new(hiiro_instance, :task)` or
+`Tasks.new(hiiro_instance, :subtask)` if the subtask subcmd was called
+
+then uses the instance of Tasks to either do all the things that it needs to
+do... or just use it to get the data it needs, so that it can do the high level
+things like running tmux or git worktree commands.
+if it doesn't put those things inside Tasks, that would be better, so I can use
+these objects in other places like inside @bin/h-link
+
+use the following interface as a guide for how to organize things inside the
+new Tasks plugin
 
 # Interface
 
 class Environment
-  def self.current  # => Environment
-  def task          # => Task
-  def session       # => Session
-  def tree          # => Tree
+  def self.current  # => Environment - makes new instance
+  def all_tasks     # => Task[] - call Task.all and memo cache the result
+  def all_sessions  # => Session[] - call TmuxSession.all and memo cache the result
+  def all_trees     # => Tree[] - call Tree.all and memo cache the result
+  def task          # => Task - move Task.current's behavior into this method, and memo cache the result
+  def session       # => Session - move TmuxSession.current here and memo cache the result
+  def tree          # => Tree - move Tree.current here and memo cache the result
 
 class Tree
   attr_reader :path, :task, :session
 
-  def self.current  # => Tree
+  def self.current  # => Tree - move to Environment#tree
   def self.all      # => Tree[]
 
 class Session
   attr_reader :name, :task
 
-  def self.current  # => Session
+  def self.current  # => Session - move to Environment#session
   def self.all      # => Session[]
 
 class Task
   attr_reader :name, :tree, :session, :parent, :subtasks
 
-  def self.current  # => Task
+  def self.current  # => Task - move to Environment#task
   def self.all      # => Task[]
 
 class App
@@ -62,7 +76,7 @@ class App
   def self.current      # => App[]
   def self.all          # => App[]
 
-Tasks
+class Tasks
   attr_reader :hiiro, :scope, :environment
 
   def tasks                           # => Task[]
