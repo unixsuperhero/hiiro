@@ -206,3 +206,60 @@ class Environment
     @tree ||= all_trees.find { |t| t.match?(path) }
   end
 end
+
+class Tasks
+  TASKS_DIR = File.join(Dir.home, '.config', 'hiiro', 'tasks')
+  APPS_FILE = File.join(Dir.home, '.config', 'hiiro', 'apps.yml')
+
+  class Config
+    attr_reader :tasks_file, :apps_file
+
+    def initialize(tasks_file: nil, apps_file: nil)
+      @tasks_file = tasks_file || File.join(TASKS_DIR, 'tasks.yml')
+      @apps_file = apps_file || APPS_FILE
+    end
+
+    def tasks
+      data = load_tasks
+      (data['tasks'] || []).map { |h| Task.new(**h.transform_keys(&:to_sym)) }
+    end
+
+    def apps
+      return [] unless File.exist?(apps_file)
+      data = YAML.safe_load_file(apps_file) || {}
+      data.map { |name, path| App.new(name: name, path: path) }
+    end
+
+    def apps_hash
+      return {} unless File.exist?(apps_file)
+      YAML.safe_load_file(apps_file) || {}
+    end
+
+    def save_task(task)
+      data = load_tasks
+      data['tasks'] ||= []
+      data['tasks'].reject! { |t| t['name'] == task.name }
+      data['tasks'] << task.to_h
+      save_tasks(data)
+    end
+
+    def remove_task(name)
+      data = load_tasks
+      data['tasks'] ||= []
+      data['tasks'].reject! { |t| t['name'] == name }
+      save_tasks(data)
+    end
+
+    private
+
+    def load_tasks
+      return { 'tasks' => [] } unless File.exist?(tasks_file)
+      YAML.safe_load_file(tasks_file) || { 'tasks' => [] }
+    end
+
+    def save_tasks(data)
+      FileUtils.mkdir_p(File.dirname(tasks_file))
+      File.write(tasks_file, YAML.dump(data))
+    end
+  end
+end
