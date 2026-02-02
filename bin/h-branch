@@ -5,7 +5,7 @@ require "fileutils"
 require "yaml"
 
 Hiiro.load_env
-hiiro = Hiiro.init(*ARGV, plugins: [Task])
+hiiro = Hiiro.init(*ARGV, plugins: [OldTask])
 
 class BranchManager
   attr_reader :hiiro

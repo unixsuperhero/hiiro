@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-module Task
+module OldTask
   def self.load(hiiro)
     hiiro.load_plugin(Tmux)
     attach_methods(hiiro)
@@ -79,7 +79,7 @@ module Task
   def self.attach_methods(hiiro)
     hiiro.instance_eval do
       def task_manager
-        @task_manager ||= Task::TaskManager.new(self)
+        @task_manager ||= OldTask::TaskManager.new(self)
       end
     end
   end
