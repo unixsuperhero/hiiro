@@ -745,8 +745,6 @@ module Tasks
 
   def self.build_hiiro(parent_hiiro, mgr)
     Hiiro.init(*parent_hiiro.args, mgr: mgr) do |h|
-      h.add_default { mgr.list }
-
       h.add_subcmd(:list) { mgr.list }
       h.add_subcmd(:ls) { mgr.list }
 
