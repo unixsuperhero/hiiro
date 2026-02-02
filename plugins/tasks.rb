@@ -90,3 +90,67 @@ class Tree
     name
   end
 end
+
+class Task
+  attr_reader :name, :parent_name, :tree_name, :session_name
+
+  def initialize(name:, parent_task: nil, tree: nil, session: nil)
+    @name = name
+    @parent_name = parent_task
+    @tree_name = tree
+    @session_name = session || name
+  end
+
+  def subtask?
+    !parent_name.nil?
+  end
+
+  def top_level?
+    !subtask?
+  end
+
+  def full_name
+    if subtask?
+      "#{parent_name}/#{name}"
+    else
+      name
+    end
+  end
+
+  def ==(other)
+    other.is_a?(Task) && name == other.name
+  end
+
+  def to_s
+    name
+  end
+
+  def to_h
+    h = { 'name' => name }
+    h['parent_task'] = parent_name if parent_name
+    h['tree'] = tree_name if tree_name
+    h['session'] = session_name if session_name != name
+    h
+  end
+end
+
+class App
+  attr_reader :name, :relative_path
+
+  def initialize(name:, path:)
+    @name = name
+    @relative_path = path
+  end
+
+  def resolve(tree_root)
+    File.join(tree_root, relative_path)
+  end
+
+  def ==(other)
+    other.is_a?(App) && name == other.name
+  end
+
+  def to_s
+    name
+  end
+end
