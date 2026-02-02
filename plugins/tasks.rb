@@ -760,10 +760,9 @@ module Tasks
   end
 
   def self.build_hiiro(parent_hiiro, mgr)
-    subcmd, *args = (parent_hiiro.args || [])
-    bin_name = [parent_hiiro.bin, subcmd || ''].join('-')
+    bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
 
-    Hiiro.init(bin_name:, args:) do |h|
+    Hiiro.init(bin_name:, args: parent_hiiro.args) do |h|
       puts "parent_hiiro: all_args: #{parent_hiiro.all_args}"
       puts "parent_hiiro: parent_cmd: #{parent_hiiro.subcmd}"
       puts "parent_hiiro: args: #{parent_hiiro.args}"
