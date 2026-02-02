@@ -204,6 +204,34 @@ class Environment
   def tree
     @tree ||= all_trees.find { |t| t.match?(path) }
   end
+
+  def find_task(abbreviated)
+    return nil if abbreviated.nil?
+
+    if abbreviated.include?('/')
+      parent_prefix, child_prefix = abbreviated.split('/', 2)
+      parent = all_tasks.select(&:top_level?).find { |t| t.name.start_with?(parent_prefix) }
+      return nil unless parent
+      all_tasks.select { |t| t.parent_name == parent.name }.find { |t| t.short_name.start_with?(child_prefix) }
+    else
+      all_tasks.find { |t| t.name.start_with?(abbreviated) }
+    end
+  end
+
+  def find_tree(abbreviated)
+    return nil if abbreviated.nil?
+    all_trees.find { |t| t.name.start_with?(abbreviated) }
+  end
+
+  def find_session(abbreviated)
+    return nil if abbreviated.nil?
+    all_sessions.find { |s| s.name.start_with?(abbreviated) }
+  end
+
+  def find_app(abbreviated)
+    return nil if abbreviated.nil?
+    all_apps.find { |a| a.name.start_with?(abbreviated) }
+  end
 end
 
 class Tasks
@@ -227,11 +255,6 @@ class Tasks
       return [] unless File.exist?(apps_file)
       data = YAML.safe_load_file(apps_file) || {}
       data.map { |name, path| App.new(name: name, path: path) }
-    end
-
-    def apps_hash
-      return {} unless File.exist?(apps_file)
-      YAML.safe_load_file(apps_file) || {}
     end
 
     def save_task(task)
@@ -321,11 +344,11 @@ class Tasks
 
   # --- Actions ---
 
-  def start_task(name, tree_path = nil)
+  def start_task(name, app_name: nil)
     existing = task_by_name(name)
     if existing
       puts "Task '#{existing.name}' already exists. Switching..."
-      switch_to_task(existing)
+      switch_to_task(existing, app_name: app_name)
       return
     end
 
@@ -334,37 +357,20 @@ class Tasks
 
     target_path = File.join(WORK_DIR, subtree_name)
 
-    if tree_path
-      tree = environment.all_trees.find { |t| t.name.start_with?(tree_path) }
-      unless tree
-        puts "ERROR: Worktree '#{tree_path}' not found"
+    available = find_available_tree
+    if available
+      puts "Renaming worktree '#{available.name}' to '#{subtree_name}'..."
+      FileUtils.mkdir_p(File.dirname(target_path))
+      unless system('git', '-C', REPO_PATH, 'worktree', 'move', available.path, target_path)
+        puts "ERROR: Failed to rename worktree"
         return
       end
-
-      if tree.name != subtree_name
-        puts "Renaming worktree '#{tree.name}' to '#{subtree_name}'..."
-        FileUtils.mkdir_p(File.dirname(target_path))
-        unless system('git', '-C', REPO_PATH, 'worktree', 'move', tree.path, target_path)
-          puts "ERROR: Failed to rename worktree"
-          return
-        end
-      end
     else
-      available = find_available_tree
-      if available
-        puts "Renaming worktree '#{available.name}' to '#{subtree_name}'..."
-        FileUtils.mkdir_p(File.dirname(target_path))
-        unless system('git', '-C', REPO_PATH, 'worktree', 'move', available.path, target_path)
-          puts "ERROR: Failed to rename worktree"
-          return
-        end
-      else
-        puts "Creating new worktree '#{subtree_name}'..."
-        FileUtils.mkdir_p(File.dirname(target_path))
-        unless system('git', '-C', REPO_PATH, 'worktree', 'add', '--detach', target_path)
-          puts "ERROR: Failed to create worktree"
-          return
-        end
+      puts "Creating new worktree '#{subtree_name}'..."
+      FileUtils.mkdir_p(File.dirname(target_path))
+      unless system('git', '-C', REPO_PATH, 'worktree', 'add', '--detach', target_path)
+        puts "ERROR: Failed to create worktree"
+        return
       end
     end
 
@@ -372,32 +378,46 @@ class Tasks
     task = Task.new(name: task_name, tree: subtree_name, session: session_name)
     config.save_task(task)
 
-    Dir.chdir(target_path)
+    base_dir = target_path
+    if app_name
+      app = environment.find_app(app_name)
+      base_dir = app.resolve(target_path) if app
+    end
+
+    Dir.chdir(base_dir)
     hiiro.start_tmux_session(session_name)
 
     puts "Started task '#{task_name}' in worktree '#{subtree_name}'"
   end
 
-  def switch_to_task(task)
+  def switch_to_task(task, app_name: nil)
     unless task
       puts "Task not found"
       return
     end
 
-    tree = environment.all_trees.find { |t| t.name == task.tree_name }
-    path = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
+    tree = environment.find_tree(task.tree_name)
+    tree_path = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
 
     session_name = task.session_name
     session_exists = system('tmux', 'has-session', '-t', session_name, err: File::NULL)
 
     if session_exists
       hiiro.start_tmux_session(session_name)
-    elsif Dir.exist?(path)
-      Dir.chdir(path)
-      hiiro.start_tmux_session(session_name)
     else
-      puts "ERROR: Worktree path '#{path}' does not exist"
-      return
+      base_dir = tree_path
+      if app_name
+        app = environment.find_app(app_name)
+        base_dir = app.resolve(tree_path) if app
+      end
+
+      if Dir.exist?(base_dir)
+        Dir.chdir(base_dir)
+        hiiro.start_tmux_session(session_name)
+      else
+        puts "ERROR: Path '#{base_dir}' does not exist"
+        return
+      end
     end
 
     puts "Switched to '#{task.name}'"
@@ -436,7 +456,7 @@ class Tasks
 
     items.each do |task|
       marker = (current && current.name == task.name) ? "*" : " "
-      tree = environment.all_trees.find { |t| t.name == task.tree_name }
+      tree = environment.find_tree(task.tree_name)
       branch = tree&.branch || (tree&.detached? ? '(detached)' : nil)
       branch_str = branch ? "  [#{branch}]" : ""
 
@@ -448,7 +468,7 @@ class Tasks
         subs = subtasks(task)
         subs.each do |st|
           sub_marker = (current && current.name == st.name) ? "*" : " "
-          sub_tree = environment.all_trees.find { |t| t.name == st.tree_name }
+          sub_tree = environment.find_tree(st.tree_name)
           sub_branch = sub_tree&.branch || (sub_tree&.detached? ? '(detached)' : nil)
           sub_branch_str = sub_branch ? "  [#{sub_branch}]" : ""
           padding = " " * task.name.length
@@ -479,7 +499,7 @@ class Tasks
 
     puts "Task: #{task.name}"
     puts "Worktree: #{task.tree_name}"
-    tree = environment.all_trees.find { |t| t.name == task.tree_name }
+    tree = environment.find_tree(task.tree_name)
     puts "Path: #{tree&.path || '(unknown)'}"
     puts "Session: #{task.session_name}"
     puts "Parent: #{task.parent_name}" if task.subtask?
@@ -512,12 +532,12 @@ class Tasks
   end
 
   def list_apps
-    apps = config.apps_hash
+    apps = environment.all_apps
     if apps.any?
       puts "Configured apps:"
       puts
-      apps.each do |name, path|
-        puts format("  %-20s => %s", name, path)
+      apps.each do |app|
+        puts format("  %-20s => %s", app.name, app.relative_path)
       end
     else
       puts "No apps configured."
@@ -532,7 +552,7 @@ class Tasks
       return
     end
 
-    tree = environment.all_trees.find { |t| t.name == task.tree_name }
+    tree = environment.find_tree(task.tree_name)
     path = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
     send_cd(path)
   end
@@ -545,7 +565,7 @@ class Tasks
     end
 
     if app_name.nil? || app_name.empty?
-      tree = environment.all_trees.find { |t| t.name == task.tree_name }
+      tree = environment.find_tree(task.tree_name)
       send_cd(tree&.path || File.join(WORK_DIR, task.tree_name))
       return
     end
@@ -559,32 +579,31 @@ class Tasks
 
   def app_path(app_name = nil)
     task = current_task
-    tree = if task
-      t = environment.all_trees.find { |t| t.name == task.tree_name }
-      t&.path || File.join(WORK_DIR, task.tree_name)
+    tree_root = if task
+      tree = environment.find_tree(task.tree_name)
+      tree&.path || File.join(WORK_DIR, task.tree_name)
     else
       `git rev-parse --show-toplevel`.strip
     end
 
     if app_name.nil?
-      print tree
+      print tree_root
       return
     end
 
-    apps = config.apps_hash
-    matches = apps.keys.select { |n| n.start_with?(app_name) }
+    matches = environment.all_apps.select { |a| a.name.start_with?(app_name) }
 
     case matches.count
     when 0
       puts "ERROR: No matches found"
       puts
       puts "Possible Apps:"
-      apps.each { |n, p| puts format("  %-20s => %s", n, p) }
+      environment.all_apps.each { |a| puts format("  %-20s => %s", a.name, a.relative_path) }
     when 1
-      print File.join(tree, apps[matches.first])
+      print matches.first.resolve(tree_root)
     else
       puts "Multiple matches found:"
-      matches.each { |n| puts format("  %-20s => %s", n, apps[n]) }
+      matches.each { |a| puts format("  %-20s => %s", a.name, a.relative_path) }
     end
   end
 
@@ -594,7 +613,7 @@ class Tasks
     puts
     puts "Subcommands:"
     puts "  list, ls              List #{scope_name}s"
-    puts "  start NAME [TREE]     Start a new #{scope_name}"
+    puts "  start NAME [APP]      Start a new #{scope_name}"
     puts "  switch [NAME]         Switch to a #{scope_name} (interactive if no name)"
     puts "  app [APP_NAME]        Open app in new tmux window (interactive if no name)"
     puts "  apps                  List configured apps"
@@ -619,16 +638,7 @@ class Tasks
   private
 
   def slash_lookup(input)
-    parent_prefix, child_prefix = input.split('/', 2)
-
-    parent = environment.all_tasks.select(&:top_level?).find { |t|
-      t.name.start_with?(parent_prefix)
-    }
-    return nil unless parent
-
-    environment.all_tasks.select { |t| t.parent_name == parent.name }.find { |t|
-      t.short_name.start_with?(child_prefix)
-    }
+    environment.find_task(input)
   end
 
   def current_parent_task
@@ -636,24 +646,22 @@ class Tasks
     return nil unless task
 
     if task.subtask?
-      environment.all_tasks.find { |t| t.name == task.parent_name && t.top_level? }
+      environment.find_task(task.parent_name)
     else
       task
     end
   end
 
   def find_available_tree
-    environment.all_trees.find { |tree|
-      !environment.all_tasks.any? { |task| task.tree_name == tree.name }
-    }
+    assigned_tree_names = environment.all_tasks.map(&:tree_name)
+    environment.all_trees.find { |tree| !assigned_tree_names.include?(tree.name) }
   end
 
   def resolve_app(app_name, task)
-    tree = environment.all_trees.find { |t| t.name == task.tree_name }
+    tree = environment.find_tree(task.tree_name)
     tree_root = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
 
-    apps = config.apps_hash
-    matches = apps.keys.select { |n| n.start_with?(app_name) }
+    matches = environment.all_apps.select { |a| a.name.start_with?(app_name) }
 
     case matches.count
     when 0
@@ -668,14 +676,15 @@ class Tasks
       list_apps
       nil
     when 1
-      [matches.first, File.join(tree_root, apps[matches.first])]
+      app = matches.first
+      [app.name, app.resolve(tree_root)]
     else
-      exact = matches.find { |n| n == app_name }
+      exact = matches.find { |a| a.name == app_name }
       if exact
-        [exact, File.join(tree_root, apps[exact])]
+        [exact.name, exact.resolve(tree_root)]
       else
         puts "ERROR: '#{app_name}' matches multiple apps:"
-        matches.each { |m| puts "  #{m}" }
+        matches.each { |a| puts "  #{a.name}" }
         nil
       end
     end
@@ -714,69 +723,75 @@ module TasksPlugin
   def self.add_subcommands(hiiro)
     hiiro.add_subcmd(:task) do |*args|
       mgr = Tasks.new(hiiro, scope: :task)
-      TasksPlugin.dispatch(mgr, args)
+      task_hiiro = TasksPlugin.build_hiiro(hiiro, mgr)
+      task_hiiro.run
     end
 
     hiiro.add_subcmd(:subtask) do |*args|
       mgr = Tasks.new(hiiro, scope: :subtask)
-      TasksPlugin.dispatch(mgr, args)
+      task_hiiro = TasksPlugin.build_hiiro(hiiro, mgr)
+      task_hiiro.run
     end
   end
 
-  def self.dispatch(mgr, args)
-    case args
-    in []
-      mgr.list
-    in ['help']
-      mgr.help
-    in ['edit']
-      system(ENV['EDITOR'] || 'nvim', __FILE__)
-    in ['list'] | ['ls']
-      mgr.list
-    in ['start', name]
-      mgr.start_task(name)
-    in ['start', name, tree]
-      mgr.start_task(name, tree)
-    in ['switch']
-      name = mgr.select_task_interactive
-      mgr.switch_to_task(mgr.task_by_name(name)) if name
-    in ['switch', name]
-      mgr.switch_to_task(mgr.task_by_name(name))
-    in ['app']
-      apps = mgr.config.apps_hash
-      name = mgr.send(:sk_select, apps.keys)
-      mgr.open_app(name) if name
-    in ['app', name]
-      mgr.open_app(name)
-    in ['apps']
-      mgr.list_apps
-    in ['cd']
-      mgr.cd_to_app
-    in ['cd', name]
-      mgr.cd_to_app(name)
-    in ['path']
-      mgr.app_path
-    in ['path', name]
-      mgr.app_path(name)
-    in ['status'] | ['st']
-      mgr.status
-    in ['save']
-      mgr.save
-    in ['stop']
-      name = mgr.select_task_interactive
-      mgr.stop_task(mgr.task_by_name(name)) if name
-    in ['stop', name]
-      mgr.stop_task(mgr.task_by_name(name))
-    in [subcmd, *rest]
-      # Prefix matching for subcommands
-      commands = %w[list start switch app apps cd path status save stop help edit]
-      match = commands.find { |c| c.start_with?(subcmd) }
-      if match
-        dispatch(mgr, [match, *rest])
-      else
-        puts "Unknown command: #{args.inspect}"
-        mgr.help
+  def self.build_hiiro(parent_hiiro, mgr)
+    Hiiro.init(*parent_hiiro.args, mgr: mgr) do |h|
+      h.add_default { mgr.list }
+
+      h.add_subcmd(:list) { mgr.list }
+      h.add_subcmd(:ls) { mgr.list }
+
+      h.add_subcmd(:start) do |task_name, app_name=nil|
+        mgr.start_task(task_name, app_name: app_name)
       end
+
+      h.add_subcmd(:switch) do |task_name=nil, app_name=nil|
+        if task_name.nil?
+          task_name = mgr.select_task_interactive
+          return unless task_name
+        end
+        task = mgr.task_by_name(task_name)
+        mgr.switch_to_task(task, app_name: app_name)
+      end
+
+      h.add_subcmd(:app) do |app_name=nil|
+        if app_name.nil?
+          names = mgr.environment.all_apps.map(&:name)
+          app_name = mgr.send(:sk_select, names)
+          return unless app_name
+        end
+        mgr.open_app(app_name)
+      end
+
+      h.add_subcmd(:apps) { mgr.list_apps }
+
+      h.add_subcmd(:cd) do |app_name=nil|
+        mgr.cd_to_app(app_name)
+      end
+
+      h.add_subcmd(:path) do |app_name=nil|
+        mgr.app_path(app_name)
+      end
+
+      h.add_subcmd(:status) { mgr.status }
+      h.add_subcmd(:st) { mgr.status }
+
+      h.add_subcmd(:save) { mgr.save }
+
+      h.add_subcmd(:stop) do |task_name=nil|
+        if task_name.nil?
+          task_name = mgr.select_task_interactive
+          return unless task_name
+        end
+        task = mgr.task_by_name(task_name)
+        mgr.stop_task(task)
+      end
+
+      h.add_subcmd(:edit) do
+        system(ENV['EDITOR'] || 'nvim', __FILE__)
+      end
+
+      h.add_subcmd(:help) { mgr.help }
     end
   end
 end
