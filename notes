@@ -105,6 +105,9 @@ class Tasks
 
 ## i forget
 
+> when initializing an instance of `Task`...it shouldn't have a `parent_task` or `parent_name` kwarg.  it derive that context from the name given.  if the name has a `/` in it...then it
+is a subtask and the left side is the parent name and the right side is the subtask name.
+
 
 ## lots of updates
 
