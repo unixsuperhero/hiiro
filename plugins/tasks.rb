@@ -2,7 +2,7 @@ require 'yaml'
 require 'fileutils'
 require 'open3'
 
-WORK_DIR = File.join(Dir.home, 'work2')
+WORK_DIR = File.join(Dir.home, 'work')
 REPO_PATH = File.join(WORK_DIR, '.bare')
 
 class TmuxSession
