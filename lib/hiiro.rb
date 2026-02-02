@@ -29,7 +29,9 @@ class Hiiro
       args = ARGV if args.empty?
     end
 
-    new($0, *args, logging: logging, **values).tap do |hiiro|
+    bin_name = values[:bin_name] || $0
+
+    new(bin_name, *args, logging: logging, **values).tap do |hiiro|
       History.load(hiiro)
       hiiro.load_plugins(*plugins)
 
