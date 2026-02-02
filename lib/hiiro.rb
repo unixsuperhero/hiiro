@@ -181,7 +181,15 @@ class Hiiro
   class Config
     class << self
       def plugin_files
-        Dir.glob(File.join(plugin_dir, '*'))
+        user_files = Dir.glob(File.join(plugin_dir, '*.rb'))
+        user_basenames = user_files.map { |f| File.basename(f) }
+
+        gem_plugin_dir = File.join(File.expand_path('../..', __FILE__), 'plugins')
+        gem_files = Dir.exist?(gem_plugin_dir) ? Dir.glob(File.join(gem_plugin_dir, '*.rb')) : []
+
+        fallback_files = gem_files.reject { |f| user_basenames.include?(File.basename(f)) }
+
+        user_files + fallback_files
       end
 
       def plugin_dir
