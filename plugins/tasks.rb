@@ -702,3 +702,79 @@ class Tasks
     nil
   end
 end
+
+module TasksPlugin
+  def self.load(hiiro)
+    hiiro.load_plugin(Tmux)
+    add_subcommands(hiiro)
+  end
+
+  def self.add_subcommands(hiiro)
+    hiiro.add_subcmd(:task) do |*args|
+      mgr = Tasks.new(hiiro, scope: :task)
+      TasksPlugin.dispatch(mgr, args)
+    end
+
+    hiiro.add_subcmd(:subtask) do |*args|
+      mgr = Tasks.new(hiiro, scope: :subtask)
+      TasksPlugin.dispatch(mgr, args)
+    end
+  end
+
+  def self.dispatch(mgr, args)
+    case args
+    in []
+      mgr.list
+    in ['help']
+      mgr.help
+    in ['edit']
+      system(ENV['EDITOR'] || 'nvim', __FILE__)
+    in ['list'] | ['ls']
+      mgr.list
+    in ['start', name]
+      mgr.start_task(name)
+    in ['start', name, tree]
+      mgr.start_task(name, tree)
+    in ['switch']
+      name = mgr.select_task_interactive
+      mgr.switch_to_task(mgr.task_by_name(name)) if name
+    in ['switch', name]
+      mgr.switch_to_task(mgr.task_by_name(name))
+    in ['app']
+      apps = mgr.config.apps_hash
+      name = mgr.send(:sk_select, apps.keys)
+      mgr.open_app(name) if name
+    in ['app', name]
+      mgr.open_app(name)
+    in ['apps']
+      mgr.list_apps
+    in ['cd']
+      mgr.cd_to_app
+    in ['cd', name]
+      mgr.cd_to_app(name)
+    in ['path']
+      mgr.app_path
+    in ['path', name]
+      mgr.app_path(name)
+    in ['status'] | ['st']
+      mgr.status
+    in ['save']
+      mgr.save
+    in ['stop']
+      name = mgr.select_task_interactive
+      mgr.stop_task(mgr.task_by_name(name)) if name
+    in ['stop', name]
+      mgr.stop_task(mgr.task_by_name(name))
+    in [subcmd, *rest]
+      # Prefix matching for subcommands
+      commands = %w[list start switch app apps cd path status save stop help edit]
+      match = commands.find { |c| c.start_with?(subcmd) }
+      if match
+        dispatch(mgr, [match, *rest])
+      else
+        puts "Unknown command: #{args.inspect}"
+        mgr.help
+      end
+    end
+  end
+end
