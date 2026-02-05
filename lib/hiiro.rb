@@ -145,6 +145,15 @@ class Hiiro
   end
 
   def load_plugin(plugin_const)
+    if plugin_const.is_a?(String) || plugin_const.is_a?(Symbol)
+      begin
+        plugin_const = Kernel.const_get(plugin_const.to_sym)
+      rescue => e
+        puts "unable to load plugin: #{plugin_const}"
+        return
+      end
+    end
+
     return if @loaded_plugins.include?(plugin_const)
 
     plugin_const.load(self)
