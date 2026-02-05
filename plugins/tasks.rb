@@ -286,6 +286,26 @@ class TaskManager
         return YAML.safe_load_file(tasks_file) || { 'tasks' => [] }
       end
 
+      # Load from individual task_*.yml files
+      task_files = Dir.glob(File.join(File.dirname(tasks_file), 'task_*.yml'))
+      if task_files.any?
+        tasks = task_files.map do |file|
+          short_name = File.basename(file, '.yml').sub(/^task_/, '')
+          data = YAML.safe_load_file(file) || {}
+          # Support parent key for subtasks, or infer from tree path
+          parent = data['parent']
+          if parent.nil? && data['tree']&.include?('/')
+            parent = data['tree'].split('/').first
+          end
+          name = parent ? "#{parent}/#{short_name}" : short_name
+          h = { 'name' => name }
+          h['tree'] = data['tree'] if data['tree']
+          h['session'] = data['session'] if data['session']
+          h
+        end
+        return { 'tasks' => tasks }
+      end
+
       assignments_file = File.join(File.dirname(tasks_file), 'assignments.yml')
       if File.exist?(assignments_file)
         raw = YAML.safe_load_file(assignments_file) || {}
@@ -652,7 +672,9 @@ class TaskManager
   # --- Interactive selection with sk ---
 
   def select_task_interactive(prompt = nil)
-    names = tasks.map { |t| scope == :subtask ? t.short_name : t.name }
+    # Include all tasks (top-level and subtasks) in selection
+    all = environment.all_tasks
+    names = all.map(&:name)
     return nil if names.empty?
 
     sk_select(names)
