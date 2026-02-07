@@ -60,4 +60,15 @@ o.add_subcmd(:resize) { |*args|
   system('tmux', 'resize-pane', *args)
 }
 
+o.add_subcmd(:history) { |pane_id=nil|
+  entries = Hiiro::History.by_pane(pane_id)
+  if entries.empty?
+    puts "No history for this pane"
+  else
+    puts "History for pane: #{pane_id || ENV['TMUX_PANE'] || 'current'}"
+    puts
+    entries.last(20).each_with_index { |e, i| puts e.oneline(i + 1) }
+  end
+}
+
 o.run

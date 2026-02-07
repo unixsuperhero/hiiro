@@ -91,8 +91,10 @@ class Hiiro
   end
 
   def run
-    log_event('hiiro: ran command')
     result = runner.run(*args)
+
+    # Track command after running (only saves if state changed and in task context)
+    History.track(cmd: full_command, hiiro: self)
 
     handle_result(result)
 
@@ -101,10 +103,6 @@ class Hiiro
     puts "ERROR: #{e.message}"
     puts e.backtrace
     exit 1
-  end
-
-  def log_event(message)
-    history.add_manual(message || 'command ran', hiiro: self)
   end
 
   def handle_result(result)

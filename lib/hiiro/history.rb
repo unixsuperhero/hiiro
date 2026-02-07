@@ -1,16 +1,23 @@
 require 'yaml'
 require 'time'
 require 'fileutils'
+require 'digest'
 
 class Hiiro
   class History
-    HISTORY_FILE = File.join(Dir.home, '.config/hiiro/history.yml')
+    HISTORY_DIR = File.join(Dir.home, '.config/hiiro/history')
+    HISTORY_FILE = File.join(HISTORY_DIR, 'entries.yml')
+    LAST_STATE_FILE = File.join(HISTORY_DIR, 'last_state.yml')
 
     class Entry
-      attr_reader :id, :timestamp, :source, :cmd, :description
-      attr_reader :tmux_session, :tmux_window, :tmux_pane
-      attr_reader :git_branch, :git_worktree
-      attr_reader :task, :subtask
+      FIELDS = %i[
+        id timestamp source cmd description pwd
+        tmux_session tmux_window tmux_pane
+        git_branch git_sha git_origin_sha git_worktree
+        task subtask app
+      ].freeze
+
+      attr_reader(*FIELDS)
 
       def initialize(data)
         data ||= {}
@@ -19,13 +26,17 @@ class Hiiro
         @source = data['source']
         @cmd = data['cmd']
         @description = data['description']
+        @pwd = data['pwd']
         @tmux_session = data['tmux_session']
         @tmux_window = data['tmux_window']
         @tmux_pane = data['tmux_pane']
         @git_branch = data['git_branch']
+        @git_sha = data['git_sha']
+        @git_origin_sha = data['git_origin_sha']
         @git_worktree = data['git_worktree']
         @task = data['task']
         @subtask = data['subtask']
+        @app = data['app']
       end
 
       def to_h
@@ -35,24 +46,60 @@ class Hiiro
           'source' => source,
           'cmd' => cmd,
           'description' => description,
+          'pwd' => pwd,
           'tmux_session' => tmux_session,
           'tmux_window' => tmux_window,
           'tmux_pane' => tmux_pane,
           'git_branch' => git_branch,
+          'git_sha' => git_sha,
+          'git_origin_sha' => git_origin_sha,
           'git_worktree' => git_worktree,
           'task' => task,
           'subtask' => subtask,
+          'app' => app,
         }.compact
       end
 
+      # Data used for change detection (excludes timestamp, id, cmd)
+      def state_key
+        {
+          'pwd' => pwd,
+          'tmux_session' => tmux_session,
+          'tmux_window' => tmux_window,
+          'tmux_pane' => tmux_pane,
+          'git_branch' => git_branch,
+          'git_sha' => git_sha,
+          'git_origin_sha' => git_origin_sha,
+          'git_worktree' => git_worktree,
+          'task' => task,
+          'subtask' => subtask,
+          'app' => app,
+        }.compact
+      end
+
+      def state_fingerprint
+        Digest::SHA256.hexdigest(state_key.to_yaml)[0..15]
+      end
+
       def short_line(index)
-        time_str = timestamp ? Time.parse(timestamp).strftime('%Y-%m-%d %H:%M') : Time.now.iso8601
+        time_str = timestamp ? Time.parse(timestamp).strftime('%Y-%m-%d %H:%M') : Time.now.strftime('%Y-%m-%d %H:%M')
         desc = description || cmd || '(no description)'
-        desc = desc[0..60] + '...' if desc.length > 63
+        desc = desc[0..50] + '...' if desc.length > 53
         [
           format('%3d  %s  %s', index, time_str, desc),
-          format('   cmd: %s', cmd),
+          format('     %s @ %s', git_branch || '(no branch)', task || '(no task)'),
         ].join("\n")
+      end
+
+      def oneline(index = nil)
+        time_str = timestamp ? Time.parse(timestamp).strftime('%m/%d %H:%M') : ''
+        prefix = index ? format('%3d  ', index) : ''
+        branch_str = git_branch ? "[#{git_branch}]" : ''
+        task_str = task ? "(#{task})" : ''
+        cmd_str = cmd || description || ''
+        cmd_str = cmd_str[0..40] + '...' if cmd_str.length > 43
+
+        "#{prefix}#{time_str}  #{branch_str.ljust(20)}  #{task_str.ljust(15)}  #{cmd_str}"
       end
 
       def full_display
@@ -70,13 +117,27 @@ class Hiiro
         lines << "  Pane:      #{tmux_pane}" if tmux_pane
         lines << ""
         lines << "Git:"
-        lines << "  Branch:    #{git_branch}" if git_branch
         lines << "  Worktree:  #{git_worktree}" if git_worktree
+        lines << "  Branch:    #{git_branch}" if git_branch
+        lines << "  SHA:       #{git_sha}" if git_sha
+        lines << "  Origin:    #{git_origin_sha}" if git_origin_sha
         lines << ""
         lines << "Task:"
         lines << "  Task:      #{task}" if task
         lines << "  Subtask:   #{subtask}" if subtask
+        lines << "  App:       #{app}" if app
         lines.join("\n")
+      end
+
+      # Filter matching
+      def matches?(filters)
+        filters.all? do |key, value|
+          entry_value = send(key) rescue nil
+          next true if value.nil?
+          next entry_value == value if value.is_a?(String)
+          next value.include?(entry_value) if value.is_a?(Array)
+          true
+        end
       end
     end
 
@@ -88,19 +149,33 @@ class Hiiro
           subcmd, *rest = args
           case subcmd
           when 'ls', 'list', nil
-            history.list
+            history.list(limit: 20)
+          when 'all'
+            history.list(limit: nil)
           when 'show'
             history.show(rest.first)
           when 'goto'
             history.goto(rest.first)
           when 'add'
             history.add_manual(rest.join(' '), hiiro: hiiro)
+          when 'by'
+            # h history by pane|window|session|task|branch [value]
+            dimension, value = rest
+            history.list_by(dimension, value)
+          when 'clear'
+            history.clear!
+            puts "History cleared."
           else
             puts "Unknown history subcommand: #{subcmd}"
-            puts "Available: ls, show <id>, goto <id>, add <description>"
+            puts "Available: ls, all, show <id>, goto <id>, add <description>, by <dimension> [value], clear"
             false
           end
         end
+      end
+
+      # Called automatically when a command runs (if in a task context)
+      def track(cmd:, hiiro: nil)
+        new.track_command(cmd: cmd, hiiro: hiiro)
       end
 
       def log(description: nil, pwd: Dir.pwd, cmd: nil, source: nil, task: nil, subtask: nil)
@@ -113,10 +188,59 @@ class Hiiro
           subtask: subtask
         )
       end
+
+      # Query helpers for other commands (e.g., h pane history)
+      def by_pane(pane_id = nil)
+        pane_id ||= current_tmux_pane
+        new.filter(tmux_pane: pane_id)
+      end
+
+      def by_window(window_id = nil)
+        window_id ||= current_tmux_window
+        new.filter(tmux_window: window_id)
+      end
+
+      def by_session(session_name = nil)
+        session_name ||= current_tmux_session
+        new.filter(tmux_session: session_name)
+      end
+
+      def by_task(task_name)
+        new.filter(task: task_name)
+      end
+
+      def by_branch(branch_name)
+        new.filter(git_branch: branch_name)
+      end
+
+      def by_worktree(worktree_path)
+        new.filter(git_worktree: worktree_path)
+      end
+
+      def by_app(app_name)
+        new.filter(app: app_name)
+      end
+
+      private
+
+      def current_tmux_pane
+        return nil unless ENV['TMUX']
+        `tmux display-message -p '#D'`.strip rescue nil
+      end
+
+      def current_tmux_window
+        return nil unless ENV['TMUX']
+        `tmux display-message -p '#S:#I'`.strip rescue nil
+      end
+
+      def current_tmux_session
+        return nil unless ENV['TMUX']
+        `tmux display-message -p '#S'`.strip rescue nil
+      end
     end
 
     def initialize
-      ensure_history_file
+      ensure_history_dir
     end
 
     def entries
@@ -128,14 +252,63 @@ class Hiiro
       entries
     end
 
-    def list
-      if entries.empty?
+    def filter(filters = {})
+      entries.select { |e| e.matches?(filters) }
+    end
+
+    def list(limit: 20)
+      items = entries.reverse
+      items = items.first(limit) if limit
+
+      if items.empty?
         puts "No history entries."
         return true
       end
 
-      entries.each_with_index do |entry, idx|
-        puts entry.short_line(idx + 1)
+      items.reverse.each_with_index do |entry, idx|
+        puts entry.oneline(idx + 1)
+      end
+      true
+    end
+
+    def list_by(dimension, value = nil)
+      dimension_map = {
+        'pane' => :tmux_pane,
+        'window' => :tmux_window,
+        'session' => :tmux_session,
+        'task' => :task,
+        'subtask' => :subtask,
+        'branch' => :git_branch,
+        'worktree' => :git_worktree,
+        'app' => :app,
+      }
+
+      field = dimension_map[dimension]
+      unless field
+        puts "Unknown dimension: #{dimension}"
+        puts "Available: #{dimension_map.keys.join(', ')}"
+        return false
+      end
+
+      # If no value specified, use current context
+      value ||= current_value_for(field)
+
+      if value.nil?
+        puts "No current #{dimension} detected. Please specify a value."
+        return false
+      end
+
+      filtered = filter(field => value)
+
+      if filtered.empty?
+        puts "No history for #{dimension}=#{value}"
+        return true
+      end
+
+      puts "History for #{dimension}: #{value}"
+      puts
+      filtered.last(20).each_with_index do |entry, idx|
+        puts entry.oneline(idx + 1)
       end
       true
     end
@@ -174,26 +347,49 @@ class Hiiro
       add(
         description: description,
         source: 'manual',
-        cmd: hiiro.full_command,
+        cmd: hiiro&.full_command,
       )
       true
     end
 
-    def add(description: nil, cmd: nil, source: nil, task: nil, subtask: nil, pwd: Dir.pwd)
+    # Main tracking method - gathers all context and saves if changed
+    def track_command(cmd:, hiiro: nil, force: false)
+      context = gather_context
+      return nil unless context[:task] || force # Only track if in a task context (unless forced)
+
+      context[:cmd] = cmd
+      context[:source] = 'auto'
+
+      # Check if state changed
+      unless force
+        new_state = build_state_key(context)
+        return nil if state_unchanged?(new_state)
+        save_last_state(new_state)
+      end
+
+      add(**context)
+    end
+
+    def add(description: nil, cmd: nil, source: nil, task: nil, subtask: nil, pwd: nil, app: nil)
+      context = gather_context
+
       entry_data = {
         'id' => generate_id,
         'timestamp' => Time.now.iso8601,
         'description' => description,
         'cmd' => cmd,
-        'pwd' => pwd,
+        'pwd' => pwd || context[:pwd],
         'source' => source,
-        'tmux_session' => current_tmux_session,
-        'tmux_window' => current_tmux_window,
-        'tmux_pane' => current_tmux_pane,
-        'git_branch' => current_git_branch,
-        'git_worktree' => current_git_worktree,
-        'task' => task,
-        'subtask' => subtask,
+        'tmux_session' => context[:tmux_session],
+        'tmux_window' => context[:tmux_window],
+        'tmux_pane' => context[:tmux_pane],
+        'git_branch' => context[:git_branch],
+        'git_sha' => context[:git_sha],
+        'git_origin_sha' => context[:git_origin_sha],
+        'git_worktree' => context[:git_worktree],
+        'task' => task || context[:task],
+        'subtask' => subtask || context[:subtask],
+        'app' => app || context[:app],
       }.compact
 
       all = load_raw_entries
@@ -203,14 +399,60 @@ class Hiiro
       Entry.new(entry_data)
     end
 
+    def clear!
+      save_entries([])
+      File.delete(LAST_STATE_FILE) if File.exist?(LAST_STATE_FILE)
+      @entries = nil
+    end
+
     private
+
+    def gather_context
+      {
+        pwd: Dir.pwd,
+        tmux_session: current_tmux_session,
+        tmux_window: current_tmux_window,
+        tmux_pane: current_tmux_pane,
+        git_branch: current_git_branch,
+        git_sha: current_git_sha,
+        git_origin_sha: current_git_origin_sha,
+        git_worktree: current_git_worktree,
+        task: current_task_name,
+        subtask: current_subtask_name,
+        app: current_app_name,
+      }
+    end
+
+    def build_state_key(context)
+      context.slice(
+        :pwd, :tmux_session, :tmux_window, :tmux_pane,
+        :git_branch, :git_sha, :git_origin_sha, :git_worktree,
+        :task, :subtask, :app
+      ).compact
+    end
+
+    def state_unchanged?(new_state)
+      return false unless File.exist?(LAST_STATE_FILE)
+      last_state = YAML.load_file(LAST_STATE_FILE) rescue {}
+      last_state == new_state.transform_keys(&:to_s)
+    end
+
+    def save_last_state(state)
+      File.write(LAST_STATE_FILE, state.transform_keys(&:to_s).to_yaml)
+    end
+
+    def current_value_for(field)
+      context = gather_context
+      context[field]
+    end
 
     def find_entry(ref)
       return nil unless ref
 
       if ref.to_s.match?(/^\d+$/)
         idx = ref.to_i - 1
-        return entries[idx] if idx >= 0 && idx < entries.length
+        reversed = entries.reverse
+        return reversed[idx] if idx >= 0 && idx < reversed.length
       end
 
       entries.find { |e| e.id == ref.to_s }
@@ -220,9 +462,8 @@ class Hiiro
       Time.now.strftime('%Y%m%d%H%M%S') + '-' + rand(10000).to_s.rjust(4, '0')
     end
 
-    def ensure_history_file
-      dir = File.dirname(HISTORY_FILE)
-      FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
+    def ensure_history_dir
+      FileUtils.mkdir_p(HISTORY_DIR) unless Dir.exist?(HISTORY_DIR)
 
       unless File.exist?(HISTORY_FILE)
         File.write(HISTORY_FILE, [].to_yaml)
@@ -240,9 +481,12 @@ class Hiiro
     end
 
     def save_entries(entries_data)
+      # Keep only last 1000 entries to prevent unbounded growth
+      entries_data = entries_data.last(1000) if entries_data.length > 1000
       File.write(HISTORY_FILE, entries_data.to_yaml)
     end
 
+    # Tmux context
     def current_tmux_session
       return nil unless ENV['TMUX']
       `tmux display-message -p '#S'`.strip rescue nil
@@ -255,11 +499,22 @@ class Hiiro
 
     def current_tmux_pane
       return nil unless ENV['TMUX']
-      `tmux display-message -p '#P'`.strip rescue nil
+      ENV['TMUX_PANE'] || `tmux display-message -p '#P'`.strip rescue nil
     end
 
+    # Git context
     def current_git_branch
       git_helper.branch_current
+    end
+
+    def current_git_sha
+      git_helper.commit('HEAD', short: true)
+    end
+
+    def current_git_origin_sha
+      branch = current_git_branch
+      return nil unless branch
+      git_helper.commit("origin/#{branch}", short: true)
     end
 
     def current_git_worktree
@@ -268,6 +523,58 @@ class Hiiro
 
     def git_helper
       @git_helper ||= Git.new(nil, Dir.pwd)
+    end
+
+    # Task context
+    def current_task_name
+      env = environment
+      return nil unless env
+
+      task = env.task
+      return nil unless task
+
+      task.subtask? ? task.parent_name : task.name
+    end
+
+    def current_subtask_name
+      env = environment
+      return nil unless env
+
+      task = env.task
+      return nil unless task
+      return nil unless task.subtask?
+
+      task.short_name
+    end
+
+    def current_app_name
+      env = environment
+      return nil unless env
+
+      pwd = Dir.pwd
+      task = env.task
+      return nil unless task
+
+      tree = env.find_tree(task.tree_name)
+      return nil unless tree
+
+      # Check if pwd is in an app directory
+      env.all_apps.each do |app|
+        app_path = app.resolve(tree.path)
+        if pwd == app_path || pwd.start_with?(app_path + '/')
+          return app.name
+        end
+      end
+
+      nil
+    end
+
+    def environment
+      @environment ||= begin
+        Environment.current
+      rescue NameError
+        nil
+      end
     end
   end
 end
