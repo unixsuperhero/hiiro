@@ -239,7 +239,12 @@ class Hiiro
       add(**context)
     end
 
-    def add(description: nil, cmd: nil, source: nil, task: nil, subtask: nil, pwd: nil, app: nil)
+    def add(
+      description: nil, cmd: nil, source: nil, pwd: nil,
+      tmux_session: nil, tmux_window: nil, tmux_pane: nil,
+      git_branch: nil, git_sha: nil, git_origin_sha: nil, git_worktree: nil,
+      task: nil, subtask: nil, app: nil
+    )
       context = gather_context
 
       entry_data = {
@@ -249,13 +254,13 @@ class Hiiro
         'cmd' => cmd,
         'pwd' => pwd || context[:pwd],
         'source' => source,
-        'tmux_session' => context[:tmux_session],
-        'tmux_window' => context[:tmux_window],
-        'tmux_pane' => context[:tmux_pane],
-        'git_branch' => context[:git_branch],
-        'git_sha' => context[:git_sha],
-        'git_origin_sha' => context[:git_origin_sha],
-        'git_worktree' => context[:git_worktree],
+        'tmux_session' => tmux_session || context[:tmux_session],
+        'tmux_window' => tmux_window || context[:tmux_window],
+        'tmux_pane' => tmux_pane || context[:tmux_pane],
+        'git_branch' => git_branch || context[:git_branch],
+        'git_sha' => git_sha || context[:git_sha],
+        'git_origin_sha' => git_origin_sha || context[:git_origin_sha],
+        'git_worktree' => git_worktree || context[:git_worktree],
         'task' => task || context[:task],
         'subtask' => subtask || context[:subtask],
         'app' => app || context[:app],
