@@ -36,27 +36,11 @@ class Tree
   attr_reader :path, :head, :branch
 
   def self.all(repo_path: REPO_PATH)
-    output = `git -C #{repo_path} worktree list --porcelain 2>/dev/null`
-
-    trees = []
-    current = nil
-
-    output.lines(chomp: true).each do |line|
-      case line
-      when /^worktree (.*)/
-        trees << new(**current) if current
-        current = { path: $1 }
-      when /^HEAD (.*)/
-        current[:head] = $1 if current
-      when /^branch refs\/heads\/(.*)/
-        current[:branch] = $1 if current
-      when 'bare'
-        current = nil
-      end
-    end
-
-    trees << new(**current) if current
-    trees
+    git = Hiiro::Git.new(nil, repo_path)
+    git.worktrees(repo_path: repo_path).map do |wt|
+      next if wt.bare?
+      new(path: wt.path, head: wt.head, branch: wt.branch)
+    end.compact
   end
 
   def initialize(path:, head: nil, branch: nil)
@@ -401,18 +385,19 @@ class TaskManager
 
     target_path = File.join(WORK_DIR, subtree_name)
 
+    git = Hiiro::Git.new(nil, REPO_PATH)
     available = find_available_tree
     if available
       puts "Renaming worktree '#{available.name}' to '#{subtree_name}'..."
       FileUtils.mkdir_p(File.dirname(target_path))
-      unless system('git', '-C', REPO_PATH, 'worktree', 'move', available.path, target_path)
+      unless git.move_worktree(available.path, target_path, repo_path: REPO_PATH)
         puts "ERROR: Failed to rename worktree"
         return
       end
     else
       puts "Creating new worktree '#{subtree_name}'..."
       FileUtils.mkdir_p(File.dirname(target_path))
-      unless system('git', '-C', REPO_PATH, 'worktree', 'add', '--detach', target_path)
+      unless git.add_worktree_detached(target_path, repo_path: REPO_PATH)
         puts "ERROR: Failed to create worktree"
         return
       end
@@ -627,7 +612,7 @@ class TaskManager
       tree = environment.find_tree(task.tree_name)
       tree&.path || File.join(WORK_DIR, task.tree_name)
     else
-      `git rev-parse --show-toplevel`.strip
+      Hiiro::Git.new(nil, Dir.pwd).root
     end
 
     if app_name.nil?
