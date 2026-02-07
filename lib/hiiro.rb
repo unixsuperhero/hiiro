@@ -3,6 +3,7 @@ require "yaml"
 require "shellwords"
 
 require_relative "hiiro/version"
+require_relative "hiiro/prefix_matcher"
 require_relative "hiiro/git"
 require_relative "hiiro/history"
 require_relative "hiiro/options"
