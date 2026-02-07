@@ -85,12 +85,13 @@ class Hiiro
       def oneline(index = nil)
         time_str = timestamp ? Time.parse(timestamp).strftime('%m/%d %H:%M') : ''
         prefix = index ? format('%3d  ', index) : ''
+        sha_str = git_sha ? git_sha[0..6] : '-------'
         branch_str = git_branch ? "[#{git_branch}]" : ''
         task_str = task ? "(#{task})" : ''
         cmd_str = cmd || description || ''
-        cmd_str = cmd_str[0..40] + '...' if cmd_str.length > 43
+        cmd_str = cmd_str[0..35] + '...' if cmd_str.length > 38
 
-        "#{prefix}#{time_str}  #{branch_str.ljust(20)}  #{task_str.ljust(15)}  #{cmd_str}"
+        "#{prefix}#{time_str}  #{sha_str}  #{branch_str.ljust(20)}  #{task_str.ljust(15)}  #{cmd_str}"
       end
 
       def full_display

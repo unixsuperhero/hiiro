@@ -382,13 +382,13 @@ class Hiiro
     end
 
     def current_git_sha
-      git_helper.commit('HEAD', short: true)
+      git_helper.commit('HEAD')
     end
 
     def current_git_origin_sha
       branch = current_git_branch
       return nil unless branch
-      git_helper.commit("origin/#{branch}", short: true)
+      git_helper.commit("origin/#{branch}")
     end
 
     def current_git_worktree
