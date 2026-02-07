@@ -672,7 +672,11 @@ class TaskManager
   # --- Interactive selection with sk ---
 
   def select_task_interactive(prompt = nil)
-    names = tasks.map { |t| scope == :subtask ? t.short_name : t.name }
+    names = if scope == :subtask
+      tasks.map(&:short_name)
+    else
+      environment.all_tasks.map(&:name)
+    end
     return nil if names.empty?
 
     sk_select(names)
