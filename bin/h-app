@@ -11,6 +11,10 @@ def load_apps
   YAML.safe_load_file(APPS_FILE) || {}
 end
 
+def save_apps(apps)
+  File.write(APPS_FILE, apps.to_yaml)
+end
+
 def task_root
   # Fall back to current task's tree path if not in a git repo
   env = Environment.current rescue nil
@@ -134,5 +138,71 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
     else
       puts "App '#{app_name}' not found"
     end
+  }
+
+  add_subcmd(:add) { |app_name=nil, relative_path=nil|
+    if app_name.nil? || app_name.empty?
+      puts "Usage: h app add <app_name> <relative_path_from_root>"
+      next
+    end
+
+    if relative_path.nil? || relative_path.empty?
+      puts "Usage: h app add <app_name> <relative_path_from_root>"
+      next
+    end
+
+    apps = load_apps
+
+    if apps.key?(app_name)
+      puts "App '#{app_name}' already exists with path: #{apps[app_name]}"
+      puts "Remove it first with: h app rm #{app_name}"
+      next
+    end
+
+    apps[app_name] = relative_path
+    save_apps(apps)
+    puts "Added app '#{app_name}' => #{relative_path}"
+  }
+
+  add_subcmd(:rm) { |app_name=nil|
+    if app_name.nil? || app_name.empty?
+      puts "Usage: h app rm <app_name>"
+      next
+    end
+
+    apps = load_apps
+
+    unless apps.key?(app_name)
+      puts "App '#{app_name}' not found"
+      puts
+      puts "Available apps:"
+      apps.each { |name, path| puts format("  %-20s => %s", name, path) }
+      next
+    end
+
+    removed_path = apps.delete(app_name)
+    save_apps(apps)
+    puts "Removed app '#{app_name}' (was: #{removed_path})"
+  }
+
+  add_subcmd(:remove) { |app_name=nil|
+    if app_name.nil? || app_name.empty?
+      puts "Usage: h app remove <app_name>"
+      next
+    end
+
+    apps = load_apps
+
+    unless apps.key?(app_name)
+      puts "App '#{app_name}' not found"
+      puts
+      puts "Available apps:"
+      apps.each { |name, path| puts format("  %-20s => %s", name, path) }
+      next
+    end
+
+    removed_path = apps.delete(app_name)
+    save_apps(apps)
+    puts "Removed app '#{app_name}' (was: #{removed_path})"
   }
 }
