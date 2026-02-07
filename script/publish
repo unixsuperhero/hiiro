@@ -1,19 +1,51 @@
 #!/usr/bin/env ruby
 
-require "hiiro"
+require "net/http"
+require "json"
 
 # Parse -t flag for pre-release
 pre_release = ARGV.include?('-t')
 
-# Parse current version
-current = Hiiro::VERSION
-parts = current.split(?.)
+# Fetch all published versions from RubyGems
+def fetch_versions
+  uri = URI("https://rubygems.org/api/v1/versions/hiiro.json")
+  response = Net::HTTP.get(uri)
+  JSON.parse(response).map { |v| v["number"] }
+rescue => e
+  puts "Warning: Could not fetch versions from RubyGems: #{e.message}"
+  puts "Falling back to local version"
+  require "hiiro"
+  [Hiiro::VERSION]
+end
 
-# Check if current version is a pre release (e.g., "0.1.43.pre.2")
+# Parse version string into comparable components
+def parse_version(version)
+  parts = version.split(?.)
+  is_pre = parts.length >= 5 && parts[-2] == 'pre'
+  if is_pre
+    { major: parts[0].to_i, minor: parts[1].to_i, patch: parts[2].to_i, pre: true, pre_num: parts[-1].to_i }
+  else
+    { major: parts[0].to_i, minor: parts[1].to_i, patch: parts[2].to_i, pre: false, pre_num: 0 }
+  end
+end
+
+# Find the latest version (prioritize release over pre for same patch)
+def latest_version(versions)
+  versions.max_by do |v|
+    p = parse_version(v)
+    # Sort by major, minor, patch, then non-pre before pre, then pre_num
+    [p[:major], p[:minor], p[:patch], p[:pre] ? 0 : 1, p[:pre_num]]
+  end
+end
+
+versions = fetch_versions
+current = latest_version(versions)
+puts "Latest published version: #{current}"
+
+parts = current.split(?.)
 is_pre = parts.length >= 5 && parts[-2] == 'pre'
 
 if is_pre
-  # Current version is pre (e.g., "0.1.43.pre.2")
   major, minor, patch = parts[0..2]
   pre_num = parts[-1].to_i
   if pre_release
@@ -24,7 +56,6 @@ if is_pre
     new_version = [major, minor, patch].join(?.)
   end
 else
-  # Current version is not pre (e.g., "0.1.42")
   major, minor, patch = parts[0..2]
   if pre_release
     # release -> pre: increment patch and add pre.1
@@ -34,6 +65,8 @@ else
     new_version = [major, minor, patch.to_i + 1].join(?.)
   end
 end
+
+puts "New version: #{new_version}"
 
 File.open('lib/hiiro/version.rb', 'w+') do |f|
   f.puts 'class Hiiro'
@@ -51,3 +84,17 @@ puts "\nERROR: unable to push\n" unless pushed
 
 system 'git', 'add', '--all'
 system 'git', 'commit', '-m', "publishing v#{new_version}"
+
+# Try to push to origin main, fallback to a separate branch if it fails
+if system('git', 'push', 'origin', 'main')
+  puts "Pushed to origin/main"
+else
+  branch_name = "publish-v#{new_version}"
+  system 'git', 'checkout', '-b', branch_name
+  if system('git', 'push', 'origin', branch_name)
+    puts "Push to main failed. Pushed to origin/#{branch_name} instead"
+  else
+    puts "\nERROR: unable to push to origin\n"
+  end
+  system 'git', 'checkout', 'main'
+end
