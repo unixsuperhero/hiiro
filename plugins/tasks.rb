@@ -672,9 +672,8 @@ class TaskManager
   # --- Interactive selection with sk ---
 
   def select_task_interactive(prompt = nil)
-    # Include all tasks (top-level and subtasks) in selection
-    all = environment.all_tasks
-    names = all.map(&:name)
+    items = tasks
+    names = items.map(&:name)
     return nil if names.empty?
 
     sk_select(names)
