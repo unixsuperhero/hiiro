@@ -661,16 +661,11 @@ module OldTask
         return nil
       end
 
-      require 'open3'
-      selected, status = Open3.capture2('sk', stdin_data: lines.join("\n"))
+      choice = Hiiro::Sk.select(lines)
+      return nil unless choice
+      return 'main' if choice == '(main)'
 
-      if status.success? && !selected.strip.empty?
-        choice = selected.strip
-        return 'main' if choice == '(main)'
-        return choice
-      end
-
-      nil
+      choice
     end
 
     # Show status for the current subtask

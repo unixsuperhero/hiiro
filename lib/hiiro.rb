@@ -5,6 +5,7 @@ require "shellwords"
 require_relative "hiiro/version"
 require_relative "hiiro/history"
 require_relative "hiiro/options"
+require_relative "hiiro/sk"
 
 class String
   def underscore(camel_cased_word=self)
@@ -209,6 +210,10 @@ class Hiiro
 
   def parsed_args
     i = Args.new(*args)
+  end
+
+  def sk(lines)
+    Sk.select(lines)
   end
 
   def get_value(name)
