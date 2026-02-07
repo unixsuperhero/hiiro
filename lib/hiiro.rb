@@ -3,6 +3,7 @@ require "yaml"
 require "shellwords"
 
 require_relative "hiiro/version"
+require_relative "hiiro/git"
 require_relative "hiiro/history"
 require_relative "hiiro/options"
 require_relative "hiiro/sk"
@@ -147,6 +148,10 @@ class Hiiro
   end
 
   def pins = @pins ||= Pin.new(self)
+
+  def git
+    @git ||= Git.new(self, Dir.pwd)
+  end
 
   def load_plugins(*plugins)
     plugins.flatten.each { |plugin| load_plugin(plugin) }
