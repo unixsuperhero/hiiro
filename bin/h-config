@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+def open_config(dir:, file:)
+  editor = ENV['EDITOR'] || 'nvim'
+  full_path = File.expand_path(File.join(dir, file))
+  Dir.chdir(File.expand_path(dir))
+  system(editor, full_path)
+end
+
+Hiiro.run(*ARGV) {
+  add_subcmd(:vim) {
+    dir = '~/.config/nvim'
+    file = File.exist?(File.expand_path('~/.config/nvim/init.lua')) ? 'init.lua' : 'init.vim'
+    open_config(dir: dir, file: file)
+  }
+
+  add_subcmd(:tmux) {
+    open_config(dir: '~', file: '.tmux.conf')
+  }
+
+  add_subcmd(:zsh) {
+    open_config(dir: '~', file: '.zshrc')
+  }
+
+  add_subcmd(:profile) {
+    open_config(dir: '~', file: '.zprofile')
+  }
+
+  add_subcmd(:starship) {
+    open_config(dir: '~/.config/starship', file: 'starship.toml')
+  }
+
+  add_subcmd(:claude) {
+    open_config(dir: '~/.claude', file: 'settings.json')
+  }
+}
