@@ -492,7 +492,7 @@ class TaskManager
       display_name = scope == :subtask ? task.short_name : task.name
       puts format("%s %-25s  tree: %-20s%s", marker, display_name, task.tree_name || '(none)', branch_str)
 
-      # Show subtask count for top-level tasks
+      # Show subtasks under parent
       if scope == :task
         subs = subtasks(task)
         subs.each do |st|
@@ -500,8 +500,7 @@ class TaskManager
           sub_tree = environment.find_tree(st.tree_name)
           sub_branch = sub_tree&.branch || (sub_tree&.detached? ? '(detached)' : nil)
           sub_branch_str = sub_branch ? "  [#{sub_branch}]" : ""
-          padding = " " * task.name.length
-          puts format("%s %s/%-*s  tree: %-20s%s", sub_marker, padding, 25 - task.name.length - 1, st.short_name, st.tree_name || '(none)', sub_branch_str)
+          puts format("%s - %-23s  tree: %-20s%s", sub_marker, st.short_name, st.tree_name || '(none)', sub_branch_str)
         end
       end
     end
