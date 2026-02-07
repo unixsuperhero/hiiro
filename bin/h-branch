@@ -107,8 +107,7 @@ class BranchManager
   private
 
   def current_branch
-    branch = `git rev-parse --abbrev-ref HEAD 2>/dev/null`.strip
-    branch.empty? ? nil : branch
+    hiiro.git.branch
   end
 
   def build_entry(branch_name)
@@ -208,10 +207,10 @@ hiiro.add_subcmd(:save) { manager.save }
 hiiro.add_subcmd(:history) { |*args| manager.history(args) }
 hiiro.add_subcmd(:current) { manager.current }
 hiiro.add_subcmd(:select) do |*args|
-  branches = `git branch -i --sort=authordate`.lines(chomp: true)
+  branches = hiiro.git.branches(sort_by: 'authordate', ignore_case: true)
 
-  lines = branches.each_with_object({}) do |ln,h|
-    h[ln] = ln.sub(/../, '')
+  lines = branches.each_with_object({}) do |name, h|
+    h["  #{name}"] = name
   end
 
   if args.any?

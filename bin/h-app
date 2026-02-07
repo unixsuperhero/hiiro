@@ -11,11 +11,6 @@ def load_apps
   YAML.safe_load_file(APPS_FILE) || {}
 end
 
-def git_root
-  root = `git rev-parse --show-toplevel 2>/dev/null`.strip
-  root.empty? ? nil : root
-end
-
 def task_root
   # Fall back to current task's tree path if not in a git repo
   env = Environment.current rescue nil
@@ -28,12 +23,6 @@ def task_root
   tree&.path
 end
 
-def resolve_app_path(app_relative_path)
-  root = git_root || task_root
-  return nil unless root
-
-  File.join(root, app_relative_path)
-end
 
 def relative_cd_path(target_path)
   pwd = Pathname.new(Dir.pwd)
@@ -57,7 +46,7 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
   }
 
   add_subcmd(:cd) { |app_name=nil|
-    root = git_root || task_root
+    root = git.root || task_root
 
     unless root
       puts "Not in a git repo or task - cannot resolve path"
@@ -99,7 +88,7 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
   }
 
   add_subcmd(:path) { |app_name=nil|
-    root = git_root || task_root
+    root = git.root || task_root
 
     unless root
       puts "Not in a git repo or task - cannot resolve path"
@@ -124,7 +113,7 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
   }
 
   add_subcmd(:abspath) { |app_name=nil|
-    root = git_root || task_root
+    root = git.root || task_root
 
     unless root
       puts "Not in a git repo or task - cannot resolve path"

@@ -259,17 +259,15 @@ class Hiiro
     end
 
     def current_git_branch
-      branch = `git branch --show-current 2>/dev/null`.strip
-      branch.empty? ? nil : branch
-    rescue
-      nil
+      git_helper.branch_current
     end
 
     def current_git_worktree
-      worktree = `git rev-parse --show-toplevel 2>/dev/null`.strip
-      worktree.empty? ? nil : worktree
-    rescue
-      nil
+      git_helper.root
+    end
+
+    def git_helper
+      @git_helper ||= Git.new(nil, Dir.pwd)
     end
   end
 end
