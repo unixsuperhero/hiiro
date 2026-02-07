@@ -1,6 +1,5 @@
 require 'yaml'
 require 'fileutils'
-require 'open3'
 
 WORK_DIR = File.join(Dir.home, 'work')
 REPO_PATH = File.join(WORK_DIR, '.bare')
@@ -757,9 +756,7 @@ class TaskManager
   end
 
   def sk_select(items)
-    selected, status = Open3.capture2('sk', stdin_data: items.join("\n"))
-    return selected.strip if status.success? && !selected.strip.empty?
-    nil
+    Hiiro::Sk.select(items)
   end
 end
 

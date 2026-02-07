@@ -229,14 +229,12 @@ class TaskManager
       "#{tree_name.ljust(20)} => #{task}"
     end
 
-    require 'open3'
-    selected, status = Open3.capture2('sk', stdin_data: lines.join("\n"))
+    selected = Hiiro::Sk.select(lines)
+    return nil unless selected
 
-    if status.success? && !selected.strip.empty?
-      # Parse the selected line to extract the task name
-      if selected =~ /=>\s*(\S+)/
-        return $1
-      end
+    # Parse the selected line to extract the task name
+    if selected =~ /=>\s*(\S+)/
+      return $1
     end
 
     nil
