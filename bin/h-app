@@ -97,4 +97,53 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
       apps.each { |name, path| puts format("  %-20s => %s", name, path) }
     end
   }
+
+  add_subcmd(:path) { |app_name=nil|
+    root = git_root || task_root
+
+    unless root
+      puts "Not in a git repo or task - cannot resolve path"
+      next
+    end
+
+    if app_name.nil? || app_name.empty?
+      puts relative_cd_path(root)
+      next
+    end
+
+    apps = load_apps
+    match = apps.find { |name, _| name.start_with?(app_name) }
+
+    if match
+      name, app_relative_path = match
+      target = File.join(root, app_relative_path)
+      puts relative_cd_path(target)
+    else
+      puts "App '#{app_name}' not found"
+    end
+  }
+
+  add_subcmd(:abspath) { |app_name=nil|
+    root = git_root || task_root
+
+    unless root
+      puts "Not in a git repo or task - cannot resolve path"
+      next
+    end
+
+    if app_name.nil? || app_name.empty?
+      puts root
+      next
+    end
+
+    apps = load_apps
+    match = apps.find { |name, _| name.start_with?(app_name) }
+
+    if match
+      name, app_relative_path = match
+      puts File.join(root, app_relative_path)
+    else
+      puts "App '#{app_name}' not found"
+    end
+  }
 }
