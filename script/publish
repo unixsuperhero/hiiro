@@ -2,9 +2,38 @@
 
 require "hiiro"
 
-major, minor, patch = Hiiro::VERSION.split(?.)
+# Parse -t flag for pre-release
+pre_release = ARGV.include?('-t')
 
-new_version = [major, minor, patch.to_i + 1].join(?.)
+# Parse current version
+current = Hiiro::VERSION
+parts = current.split(?.)
+
+# Check if current version is a pre release (e.g., "0.1.43.pre.2")
+is_pre = parts.length >= 5 && parts[-2] == 'pre'
+
+if is_pre
+  # Current version is pre (e.g., "0.1.43.pre.2")
+  major, minor, patch = parts[0..2]
+  pre_num = parts[-1].to_i
+  if pre_release
+    # pre -> pre: increment pre number
+    new_version = [major, minor, patch, 'pre', pre_num + 1].join(?.)
+  else
+    # pre -> release: remove pre, keep same version number
+    new_version = [major, minor, patch].join(?.)
+  end
+else
+  # Current version is not pre (e.g., "0.1.42")
+  major, minor, patch = parts[0..2]
+  if pre_release
+    # release -> pre: increment patch and add pre.1
+    new_version = [major, minor, patch.to_i + 1, 'pre', 1].join(?.)
+  else
+    # release -> release: increment patch
+    new_version = [major, minor, patch.to_i + 1].join(?.)
+  end
+end
 
 File.open('lib/hiiro/version.rb', 'w+') do |f|
   f.puts 'class Hiiro'
@@ -22,4 +51,3 @@ puts "\nERROR: unable to push\n" unless pushed
 
 system 'git', 'add', '--all'
 system 'git', 'commit', '-m', "publishing v#{new_version}"
-
