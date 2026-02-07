@@ -1,3 +1,10 @@
+require_relative 'git/worktree'
+require_relative 'git/worktrees'
+require_relative 'git/branch'
+require_relative 'git/branches'
+require_relative 'git/remote'
+require_relative 'git/pr'
+
 class Hiiro
   class Git
     attr_reader :hiiro, :pwd
@@ -17,16 +24,8 @@ class Hiiro
       @root ||= run_safe('rev-parse', '--show-toplevel')
     end
 
-    def branch
-      run_safe('rev-parse', '--abbrev-ref', 'HEAD')
-    end
-
-    def branch_current
-      run_safe('branch', '--show-current')
-    end
-
     def detached?
-      branch == 'HEAD'
+      current_branch_name == 'HEAD'
     end
 
     def commit(ref = 'HEAD', short: false)
@@ -34,17 +33,30 @@ class Hiiro
       run_safe(*args)
     end
 
-    # Branch operations
+    # Branch convenience methods
+
+    def branch
+      current_branch_name
+    end
+
+    def branch_current
+      run_safe('branch', '--show-current')
+    end
+
+    def current_branch
+      Branch.current
+    end
+
+    def current_branch_name
+      run_safe('rev-parse', '--abbrev-ref', 'HEAD')
+    end
 
     def branches(sort_by: nil, ignore_case: false)
-      args = ['branch', '--format=%(refname:short)']
-      args << '-i' if ignore_case
-      args << "--sort=#{sort_by}" if sort_by
+      Branches.fetch(sort_by: sort_by, ignore_case: ignore_case).names
+    end
 
-      result = run_safe(*args)
-      return [] unless result
-
-      result.split("\n").map(&:strip)
+    def branches_collection(sort_by: nil, ignore_case: false)
+      Branches.fetch(sort_by: sort_by, ignore_case: ignore_case)
     end
 
     def branch_exists?(name)
@@ -66,13 +78,14 @@ class Hiiro
       run_system('branch', flag, name)
     end
 
-    # Worktree operations
+    # Worktree convenience methods
 
     def worktrees(repo_path: nil)
-      output = worktrees_porcelain(repo_path: repo_path)
-      return [] unless output
+      worktrees_collection(repo_path: repo_path).to_a
+    end
 
-      parse_worktrees(output)
+    def worktrees_collection(repo_path: nil)
+      Worktrees.fetch(repo_path: repo_path)
     end
 
     def worktrees_porcelain(repo_path: nil)
@@ -130,18 +143,40 @@ class Hiiro
       run_system('worktree', 'repair')
     end
 
-    # Remote operations
+    # Remote convenience methods
 
-    def push(remote: 'origin', branch: nil)
-      args = ['push', remote]
-      args << branch if branch
-      run_system(*args)
+    def remotes
+      Remote.all
+    end
+
+    def origin
+      Remote.origin
+    end
+
+    def push(remote: 'origin', branch: nil, force: false)
+      Remote.new(name: remote).push(branch, force: force)
     end
 
     def pull(remote: 'origin', branch: nil)
-      args = ['pull', remote]
-      args << branch if branch
-      run_system(*args)
+      Remote.new(name: remote).pull(branch)
+    end
+
+    def fetch_remote(remote: 'origin')
+      Remote.new(name: remote).fetch_remote
+    end
+
+    # PR convenience methods
+
+    def current_pr
+      Pr.current
+    end
+
+    def list_prs(state: 'open', limit: 30)
+      Pr.list(state: state, limit: limit)
+    end
+
+    def create_pr(title:, body: nil, base: nil, draft: false)
+      Pr.create(title: title, body: body, base: base, draft: draft)
     end
 
     private
@@ -157,56 +192,6 @@ class Hiiro
 
     def run_success?(*args)
       system('git', *args, out: File::NULL, err: File::NULL)
-    end
-
-    def parse_worktrees(output)
-      trees = []
-      current = {}
-
-      output.each_line do |line|
-        line = line.chomp
-        if line.empty?
-          trees << Worktree.new(current) if current[:path]
-          current = {}
-        elsif line.start_with?('worktree ')
-          current[:path] = line.sub('worktree ', '')
-        elsif line.start_with?('HEAD ')
-          current[:head] = line.sub('HEAD ', '')
-        elsif line.start_with?('branch ')
-          current[:branch] = line.sub('branch ', '').sub('refs/heads/', '')
-        elsif line == 'detached'
-          current[:detached] = true
-        elsif line == 'bare'
-          current[:bare] = true
-        end
-      end
-
-      trees << Worktree.new(current) if current[:path]
-      trees
-    end
-
-    class Worktree
-      attr_reader :path, :head, :branch
-
-      def initialize(attrs = {})
-        @path = attrs[:path]
-        @head = attrs[:head]
-        @branch = attrs[:branch]
-        @detached = attrs[:detached] || false
-        @bare = attrs[:bare] || false
-      end
-
-      def detached?
-        @detached
-      end
-
-      def bare?
-        @bare
-      end
-
-      def name
-        File.basename(path)
-      end
     end
   end
 end
