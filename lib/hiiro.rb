@@ -4,6 +4,7 @@ require "shellwords"
 
 require_relative "hiiro/version"
 require_relative "hiiro/history"
+require_relative "hiiro/options"
 
 class String
   def underscore(camel_cased_word=self)
@@ -39,7 +40,13 @@ class Hiiro
         system(ENV['EDITOR'] || 'nvim', hiiro.bin)
       }
 
-      block.call(hiiro) if block
+      if block
+        if block.arity == 1
+          block.call(hiiro)
+        else
+          hiiro.instance_eval(&block)
+        end
+      end
     end
   end
 
