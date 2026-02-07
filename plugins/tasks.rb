@@ -797,7 +797,7 @@ module Tasks
       h.add_subcmd(:switch) do |task_name=nil, app_name=nil|
         if task_name.nil?
           task_name = mgr.select_task_interactive
-          return unless task_name
+          next unless task_name
         end
         task = mgr.task_by_name(task_name)
         mgr.switch_to_task(task, app_name: app_name)
@@ -807,7 +807,7 @@ module Tasks
         if app_name.nil?
           names = mgr.environment.all_apps.map(&:name)
           app_name = mgr.send(:sk_select, names)
-          return unless app_name
+          next unless app_name
         end
         mgr.open_app(app_name)
       end
@@ -830,7 +830,7 @@ module Tasks
       h.add_subcmd(:stop) do |task_name=nil|
         if task_name.nil?
           task_name = mgr.select_task_interactive
-          return unless task_name
+          next unless task_name
         end
         task = mgr.task_by_name(task_name)
         mgr.stop_task(task)
