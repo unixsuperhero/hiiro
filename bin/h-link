@@ -10,7 +10,7 @@ require "hiiro"
 class LinkManager
   LINKS_FILE = File.join(Dir.home, '.config/hiiro/links.yml')
   LINK_TEMPLATE = {
-    'url' => 'https://',
+    'url' => '',
     'description' => '',
     'shorthand' => nil,
     'created_at' => Time.now.iso8601,
