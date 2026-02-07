@@ -7,7 +7,7 @@ require "yaml"
 require "json"
 
 Hiiro.load_env
-hiiro = Hiiro.init(*ARGV, plugins: [OldTask, Tmux, Pins])
+hiiro = Hiiro.init(*ARGV, plugins: [Tasks, Tmux, Pins])
 
 class PRManager
   attr_reader :hiiro
@@ -144,7 +144,7 @@ class PRManager
   end
 
   def build_entry(pr_info)
-    task_info = hiiro.task_manager.send(:current_task)
+    current_task = Environment.current.task
     tmux_info = capture_tmux_info
 
     {
@@ -153,8 +153,8 @@ class PRManager
       url: pr_info['url'],
       branch: pr_info['headRefName'],
       state: pr_info['state'],
-      worktree: task_info&.[](:tree),
-      task: task_info&.[](:task),
+      worktree: current_task&.tree_name,
+      task: current_task&.name,
       tmux: tmux_info
     }
   end

@@ -5,7 +5,7 @@ require "fileutils"
 require "yaml"
 
 Hiiro.load_env
-hiiro = Hiiro.init(*ARGV, plugins: [OldTask])
+hiiro = Hiiro.init(*ARGV, plugins: [Tasks])
 
 class BranchManager
   attr_reader :hiiro
@@ -112,13 +112,13 @@ class BranchManager
   end
 
   def build_entry(branch_name)
-    task_info = hiiro.task_manager.send(:current_task)
+    current_task = Environment.current.task
     tmux_info = capture_tmux_info
 
     {
       name: branch_name,
-      worktree: task_info&.[](:tree),
-      task: task_info&.[](:task),
+      worktree: current_task&.tree_name,
+      task: current_task&.name,
       tmux: tmux_info
     }
   end
