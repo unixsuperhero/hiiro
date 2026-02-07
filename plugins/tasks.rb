@@ -678,7 +678,7 @@ class TaskManager
     end
     return nil if names.empty?
 
-    sk_select(names)
+    sk_select(names.sort)
   end
 
   # --- Private helpers ---
