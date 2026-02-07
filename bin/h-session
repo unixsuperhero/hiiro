@@ -60,4 +60,16 @@ o.add_subcmd(:info) { |*args|
   system('tmux', 'display-message', '-p', '#{session_name}: #{session_windows} windows, #{session_attached} attached', *args)
 }
 
+o.add_subcmd(:history) { |session_name=nil|
+  session_name ||= `tmux display-message -p '#S'`.strip if ENV['TMUX']
+  entries = Hiiro::History.by_session(session_name)
+  if entries.empty?
+    puts "No history for this session"
+  else
+    puts "History for session: #{session_name || 'current'}"
+    puts
+    entries.last(20).each_with_index { |e, i| puts e.oneline(i + 1) }
+  end
+}
+
 o.run
