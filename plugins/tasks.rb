@@ -209,33 +209,33 @@ class Environment
     # Try path-based matching first (handles "parent/child" patterns)
     if abbreviated.include?('/')
       result = task_matcher.resolve_path(abbreviated)
-      return result if result
+      return result.resolved&.item if result.match?
 
       # "main" refers to the parent task itself
       parent_prefix, child_prefix = abbreviated.split('/', 2)
       if 'main'.start_with?(child_prefix)
-        return task_matcher.find(parent_prefix)
+        return task_matcher.find(parent_prefix).first&.item
       end
 
       nil
     else
-      task_matcher.find(abbreviated)
+      task_matcher.find(abbreviated).first&.item
     end
   end
 
   def find_tree(abbreviated)
     return nil if abbreviated.nil?
-    tree_matcher.find(abbreviated)
+    tree_matcher.find(abbreviated).first&.item
   end
 
   def find_session(abbreviated)
     return nil if abbreviated.nil?
-    session_matcher.find(abbreviated)
+    session_matcher.find(abbreviated).first&.item
   end
 
   def find_app(abbreviated)
     return nil if abbreviated.nil?
-    app_matcher.find(abbreviated)
+    app_matcher.find(abbreviated).first&.item
   end
 end
 
@@ -277,15 +277,15 @@ class TaskManager
     return slash_lookup(name) if name.include?('/')
 
     key = (scope == :subtask) ? :short_name : :name
-    Hiiro::PrefixMatcher.new(tasks, key).find(name)
+    Hiiro::PrefixMatcher.new(tasks, key).find(name).first&.item
   end
 
   def task_by_tree(tree_name)
-    environment.task_matcher.resolve(tree_name, :tree_name)
+    environment.task_matcher.resolve(tree_name, :tree_name).resolved&.item
   end
 
   def task_by_session(session_name)
-    environment.task_matcher.resolve(session_name, :session_name)
+    environment.task_matcher.resolve(session_name, :session_name).resolved&.item
   end
 
   def current_task
@@ -549,19 +549,19 @@ class TaskManager
       return
     end
 
-    matches = environment.app_matcher.find_all(app_name)
+    result = environment.app_matcher.find_all(app_name)
 
-    case matches.count
+    case result.count
     when 0
       puts "ERROR: No matches found"
       puts
       puts "Possible Apps:"
       environment.all_apps.each { |a| puts format("  %-20s => %s", a.name, a.relative_path) }
     when 1
-      print matches.first.resolve(tree_root)
+      print result.first.item.resolve(tree_root)
     else
       puts "Multiple matches found:"
-      matches.each { |a| puts format("  %-20s => %s", a.name, a.relative_path) }
+      result.matches.each { |m| puts format("  %-20s => %s", m.item.name, m.item.relative_path) }
     end
   end
 
@@ -623,9 +623,9 @@ class TaskManager
     tree = environment.find_tree(task.tree_name)
     tree_root = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
 
-    matches = environment.app_matcher.find_all(app_name)
+    result = environment.app_matcher.find_all(app_name)
 
-    case matches.count
+    case result.count
     when 0
       # Fallback: directory discovery
       exact = File.join(tree_root, app_name)
@@ -638,15 +638,15 @@ class TaskManager
       list_apps
       nil
     when 1
-      app = matches.first
+      app = result.first.item
       [app.name, app.resolve(tree_root)]
     else
-      exact = matches.find { |a| a.name == app_name }
+      exact = result.matches.find { |m| m.item.name == app_name }
       if exact
-        [exact.name, exact.resolve(tree_root)]
+        [exact.item.name, exact.item.resolve(tree_root)]
       else
         puts "ERROR: '#{app_name}' matches multiple apps:"
-        matches.each { |a| puts "  #{a.name}" }
+        result.matches.each { |m| puts "  #{m.item.name}" }
         nil
       end
     end

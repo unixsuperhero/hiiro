@@ -53,6 +53,82 @@ class Hiiro
       def one?
         count == 1
       end
+
+      # Returns item for resolve semantics: exact match, or single match, otherwise nil
+      def resolved
+        exact_match || match
+      end
+
+      # Returns the first matching item (for find semantics)
+      def first
+        matches.first
+      end
+    end
+
+    class PathResult
+      attr_reader :matcher, :all_items, :key, :block, :prefix
+
+      def initialize(matcher:, all_items:, prefix:, key: nil, block: nil)
+        @matcher = matcher
+        @all_items = all_items
+        @prefix = prefix
+        @key = key
+        @block = block
+      end
+
+      def matches
+        @matches ||= begin
+          prefixes = prefix.to_s.split('/')
+
+          items_with_paths = all_items.map { |item|
+            [item, item.extracted_item.to_s.split('/')]
+          }
+
+          prefixes.each_with_index do |seg, i|
+            items_with_paths = items_with_paths.select { |_, path| path[i]&.start_with?(seg) }
+          end
+
+          items_with_paths.map(&:first)
+        end
+      end
+
+      def count
+        matches.count
+      end
+
+      def ambiguous?
+        count > 1
+      end
+
+      def exact_match
+        all_items.find { |item| item.extracted_item == prefix }
+      end
+
+      def match
+        one? ? matches.first : nil
+      end
+
+      def match?
+        matches.any?
+      end
+
+      def exact?
+        !exact_match.nil?
+      end
+
+      def one?
+        count == 1
+      end
+
+      # Returns item for resolve semantics: exact match, or single match, otherwise nil
+      def resolved
+        exact_match || match
+      end
+
+      # Returns the first matching item (for find semantics)
+      def first
+        matches.first
+      end
     end
 
     class << self
@@ -89,68 +165,68 @@ class Hiiro
       @block = block
     end
 
-    def items(key = nil, &block)
-      if key.nil? && !block_given?
-        @items ||= original_items.map { |item| extract(item, @key, &@block) }
-      else
-        original_items.map { |item| extract(item, key, &block) }
-      end
+    def all_items(key = nil, &block)
+      use_key = key.nil? && !block_given? ? @key : key
+      use_block = key.nil? && !block_given? ? @block : block
+
+      @all_items_cache ||= {}
+      cache_key = [use_key, use_block].hash
+
+      @all_items_cache[cache_key] ||= original_items.map { |item|
+        Item.new(
+          item: item,
+          extracted_item: extract(item, use_key, &use_block),
+          key: use_key,
+          block: use_block
+        )
+      }
     end
 
-    def extracted_items(key = nil, &block)
-      original_items.zip(items(key, &block))
+    def search(prefix, key = nil, &block)
+      Result.new(
+        matcher: self,
+        all_items: all_items(key, &block),
+        prefix: prefix,
+        key: key || @key,
+        block: block || @block
+      )
     end
 
     def find(prefix, key = nil, &block)
-      extracted_items(key, &block).find { |_, extracted| matches?(extracted, prefix) }&.first
+      search(prefix, key, &block)
     end
 
     def find_all(prefix, key = nil, &block)
-      extracted_items(key, &block).select { |_, extracted| matches?(extracted, prefix) }.map(&:first)
+      search(prefix, key, &block)
     end
 
     def resolve(prefix, key = nil, &block)
-      pairs = extracted_items(key, &block)
-
-      exact = pairs.find { |_, extracted| extracted == prefix }
-      return exact.first if exact
-
-      matches = pairs.select { |_, extracted| matches?(extracted, prefix) }
-      matches.one? ? matches.first.first : nil
+      search(prefix, key, &block)
     end
 
     def find_path(prefix, key = nil, &block)
-      matching_path_pairs(prefix, key, &block).first&.first
+      search_path(prefix, key, &block)
     end
 
     def find_all_paths(prefix, key = nil, &block)
-      matching_path_pairs(prefix, key, &block).map(&:first)
+      search_path(prefix, key, &block)
     end
 
     def resolve_path(prefix, key = nil, &block)
-      matches = matching_path_pairs(prefix, key, &block)
-      return nil if matches.empty?
-      return matches.first.first if matches.one?
+      search_path(prefix, key, &block)
+    end
 
-      exact = matches.find { |_, path| path == prefix }
-      exact&.first
+    def search_path(prefix, key = nil, &block)
+      PathResult.new(
+        matcher: self,
+        all_items: all_items(key, &block),
+        prefix: prefix,
+        key: key || @key,
+        block: block || @block
+      )
     end
 
     private
-
-    def matching_path_pairs(prefix, key = nil, &block)
-      prefixes = prefix.to_s.split('/')
-
-      pairs = extracted_items(key, &block).map { |item, extracted|
-        [item, extracted.to_s.split('/')]
-      }
-
-      prefixes.each_with_index do |seg, i|
-        pairs = pairs.select { |_, path| path[i]&.start_with?(seg) }
-      end
-
-      pairs.map { |item, path| [item, path.join('/')] }
-    end
 
     def matches?(item, prefix)
       item.to_s.start_with?(prefix.to_s)
