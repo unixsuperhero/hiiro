@@ -4,7 +4,7 @@ require "hiiro"
 require "fileutils"
 require "pry"
 
-Hiiro.run(*ARGV, cwd: Dir.pwd, plugins: [:Tasks]) do
+Hiiro.run(*ARGV, cwd: Dir.pwd, plugins: [Tasks]) do
   add_subcommand(:version) { |*args|
     puts Hiiro::VERSION
   }
