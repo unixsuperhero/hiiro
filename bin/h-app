@@ -63,7 +63,7 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
     end
 
     apps = load_apps
-    match = apps.find { |name, _| name.start_with?(app_name) }
+    match = Hiiro::PrefixMatcher.find(apps, app_name) { |name, _| name }
 
     if match
       name, app_relative_path = match
@@ -105,7 +105,7 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
     end
 
     apps = load_apps
-    match = apps.find { |name, _| name.start_with?(app_name) }
+    match = Hiiro::PrefixMatcher.find(apps, app_name) { |name, _| name }
 
     if match
       name, app_relative_path = match
@@ -130,7 +130,7 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
     end
 
     apps = load_apps
-    match = apps.find { |name, _| name.start_with?(app_name) }
+    match = Hiiro::PrefixMatcher.find(apps, app_name) { |name, _| name }
 
     if match
       name, app_relative_path = match

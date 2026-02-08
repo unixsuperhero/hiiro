@@ -23,7 +23,9 @@ o.add_subcmd(:edit) { |*args|
   if args.none?
     system(ENV['EDITOR'] || 'safe_nvim', __FILE__)
   else
-    plugins = plugin_files.select{|f| args.any?{|arg| File.basename(f).start_with?(arg) } }
+    plugins = args.flat_map { |arg|
+      Hiiro::PrefixMatcher.find_all(plugin_files, arg) { |f| File.basename(f) }
+    }.uniq
 
     if plugins.none?
       puts "No matching plugins found for: #{args.map(&:inspect).join(' ')}"

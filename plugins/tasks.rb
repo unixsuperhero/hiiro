@@ -193,10 +193,10 @@ class Environment
 
     if abbreviated.include?('/')
       parent_prefix, child_prefix = abbreviated.split('/', 2)
-      parent = all_tasks.select(&:top_level?).find { |t| t.name.start_with?(parent_prefix) }
+      parent = Hiiro::PrefixMatcher.find(all_tasks.select(&:top_level?), parent_prefix, key: :name)
       return nil unless parent
 
-      subtask = all_tasks.select { |t| t.parent_name == parent.name }.find { |t| t.short_name.start_with?(child_prefix) }
+      subtask = Hiiro::PrefixMatcher.find(all_tasks.select { |t| t.parent_name == parent.name }, child_prefix, key: :short_name)
       return subtask if subtask
 
       # "main" refers to the parent task itself
@@ -204,23 +204,23 @@ class Environment
 
       nil
     else
-      all_tasks.find { |t| t.name.start_with?(abbreviated) }
+      Hiiro::PrefixMatcher.find(all_tasks, abbreviated, key: :name)
     end
   end
 
   def find_tree(abbreviated)
     return nil if abbreviated.nil?
-    all_trees.find { |t| t.name.start_with?(abbreviated) }
+    Hiiro::PrefixMatcher.find(all_trees, abbreviated, key: :name)
   end
 
   def find_session(abbreviated)
     return nil if abbreviated.nil?
-    all_sessions.find { |s| s.name.start_with?(abbreviated) }
+    Hiiro::PrefixMatcher.find(all_sessions, abbreviated, key: :name)
   end
 
   def find_app(abbreviated)
     return nil if abbreviated.nil?
-    all_apps.find { |a| a.name.start_with?(abbreviated) }
+    Hiiro::PrefixMatcher.find(all_apps, abbreviated, key: :name)
   end
 end
 
@@ -344,10 +344,8 @@ class TaskManager
   def task_by_name(name)
     return slash_lookup(name) if name.include?('/')
 
-    tasks.find { |t|
-      match_name = (scope == :subtask) ? t.short_name : t.name
-      match_name.start_with?(name)
-    }
+    key = (scope == :subtask) ? :short_name : :name
+    Hiiro::PrefixMatcher.find(tasks, name, key: key)
   end
 
   def task_by_tree(tree_name)
@@ -619,7 +617,7 @@ class TaskManager
       return
     end
 
-    matches = environment.all_apps.select { |a| a.name.start_with?(app_name) }
+    matches = Hiiro::PrefixMatcher.find_all(environment.all_apps, app_name, key: :name)
 
     case matches.count
     when 0
@@ -693,7 +691,7 @@ class TaskManager
     tree = environment.find_tree(task.tree_name)
     tree_root = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
 
-    matches = environment.all_apps.select { |a| a.name.start_with?(app_name) }
+    matches = Hiiro::PrefixMatcher.find_all(environment.all_apps, app_name, key: :name)
 
     case matches.count
     when 0

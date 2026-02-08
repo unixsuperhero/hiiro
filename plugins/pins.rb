@@ -54,15 +54,11 @@ module Pins
     end
 
     def find(partial)
-      pins.keys.map(&:to_s).find do |pin_name|
-        pin_name.start_with?(partial)
-      end
+      Hiiro::PrefixMatcher.find(pins.keys.map(&:to_s), partial)
     end
 
     def find_all(partial)
-      pins.keys.map(&:to_s).select do |pin_name|
-        pin_name.start_with?(partial)
-      end
+      Hiiro::PrefixMatcher.find_all(pins.keys.map(&:to_s), partial)
     end
 
     def remove(name)
