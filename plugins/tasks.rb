@@ -169,6 +169,18 @@ class Environment
     @all_apps ||= config.apps
   end
 
+  def tree_matcher
+    @tree_matcher ||= Hiiro::PrefixMatcher.new(all_trees, :name)
+  end
+
+  def session_matcher
+    @session_matcher ||= Hiiro::PrefixMatcher.new(all_sessions, :name)
+  end
+
+  def app_matcher
+    @app_matcher ||= Hiiro::PrefixMatcher.new(all_apps, :name)
+  end
+
   def task
     @task ||= begin
       s = session
@@ -210,106 +222,23 @@ class Environment
 
   def find_tree(abbreviated)
     return nil if abbreviated.nil?
-    Hiiro::PrefixMatcher.find(all_trees, abbreviated, key: :name)
+    tree_matcher.find(abbreviated)
   end
 
   def find_session(abbreviated)
     return nil if abbreviated.nil?
-    Hiiro::PrefixMatcher.find(all_sessions, abbreviated, key: :name)
+    session_matcher.find(abbreviated)
   end
 
   def find_app(abbreviated)
     return nil if abbreviated.nil?
-    Hiiro::PrefixMatcher.find(all_apps, abbreviated, key: :name)
+    app_matcher.find(abbreviated)
   end
 end
 
 class TaskManager
   TASKS_DIR = File.join(Dir.home, '.config', 'hiiro', 'tasks')
   APPS_FILE = File.join(Dir.home, '.config', 'hiiro', 'apps.yml')
-
-  class Config
-    attr_reader :tasks_file, :apps_file
-
-    def initialize(tasks_file: nil, apps_file: nil)
-      @tasks_file = tasks_file || File.join(TASKS_DIR, 'tasks.yml')
-      @apps_file = apps_file || APPS_FILE
-    end
-
-    def tasks
-      data = load_tasks
-      (data['tasks'] || []).map { |h| Task.new(**h.transform_keys(&:to_sym)) }
-    end
-
-    def apps
-      return [] unless File.exist?(apps_file)
-      data = YAML.safe_load_file(apps_file) || {}
-      data.map { |name, path| App.new(name: name, path: path) }
-    end
-
-    def save_task(task)
-      data = load_tasks
-      data['tasks'] ||= []
-      data['tasks'].reject! { |t| t['name'] == task.name }
-      data['tasks'] << task.to_h
-      save_tasks(data)
-    end
-
-    def remove_task(name)
-      data = load_tasks
-      data['tasks'] ||= []
-      data['tasks'].reject! { |t| t['name'] == name }
-      save_tasks(data)
-    end
-
-    private
-
-    def load_tasks
-      if File.exist?(tasks_file)
-        return YAML.safe_load_file(tasks_file) || { 'tasks' => [] }
-      end
-
-      # Load from individual task_*.yml files
-      task_files = Dir.glob(File.join(File.dirname(tasks_file), 'task_*.yml'))
-      if task_files.any?
-        tasks = task_files.map do |file|
-          short_name = File.basename(file, '.yml').sub(/^task_/, '')
-          data = YAML.safe_load_file(file) || {}
-          # Support parent key for subtasks, or infer from tree path
-          parent = data['parent']
-          if parent.nil? && data['tree']&.include?('/')
-            parent = data['tree'].split('/').first
-          end
-          name = parent ? "#{parent}/#{short_name}" : short_name
-          h = { 'name' => name }
-          h['tree'] = data['tree'] if data['tree']
-          h['session'] = data['session'] if data['session']
-          h
-        end
-        return { 'tasks' => tasks }
-      end
-
-      assignments_file = File.join(File.dirname(tasks_file), 'assignments.yml')
-      if File.exist?(assignments_file)
-        raw = YAML.safe_load_file(assignments_file) || {}
-        tasks = raw.map do |tree_path, task_name|
-          h = { 'name' => task_name, 'tree' => tree_path }
-          h['session'] = task_name if task_name.include?('/')
-          h
-        end
-        data = { 'tasks' => tasks }
-        save_tasks(data)
-        return data
-      end
-
-      { 'tasks' => [] }
-    end
-
-    def save_tasks(data)
-      FileUtils.mkdir_p(File.dirname(tasks_file))
-      File.write(tasks_file, YAML.dump(data))
-    end
-  end
 
   attr_reader :hiiro, :scope, :environment
 
@@ -617,7 +546,7 @@ class TaskManager
       return
     end
 
-    matches = Hiiro::PrefixMatcher.find_all(environment.all_apps, app_name, key: :name)
+    matches = environment.app_matcher.find_all(app_name)
 
     case matches.count
     when 0
@@ -691,7 +620,7 @@ class TaskManager
     tree = environment.find_tree(task.tree_name)
     tree_root = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
 
-    matches = Hiiro::PrefixMatcher.find_all(environment.all_apps, app_name, key: :name)
+    matches = environment.app_matcher.find_all(app_name)
 
     case matches.count
     when 0
@@ -739,6 +668,89 @@ class TaskManager
 
   def sk_select(items)
     Hiiro::Sk.select(items)
+  end
+
+  class Config
+    attr_reader :tasks_file, :apps_file
+
+    def initialize(tasks_file: nil, apps_file: nil)
+      @tasks_file = tasks_file || File.join(TASKS_DIR, 'tasks.yml')
+      @apps_file = apps_file || APPS_FILE
+    end
+
+    def tasks
+      data = load_tasks
+      (data['tasks'] || []).map { |h| Task.new(**h.transform_keys(&:to_sym)) }
+    end
+
+    def apps
+      return [] unless File.exist?(apps_file)
+      data = YAML.safe_load_file(apps_file) || {}
+      data.map { |name, path| App.new(name: name, path: path) }
+    end
+
+    def save_task(task)
+      data = load_tasks
+      data['tasks'] ||= []
+      data['tasks'].reject! { |t| t['name'] == task.name }
+      data['tasks'] << task.to_h
+      save_tasks(data)
+    end
+
+    def remove_task(name)
+      data = load_tasks
+      data['tasks'] ||= []
+      data['tasks'].reject! { |t| t['name'] == name }
+      save_tasks(data)
+    end
+
+    private
+
+    def load_tasks
+      if File.exist?(tasks_file)
+        return YAML.safe_load_file(tasks_file) || { 'tasks' => [] }
+      end
+
+      # Load from individual task_*.yml files
+      task_files = Dir.glob(File.join(File.dirname(tasks_file), 'task_*.yml'))
+      if task_files.any?
+        tasks = task_files.map do |file|
+          short_name = File.basename(file, '.yml').sub(/^task_/, '')
+          data = YAML.safe_load_file(file) || {}
+          # Support parent key for subtasks, or infer from tree path
+          parent = data['parent']
+          if parent.nil? && data['tree']&.include?('/')
+            parent = data['tree'].split('/').first
+          end
+          name = parent ? "#{parent}/#{short_name}" : short_name
+          h = { 'name' => name }
+          h['tree'] = data['tree'] if data['tree']
+          h['session'] = data['session'] if data['session']
+          h
+        end
+        return { 'tasks' => tasks }
+      end
+
+      assignments_file = File.join(File.dirname(tasks_file), 'assignments.yml')
+      if File.exist?(assignments_file)
+        raw = YAML.safe_load_file(assignments_file) || {}
+        tasks = raw.map do |tree_path, task_name|
+          h = { 'name' => task_name, 'tree' => tree_path }
+          h['session'] = task_name if task_name.include?('/')
+          h
+        end
+        data = { 'tasks' => tasks }
+        save_tasks(data)
+        return data
+      end
+
+      { 'tasks' => [] }
+    end
+
+    def save_tasks(data)
+      FileUtils.mkdir_p(File.dirname(tasks_file))
+      File.write(tasks_file, YAML.dump(data))
+    end
   end
 end
 
