@@ -181,6 +181,10 @@ class Environment
     @app_matcher ||= Hiiro::PrefixMatcher.new(all_apps, :name)
   end
 
+  def task_matcher
+    @task_matcher ||= Hiiro::PrefixMatcher.new(all_tasks, :name)
+  end
+
   def task
     @task ||= begin
       s = session
@@ -203,20 +207,20 @@ class Environment
   def find_task(abbreviated)
     return nil if abbreviated.nil?
 
+    # Try path-based matching first (handles "parent/child" patterns)
     if abbreviated.include?('/')
-      parent_prefix, child_prefix = abbreviated.split('/', 2)
-      parent = Hiiro::PrefixMatcher.find(all_tasks.select(&:top_level?), parent_prefix, key: :name)
-      return nil unless parent
-
-      subtask = Hiiro::PrefixMatcher.find(all_tasks.select { |t| t.parent_name == parent.name }, child_prefix, key: :short_name)
-      return subtask if subtask
+      result = task_matcher.resolve_path(abbreviated)
+      return result if result
 
       # "main" refers to the parent task itself
-      return parent if 'main'.start_with?(child_prefix)
+      parent_prefix, child_prefix = abbreviated.split('/', 2)
+      if 'main'.start_with?(child_prefix)
+        return task_matcher.find(parent_prefix)
+      end
 
       nil
     else
-      Hiiro::PrefixMatcher.find(all_tasks, abbreviated, key: :name)
+      task_matcher.find(abbreviated)
     end
   end
 
@@ -274,15 +278,15 @@ class TaskManager
     return slash_lookup(name) if name.include?('/')
 
     key = (scope == :subtask) ? :short_name : :name
-    Hiiro::PrefixMatcher.find(tasks, name, key: key)
+    Hiiro::PrefixMatcher.new(tasks, key).find(name)
   end
 
   def task_by_tree(tree_name)
-    tasks.find { |t| t.tree_name == tree_name }
+    environment.task_matcher.resolve(tree_name, :tree_name)
   end
 
   def task_by_session(session_name)
-    tasks.find { |t| t.session_name == session_name }
+    environment.task_matcher.resolve(session_name, :session_name)
   end
 
   def current_task
@@ -757,7 +761,16 @@ end
 module Tasks
   def self.load(hiiro)
     hiiro.load_plugin(Tmux)
+    attach_methods(hiiro)
     add_subcommands(hiiro)
+  end
+
+  def self.attach_methods(hiiro)
+    hiiro.instance_eval do
+      def environment
+        @environment ||= Environment.current
+      end
+    end
   end
 
   def self.add_subcommands(hiiro)

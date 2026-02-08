@@ -43,48 +43,54 @@ class Hiiro
     end
 
     def find(prefix, key = nil, &block)
-      items(key, &block).find { |item| matches?(item, prefix) }
+      original_items.zip(items(key, &block)).find { |_, extracted| matches?(extracted, prefix) }&.first
     end
 
     def find_all(prefix, key = nil, &block)
-      items(key, &block).select { |item| matches?(item, prefix) }
+      original_items.zip(items(key, &block)).select { |_, extracted| matches?(extracted, prefix) }.map(&:first)
     end
 
     def resolve(prefix, key = nil, &block)
-      exact = items(key, &block).find { |item| item == prefix }
-      return exact if exact
+      pairs = original_items.zip(items(key, &block))
 
-      matches = items(key, &block).select { |item| matches?(item, prefix) }
-      matches.one? ? matches.first : nil
+      exact = pairs.find { |_, extracted| extracted == prefix }
+      return exact.first if exact
+
+      matches = pairs.select { |_, extracted| matches?(extracted, prefix) }
+      matches.one? ? matches.first.first : nil
     end
 
     def find_path(prefix, key = nil, &block)
-      matching_paths(prefix, key, &block).first
+      matching_path_pairs(prefix, key, &block).first&.first
     end
 
     def find_all_paths(prefix, key = nil, &block)
-      matching_paths(prefix, key, &block)
+      matching_path_pairs(prefix, key, &block).map(&:first)
     end
 
     def resolve_path(prefix, key = nil, &block)
-      matches = matching_paths(prefix, key, &block)
+      matches = matching_path_pairs(prefix, key, &block)
       return nil if matches.empty?
-      return matches.first if matches.one?
-      matches.find { |path| path == prefix }
+      return matches.first.first if matches.one?
+
+      exact = matches.find { |_, path| path == prefix }
+      exact&.first
     end
 
     private
 
-    def matching_paths(prefix, key = nil, &block)
+    def matching_path_pairs(prefix, key = nil, &block)
       prefixes = prefix.to_s.split('/')
 
-      paths = items(key, &block).map { |item| item.to_s.split('/') }
+      pairs = original_items.zip(items(key, &block)).map { |item, extracted|
+        [item, extracted.to_s.split('/')]
+      }
 
       prefixes.each_with_index do |seg, i|
-        paths = paths.select { |path| path[i]&.start_with?(seg) }
+        pairs = pairs.select { |_, path| path[i]&.start_with?(seg) }
       end
 
-      paths.map { |p| p.join('/') }
+      pairs.map { |item, path| [item, path.join('/')] }
     end
 
     def matches?(item, prefix)
