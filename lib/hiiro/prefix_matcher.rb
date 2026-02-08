@@ -1,5 +1,60 @@
 class Hiiro
   class PrefixMatcher
+    class Item
+      attr_reader :item, :extracted_item, :key, :block
+
+      def initialize(item:, extracted_item:, key: nil, block: nil)
+        @item = item
+        @extracted_item = extracted_item
+        @key = key
+        @block = block
+      end
+    end
+
+    class Result
+      attr_reader :matcher, :all_items, :key, :block, :prefix
+
+      def initialize(matcher:, all_items:, prefix:, key: nil, block: nil)
+        @matcher = matcher
+        @all_items = all_items
+        @prefix = prefix
+        @key = key
+        @block = block
+      end
+
+      def matches
+        @matches ||= all_items.select { |item| item.extracted_item.to_s.start_with?(prefix.to_s) }
+      end
+
+      def count
+        matches.count
+      end
+
+      def ambiguous?
+        count > 1
+      end
+
+      def exact_match
+        all_items.find { |item| item.extracted_item == prefix }
+      end
+
+      def match
+        one? ? matches.first : nil
+      end
+
+      def match?
+        matches.any?
+      end
+
+      def exact?
+        !exact_match.nil?
+      end
+
+      def one?
+        count == 1
+      end
+    end
+
     class << self
       def find(items, prefix, key: nil, &block)
         new(items, key, &block).find(prefix)
