@@ -42,16 +42,20 @@ class Hiiro
       end
     end
 
+    def extracted_items(key = nil, &block)
+      original_items.zip(items(key, &block))
+    end
+
     def find(prefix, key = nil, &block)
-      original_items.zip(items(key, &block)).find { |_, extracted| matches?(extracted, prefix) }&.first
+      extracted_items(key, &block).find { |_, extracted| matches?(extracted, prefix) }&.first
     end
 
     def find_all(prefix, key = nil, &block)
-      original_items.zip(items(key, &block)).select { |_, extracted| matches?(extracted, prefix) }.map(&:first)
+      extracted_items(key, &block).select { |_, extracted| matches?(extracted, prefix) }.map(&:first)
     end
 
     def resolve(prefix, key = nil, &block)
-      pairs = original_items.zip(items(key, &block))
+      pairs = extracted_items(key, &block)
 
       exact = pairs.find { |_, extracted| extracted == prefix }
       return exact.first if exact
@@ -82,7 +86,7 @@ class Hiiro
     def matching_path_pairs(prefix, key = nil, &block)
       prefixes = prefix.to_s.split('/')
 
-      pairs = original_items.zip(items(key, &block)).map { |item, extracted|
+      pairs = extracted_items(key, &block).map { |item, extracted|
         [item, extracted.to_s.split('/')]
       }
 
