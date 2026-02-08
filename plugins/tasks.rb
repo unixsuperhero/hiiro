@@ -696,7 +696,7 @@ class TaskManager
       data = load_tasks
       data['tasks'] ||= []
       data['tasks'].reject! { |t| t['name'] == task.name }
-      data['tasks'] << task.to_h
+      data['tasks'] << task.to_h.transform_keys(&:to_s)
       save_tasks(data)
     end
 
