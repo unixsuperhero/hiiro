@@ -75,6 +75,8 @@ class Tree
 end
 
 class Task
+  HASH_METHODS = %i[name parent_name short_name session_name tree_name top_level? subtask?]
+
   attr_reader :name, :tree_name, :session_name
 
   def initialize(name:, tree: nil, session: nil, **_)
@@ -109,10 +111,7 @@ class Task
   end
 
   def to_h
-    h = { 'name' => name }
-    h['tree'] = tree_name if tree_name
-    h['session'] = session_name if session_name != name
-    h
+    HASH_METHODS.zip(HASH_METHODS.map{|m| send(m) }).to_h
   end
 end
 
