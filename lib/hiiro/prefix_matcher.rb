@@ -1,5 +1,112 @@
 class Hiiro
   class PrefixMatcher
+    class << self
+      def find(items, prefix, key: nil, &block)
+        new(items, key, &block).find(prefix)
+      end
+
+      def find_all(items, prefix, key: nil, &block)
+        new(items, key, &block).find_all(prefix)
+      end
+
+      def resolve(items, prefix, key: nil, &block)
+        new(items, key, &block).resolve(prefix)
+      end
+
+      def find_path(items, prefix, key: nil, &block)
+        new(items, key, &block).find_path(prefix)
+      end
+
+      def find_all_paths(items, prefix, key: nil, &block)
+        new(items, key, &block).find_all_paths(prefix)
+      end
+
+      def resolve_path(items, prefix, key: nil, &block)
+        new(items, key, &block).resolve_path(prefix)
+      end
+    end
+
+    attr_reader :original_items, :key, :block
+
+    def initialize(items, key = nil, &block)
+      @original_items = items
+      @key = key
+      @block = block
+    end
+
+    def all_items(key = nil, &block)
+      use_key = key.nil? && !block_given? ? @key : key
+      use_block = key.nil? && !block_given? ? @block : block
+
+      @all_items_cache ||= {}
+      cache_key = [use_key, use_block].hash
+
+      @all_items_cache[cache_key] ||= original_items.map { |item|
+        Item.new(
+          item: item,
+          extracted_item: extract(item, use_key, &use_block),
+          key: use_key,
+          block: use_block
+        )
+      }
+    end
+
+    def search(prefix, key = nil, &block)
+      Result.new(
+        matcher: self,
+        all_items: all_items(key, &block),
+        prefix: prefix,
+        key: key || @key,
+        block: block || @block
+      )
+    end
+
+    def find(prefix, key = nil, &block)
+      search(prefix, key, &block)
+    end
+
+    def find_all(prefix, key = nil, &block)
+      search(prefix, key, &block)
+    end
+
+    def resolve(prefix, key = nil, &block)
+      search(prefix, key, &block)
+    end
+
+    def find_path(prefix, key = nil, &block)
+      search_path(prefix, key, &block)
+    end
+
+    def find_all_paths(prefix, key = nil, &block)
+      search_path(prefix, key, &block)
+    end
+
+    def resolve_path(prefix, key = nil, &block)
+      search_path(prefix, key, &block)
+    end
+
+    def search_path(prefix, key = nil, &block)
+      PathResult.new(
+        matcher: self,
+        all_items: all_items(key, &block),
+        prefix: prefix,
+        key: key || @key,
+        block: block || @block
+      )
+    end
+
+    private
+
+    def matches?(item, prefix)
+      item.to_s.start_with?(prefix.to_s)
+    end
+
+    def extract(item, key = nil, &block)
+      return block.call(item) if block
+      return item.send(key) if key
+      item
+    end
+
     class Item
       attr_reader :item, :extracted_item, :key, :block
 
@@ -129,113 +236,6 @@ class Hiiro
       def first
         matches.first
       end
-    end
-
-    class << self
-      def find(items, prefix, key: nil, &block)
-        new(items, key, &block).find(prefix)
-      end
-
-      def find_all(items, prefix, key: nil, &block)
-        new(items, key, &block).find_all(prefix)
-      end
-
-      def resolve(items, prefix, key: nil, &block)
-        new(items, key, &block).resolve(prefix)
-      end
-
-      def find_path(items, prefix, key: nil, &block)
-        new(items, key, &block).find_path(prefix)
-      end
-
-      def find_all_paths(items, prefix, key: nil, &block)
-        new(items, key, &block).find_all_paths(prefix)
-      end
-
-      def resolve_path(items, prefix, key: nil, &block)
-        new(items, key, &block).resolve_path(prefix)
-      end
-    end
-
-    attr_reader :original_items, :key, :block
-
-    def initialize(items, key = nil, &block)
-      @original_items = items
-      @key = key
-      @block = block
-    end
-
-    def all_items(key = nil, &block)
-      use_key = key.nil? && !block_given? ? @key : key
-      use_block = key.nil? && !block_given? ? @block : block
-
-      @all_items_cache ||= {}
-      cache_key = [use_key, use_block].hash
-
-      @all_items_cache[cache_key] ||= original_items.map { |item|
-        Item.new(
-          item: item,
-          extracted_item: extract(item, use_key, &use_block),
-          key: use_key,
-          block: use_block
-        )
-      }
-    end
-
-    def search(prefix, key = nil, &block)
-      Result.new(
-        matcher: self,
-        all_items: all_items(key, &block),
-        prefix: prefix,
-        key: key || @key,
-        block: block || @block
-      )
-    end
-
-    def find(prefix, key = nil, &block)
-      search(prefix, key, &block)
-    end
-
-    def find_all(prefix, key = nil, &block)
-      search(prefix, key, &block)
-    end
-
-    def resolve(prefix, key = nil, &block)
-      search(prefix, key, &block)
-    end
-
-    def find_path(prefix, key = nil, &block)
-      search_path(prefix, key, &block)
-    end
-
-    def find_all_paths(prefix, key = nil, &block)
-      search_path(prefix, key, &block)
-    end
-
-    def resolve_path(prefix, key = nil, &block)
-      search_path(prefix, key, &block)
-    end
-
-    def search_path(prefix, key = nil, &block)
-      PathResult.new(
-        matcher: self,
-        all_items: all_items(key, &block),
-        prefix: prefix,
-        key: key || @key,
-        block: block || @block
-      )
-    end
-
-    private
-
-    def matches?(item, prefix)
-      item.to_s.start_with?(prefix.to_s)
-    end
-
-    def extract(item, key = nil, &block)
-      return block.call(item) if block
-      return item.send(key) if key
-      item
     end
   end
 end
