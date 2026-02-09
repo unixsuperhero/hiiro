@@ -326,6 +326,23 @@ hiiro.add_subcmd(:ahead) { |*args|
   puts "#{branch} is #{count} commit(s) ahead of #{ahead_of}"
 }
 
+hiiro.add_subcmd(:behind) { |*args|
+  case args.length
+  when 0
+    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
+    behind_of = base
+    branch = 'HEAD'
+  when 1
+    behind_of = args[0]
+    branch = 'HEAD'
+  else
+    behind_of, branch = args[0..1]
+  end
+
+  count = `git rev-list --count #{branch}..#{behind_of}`.strip.to_i
+  puts "#{branch} is #{count} commit(s) behind #{behind_of}"
+}
+
 hiiro.add_default { manager.help }
 
 hiiro.run
