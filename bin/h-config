@@ -16,6 +16,19 @@ Hiiro.run(*ARGV) {
     open_config(dir: dir, file: file)
   }
 
+  add_subcmd(:git) {
+    make_child(subcmd, *args) {
+      add_subcmd(:global) {
+        open_config(dir: '~', file: '.gitconfig')
+      }
+
+      add_subcmd(:local) {
+        root = `git rev-parse --show-toplevel`.chomp 
+        open_config(dir: root, file: '.git/config')
+      }
+    }
+  }
+
   add_subcmd(:tmux) {
     open_config(dir: '~', file: '.tmux.conf')
   }

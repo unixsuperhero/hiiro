@@ -90,7 +90,7 @@ class Hiiro
   def make_child(subcmd, *args, **kwargs, &block)
     bin_name = [bin, subcmd.to_s].join(?-)
 
-    Hiiro.init(bin_name, *args, **kwargs, &block)
+    Hiiro.init(bin_name:, args:, **kwargs, &block)
   end
 
   def history
