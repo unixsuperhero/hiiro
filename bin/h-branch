@@ -343,6 +343,32 @@ hiiro.add_subcmd(:behind) { |*args|
   puts "#{branch} is #{count} commit(s) behind #{behind_of}"
 }
 
+hiiro.add_subcmd(:ancestor) { |*args|
+  case args.length
+  when 0
+    # Check if main/master is ancestor of HEAD
+    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") }
+    unless base
+      puts "Cannot find main or master branch"
+      next
+    end
+    ancestor = base
+    descendant = 'HEAD'
+  when 1
+    # Check if arg is ancestor of HEAD
+    ancestor = args[0]
+    descendant = 'HEAD'
+  else
+    ancestor, descendant = args[0..1]
+  end
+
+  if system("git merge-base --is-ancestor #{ancestor} #{descendant}")
+    puts "Yes, #{ancestor} is an ancestor of #{descendant}"
+  else
+    puts "No, #{ancestor} is NOT an ancestor of #{descendant}"
+  end
+}
+
 hiiro.add_default { manager.help }
 
 hiiro.run
