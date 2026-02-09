@@ -26,7 +26,7 @@ Hiiro.run(*ARGV) {
         root = `git rev-parse --show-toplevel`.chomp 
         open_config(dir: root, file: '.git/config')
       }
-    }
+    }.run
   }
 
   add_subcmd(:tmux) {
