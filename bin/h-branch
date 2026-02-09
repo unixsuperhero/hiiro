@@ -257,6 +257,18 @@ hiiro.add_subcmd(:rm, :remove) { |branch = nil, *args|
   system('git', 'branch', '-d', branch, *args)
 }
 
+hiiro.add_subcmd(:duplicate) { |new_name = nil, source = nil|
+  unless new_name
+    puts "Usage: h branch duplicate <new_name> [source_branch]"
+    puts "  Creates a copy of source_branch (or current branch) as new_name"
+    next
+  end
+
+  source ||= hiiro.git.branch
+  system('git', 'branch', new_name, source)
+  puts "Created branch '#{new_name}' from '#{source}'"
+}
+
 hiiro.add_default { manager.help }
 
 hiiro.run
