@@ -269,6 +269,28 @@ hiiro.add_subcmd(:duplicate) { |new_name = nil, source = nil|
   puts "Created branch '#{new_name}' from '#{source}'"
 }
 
+hiiro.add_subcmd(:push) { |*args|
+  opts = Hiiro::Options.new(args) do
+    option :remote, short: 'r', default: 'origin', desc: 'Remote name'
+    option :from, short: 'f', desc: 'Local branch or commit to push'
+    option :to, short: 't', desc: 'Remote branch name'
+    flag :force, short: 'F', desc: 'Force push'
+    flag :set_upstream, short: 'u', desc: 'Set upstream tracking'
+  end.parse!
+
+  local_ref = opts[:from] || hiiro.git.branch
+  remote_branch = opts[:to] || local_ref
+
+  git_args = ['git', 'push']
+  git_args << '--force' if opts[:force]
+  git_args << '-u' if opts[:set_upstream]
+  git_args << opts[:remote]
+  git_args << "#{local_ref}:#{remote_branch}"
+
+  puts "Pushing #{local_ref} to #{opts[:remote]}/#{remote_branch}..."
+  system(*git_args)
+}
+
 hiiro.add_default { manager.help }
 
 hiiro.run
