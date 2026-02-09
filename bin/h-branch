@@ -225,6 +225,22 @@ hiiro.add_subcmd(:select) do |*args|
   end
 end
 
+hiiro.add_subcmd(:checkout, :co) { |branch = nil, *args|
+  unless branch
+    # Use sk to select a branch
+    branches = hiiro.git.branches(sort_by: 'authordate', ignore_case: true)
+    require 'open3'
+    selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: branches.join("\n"))
+    unless status.success? && !selected.strip.empty?
+      puts "No branch selected"
+      next
+    end
+    branch = selected.strip
+  end
+
+  system('git', 'checkout', branch, *args)
+}
+
 hiiro.add_default { manager.help }
 
 hiiro.run
