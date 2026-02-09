@@ -291,6 +291,24 @@ hiiro.add_subcmd(:push) { |*args|
   system(*git_args)
 }
 
+hiiro.add_subcmd(:diff) { |*args|
+  case args.length
+  when 0
+    # Compare current branch to main/master
+    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
+    range = "#{base}..HEAD"
+  when 1
+    # Compare current branch to specified ref
+    range = "#{args[0]}..HEAD"
+  else
+    # Compare two refs (from..to or from...to based on args)
+    from, to = args[0..1]
+    range = "#{from}..#{to}"
+  end
+
+  system('git', 'log', '--oneline', '--decorate', range)
+}
+
 hiiro.add_default { manager.help }
 
 hiiro.run
