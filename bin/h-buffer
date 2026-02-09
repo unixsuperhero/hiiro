@@ -50,6 +50,23 @@ o.add_subcmd(:show) { |name = nil, *args|
   system('tmux', 'show-buffer', '-b', buffer, *args)
 }
 
+o.add_subcmd(:copy) { |name = nil, *args|
+  buffer = select_buffer(name)
+  unless buffer
+    puts "No buffer selected or found"
+    next
+  end
+
+  require 'open3'
+  content = `tmux show-buffer -b #{buffer}`
+  Open3.popen3('pbcopy') do |stdin, stdout, stderr, wait_thr|
+    stdin.write(content)
+    stdin.close
+    wait_thr.value
+  end
+  puts "Copied buffer '#{buffer}' to clipboard"
+}
+
 o.add_subcmd(:save) { |*args|
   system('tmux', 'save-buffer', *args)
 }
