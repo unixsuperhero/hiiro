@@ -2,8 +2,12 @@
 
 require "hiiro"
 
+def buffer_names
+  `tmux list-buffers -F '\#{buffer_name}'`.strip.split("\n")
+end
+
 def find_buffer(partial)
-  buffer_list = `tmux list-buffers`.lines.map{|line| line.split(/:/, 2).first }
+  buffer_list = buffer_names
 
   buffer, *other = buffer_list.grep(Regexp.new(partial))
 
@@ -12,14 +16,36 @@ def find_buffer(partial)
   buffer
 end
 
+def select_buffer(partial = nil)
+  names = buffer_names
+  return nil if names.empty?
+
+  if partial
+    names = names.grep(Regexp.new(partial))
+  end
+
+  return nil if names.empty?
+  return names.first if names.length == 1
+
+  require 'open3'
+  selected, status = Open3.capture2('sk', '--no-sort', stdin_data: names.join("\n"))
+  return nil unless status.success?
+
+  selected.strip.empty? ? nil : selected.strip
+end
+
 o = Hiiro.init(*ARGV, plugins: [Pins])
 
 o.add_subcmd(:ls) { |*args|
   system('tmux', 'list-buffers', *args)
 }
 
-o.add_subcmd(:show) { |name, *args|
-  buffer = find_buffer(name)
+o.add_subcmd(:show) { |name = nil, *args|
+  buffer = select_buffer(name)
+  unless buffer
+    puts "No buffer selected or found"
+    next
+  end
 
   system('tmux', 'show-buffer', '-b', buffer, *args)
 }
