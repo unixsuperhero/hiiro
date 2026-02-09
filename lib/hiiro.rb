@@ -87,6 +87,12 @@ class Hiiro
     ].map(&:shellescape).join(' ')
   end
 
+  def make_child(subcmd, *args, **kwargs, &block)
+    bin_name = [bin, subcmd.to_s].join(?-)
+
+    Hiiro.init(bin_name, *args, **kwargs, &block)
+  end
+
   def history
     @history ||= History.new
   end
