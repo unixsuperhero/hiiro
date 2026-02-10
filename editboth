@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+home_map = {
+  'plugins' => File.join(Dir.home, '.config', 'hiiro', 'plugins'),
+  'bin' => File.join(Dir.home, 'bin'),
+  'exe' => File.join(Dir.home, 'bin'),
+  'lib' => File.dirname(`gem which hiiro`),
+}
+
+files = ARGV.flat_map do |fname|
+  key, *_ = fname.split(?/)
+
+  [fname, fname.sub(key, home_map[key])]
+end
+
+editor = ENV['EDITOR'] || 'safe_nvim' || 'nvim'
+
+system(editor, '-O2', *files)
+
