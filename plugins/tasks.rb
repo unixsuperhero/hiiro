@@ -101,7 +101,7 @@ class Task
   end
 
   def tree
-    @task ||= Environment.current&.find_tree(tree_name)
+    @tree ||= Environment.current&.find_tree(tree_name)
   end
 
   def branch
@@ -630,6 +630,25 @@ class TaskManager
     sk_select(names.sort)
   end
 
+  def value_for_task(task_name = nil, &block)
+    if task_name
+      task = task_by_name(task_name)
+      return block.call(task) if task
+    end
+
+    tasks = scope == :subtask ? tasks.sort_by(&:short_name) : environment.all_tasks.sort_by(&:name)
+
+    mapping = tasks.each_with_object({}) do |task,h|
+      name = scope == :subtask ? task.short_name : task.name
+      val = block.call(task)&.to_s
+
+      line = format("%-25s  | %s", name, val)
+      h[line] = val
+    end
+
+    Hiiro::Sk.map_select(mapping)
+  end
+
   def select_branch_interactive(prompt = nil)
     name_map = if scope == :subtask
       tasks.sort_by(&:short_name).each_with_object({}) { |t,h| h[format('%-25s  | %s', t.short_name, t.branch)] = t.branch }
@@ -876,7 +895,15 @@ module Tasks
       end
 
       h.add_subcmd(:branch) do |task_name=nil|
-        tm.branch(task_name)
+        print tm.value_for_task(task_name, &:branch)
+      end
+
+      h.add_subcmd(:tree) do |task_name=nil|
+        print tm.value_for_task(task_name, &:tree_name)
+      end
+
+      h.add_subcmd(:session) do |task_name=nil|
+        print tm.value_for_task(task_name, &:session_name)
       end
 
       h.add_subcmd(:status) { tm.status }
