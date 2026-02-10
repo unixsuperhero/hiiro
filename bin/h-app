@@ -62,9 +62,10 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
       next
     end
 
-    app = environment.app_matcher.find(app_name)
+    result = environment.app_matcher.find(app_name)
 
-    if app
+    if result.match?
+      app = result.first.item
       target = File.join(root, app.relative_path)
       send_cd(relative_cd_path(target))
     else
@@ -102,9 +103,10 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
       next
     end
 
-    app = environment.app_matcher.find(app_name)
+    result = environment.app_matcher.find(app_name)
 
-    if app
+    if result.match?
+      app = result.first.item
       target = File.join(root, app.relative_path)
       puts relative_cd_path(target)
     else
@@ -125,9 +127,10 @@ Hiiro.run(*ARGV, plugins: [:Tasks]) {
       next
     end
 
-    app = environment.app_matcher.find(app_name)
+    result = environment.app_matcher.find(app_name)
 
-    if app
+    if result.match?
+      app = result.first.item
       puts File.join(root, app.relative_path)
     else
       puts "App '#{app_name}' not found"
