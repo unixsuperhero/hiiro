@@ -163,6 +163,10 @@ class Hiiro
     @git ||= Git.new(self, Dir.pwd)
   end
 
+  def attach_method(name, &block)
+    define_method(name.to_sym, &block)
+  end
+
   def load_plugins(*plugins)
     plugins.flatten.each { |plugin| load_plugin(plugin) }
   end

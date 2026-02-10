@@ -809,33 +809,36 @@ module Tasks
     add_subcommands(hiiro)
   end
 
-  def self.attach_methods(hiiro)
-    hiiro.instance_eval do
-      def environment
-        @environment ||= Environment.current
-      end
-    end
+  def self.attach_methods(hiiro, task_manager=nil)
+    environment = Environment.current
+
+    hiiro.attach_method(:environment) { environment }
+    hiiro.attach_method(:env) { environment }
+    hiiro.attach_method(:task_manager) { task_manager }
+    hiiro.attach_method(:tm) { task_manager }
+
+    hiiro
   end
 
   def self.add_subcommands(hiiro)
     hiiro.add_subcmd(:task) do |*args|
-      mgr = TaskManager.new(hiiro, scope: :task)
-      task_hiiro = Tasks.build_hiiro(hiiro, mgr)
-      task_hiiro.run
+      tm = TaskManager.new(hiiro, scope: :task)
+      build_hiiro(hiiro, tm).run
     end
 
     hiiro.add_subcmd(:subtask) do |*args|
-      mgr = TaskManager.new(hiiro, scope: :subtask)
-      task_hiiro = Tasks.build_hiiro(hiiro, mgr)
-      task_hiiro.run
+      tm = TaskManager.new(hiiro, scope: :subtask)
+      build_hiiro(hiiro, tm).run
     end
   end
 
-  def self.build_hiiro(parent_hiiro, mgr)
+  def self.build_hiiro(parent_hiiro, task_manager)
     bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
 
-    Hiiro.init(bin_name:, args: parent_hiiro.args, task_manager: mgr) do |h|
-      tm = mgr
+    task_hiiro = Hiiro.init(
+      bin_name:,
+      args: parent_hiiro.args,
+    ) do |h|
       h.add_subcmd(:list) { tm.list }
       h.add_subcmd(:ls) { tm.list }
 
@@ -893,5 +896,7 @@ module Tasks
         system(ENV['EDITOR'] || 'nvim', __FILE__)
       end
     end
+
+    attach_methods task_hiiro, task_manager
   end
 end
