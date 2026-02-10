@@ -517,9 +517,10 @@ class TaskManager
     branch_name = nil
 
     if task_name.nil?
-      selected_task = select_branch_interactive
-      return unless selected_task
-      task_name, branch_name = selected_task.split(/\s\s*[|]\s\s*/)
+      branch = select_branch_interactive
+      return unless branch
+      print branch
+      return
     end
  
     task = task_by_name(task_name)
@@ -630,14 +631,14 @@ class TaskManager
   end
 
   def select_branch_interactive(prompt = nil)
-    names = if scope == :subtask
-      tasks.map { |t| format('%-25s  | %s', t.short_name, t.branch) }
+    name_map = if scope == :subtask
+      tasks.sort_by(&:short_name).each_with_object({}) { |t,h| h[format('%-25s  | %s', t.short_name, t.branch)] = t.branch }
     else
-      environment.all_tasks.map { |t| format('%-25s  | %s', t.name, t.branch) }
+      environment.all_tasks.sort_by(&:name).each_with_object({}) { |t,h| h[format('%-25s  | %s', t.name, t.branch)] = t.branch }
     end
-    return nil if names.empty?
+    return nil if name_map.empty?
 
-    sk_select(names.sort)
+    Hiiro::Sk.map_select(name_map)
   end
 
   # --- Private helpers ---
