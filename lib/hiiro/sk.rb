@@ -13,5 +13,13 @@ class Hiiro
 
       result
     end
+
+    def self.map_select(mapping)
+      keys = mapping.keys
+
+      key = select(keys)
+
+      mapping[key.to_s.chomp]
+    end
   end
 end
