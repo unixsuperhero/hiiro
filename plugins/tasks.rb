@@ -832,7 +832,7 @@ module Tasks
     end
   end
 
-  def self.build_hiiro(parent_hiiro, task_manager)
+  def self.build_hiiro(parent_hiiro, tm)
     bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
 
     task_hiiro = Hiiro.init(
@@ -897,6 +897,6 @@ module Tasks
       end
     end
 
-    attach_methods task_hiiro, task_manager
+    attach_methods task_hiiro, tm
   end
 end

@@ -164,7 +164,7 @@ class Hiiro
   end
 
   def attach_method(name, &block)
-    define_method(name.to_sym, &block)
+    define_singleton_method(name.to_sym, &block)
   end
 
   def load_plugins(*plugins)
