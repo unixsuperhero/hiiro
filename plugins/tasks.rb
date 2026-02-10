@@ -835,7 +835,7 @@ module Tasks
     bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
 
     Hiiro.init(bin_name:, args: parent_hiiro.args, task_manager: mgr) do |h|
-      tm = h.get_value(:task_manager)
+      tm = mgr
       h.add_subcmd(:list) { tm.list }
       h.add_subcmd(:ls) { tm.list }
 
