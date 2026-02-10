@@ -2,15 +2,10 @@
 
 require "hiiro"
 require "fileutils"
-require "pry"
 
 Hiiro.run(*ARGV, cwd: Dir.pwd, plugins: [Tasks]) do
   add_subcommand(:version) { |*args|
     puts Hiiro::VERSION
-  }
-
-  add_subcommand(:pry) { |*args|
-    binding.pry
   }
 
   add_subcommand(:ping) { |*args|

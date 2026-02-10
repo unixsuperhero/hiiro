@@ -225,7 +225,7 @@ hiiro.add_subcmd(:select) do |*args|
   end
 end
 
-hiiro.add_subcmd(:checkout, :co) { |branch = nil, *args|
+checkout_branch = lambda { |branch = nil, *args|
   unless branch
     # Use sk to select a branch
     branches = hiiro.git.branches(sort_by: 'authordate', ignore_case: true)
@@ -241,7 +241,10 @@ hiiro.add_subcmd(:checkout, :co) { |branch = nil, *args|
   system('git', 'checkout', branch, *args)
 }
 
-hiiro.add_subcmd(:rm, :remove) { |branch = nil, *args|
+hiiro.add_subcmd(:checkout, checkout_branch)
+hiiro.add_subcmd(:co, checkout_branch)
+
+remove_branch = lambda { |branch = nil, *args|
   unless branch
     # Use sk to select a branch
     branches = hiiro.git.branches(sort_by: 'authordate', ignore_case: true)
@@ -256,6 +259,9 @@ hiiro.add_subcmd(:rm, :remove) { |branch = nil, *args|
 
   system('git', 'branch', '-d', branch, *args)
 }
+
+hiiro.add_subcmd(:remove, &remove_branch)
+hiiro.add_subcmd(:rm, &remove_branch)
 
 hiiro.add_subcmd(:duplicate) { |new_name = nil, source = nil|
   unless new_name

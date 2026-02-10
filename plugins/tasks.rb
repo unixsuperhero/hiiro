@@ -100,6 +100,14 @@ class Task
     !subtask?
   end
 
+  def tree
+    @task ||= Environment.current&.find_tree(tree_name)
+  end
+
+  def branch
+    tree&.branch
+  end
+
   def ==(other)
     other.is_a?(Task) && name == other.name
   end
@@ -505,6 +513,30 @@ class TaskManager
     end
   end
 
+  def branch(task_name = nil)
+    branch_name = nil
+
+    if task_name.nil?
+      selected_task = select_branch_interactive
+      return unless selected_task
+      task_name, branch_name = selected_task.split(/\s\s*[|]\s\s*/)
+    end
+ 
+    task = task_by_name(task_name)
+    unless task
+      puts "Task not found: #{task_name}"
+      return
+    end
+ 
+    if task.branch
+      print task.branch
+    elsif task.tree&.detached?
+      puts "(detached HEAD)"
+    else
+      puts "(no branch)"
+    end
+  end
+
   def cd_to_task(task)
     unless task
       puts "Task not found"
@@ -574,6 +606,7 @@ class TaskManager
     puts "  list, ls              List #{scope_name}s"
     puts "  start NAME [APP]      Start a new #{scope_name}"
     puts "  switch [NAME]         Switch to a #{scope_name} (interactive if no name)"
+    puts "  branch [NAME]         Print git branch for a #{scope_name} (interactive if no name)"
     puts "  app [APP_NAME]        Open app in new tmux window (interactive if no name)"
     puts "  apps                  List configured apps"
     puts "  cd [APP_NAME]         Change directory to app"
@@ -590,6 +623,17 @@ class TaskManager
       tasks.map(&:short_name)
     else
       environment.all_tasks.map(&:name)
+    end
+    return nil if names.empty?
+
+    sk_select(names.sort)
+  end
+
+  def select_branch_interactive(prompt = nil)
+    names = if scope == :subtask
+      tasks.map { |t| format('%-25s  | %s', t.short_name, t.branch) }
+    else
+      environment.all_tasks.map { |t| format('%-25s  | %s', t.name, t.branch) }
     end
     return nil if names.empty?
 
@@ -790,54 +834,59 @@ module Tasks
   def self.build_hiiro(parent_hiiro, mgr)
     bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
 
-    Hiiro.init(bin_name:, args: parent_hiiro.args) do |h|
-      h.add_subcmd(:list) { mgr.list }
-      h.add_subcmd(:ls) { mgr.list }
+    Hiiro.init(bin_name:, args: parent_hiiro.args, task_manager: mgr) do |h|
+      tm = h.get_value(:task_manager)
+      h.add_subcmd(:list) { tm.list }
+      h.add_subcmd(:ls) { tm.list }
 
       h.add_subcmd(:start) do |task_name, app_name=nil|
-        mgr.start_task(task_name, app_name: app_name)
+        tm.start_task(task_name, app_name: app_name)
       end
 
       h.add_subcmd(:switch) do |task_name=nil, app_name=nil|
         if task_name.nil?
-          task_name = mgr.select_task_interactive
+          task_name = tm.select_task_interactive
           next unless task_name
         end
-        task = mgr.task_by_name(task_name)
-        mgr.switch_to_task(task, app_name: app_name)
+        task = tm.task_by_name(task_name)
+        tm.switch_to_task(task, app_name: app_name)
       end
 
       h.add_subcmd(:app) do |app_name=nil|
         if app_name.nil?
-          names = mgr.environment.all_apps.map(&:name)
-          app_name = mgr.send(:sk_select, names)
+          names = tm.environment.all_apps.map(&:name)
+          app_name = tm.send(:sk_select, names)
           next unless app_name
         end
-        mgr.open_app(app_name)
+        tm.open_app(app_name)
       end
 
-      h.add_subcmd(:apps) { mgr.list_apps }
+      h.add_subcmd(:apps) { tm.list_apps }
 
       h.add_subcmd(:cd) do |app_name=nil|
-        mgr.cd_to_app(app_name)
+        tm.cd_to_app(app_name)
       end
 
       h.add_subcmd(:path) do |app_name=nil|
-        mgr.app_path(app_name)
+        tm.app_path(app_name)
       end
 
-      h.add_subcmd(:status) { mgr.status }
-      h.add_subcmd(:st) { mgr.status }
+      h.add_subcmd(:branch) do |task_name=nil|
+        tm.branch(task_name)
+      end
 
-      h.add_subcmd(:save) { mgr.save }
+      h.add_subcmd(:status) { tm.status }
+      h.add_subcmd(:st) { tm.status }
+
+      h.add_subcmd(:save) { tm.save }
 
       h.add_subcmd(:stop) do |task_name=nil|
         if task_name.nil?
-          task_name = mgr.select_task_interactive
+          task_name = tm.select_task_interactive
           next unless task_name
         end
-        task = mgr.task_by_name(task_name)
-        mgr.stop_task(task)
+        task = tm.task_by_name(task_name)
+        tm.stop_task(task)
       end
 
       h.add_subcmd(:edit) do

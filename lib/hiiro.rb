@@ -1,6 +1,7 @@
 require "fileutils"
 require "yaml"
 require "shellwords"
+require "pry"
 
 require_relative "hiiro/version"
 require_relative "hiiro/prefix_matcher"
@@ -38,6 +39,10 @@ class Hiiro
     new(bin_name, *args, logging: logging, **values).tap do |hiiro|
       History.load(hiiro)
       hiiro.load_plugins(*plugins)
+
+      hiiro.add_subcommand(:pry) { |*args|
+        binding.pry
+      }
 
       hiiro.add_subcmd(:edit, **values) { |*args|
         system(ENV['EDITOR'] || 'nvim', hiiro.bin)
