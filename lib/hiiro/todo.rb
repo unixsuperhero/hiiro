@@ -3,7 +3,7 @@ require 'fileutils'
 require 'securerandom'
 require 'tempfile'
 
-module Hiiro
+class Hiiro
   class TodoItem
     STATUSES = %w[not_started started done skip].freeze
 
