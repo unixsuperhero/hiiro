@@ -1,6 +1,5 @@
 require 'yaml'
 require 'fileutils'
-require_relative '../lib/hiiro/todo'
 
 WORK_DIR = File.join(Dir.home, 'work')
 REPO_PATH = File.join(WORK_DIR, '.bare')
