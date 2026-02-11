@@ -1,6 +1,7 @@
 require 'yaml'
 require 'fileutils'
 require 'securerandom'
+require 'tempfile'
 
 module Hiiro
   class TodoItem
@@ -120,10 +121,17 @@ module Hiiro
   class TodoManager
     TODO_FILE = File.join(Dir.home, '.config', 'hiiro', 'todo.yml')
 
-    attr_reader :items
+    ITEM_TEMPLATE = {
+      'text' => '',
+      'status' => 'not_started',
+      'tags' => nil
+    }.freeze
+
+    attr_reader :items, :todo_file
 
     def initialize(file_path: nil)
-      @file_path = file_path || TODO_FILE
+      @todo_file = file_path || TODO_FILE
+      @file_path = @todo_file
       @items = load_items
     end
 
@@ -154,6 +162,49 @@ module Hiiro
       @items << item
       save
       item
+    end
+
+    def edit_items(items_to_edit = nil, task_info: nil)
+      items_array = if items_to_edit.nil?
+        [ITEM_TEMPLATE.dup]
+      elsif items_to_edit.is_a?(Array)
+        items_to_edit.map { |item| item.is_a?(TodoItem) ? editable_hash(item) : item }
+      else
+        [items_to_edit.is_a?(TodoItem) ? editable_hash(items_to_edit) : items_to_edit]
+      end
+
+      tmpfile = Tempfile.new(['todo-edit-', '.yml'])
+      tmpfile.write(items_array.to_yaml)
+      tmpfile.close
+
+      editor = ENV['EDITOR'] || 'safe_nvim' || 'nvim'
+      system(editor, tmpfile.path)
+
+      updated_data = YAML.safe_load_file(tmpfile.path)
+      tmpfile.unlink
+
+      return [] if updated_data.nil?
+
+      updated_array = updated_data.is_a?(Array) ? updated_data : [updated_data]
+      updated_array.filter_map do |h|
+        next if h['text'].nil? || h['text'].to_s.strip.empty?
+        TodoItem.new(
+          text: h['text'],
+          status: h['status'] || 'not_started',
+          tags: h['tags'],
+          task_name: task_info&.dig(:task_name),
+          subtask_name: task_info&.dig(:subtask_name),
+          tree: task_info&.dig(:tree),
+          branch: task_info&.dig(:branch),
+          session: task_info&.dig(:session)
+        )
+      end
+    end
+
+    def add_items(new_items)
+      @items.concat(new_items)
+      save
+      new_items
     end
 
     def remove(id_or_index)
@@ -260,6 +311,14 @@ module Hiiro
       item.update_status(status)
       save
       item
+    end
+
+    def editable_hash(item)
+      {
+        'text' => item.text,
+        'status' => item.status,
+        'tags' => item.tags
+      }
     end
 
     def load_items

@@ -959,6 +959,22 @@ module Tasks
           end
 
         when 'add'
+          if todo_args.empty?
+            new_items = todo_manager.edit_items(task_info: task_info)
+            if new_items.empty?
+              puts "No items added."
+              next
+            end
+            todo_manager.add_items(new_items)
+            if new_items.length == 1
+              puts "Added: #{todo_manager.format_item(new_items.first)}"
+            else
+              puts "Added #{new_items.length} items:"
+              new_items.each { |item| puts "  #{todo_manager.format_item(item)}" }
+            end
+            next
+          end
+
           tags = nil
           text_parts = []
           while todo_args.any?
@@ -971,10 +987,6 @@ module Tasks
             end
           end
           text = text_parts.join(' ')
-          if text.empty?
-            puts "Usage: h #{tm.scope} todo add <text> [-t tags]"
-            next
-          end
           item = todo_manager.add(text, tags: tags, task_info: task_info)
           puts "Added: #{todo_manager.format_item(item)}"
 
