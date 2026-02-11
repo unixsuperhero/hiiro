@@ -1,5 +1,6 @@
 require 'yaml'
 require 'fileutils'
+require_relative '../lib/hiiro/todo'
 
 WORK_DIR = File.join(Dir.home, 'work')
 REPO_PATH = File.join(WORK_DIR, '.bare')
@@ -922,6 +923,113 @@ module Tasks
 
       h.add_subcmd(:edit) do
         system(ENV['EDITOR'] || 'nvim', __FILE__)
+      end
+
+      h.add_subcmd(:todo) do |*todo_args|
+        todo_manager = Hiiro::TodoManager.new
+        task = tm.current_task
+
+        task_info = if task
+          {
+            task_name: task.subtask? ? task.parent_name : task.name,
+            subtask_name: task.subtask? ? task.short_name : nil,
+            tree: task.tree_name,
+            branch: task.branch,
+            session: task.session_name
+          }
+        end
+
+        todo_subcmd = todo_args.shift
+        case todo_subcmd
+        when 'ls', 'list', nil
+          show_all = todo_args.delete('-a') || todo_args.delete('--all')
+          # Default to filtering by current task unless -a or --all is used
+          items = if show_all
+            todo_manager.all
+          elsif task
+            todo_manager.filter_by_task(task.name).select { |i| %w[not_started started].include?(i.status) }
+          else
+            todo_manager.active
+          end
+
+          if items.empty?
+            puts task ? "No todo items for task '#{task.name}'." : "No todo items found."
+          else
+            puts todo_manager.list(items)
+          end
+
+        when 'add'
+          tags = nil
+          text_parts = []
+          while todo_args.any?
+            arg = todo_args.shift
+            case arg
+            when '-t', '--tags'
+              tags = todo_args.shift
+            else
+              text_parts << arg
+            end
+          end
+          text = text_parts.join(' ')
+          if text.empty?
+            puts "Usage: h #{tm.scope} todo add <text> [-t tags]"
+            next
+          end
+          item = todo_manager.add(text, tags: tags, task_info: task_info)
+          puts "Added: #{todo_manager.format_item(item)}"
+
+        when 'rm', 'remove'
+          id_or_index = todo_args.shift
+          unless id_or_index
+            puts "Usage: h #{tm.scope} todo rm <id|index>"
+            next
+          end
+          item = todo_manager.remove(id_or_index)
+          puts item ? "Removed: #{item.text}" : "Item not found: #{id_or_index}"
+
+        when 'start'
+          id_or_index = todo_args.shift
+          unless id_or_index
+            puts "Usage: h #{tm.scope} todo start <id|index>"
+            next
+          end
+          item = todo_manager.start(id_or_index)
+          puts item ? "Started: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
+
+        when 'done'
+          id_or_index = todo_args.shift
+          unless id_or_index
+            puts "Usage: h #{tm.scope} todo done <id|index>"
+            next
+          end
+          item = todo_manager.done(id_or_index)
+          puts item ? "Done: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
+
+        when 'skip'
+          id_or_index = todo_args.shift
+          unless id_or_index
+            puts "Usage: h #{tm.scope} todo skip <id|index>"
+            next
+          end
+          item = todo_manager.skip(id_or_index)
+          puts item ? "Skipped: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
+
+        when 'search'
+          query = todo_args.join(' ')
+          if query.empty?
+            puts "Usage: h #{tm.scope} todo search <query>"
+            next
+          end
+          items = todo_manager.search(query)
+          if items.empty?
+            puts "No items matching: #{query}"
+          else
+            puts todo_manager.list(items)
+          end
+
+        else
+          puts "Usage: h #{tm.scope} todo <ls|add|rm|start|done|skip|search> [args]"
+        end
       end
     end
 

@@ -1,0 +1,275 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+class TodoCLI
+  attr_reader :manager, :args
+
+  def initialize(args)
+    @args = args
+    @manager = Hiiro::TodoManager.new
+  end
+
+  def run
+    subcmd = args.shift
+    case subcmd
+    when 'ls', 'list', nil
+      cmd_list
+    when 'add'
+      cmd_add
+    when 'rm', 'remove'
+      cmd_remove
+    when 'change'
+      cmd_change
+    when 'start'
+      cmd_start
+    when 'done'
+      cmd_done
+    when 'skip'
+      cmd_skip
+    when 'reset'
+      cmd_reset
+    when 'search'
+      cmd_search
+    when 'help', '-h', '--help'
+      cmd_help
+    else
+      puts "Unknown command: #{subcmd}"
+      cmd_help
+      exit 1
+    end
+  end
+
+  private
+
+  def cmd_list
+    show_all = args.delete('-a') || args.delete('--all')
+    status_filter = nil
+    tag_filter = nil
+    task_filter = nil
+
+    while args.any?
+      arg = args.shift
+      case arg
+      when '-s', '--status'
+        status_filter = args.shift
+      when '-t', '--tag'
+        tag_filter = args.shift
+      when '--task'
+        task_filter = args.shift
+      end
+    end
+
+    items = if status_filter
+      manager.filter_by_status(*status_filter.split(','))
+    elsif tag_filter
+      manager.filter_by_tag(tag_filter)
+    elsif task_filter
+      manager.filter_by_task(task_filter)
+    elsif show_all
+      manager.all
+    else
+      manager.active
+    end
+
+    if items.empty?
+      puts "No todo items found."
+    else
+      puts manager.list(items)
+    end
+  end
+
+  def cmd_add
+    tags = nil
+    text_parts = []
+
+    while args.any?
+      arg = args.shift
+      case arg
+      when '-t', '--tags'
+        tags = args.shift
+      else
+        text_parts << arg
+      end
+    end
+
+    text = text_parts.join(' ')
+    if text.empty?
+      puts "Usage: h todo add <text> [-t tags]"
+      exit 1
+    end
+
+    item = manager.add(text, tags: tags)
+    puts "Added: #{manager.format_item(item)}"
+  end
+
+  def cmd_remove
+    id_or_index = args.shift
+    if id_or_index.nil?
+      puts "Usage: h todo rm <id|index>"
+      exit 1
+    end
+
+    item = manager.remove(id_or_index)
+    if item
+      puts "Removed: #{item.text}"
+    else
+      puts "Item not found: #{id_or_index}"
+      exit 1
+    end
+  end
+
+  def cmd_change
+    id_or_index = args.shift
+    if id_or_index.nil?
+      puts "Usage: h todo change <id|index> [--text TEXT] [--tags TAGS] [--status STATUS]"
+      exit 1
+    end
+
+    text = nil
+    tags = nil
+    status = nil
+
+    while args.any?
+      arg = args.shift
+      case arg
+      when '--text'
+        text = args.shift
+      when '--tags', '-t'
+        tags = args.shift
+      when '--status', '-s'
+        status = args.shift
+      else
+        # Treat remaining args as text if no --text flag
+        text ||= ''
+        text = [text, arg, *args].join(' ').strip
+        break
+      end
+    end
+
+    item = manager.change(id_or_index, text: text, tags: tags, status: status)
+    if item
+      puts "Updated: #{manager.format_item(item)}"
+    else
+      puts "Item not found: #{id_or_index}"
+      exit 1
+    end
+  end
+
+  def cmd_start
+    id_or_index = args.shift
+    if id_or_index.nil?
+      puts "Usage: h todo start <id|index>"
+      exit 1
+    end
+
+    item = manager.start(id_or_index)
+    if item
+      puts "Started: #{manager.format_item(item)}"
+    else
+      puts "Item not found: #{id_or_index}"
+      exit 1
+    end
+  end
+
+  def cmd_done
+    id_or_index = args.shift
+    if id_or_index.nil?
+      puts "Usage: h todo done <id|index>"
+      exit 1
+    end
+
+    item = manager.done(id_or_index)
+    if item
+      puts "Done: #{manager.format_item(item)}"
+    else
+      puts "Item not found: #{id_or_index}"
+      exit 1
+    end
+  end
+
+  def cmd_skip
+    id_or_index = args.shift
+    if id_or_index.nil?
+      puts "Usage: h todo skip <id|index>"
+      exit 1
+    end
+
+    item = manager.skip(id_or_index)
+    if item
+      puts "Skipped: #{manager.format_item(item)}"
+    else
+      puts "Item not found: #{id_or_index}"
+      exit 1
+    end
+  end
+
+  def cmd_reset
+    id_or_index = args.shift
+    if id_or_index.nil?
+      puts "Usage: h todo reset <id|index>"
+      exit 1
+    end
+
+    item = manager.reset(id_or_index)
+    if item
+      puts "Reset: #{manager.format_item(item)}"
+    else
+      puts "Item not found: #{id_or_index}"
+      exit 1
+    end
+  end
+
+  def cmd_search
+    query = args.join(' ')
+    if query.empty?
+      puts "Usage: h todo search <query>"
+      exit 1
+    end
+
+    items = manager.search(query)
+    if items.empty?
+      puts "No items matching: #{query}"
+    else
+      puts manager.list(items)
+    end
+  end
+
+  def cmd_help
+    puts <<~HELP
+      Usage: h todo <command> [args]
+
+      Commands:
+        ls, list              List todo items (active by default)
+          -a, --all           Show all items including done/skip
+          -s, --status STATUS Filter by status (not_started,started,done,skip)
+          -t, --tag TAG       Filter by tag
+          --task TASK         Filter by task name
+
+        add <text> [-t tags]  Add a new todo item
+          -t, --tags TAGS     Comma-separated tags
+
+        rm, remove <id|index> Remove a todo item
+
+        change <id|index>     Modify a todo item
+          --text TEXT         New text
+          --tags TAGS         New tags
+          --status STATUS     New status
+
+        start <id|index>      Mark item as started
+        done <id|index>       Mark item as done
+        skip <id|index>       Mark item as skipped
+        reset <id|index>      Reset item to not_started
+
+        search <query>        Search items by text, tags, or task
+
+      Status icons:
+        [ ] not_started
+        [>] started
+        [x] done
+        [-] skip
+    HELP
+  end
+end
+
+TodoCLI.new(ARGV.dup).run

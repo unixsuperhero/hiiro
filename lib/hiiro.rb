@@ -9,6 +9,7 @@ require_relative "hiiro/git"
 require_relative "hiiro/history"
 require_relative "hiiro/options"
 require_relative "hiiro/sk"
+require_relative "hiiro/todo"
 
 class String
   def underscore(camel_cased_word=self)
@@ -96,6 +97,10 @@ class Hiiro
     bin_name = [bin, subcmd.to_s].join(?-)
 
     Hiiro.init(bin_name:, args:, **kwargs, &block)
+  end
+
+  def todo_manager
+    @todo_manager ||= TodoManager.new
   end
 
   def history
