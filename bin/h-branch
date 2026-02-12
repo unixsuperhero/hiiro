@@ -241,8 +241,8 @@ checkout_branch = lambda { |branch = nil, *args|
   system('git', 'checkout', branch, *args)
 }
 
-hiiro.add_subcmd(:checkout, checkout_branch)
-hiiro.add_subcmd(:co, checkout_branch)
+hiiro.add_subcmd(:checkout, &checkout_branch)
+hiiro.add_subcmd(:co, &checkout_branch)
 
 remove_branch = lambda { |branch = nil, *args|
   unless branch
@@ -275,14 +275,35 @@ hiiro.add_subcmd(:duplicate) { |new_name = nil, source = nil|
   puts "Created branch '#{new_name}' from '#{source}'"
 }
 
-hiiro.add_subcmd(:push) { |*args|
-  opts = Hiiro::Options.new(args) do
+hiiro.add_subcmd(:test) { |*args|
+  opts = Hiiro::Options.parse(args) do
     option :remote, short: 'r', default: 'origin', desc: 'Remote name'
     option :from, short: 'f', desc: 'Local branch or commit to push'
     option :to, short: 't', desc: 'Remote branch name'
     flag :force, short: 'F', desc: 'Force push'
     flag :set_upstream, short: 'u', desc: 'Set upstream tracking'
-  end.parse!
+  end
+
+  {
+    remote_as_method: opts.remote,
+    remote_as_sym_key: opts[:remote],
+    remote_as_string_key: opts['remote'],
+    force_as_method: opts.force,
+    force_as_sym_key: opts[:force],
+    force_as_string_key: opts['force'],
+  }.each do |k,v|
+    puts "#{k} => #{v}"
+  end
+}
+
+hiiro.add_subcmd(:push) { |*args|
+  opts = Hiiro::Options.parse(args) do
+    option :remote, short: 'r', default: 'origin', desc: 'Remote name'
+    option :from, short: 'f', desc: 'Local branch or commit to push'
+    option :to, short: 't', desc: 'Remote branch name'
+    flag :force, short: 'F', desc: 'Force push'
+    flag :set_upstream, short: 'u', desc: 'Set upstream tracking'
+  end
 
   local_ref = opts[:from] || hiiro.git.branch
   remote_branch = opts[:to] || local_ref

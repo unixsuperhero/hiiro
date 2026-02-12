@@ -144,8 +144,10 @@ class Hiiro
     runners.add_default(handler, **global_values, **values)
   end
 
-  def add_subcommand(name, **values, &handler)
-    runners.add_subcommand(name, handler, **global_values, **values)
+  def add_subcommand(*names, **values, &handler)
+    names.each do |name|
+      runners.add_subcommand(name, handler, **global_values, **values)
+    end
   end
   alias add_subcmd add_subcommand
 
