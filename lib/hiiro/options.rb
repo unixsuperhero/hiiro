@@ -12,7 +12,18 @@ class Hiiro
 
     def initialize(&block)
       @definitions = {}
+      flag(:help, short: 'h', desc: 'Show this help message')
       instance_eval(&block) if block
+    end
+
+    def help_text
+      lines = []
+      @definitions.each do |name, defn|
+        next if name == :help
+        lines << defn.usage_line
+      end
+      lines << @definitions[:help].usage_line
+      lines.join("\n")
     end
 
     def flag(name, short: nil, default: false, desc: nil)
@@ -62,6 +73,20 @@ class Hiiro
         key = name.to_sym
         return false unless @definitions.key?(key)
         @values[key] != @definitions[key].default
+      end
+
+      def help?
+        @values[:help]
+      end
+
+      def help_text
+        lines = []
+        @definitions.each do |name, defn|
+          next if name == :help
+          lines << defn.usage_line
+        end
+        lines << @definitions[:help].usage_line
+        lines.join("\n")
       end
 
       def to_h
@@ -186,6 +211,25 @@ class Hiiro
         when :integer then value.to_i
         when :float then value.to_f
         else value
+        end
+      end
+
+      def usage_line
+        parts = []
+        parts << (short_form ? "#{short_form}, #{long_form}" : "    #{long_form}")
+        parts[0] = parts[0].ljust(20)
+        parts << value_hint unless flag?
+        parts << desc if desc
+        parts << "(default: #{default.inspect})" if default && !flag?
+        parts << "[multi]" if multi
+        parts.join("  ")
+      end
+
+      def value_hint
+        case type
+        when :integer then "<int>"
+        when :float then "<num>"
+        else "<value>"
         end
       end
     end
