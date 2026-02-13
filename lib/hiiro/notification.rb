@@ -36,10 +36,10 @@ class Hiiro
 
     def show
       cmd = ['terminal-notifier']
-      cmd << ['-message', options.message] if options.message
-      cmd << ['-title', options.title.tr('()[]', '')] if options.title
-      cmd << ['-open', options.link] if options.link
-      cmd << ['-execute', options.command] if options.command
+      cmd += ['-message', options.message] if options.message
+      cmd += ['-title', options.title.tr('()[]', '')] if options.title
+      cmd += ['-open', options.link] if options.link
+      cmd += ['-execute', options.command] if options.command
       system(*cmd)
 
       play_sound
