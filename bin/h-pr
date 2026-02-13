@@ -322,6 +322,33 @@ hiiro.add_subcmd(:current) { manager.current }
 hiiro.add_subcmd(:open) { |pr_number=nil| manager.open(pr_number) }
 hiiro.add_subcmd(:view) { |pr_number=nil| manager.view(pr_number) }
 
+hiiro.add_subcmd(:select) do |*args|
+  # Get my open PRs
+  output = `gh pr list --author @me --state open --json number,title,headRefName 2>/dev/null`.strip
+
+  if output.empty?
+    STDERR.puts "No open PRs found"
+    next
+  end
+
+  prs = JSON.parse(output) rescue []
+  if prs.empty?
+    STDERR.puts "No open PRs found"
+    next
+  end
+
+  lines = prs.each_with_object({}) do |pr, h|
+    display = "##{pr['number']} [#{pr['headRefName']}] #{pr['title']}"
+    h[display] = pr['number'].to_s
+  end
+
+  selected = Hiiro::Sk.map_select(lines)
+
+  if selected
+    print selected
+  end
+end
+
 # hiiro.add_default { manager.help }
 
 hiiro.run

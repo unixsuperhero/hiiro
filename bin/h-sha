@@ -2,9 +2,56 @@
 
 require 'hiiro'
 
-BASE_DIR = File.join(Dir.home, 'work/carrot')
+Hiiro.init(*ARGV, plugins: [Pins]) { |hiiro|
 
-Hiiro.init(*ARGV, plugins: [Tmux, Pins, Project]) { |hiiro|
+  hiiro.add_subcmd(:select) do |*args|
+    # Get git log with format: sha - subject
+    log_output = `git log --oneline -100 #{args.join(' ')}`.strip
+
+    if log_output.empty?
+      STDERR.puts "No commits found"
+      next
+    end
+
+    lines = log_output.split("\n").each_with_object({}) do |line, h|
+      sha = line.split.first
+      h[line] = sha
+    end
+
+    selected = Hiiro::Sk.map_select(lines)
+
+    if selected
+      print selected
+    end
+  end
+
+  hiiro.add_subcmd(:ls) do |*args|
+    system('git', 'log', '--oneline', *args)
+  end
+
+  hiiro.add_subcmd(:show) do |sha = nil, *args|
+    if sha.nil?
+      sha = `h sha select`.strip
+      next if sha.empty?
+    end
+
+    system('git', 'show', sha, *args)
+  end
+
+  hiiro.add_subcmd(:copy) do |sha = nil, *args|
+    if sha.nil?
+      sha = `h sha select`.strip
+      next if sha.empty?
+    end
+
+    require 'open3'
+    Open3.popen3('pbcopy') do |stdin, stdout, stderr, wait_thr|
+      stdin.write(sha)
+      stdin.close
+      wait_thr.value
+    end
+    puts "Copied #{sha} to clipboard"
+  end
 
 }.run
 

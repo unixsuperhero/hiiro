@@ -68,4 +68,25 @@ o.add_subcmd(:history) { |window_id=nil|
   end
 }
 
+o.add_subcmd(:select) do |*args|
+  # Get all windows with details
+  output = `tmux list-windows -a -F '\#{session_name}:\#{window_index} \#{window_name} [\#{window_panes} panes]'`.strip
+
+  if output.empty?
+    STDERR.puts "No windows found"
+    next
+  end
+
+  lines = output.split("\n").each_with_object({}) do |line, h|
+    window_id = line.split.first
+    h[line] = window_id
+  end
+
+  selected = Hiiro::Sk.map_select(lines)
+
+  if selected
+    print selected
+  end
+end
+
 o.run

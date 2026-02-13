@@ -136,6 +136,32 @@ o.add_subcmd(:edit) { |*args|
   exec(editor, projects_file)
 }
 
+# === SELECT PROJECT ===
+
+o.add_subcmd(:select) { |*args|
+  dirs = project_dirs
+  conf = projects_from_config
+
+  all_projects = dirs.merge(conf)
+
+  if all_projects.empty?
+    STDERR.puts "No projects found"
+    next
+  end
+
+  lines = all_projects.each_with_object({}) do |(name, path), h|
+    source = conf.key?(name) ? '[config]' : '[dir]'
+    display = format("%-15s %s  %s", name, source, path)
+    h[display] = path
+  end
+
+  selected = Hiiro::Sk.map_select(lines)
+
+  if selected
+    print selected
+  end
+}
+
 # === HELP ===
 
 o.add_subcmd(:help) { |*args|

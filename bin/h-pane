@@ -71,4 +71,25 @@ o.add_subcmd(:history) { |pane_id=nil|
   end
 }
 
+o.add_subcmd(:select) do |*args|
+  # Get all panes with details
+  output = `tmux list-panes -a -F '\#{session_name}:\#{window_index}.\#{pane_index} [\#{pane_current_command}] \#{pane_current_path}'`.strip
+
+  if output.empty?
+    STDERR.puts "No panes found"
+    next
+  end
+
+  lines = output.split("\n").each_with_object({}) do |line, h|
+    pane_id = line.split.first
+    h[line] = pane_id
+  end
+
+  selected = Hiiro::Sk.map_select(lines)
+
+  if selected
+    print selected
+  end
+end
+
 o.run

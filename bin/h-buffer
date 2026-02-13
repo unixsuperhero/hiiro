@@ -98,4 +98,25 @@ o.add_subcmd(:clear) { |*args|
   puts "Cleared #{buffers.count} buffers"
 }
 
+o.add_subcmd(:select) do |*args|
+  # Get buffer list with content preview
+  output = `tmux list-buffers -F '\#{buffer_name}: \#{buffer_sample}'`.strip
+
+  if output.empty?
+    STDERR.puts "No buffers found"
+    next
+  end
+
+  lines = output.split("\n").each_with_object({}) do |line, h|
+    buffer_name = line.split(':').first
+    h[line] = buffer_name
+  end
+
+  selected = Hiiro::Sk.map_select(lines)
+
+  if selected
+    print selected
+  end
+end
+
 o.run
