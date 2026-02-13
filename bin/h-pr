@@ -295,7 +295,7 @@ class PinnedPRManager
   end
 
   def fetch_pr_info(pr_number)
-    fields = 'number,title,url,headRefName,state,statusCheckRollup'
+    fields = 'number,title,url,headRefName,state,statusCheckRollup,reviewDecision,reviews,isDraft,mergeable'
     output = `gh pr view #{pr_number} --json #{fields} 2>/dev/null`.strip
     return nil if output.empty?
     JSON.parse(output)
@@ -325,6 +325,10 @@ class PinnedPRManager
     pr['state'] = info['state']
     pr['title'] = info['title']
     pr['checks'] = summarize_checks(info['statusCheckRollup'])
+    pr['reviews'] = summarize_reviews(info['reviews'])
+    pr['review_decision'] = info['reviewDecision']
+    pr['is_draft'] = info['isDraft']
+    pr['mergeable'] = info['mergeable']
     pr['last_checked'] = Time.now.iso8601
     pr
   end
@@ -343,28 +347,124 @@ class PinnedPRManager
     { 'total' => total, 'success' => success, 'pending' => pending, 'failed' => failed }
   end
 
+  def summarize_reviews(reviews)
+    return nil unless reviews.is_a?(Array) && !reviews.empty?
+
+    # Get the latest review state per author
+    latest_by_author = {}
+    reviews.each do |review|
+      author = review['author']['login'] rescue nil
+      next unless author
+      # Only track if it's a meaningful state
+      state = review['state']
+      next unless %w[APPROVED CHANGES_REQUESTED COMMENTED].include?(state)
+      latest_by_author[author] = state
+    end
+
+    approved = latest_by_author.values.count { |s| s == 'APPROVED' }
+    changes_requested = latest_by_author.values.count { |s| s == 'CHANGES_REQUESTED' }
+    commented = latest_by_author.values.count { |s| s == 'COMMENTED' }
+
+    { 'approved' => approved, 'changes_requested' => changes_requested, 'commented' => commented, 'reviewers' => latest_by_author }
+  end
+
   def display_pinned(pr, idx = nil)
     num = idx ? "#{(idx + 1).to_s.rjust(3)}." : ""
     state_icon = case pr['state']
     when 'MERGED' then '[M]'
     when 'CLOSED' then '[X]'
-    else '[O]'
+    else pr['is_draft'] ? '[D]' : '[O]'
     end
 
     checks_str = if pr['checks']
       c = pr['checks']
       if c['failed'] > 0
-        " [#{c['success']}/#{c['total']} FAIL:#{c['failed']}]"
+        " checks:#{c['success']}/#{c['total']} FAIL:#{c['failed']}"
       elsif c['pending'] > 0
-        " [#{c['success']}/#{c['total']} pending:#{c['pending']}]"
+        " checks:#{c['success']}/#{c['total']} pending:#{c['pending']}"
       else
-        " [#{c['success']}/#{c['total']}]"
+        " checks:#{c['success']}/#{c['total']}"
       end
     else
       ""
     end
 
-    "#{num} #{state_icon} ##{pr['number']} #{pr['title']}#{checks_str}".strip
+    reviews_str = if pr['reviews']
+      r = pr['reviews']
+      parts = []
+      parts << "#{r['approved']} approved" if r['approved'] > 0
+      parts << "#{r['changes_requested']} changes" if r['changes_requested'] > 0
+      parts.empty? ? "" : " | #{parts.join(', ')}"
+    else
+      ""
+    end
+
+    "#{num} #{state_icon} ##{pr['number']} #{pr['title']}#{checks_str}#{reviews_str}".strip
+  end
+
+  def display_detailed(pr, idx = nil)
+    lines = []
+    num = idx ? "#{idx + 1}." : ""
+
+    state_str = case pr['state']
+    when 'MERGED' then 'MERGED'
+    when 'CLOSED' then 'CLOSED'
+    else pr['is_draft'] ? 'DRAFT' : 'OPEN'
+    end
+
+    lines << "#{num} ##{pr['number']} - #{pr['title']}"
+    lines << "   State: #{state_str}"
+    lines << "   Branch: #{pr['headRefName']}" if pr['headRefName']
+    lines << "   URL: #{pr['url']}" if pr['url']
+
+    # Checks
+    if pr['checks']
+      c = pr['checks']
+      check_status = if c['failed'] > 0
+        "FAILING (#{c['success']}/#{c['total']} passed, #{c['failed']} failed)"
+      elsif c['pending'] > 0
+        "PENDING (#{c['success']}/#{c['total']} passed, #{c['pending']} pending)"
+      else
+        "PASSING (#{c['success']}/#{c['total']})"
+      end
+      lines << "   Checks: #{check_status}"
+    else
+      lines << "   Checks: (none)"
+    end
+
+    # Reviews
+    if pr['reviews']
+      r = pr['reviews']
+      review_parts = []
+      review_parts << "#{r['approved']} approved" if r['approved'] > 0
+      review_parts << "#{r['changes_requested']} requesting changes" if r['changes_requested'] > 0
+      review_parts << "#{r['commented']} commented" if r['commented'] > 0
+
+      if review_parts.any?
+        lines << "   Reviews: #{review_parts.join(', ')}"
+        if r['reviewers'] && !r['reviewers'].empty?
+          r['reviewers'].each do |author, state|
+            icon = case state
+            when 'APPROVED' then '+'
+            when 'CHANGES_REQUESTED' then '-'
+            else '?'
+            end
+            lines << "      #{icon} #{author}: #{state.downcase.gsub('_', ' ')}"
+          end
+        end
+      else
+        lines << "   Reviews: (none)"
+      end
+    else
+      lines << "   Reviews: (not fetched)"
+    end
+
+    # Mergeable
+    if pr['mergeable']
+      lines << "   Mergeable: #{pr['mergeable']}"
+    end
+
+    lines.join("\n")
   end
 end
 
@@ -586,16 +686,23 @@ hiiro.add_subcmd(:status) do |*args|
     next
   end
 
+  compact = args.include?('-c') || args.include?('--compact')
+
   puts "Refreshing status for #{pinned.length} pinned PR(s)..."
   puts
 
   pinned.each_with_index do |pr, idx|
     pinned_manager.refresh_status(pr)
-    puts pinned_manager.display_pinned(pr, idx)
+    if compact
+      puts pinned_manager.display_pinned(pr, idx)
+    else
+      puts pinned_manager.display_detailed(pr, idx)
+      puts
+    end
   end
 
   pinned_manager.save_pinned(pinned)
-  puts
+  puts "---"
   puts "Status updated at #{Time.now.strftime('%H:%M:%S')}"
 end
 
