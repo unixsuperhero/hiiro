@@ -1,7 +1,7 @@
 class Hiiro
   class Notification
     def self.show(hiiro)
-      new(hiiro).send
+      new(hiiro).show
     end
 
     attr_reader :hiiro, :original_args
