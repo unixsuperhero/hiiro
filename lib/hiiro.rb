@@ -194,23 +194,32 @@ class Hiiro
     @loaded_plugins.push(plugin_const)
   end
 
-  def help
+  def help(options=nil)
     ambiguous = runners.ambiguous_matches
+
+    puts "Current command: #{bin_name}!"
 
     if ambiguous.any?
       puts "Ambiguous subcommand #{subcmd.inspect}!"
-      puts ""
+      puts
       puts "Did you mean one of these?"
       list_runners(ambiguous)
+      puts
     else
-      subcmd_msg = "Subcommand required!"
-      subcmd_msg = "Subcommand #{subcmd.inspect} not found!" if subcmd
-
-      puts subcmd_msg
-      puts ""
+      puts "Subcommand required for #{bin_name}"
+      puts
       puts "Possible subcommands:"
       list_runners(runners.all_runners)
+      puts
     end
+
+    if options
+      puts "Options:"
+      puts options.help_text
+      puts
+    end
+
+    exit 1
   end
 
   def list_runners(list)

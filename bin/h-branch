@@ -284,6 +284,11 @@ hiiro.add_subcmd(:test) { |*args|
     flag :set_upstream, short: 'u', desc: 'Set upstream tracking'
   end
 
+  if opts.help?
+    hiiro.help(opts)
+    return
+  end
+
   {
     remote_as_method: opts.remote,
     remote_as_sym_key: opts[:remote],
