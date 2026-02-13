@@ -50,6 +50,6 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, plugins: [Tasks]) do
   end
 
   add_subcmd(:alert) do |*args|
-    puts Hiiro::Notification.new(self).sounds
+    Hiiro::Notification.show(self)
   end
 end
