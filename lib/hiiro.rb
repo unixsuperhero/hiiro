@@ -8,6 +8,7 @@ require_relative "hiiro/prefix_matcher"
 require_relative "hiiro/git"
 require_relative "hiiro/history"
 require_relative "hiiro/options"
+require_relative "hiiro/notification"
 require_relative "hiiro/sk"
 require_relative "hiiro/todo"
 

@@ -4,15 +4,15 @@ require "hiiro"
 require "fileutils"
 
 Hiiro.run(*ARGV, cwd: Dir.pwd, plugins: [Tasks]) do
-  add_subcommand(:version) { |*args|
+  add_subcmd(:version) { |*args|
     puts Hiiro::VERSION
   }
 
-  add_subcommand(:ping) { |*args|
+  add_subcmd(:ping) { |*args|
     puts "pong"
   }
 
-  add_subcommand(:setup) do |*args|
+  add_subcmd(:setup) do |*args|
     gem_root = File.expand_path("../..", __FILE__)
     source_plugins = File.join(gem_root, "plugins")
     source_bins = File.join(gem_root, "bin")
@@ -42,10 +42,14 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, plugins: [Tasks]) do
       puts "Installed #{bin_files.size} subcommands to #{dest_bin}"
       bin_files.each { |f| puts "  - #{File.basename(f)}" }
     else
-      puts "No subcommands found in #{source_bins}"
+      puts "No subcmds found in #{source_bins}"
     end
 
     puts
     puts "Setup complete! Make sure ~/bin is in your PATH."
+  end
+
+  add_subcmd(:alert) do |*args|
+    puts Notification.new(self).sounds
   end
 end
