@@ -265,26 +265,61 @@ hiiro.add_subcmd(:diff) { |*args|
   system('git', 'log', '--oneline', '--decorate', range)
 }
 
-hiiro.add_subcmd(:ahead) { |ancestor, test_branch = nil|
-  test_branch ||= 'HEAD'
-
-  # HEAD is ahead of ancestor if ancestor is an ancestor of HEAD
-  if system("git merge-base --is-ancestor #{ancestor} #{test_branch} 2>/dev/null")
-    puts "Yes, #{test_branch} is ahead of #{ancestor}"
+hiiro.add_subcmd(:ahead) { |*args|
+  case args.length
+  when 0
+    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
+    ahead_of = base
+    branch = 'HEAD'
+  when 1
+    ahead_of = args[0]
+    branch = 'HEAD'
   else
-    puts "No, #{test_branch} is NOT ahead of #{ancestor}"
+    ahead_of, branch = args[0..1]
   end
+
+  count = `git rev-list --count #{ahead_of}..#{branch}`.strip.to_i
+  puts "#{branch} is #{count} commit(s) ahead of #{ahead_of}"
 }
 
-hiiro.add_subcmd(:behind) { |descendant, test_branch = nil|
-  test_branch ||= 'HEAD'
-
-  # HEAD is behind descendant if HEAD is an ancestor of descendant
-  if system("git merge-base --is-ancestor #{test_branch} #{descendant} 2>/dev/null")
-    puts "Yes, #{test_branch} is behind #{descendant}"
+hiiro.add_subcmd(:behind) { |*args|
+  case args.length
+  when 0
+    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
+    behind_of = base
+    branch = 'HEAD'
+  when 1
+    behind_of = args[0]
+    branch = 'HEAD'
   else
-    puts "No, #{test_branch} is NOT behind #{descendant}"
+    behind_of, branch = args[0..1]
   end
+
+  count = `git rev-list --count #{branch}..#{behind_of}`.strip.to_i
+  puts "#{branch} is #{count} commit(s) behind #{behind_of}"
+}
+
+hiiro.add_subcmd(:log) { |upstream = nil|
+  upstream ||= %w[origin/master master origin/main main].find { |ref|
+    system("git rev-parse --verify #{ref} >/dev/null 2>&1")
+  }
+
+  unless upstream
+    puts "Cannot find master or origin/master"
+    next
+  end
+
+  forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
+  if forkpoint.empty?
+    forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
+  end
+
+  if forkpoint.empty?
+    puts "Could not find fork point"
+    next
+  end
+
+  system('git', 'log', '--oneline', '--decorate', "#{forkpoint}..HEAD")
 }
 
 hiiro.add_subcmd(:forkpoint) { |upstream = nil, branch = nil|
@@ -310,29 +345,6 @@ hiiro.add_subcmd(:forkpoint) { |upstream = nil, branch = nil|
   else
     puts forkpoint
   end
-}
-
-hiiro.add_subcmd(:log) { |upstream = nil|
-  upstream ||= %w[origin/master master origin/main main].find { |ref|
-    system("git rev-parse --verify #{ref} >/dev/null 2>&1")
-  }
-
-  unless upstream
-    puts "Cannot find master or origin/master"
-    next
-  end
-
-  forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
-  if forkpoint.empty?
-    forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
-  end
-
-  if forkpoint.empty?
-    puts "Could not find fork point"
-    next
-  end
-
-  system('git', 'log', '--oneline', '--decorate', "#{forkpoint}..HEAD")
 }
 
 hiiro.add_subcmd(:changed) { |*args|
@@ -362,6 +374,63 @@ hiiro.add_subcmd(:changed) { |*args|
     system('git', 'diff', '--name-only', "#{forkpoint}...HEAD")
   else
     system('git', 'diff', '--name-only', '--relative', "#{forkpoint}...HEAD")
+  end
+}
+
+
+hiiro.add_subcmd(:changed) { |*args|
+  show_all = args.delete('-a') || args.delete('--all')
+  upstream = args.first
+
+  upstream ||= %w[origin/master master origin/main main].find { |ref|
+    system("git rev-parse --verify #{ref} >/dev/null 2>&1")
+  }
+
+  unless upstream
+    puts "Cannot find master or origin/master"
+    next
+  end
+
+  forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
+  if forkpoint.empty?
+    forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
+  end
+
+  if forkpoint.empty?
+    puts "Could not find fork point"
+    next
+  end
+
+  if show_all
+    system('git', 'diff', '--name-only', "#{forkpoint}...HEAD")
+  else
+    system('git', 'diff', '--name-only', '--relative', "#{forkpoint}...HEAD")
+  end
+}
+
+hiiro.add_subcmd(:ancestor) { |*args|
+  case args.length
+  when 0
+    # Check if main/master is ancestor of HEAD
+    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") }
+    unless base
+      puts "Cannot find main or master branch"
+      next
+    end
+    ancestor = base
+    descendant = 'HEAD'
+  when 1
+    # Check if arg is ancestor of HEAD
+    ancestor = args[0]
+    descendant = 'HEAD'
+  else
+    ancestor, descendant = args[0..1]
+  end
+
+  if system("git merge-base --is-ancestor #{ancestor} #{descendant}")
+    puts "Yes, #{ancestor} is an ancestor of #{descendant}"
+  else
+    puts "No, #{ancestor} is NOT an ancestor of #{descendant}"
   end
 }
 
