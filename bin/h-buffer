@@ -27,8 +27,7 @@ def select_buffer(partial = nil)
   return nil if names.empty?
   return names.first if names.length == 1
 
-  require 'open3'
-  selected, status = Open3.capture2('sk', '--no-sort', stdin_data: names.join("\n"))
+  selected, status = Hiiro::Fuzzyfind.select(names)
   return nil unless status.success?
 
   selected.strip.empty? ? nil : selected.strip
@@ -112,7 +111,7 @@ o.add_subcmd(:select) do |*args|
     h[line] = buffer_name
   end
 
-  selected = Hiiro::Sk.map_select(lines)
+  selected = o.fuzzyfind_from_map(lines)
 
   if selected
     print selected

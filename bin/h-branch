@@ -121,7 +121,6 @@ manager = BranchManager.new(hiiro)
 
 hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
 hiiro.add_subcmd(:save) { manager.save }
-hiiro.add_subcmd(:history) { |*args| manager.history(args) }
 hiiro.add_subcmd(:current) { print `git branch --show-current` }
 hiiro.add_subcmd(:info) { manager.current }
 hiiro.add_subcmd(:select) do |*args|

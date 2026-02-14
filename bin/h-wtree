@@ -28,7 +28,7 @@ Hiiro.run(*ARGV) do |h|
       hash[line] = path
     end
 
-    selected = Hiiro::Sk.map_select(lines)
+    selected = h.fuzzyfind_from_map(lines)
 
     if selected
       print selected

@@ -275,8 +275,7 @@ o.add_subcmd(:select) do |*args|
     lines = lm.hash_matches?(lines, *args)
   end
 
-  require 'open3'
-  selected, status = Open3.capture2('sk', stdin_data: lines.keys.join("\n"))
+  selected, status = o.fuzzyfind(lines.keys)
 
   if status.success? && !selected.strip.empty?
     link = lines[selected.strip]
@@ -349,8 +348,7 @@ o.add_subcmd(:open) do |*args|
       lines = lm.hash_matches?(lines, *args)
     end
 
-    require 'open3'
-    selected, status = Open3.capture2('sk', stdin_data: lines.keys.join("\n"))
+    selected, status = o.fuzzyfind(lines.keys)
 
     if status.success? && !selected.strip.empty?
       link = lines[selected.strip]

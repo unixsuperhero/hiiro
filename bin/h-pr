@@ -502,7 +502,7 @@ hiiro.add_subcmd(:select) do |*args|
     h[display] = pr['number'].to_s
   end
 
-  selected = Hiiro::Sk.map_select(lines)
+  selected = hiiro.fuzzyfind_from_map(lines)
 
   if selected
     print selected
@@ -538,7 +538,7 @@ hiiro.add_subcmd(:pin) do |ref = nil, *args|
         h[display] = pr
       end
 
-      pr_info = Hiiro::Sk.map_select(lines)
+      pr_info = hiiro.fuzzyfind_from_map(lines)
       unless pr_info
         puts "No PR selected"
         next
@@ -579,7 +579,7 @@ hiiro.add_subcmd(:unpin) do |ref = nil, *args|
       h[pinned_manager.display_pinned(pr, idx)] = pr['number'].to_s
     end
 
-    pr_number = Hiiro::Sk.map_select(lines)
+    pr_number = hiiro.fuzzyfind_from_map(lines)
     unless pr_number
       puts "No PR selected"
       next

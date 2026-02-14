@@ -36,7 +36,7 @@ Ensure `~/bin` is in your `$PATH`.
 brew install terminal-notifier
 
 # For fuzzy-finder
-brew install sk
+brew install sk # (or fzf)
 ```
 
 ## Quick Start

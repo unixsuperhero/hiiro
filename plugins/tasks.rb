@@ -599,7 +599,7 @@ class TaskManager
     end
   end
 
-  def help
+  def DELETEME_help
     scope_name = scope.to_s
     puts "Usage: h #{scope_name} <subcommand> [args]"
     puts
@@ -627,7 +627,7 @@ class TaskManager
     end
     return nil if names.empty?
 
-    sk_select(names.sort)
+    hiiro.fuzzyfind(names.sort)
   end
 
   def value_for_task(task_name = nil, &block)
@@ -646,7 +646,7 @@ class TaskManager
       h[line] = val
     end
 
-    Hiiro::Sk.map_select(mapping)
+    o.fuzzyfind_from_map(mapping)
   end
 
   def select_branch_interactive(prompt = nil)
@@ -657,7 +657,7 @@ class TaskManager
     end
     return nil if name_map.empty?
 
-    Hiiro::Sk.map_select(name_map)
+    o.fuzzyfind_from_map(name_map)
   end
 
   # --- Private helpers ---
@@ -735,7 +735,7 @@ class TaskManager
   end
 
   def sk_select(items)
-    Hiiro::Sk.select(items)
+    hiiro.fuzzyfind(items) # Hiiro::Fuzzyfind.select(items)
   end
 
   class Config
@@ -878,7 +878,7 @@ module Tasks
       h.add_subcmd(:app) do |app_name=nil|
         if app_name.nil?
           names = tm.environment.all_apps.map(&:name)
-          app_name = tm.send(:sk_select, names)
+          app_name = h.fuzzyfind(names)
           next unless app_name
         end
         tm.open_app(app_name)

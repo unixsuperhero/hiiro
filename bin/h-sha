@@ -18,7 +18,7 @@ Hiiro.init(*ARGV, plugins: [Pins]) { |hiiro|
       h[line] = sha
     end
 
-    selected = Hiiro::Sk.map_select(lines)
+    selected = hiiro.fuzzyfind_from_map(lines)
 
     if selected
       print selected
@@ -44,12 +44,7 @@ Hiiro.init(*ARGV, plugins: [Pins]) { |hiiro|
       next if sha.empty?
     end
 
-    require 'open3'
-    Open3.popen3('pbcopy') do |stdin, stdout, stderr, wait_thr|
-      stdin.write(sha)
-      stdin.close
-      wait_thr.value
-    end
+    Hiiro::Shell.pipe(sha, 'pbcopy')
     puts "Copied #{sha} to clipboard"
   end
 

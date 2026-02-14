@@ -154,7 +154,7 @@ Main entry point with class methods:
 
 Instance methods available in subcommand blocks:
 - `git` - Returns `Hiiro::Git` instance for git operations
-- `sk(lines)` - Interactive selection via skim
+- `fuzzyfind(lines)` - Interactive selection via skim
 - `pins` - Key-value storage per command
 - `todo_manager` - Todo item management
 - `history` - Command history tracking
@@ -193,15 +193,15 @@ git.move_worktree(from, to)       # Rename worktree
 git.current_pr                    # Get current PR info
 ```
 
-### Hiiro::Sk (lib/hiiro/sk.rb)
+### Hiiro::Fuzzyfind (lib/hiiro/fuzzyfind.rb)
 
-Integration with `sk` (skim) fuzzy finder:
+Integration with `sk` (skim) or `fzf` fuzzy finders:
 
 ```ruby
-selected = Hiiro::Sk.select(["option1", "option2", "option3"])
+selected = Hiiro::Fuzzyfind.select(["option1", "option2", "option3"])
 # Returns selected string or nil if cancelled
 
-value = Hiiro::Sk.map_select({ "Display 1" => "value1", "Display 2" => "value2" })
+value = Hiiro::Fuzzyfind.map_select({ "Display 1" => "value1", "Display 2" => "value2" })
 # Shows keys, returns corresponding value
 ```
 
@@ -235,7 +235,7 @@ History.by_session("work")                      # Filter by tmux session
 - `bin/h-*` - External subcommands (tmux wrappers, video operations)
 - `plugins/*.rb` - Reusable plugin modules (Pins, Project, Task, Tmux, Notify)
 - `lib/hiiro.rb` - Main Hiiro class and Runners
-- `lib/hiiro/*.rb` - Supporting classes (Git, PrefixMatcher, Sk, Todo, History)
+- `lib/hiiro/*.rb` - Supporting classes (Git, PrefixMatcher, Fuzzyfind, Todo, History)
 
 ## External Dependencies
 

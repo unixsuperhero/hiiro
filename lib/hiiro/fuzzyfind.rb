@@ -1,5 +1,3 @@
-require_relative 'fuzzyfind/sk'
-require_relative 'fuzzyfind/fzf'
 require_relative 'shell'
 
 class Hiiro

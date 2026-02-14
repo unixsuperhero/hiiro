@@ -8,7 +8,7 @@ require_relative "hiiro/prefix_matcher"
 require_relative "hiiro/git"
 require_relative "hiiro/options"
 require_relative "hiiro/notification"
-require_relative "hiiro/sk"
+require_relative "hiiro/fuzzyfind"
 require_relative "hiiro/todo"
 
 class String
@@ -239,8 +239,12 @@ class Hiiro
     i = Args.new(*args)
   end
 
-  def sk(lines)
-    Sk.select(lines)
+  def fuzzyfind(lines)
+    Fuzzyfind.select(lines)
+  end
+
+  def fuzzyfind_from_map(mapping)
+    Fuzzyfind.map_select(mapping)
   end
 
   def get_value(name)
