@@ -5,7 +5,7 @@ class Hiiro
     TOOLS = %w[sk fzf]
 
     def self.tool
-      TOOLS.find { |name| system("command -v #{name} 2>/dev/null") }
+      TOOLS.find { |name| system("command -v #{name} &>/dev/null") }
     end
 
     def self.tool!
