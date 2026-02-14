@@ -14,14 +14,6 @@ class BranchManager
     @hiiro = hiiro
   end
 
-  def help
-    puts "Usage: h branch <subcommand> [args]"
-    puts
-    puts "Subcommands:"
-    puts "  save                  Record current branch for this task"
-    puts "  current               Show current branch info"
-  end
-
   def save
     branch_name = current_branch
     unless branch_name
@@ -465,7 +457,5 @@ hiiro.add_subcmd(:ancestor) { |*args|
     puts "No, #{ancestor} is NOT an ancestor of #{descendant}"
   end
 }
-
-hiiro.add_default { manager.help }
 
 hiiro.run
