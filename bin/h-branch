@@ -129,7 +129,9 @@ manager = BranchManager.new(hiiro)
 
 hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
 hiiro.add_subcmd(:save) { manager.save }
-hiiro.add_subcmd(:current) { manager.current }
+hiiro.add_subcmd(:history) { |*args| manager.history(args) }
+hiiro.add_subcmd(:current) { print `git branch --show-current` }
+hiiro.add_subcmd(:info) { manager.current }
 hiiro.add_subcmd(:select) do |*args|
   branches = hiiro.git.branches(sort_by: 'authordate', ignore_case: true)
 
@@ -263,6 +265,36 @@ hiiro.add_subcmd(:diff) { |*args|
   end
 
   system('git', 'log', '--oneline', '--decorate', range)
+}
+
+hiiro.add_subcmd(:changed) { |*args|
+  show_all = args.delete('-a') || args.delete('--all')
+  upstream = args.first
+
+  upstream ||= %w[origin/master master origin/main main].find { |ref|
+    system("git rev-parse --verify #{ref} >/dev/null 2>&1")
+  }
+
+  unless upstream
+    puts "Cannot find master or origin/master"
+    next
+  end
+
+  forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
+  if forkpoint.empty?
+    forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
+  end
+
+  if forkpoint.empty?
+    puts "Could not find fork point"
+    next
+  end
+
+  if show_all
+    system('git', 'diff', '--name-only', "#{forkpoint}...HEAD")
+  else
+    system('git', 'diff', '--name-only', '--relative', "#{forkpoint}...HEAD")
+  end
 }
 
 hiiro.add_subcmd(:ahead) { |*args|
