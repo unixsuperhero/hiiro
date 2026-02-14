@@ -6,6 +6,19 @@ def buffer_names
   `tmux list-buffers -F '\#{buffer_name}'`.strip.split("\n")
 end
 
+def show_buffer(name, *args)
+  `tmux show-buffer -b #{name.shellescape} #{args.shelljoin}`
+end
+
+def buffer_map
+  output = `tmux list-buffers -F '\#{buffer_name}: \#{buffer_sample}'`.strip
+
+  lines = output.split("\n").each_with_object({}) do |line, h|
+    buffer_name = line.split(': ', 2).first
+    h[line] = buffer_name
+  end
+end
+
 def find_buffer(partial)
   buffer_list = buffer_names
 
@@ -17,20 +30,17 @@ def find_buffer(partial)
 end
 
 def select_buffer(partial = nil)
-  names = buffer_names
-  return nil if names.empty?
+  buffers = buffer_map
+  return nil if buffers.empty?
 
   if partial
-    names = names.grep(Regexp.new(partial))
+    buffers = buffers.select{|k,v| ![k.to_s, v.to_s].grep(Regexp.new(partial)).empty? }
   end
 
-  return nil if names.empty?
-  return names.first if names.length == 1
+  return nil if buffers.empty?
+  return buffers.first if buffers.length == 1
 
-  selected, status = Hiiro::Fuzzyfind.select(names)
-  return nil unless status.success?
-
-  selected.strip.empty? ? nil : selected.strip
+  Hiiro::Fuzzyfind.map_select(buffers)
 end
 
 o = Hiiro.init(*ARGV, plugins: [Pins])
@@ -41,12 +51,13 @@ o.add_subcmd(:ls) { |*args|
 
 o.add_subcmd(:show) { |name = nil, *args|
   buffer = select_buffer(name)
+
   unless buffer
     puts "No buffer selected or found"
     next
   end
 
-  system('tmux', 'show-buffer', '-b', buffer, *args)
+  print show_buffer(buffer, *args)
 }
 
 o.add_subcmd(:copy) { |name = nil, *args|
@@ -56,13 +67,8 @@ o.add_subcmd(:copy) { |name = nil, *args|
     next
   end
 
-  require 'open3'
-  content = `tmux show-buffer -b #{buffer}`
-  Open3.popen3('pbcopy') do |stdin, stdout, stderr, wait_thr|
-    stdin.write(content)
-    stdin.close
-    wait_thr.value
-  end
+  content = show_buffer(buffer)
+  Hiiro::Shell.pipe(content, 'pbcopy')
   puts "Copied buffer '#{buffer}' to clipboard"
 }
 
