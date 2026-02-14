@@ -1,17 +1,10 @@
 require 'open3'
+require_relative 'shell'
 
 class Hiiro
   class Sk
     def self.select(lines)
-      input = lines.is_a?(Array) ? lines.join("\n") : lines.to_s
-      selected, status = Open3.capture2('sk', stdin_data: input)
-
-      return nil unless status.success?
-
-      result = selected.strip
-      return nil if result.empty?
-
-      result
+      Shell.pipe_lines(lines, 'sk')
     end
 
     def self.map_select(mapping)
