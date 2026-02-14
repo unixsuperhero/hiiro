@@ -6,7 +6,6 @@ require "pry"
 require_relative "hiiro/version"
 require_relative "hiiro/prefix_matcher"
 require_relative "hiiro/git"
-require_relative "hiiro/history"
 require_relative "hiiro/options"
 require_relative "hiiro/notification"
 require_relative "hiiro/sk"
@@ -39,7 +38,6 @@ class Hiiro
     bin_name = values[:bin_name] || $0
 
     new(bin_name, *args, logging: logging, **values).tap do |hiiro|
-      History.load(hiiro)
       hiiro.load_plugins(*plugins)
 
       hiiro.add_subcommand(:pry) { |*args|
@@ -104,15 +102,8 @@ class Hiiro
     @todo_manager ||= TodoManager.new
   end
 
-  def history
-    @history ||= History.new
-  end
-
   def run
     result = runner.run(*args)
-
-    # Track command after running (only saves if state changed and in task context)
-    History.track(cmd: full_command, hiiro: self)
 
     handle_result(result)
 

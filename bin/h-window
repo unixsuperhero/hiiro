@@ -56,18 +56,6 @@ o.add_subcmd(:unlink) { |*args|
   system('tmux', 'unlink-window', *args)
 }
 
-o.add_subcmd(:history) { |window_id=nil|
-  window_id ||= `tmux display-message -p '#I'`.strip if ENV['TMUX']
-  entries = Hiiro::History.by_window(window_id)
-  if entries.empty?
-    puts "No history for this window"
-  else
-    puts "History for window: #{window_id || 'current'}"
-    puts
-    entries.last(20).each_with_index { |e, i| puts e.oneline(i + 1) }
-  end
-}
-
 o.add_subcmd(:select) do |*args|
   # Get all windows with details
   output = `tmux list-windows -a -F '\#{session_name}:\#{window_index} \#{window_name} [\#{window_panes} panes]'`.strip

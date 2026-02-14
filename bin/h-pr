@@ -21,10 +21,6 @@ class PRManager
     puts
     puts "Subcommands:"
     puts "  save [PR_NUMBER]      Record PR for this task (auto-detects if omitted)"
-    puts "  history               List PR history (oldest to newest)"
-    puts "  history --worktree=X  Filter by worktree"
-    puts "  history --task=X      Filter by task"
-    puts "  history --session=X   Filter by tmux session"
     puts "  current               Show current branch's PR info"
     puts "  open [PR_NUMBER]      Open PR in browser"
     puts "  view [PR_NUMBER]      View PR details in terminal"
@@ -65,35 +61,6 @@ class PRManager
     save_data(data)
     show_entry(entry)
     true
-  end
-
-  def history(args = [])
-    filters = parse_filters(args)
-    data = load_data
-    prs = data['prs'] || []
-
-    if prs.empty?
-      puts "No PRs recorded."
-      puts "Use 'h pr save' to record the current PR."
-      return
-    end
-
-    # Apply filters
-    prs = filter_entries(prs, filters)
-
-    if prs.empty?
-      puts "No PRs match the given filters."
-      return
-    end
-
-    # Sort by created_at (oldest first)
-    prs = prs.sort_by { |p| p['created_at'] || '' }
-
-    puts "PR history (oldest to newest):"
-    puts
-    prs.each_with_index do |pr, idx|
-      puts format_entry(pr, idx + 1)
-    end
   end
 
   def current
@@ -167,36 +134,6 @@ class PRManager
       'window' => `tmux display-message -p '#W'`.strip,
       'pane' => ENV['TMUX_PANE']
     }
-  end
-
-  def parse_filters(args)
-    filters = {}
-    args.each do |arg|
-      case arg
-      when /^--worktree=(.+)$/
-        filters[:worktree] = $1
-      when /^--task=(.+)$/
-        filters[:task] = $1
-      when /^--session=(.+)$/
-        filters[:session] = $1
-      when /^-w(.+)$/
-        filters[:worktree] = $1
-      when /^-t(.+)$/
-        filters[:task] = $1
-      when /^-s(.+)$/
-        filters[:session] = $1
-      end
-    end
-    filters
-  end
-
-  def filter_entries(entries, filters)
-    entries.select do |entry|
-      next false if filters[:worktree] && !entry['worktree']&.include?(filters[:worktree])
-      next false if filters[:task] && !entry['task']&.include?(filters[:task])
-      next false if filters[:session] && entry.dig('tmux', 'session') != filters[:session]
-      true
-    end
   end
 
   def format_entry(entry, num)
@@ -541,7 +478,6 @@ hiiro.add_subcmd(:link) { |*args|
 
 hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
 hiiro.add_subcmd(:save) { |pr_number=nil| manager.save(pr_number) }
-hiiro.add_subcmd(:history) { |*args| manager.history(args) }
 hiiro.add_subcmd(:current) { manager.current }
 hiiro.add_subcmd(:open) { |pr_number=nil| manager.open(pr_number) }
 hiiro.add_subcmd(:view) { |pr_number=nil| manager.view(pr_number) }
