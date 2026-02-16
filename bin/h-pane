@@ -60,6 +60,14 @@ o.add_subcmd(:resize) { |*args|
   system('tmux', 'resize-pane', *args)
 }
 
+o.add_subcmd(:width) { |size, *args|
+  system('tmux', 'resize-pane', '-x', size, *args)
+}
+
+o.add_subcmd(:height) { |size, *args|
+  system('tmux', 'resize-pane', '-y', size, *args)
+}
+
 o.add_subcmd(:select) do |*args|
   # Get all panes with details
   output = `tmux list-panes -a -F '\#{session_name}:\#{window_index}.\#{pane_index} [\#{pane_current_command}] \#{pane_current_path}'`.strip
