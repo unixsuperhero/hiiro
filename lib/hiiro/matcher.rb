@@ -1,16 +1,17 @@
 class Hiiro
-  class PrefixMatcher
+  class Matcher
     class << self
+      # Prefix matching class methods
       def find(items, prefix, key: nil, &block)
-        new(items, key, &block).find(prefix)
+        new(items, key, &block).by_prefix(prefix)
       end
 
       def find_all(items, prefix, key: nil, &block)
-        new(items, key, &block).find_all(prefix)
+        new(items, key, &block).by_prefix(prefix)
       end
 
       def resolve(items, prefix, key: nil, &block)
-        new(items, key, &block).resolve(prefix)
+        new(items, key, &block).by_prefix(prefix)
       end
 
       def find_path(items, prefix, key: nil, &block)
@@ -23,6 +24,16 @@ class Hiiro
 
       def resolve_path(items, prefix, key: nil, &block)
         new(items, key, &block).resolve_path(prefix)
+      end
+
+      # Substring matching class methods
+      def by_substring(items, substring, key: nil, &block)
+        new(items, key, &block).by_substring(substring)
+      end
+
+      # Prefix matching class methods (explicit)
+      def by_prefix(items, prefix, key: nil, &block)
+        new(items, key, &block).by_prefix(prefix)
       end
     end
 
@@ -51,28 +62,48 @@ class Hiiro
       }
     end
 
-    def search(prefix, key = nil, &block)
+    # Primary prefix matching method
+    def by_prefix(prefix, key = nil, &block)
       Result.new(
         matcher: self,
         all_items: all_items(key, &block),
-        prefix: prefix,
+        pattern: prefix,
+        match_type: :prefix,
         key: key || @key,
         block: block || @block
       )
     end
 
+    # Primary substring matching method
+    def by_substring(substring, key = nil, &block)
+      Result.new(
+        matcher: self,
+        all_items: all_items(key, &block),
+        pattern: substring,
+        match_type: :substring,
+        key: key || @key,
+        block: block || @block
+      )
+    end
+
+    # Legacy method aliases for backward compatibility
+    def search(prefix, key = nil, &block)
+      by_prefix(prefix, key, &block)
+    end
+
     def find(prefix, key = nil, &block)
-      search(prefix, key, &block)
+      by_prefix(prefix, key, &block)
     end
 
     def find_all(prefix, key = nil, &block)
-      search(prefix, key, &block)
+      by_prefix(prefix, key, &block)
     end
 
     def resolve(prefix, key = nil, &block)
-      search(prefix, key, &block)
+      by_prefix(prefix, key, &block)
     end
 
+    # Path-based matching
     def find_path(prefix, key = nil, &block)
       search_path(prefix, key, &block)
     end
@@ -119,18 +150,33 @@ class Hiiro
     end
 
     class Result
-      attr_reader :matcher, :all_items, :key, :block, :prefix
+      attr_reader :matcher, :all_items, :key, :block, :pattern, :match_type
 
-      def initialize(matcher:, all_items:, prefix:, key: nil, block: nil)
+      def initialize(matcher:, all_items:, pattern:, match_type: :prefix, key: nil, block: nil)
         @matcher = matcher
         @all_items = all_items
-        @prefix = prefix
+        @pattern = pattern
+        @match_type = match_type
         @key = key
         @block = block
       end
 
+      # Alias for backward compatibility
+      def prefix
+        pattern
+      end
+
       def matches
-        @matches ||= all_items.select { |item| item.extracted_item.to_s.start_with?(prefix.to_s) }
+        @matches ||= all_items.select { |item|
+          case match_type
+          when :prefix
+            item.extracted_item.to_s.start_with?(pattern.to_s)
+          when :substring
+            item.extracted_item.to_s.include?(pattern.to_s)
+          else
+            item.extracted_item.to_s.start_with?(pattern.to_s)
+          end
+        }
       end
 
       def count
@@ -142,7 +188,7 @@ class Hiiro
       end
 
       def exact_match
-        all_items.find { |item| item.extracted_item == prefix }
+        all_items.find { |item| item.extracted_item == pattern }
       end
 
       def match
@@ -238,4 +284,7 @@ class Hiiro
       end
     end
   end
+
+  # Backward compatibility alias
+  PrefixMatcher = Matcher
 end

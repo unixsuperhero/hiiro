@@ -4,7 +4,7 @@ require "shellwords"
 require "pry"
 
 require_relative "hiiro/version"
-require_relative "hiiro/prefix_matcher"
+require_relative "hiiro/matcher"
 require_relative "hiiro/git"
 require_relative "hiiro/options"
 require_relative "hiiro/notification"

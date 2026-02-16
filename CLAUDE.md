@@ -161,22 +161,34 @@ Instance methods available in subcommand blocks:
 - `attach_method(name, &block)` - Add methods to hiiro instance dynamically
 - `make_child(subcmd, *args)` - Create nested Hiiro for sub-subcommands
 
-### Hiiro::PrefixMatcher (lib/hiiro/prefix_matcher.rb)
+### Hiiro::Matcher (lib/hiiro/matcher.rb)
 
-Handles abbreviation matching for commands and items:
+Handles pattern matching for commands and items with prefix and substring matching:
 
 ```ruby
-matcher = Hiiro::PrefixMatcher.new(items, :name)
-result = matcher.find("pre")     # Find items where name starts with "pre"
+matcher = Hiiro::Matcher.new(items, :name)
+
+# Prefix matching - find items where name starts with pattern
+result = matcher.by_prefix("pre")
 result.match?                     # Any matches?
 result.one?                       # Exactly one match?
 result.ambiguous?                 # Multiple matches?
 result.first&.item                # Get first matching item
 result.resolved&.item             # Get exact or single match
 
+# Substring matching - find items where name contains pattern anywhere
+result = matcher.by_substring("abc")
+result.matches.map(&:item)        # All matching items
+
 # Path-based matching for hierarchical names (e.g., "task/subtask")
 result = matcher.resolve_path("t/s")
+
+# Class methods for one-off matching
+Hiiro::Matcher.by_prefix(items, "pre", key: :name)
+Hiiro::Matcher.by_substring(items, "abc", key: :name)
 ```
+
+Note: `Hiiro::PrefixMatcher` is aliased to `Hiiro::Matcher` for backward compatibility.
 
 ### Hiiro::Git (lib/hiiro/git.rb)
 
@@ -235,7 +247,7 @@ History.by_session("work")                      # Filter by tmux session
 - `bin/h-*` - External subcommands (tmux wrappers, video operations)
 - `plugins/*.rb` - Reusable plugin modules (Pins, Project, Task, Tmux, Notify)
 - `lib/hiiro.rb` - Main Hiiro class and Runners
-- `lib/hiiro/*.rb` - Supporting classes (Git, PrefixMatcher, Fuzzyfind, Todo, History)
+- `lib/hiiro/*.rb` - Supporting classes (Git, Matcher, Fuzzyfind, Todo, History)
 
 ## External Dependencies
 

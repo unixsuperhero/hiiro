@@ -178,19 +178,19 @@ class Environment
   end
 
   def tree_matcher
-    @tree_matcher ||= Hiiro::PrefixMatcher.new(all_trees, :name)
+    @tree_matcher ||= Hiiro::Matcher.new(all_trees, :name)
   end
 
   def session_matcher
-    @session_matcher ||= Hiiro::PrefixMatcher.new(all_sessions, :name)
+    @session_matcher ||= Hiiro::Matcher.new(all_sessions, :name)
   end
 
   def app_matcher
-    @app_matcher ||= Hiiro::PrefixMatcher.new(all_apps, :name)
+    @app_matcher ||= Hiiro::Matcher.new(all_apps, :name)
   end
 
   def task_matcher
-    @task_matcher ||= Hiiro::PrefixMatcher.new(all_tasks, :name)
+    @task_matcher ||= Hiiro::Matcher.new(all_tasks, :name)
   end
 
   def task
@@ -286,7 +286,7 @@ class TaskManager
     return slash_lookup(name) if name.include?('/')
 
     key = (scope == :subtask) ? :short_name : :name
-    Hiiro::PrefixMatcher.new(tasks, key).find(name).first&.item
+    Hiiro::Matcher.new(tasks, key).by_prefix(name).first&.item
   end
 
   def task_by_tree(tree_name)

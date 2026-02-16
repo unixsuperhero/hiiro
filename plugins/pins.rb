@@ -54,7 +54,7 @@ module Pins
     end
 
     def search(partial)
-      Hiiro::PrefixMatcher.find(pins.keys.map(&:to_s), partial)
+      Hiiro::Matcher.by_prefix(pins.keys.map(&:to_s), partial)
     end
 
     def find(partial)
