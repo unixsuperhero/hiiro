@@ -2,12 +2,46 @@
 
 require 'hiiro'
 
+opts = Hiiro::Options.setup {
+  flag(:horizontal, short: :h, default: false)
+  flag(:percent, short: :p, default: false)
+  option(:size, short: :s, default: nil)
+}
+
 Hiiro.run(*ARGV, plugins: [Pins]) {
+  add_subcmd(:split) { |*args|
+    opts = opts.parse(args)
+    direction = opts.horizontal ? '-v' : '-h'
+
+    size = opts.size || '40'
+    size += '%' if opts.percent
+
+    system('tmux', 'split-window', direction, '-l', size, *opts.args)
+  }
+
   add_subcmd(:vsplit) { |*args|
-    system('tmux', 'split-window', '-h', '-l', '40%', *args)
+    size = '40%'
+
+    opts = opts.parse(args)
+
+    if opts.size
+      size = opts.size
+      size += '%' if opts.percent
+    end
+
+    system('tmux', 'split-window', '-h', '-l', size, *opts.args)
   }
 
   add_subcmd(:hsplit) { |*args|
-    system('tmux', 'split-window', '-v', '-l', '40%', *args)
+    size = '40%'
+
+    opts = opts.parse(args)
+
+    if opts.size
+      size = opts.size
+      size += '%' if opts.percent
+    end
+
+    system('tmux', 'split-window', '-v', '-l', size, *opts.args)
   }
 }
