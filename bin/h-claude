@@ -3,11 +3,11 @@
 require 'hiiro'
 
 Hiiro.run(*ARGV, plugins: [Pins]) {
-  add_subcmd(:hsplit) { |*args|
+  add_subcmd(:vsplit) { |*args|
     system('tmux', 'split-window', '-h', '-l', '40%', *args)
   }
 
-  add_subcmd(:vsplit) { |*args|
+  add_subcmd(:hsplit) { |*args|
     system('tmux', 'split-window', '-v', '-l', '40%', *args)
   }
 }
