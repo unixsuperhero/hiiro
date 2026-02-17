@@ -69,12 +69,14 @@ Plugins auto-load from `~/.config/hiiro/plugins/`. Load order matters when plugi
 
 ### Global Values Pattern
 
-Values passed to `Hiiro.init()` are available in subcommand handlers:
+Values passed to `Hiiro.run()` are available in subcommand handlers:
 
 ```ruby
-hiiro = Hiiro.init(*ARGV, cwd: Dir.pwd)
-hiiro.add_subcmd(:pwd) do |*args, **values|
-  puts values[:cwd]
+Hiiro.run(*ARGV, cwd: Dir.pwd) do
+  add_subcmd(:pwd) { |*args|
+    cwd = get_value(:cwd)
+    puts cwd
+  }
 end
 ```
 
@@ -126,10 +128,10 @@ end
 def self.build_hiiro(parent_hiiro, tm)
   bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
 
-  Hiiro.init(bin_name:, args: parent_hiiro.args) do |h|
-    h.add_subcmd(:list) { tm.list }
-    h.add_subcmd(:start) { |name| tm.start_task(name) }
-    h.add_subcmd(:switch) { |name=nil|
+  Hiiro.run(bin_name:, args: parent_hiiro.args) do
+    add_subcmd(:list) { tm.list }
+    add_subcmd(:start) { |name| tm.start_task(name) }
+    add_subcmd(:switch) { |name=nil|
       name ||= tm.select_task_interactive
       tm.switch_to_task(tm.task_by_name(name))
     }
@@ -150,7 +152,7 @@ The `lib/hiiro.rb` file and `lib/hiiro/` directory contain the core framework cl
 
 Main entry point with class methods:
 - `Hiiro.run(*ARGV, plugins: [...]) { ... }` - Initialize and run immediately
-- `Hiiro.init(*ARGV, plugins: [...]) { ... }` - Initialize without running (returns hiiro instance)
+- `Hiiro.init(*ARGV, plugins: [...]) { ... }` - Initialize without running (returns hiiro instance).  **NEVER USE THIS** without a good reason, always favor `Hiiro.run`
 
 Instance methods available in subcommand blocks:
 - `git` - Returns `Hiiro::Git` instance for git operations
