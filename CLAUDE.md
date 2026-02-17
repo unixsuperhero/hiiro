@@ -266,3 +266,17 @@ All config lives in `~/.config/hiiro/`:
 - `tasks/` - Task metadata for worktree management
 - `projects.yml` - Project directory aliases
 - `apps.yml` - App directory mappings for task plugin
+
+
+# Groups of files
+
+## tmux-related files
+
+- bin/h-buffer
+- bin/h-pane
+- bin/h-window
+- bin/h-session
+- lib/hiiro/tmux.rb
+- lib/hiiro/tmux/*
+
+
