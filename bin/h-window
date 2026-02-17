@@ -65,6 +65,18 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   }
 
+  add_subcmd(:sw, :switch) { |target = nil, *args|
+    if target.nil?
+      target = fuzzyfind_from_map(tmux.windows(all: true).name_map)
+    end
+
+    if target && args.empty?
+      system('tmux', 'switch-client', '-t', target)
+    elsif target
+      system('tmux', 'switch-client', '-t', target, *args)
+    end
+  }
+
   add_subcmd(:next) { |*args|
     if args.empty?
       tmux.next_window
