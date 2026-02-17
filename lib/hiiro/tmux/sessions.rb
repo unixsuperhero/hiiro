@@ -41,6 +41,12 @@ class Hiiro
         sessions.map(&:name)
       end
 
+      def name_map
+        sessions.each_with_object({}) do |session, h|
+          h[session.to_s.chomp] = session.name
+        end
+      end
+
       def empty?
         sessions.empty?
       end
