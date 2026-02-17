@@ -63,7 +63,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     if name && args.empty?
-      tmux.switch_client(name)
+      tmux.open_session(name)
     elsif name
       system('tmux', 'switch-client', '-t', name, *args)
     end

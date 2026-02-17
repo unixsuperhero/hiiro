@@ -79,10 +79,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       target = fuzzyfind_from_map(tmux.panes(all: true).name_map)
     end
 
-    if target && args.empty?
-      tmux.select_pane(target)
-    elsif target
-      system('tmux', 'select-pane', '-t', target, *args)
+    if target
+      print target
     end
   }
 

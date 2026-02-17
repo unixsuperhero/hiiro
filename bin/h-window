@@ -58,10 +58,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       target = fuzzyfind_from_map(tmux.windows(all: true).name_map)
     end
 
-    if target && args.empty?
-      tmux.select_window(target)
-    elsif target
-      system('tmux', 'select-window', '-t', target, *args)
+    if target
+      print target
     end
   }
 
