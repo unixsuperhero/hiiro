@@ -62,10 +62,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       name = fuzzyfind_from_map(tmux.sessions.name_map)
     end
 
-    if name && args.empty?
+    if name
       tmux.open_session(name)
-    elsif name
-      system('tmux', 'switch-client', '-t', name, *args)
     end
   }
 
