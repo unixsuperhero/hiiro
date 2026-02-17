@@ -34,6 +34,12 @@ class Hiiro
         buffers.map(&:name)
       end
 
+      def name_map
+        buffers.each_with_object({}) do |buffer, h|
+          h[buffer.to_s] = buffer.name
+        end
+      end
+
       def empty?
         buffers.empty?
       end

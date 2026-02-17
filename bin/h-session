@@ -23,7 +23,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:kill) { |name = nil, *args|
     if name.nil?
-      name = fuzzyfind(tmux.sessions.names)
+      name = fuzzyfind_from_map(tmux.sessions.name_map)
     end
 
     if name && args.empty?
@@ -35,7 +35,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:attach) { |name = nil, *args|
     if name.nil?
-      name = fuzzyfind(tmux.sessions.names)
+      name = fuzzyfind_from_map(tmux.sessions.name_map)
     end
 
     if name && args.empty?
@@ -47,7 +47,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:rename) { |old_name = nil, new_name = nil, *args|
     if old_name.nil?
-      old_name = fuzzyfind(tmux.sessions.names)
+      old_name = fuzzyfind_from_map(tmux.sessions.name_map)
     end
 
     if old_name && new_name && args.empty?
@@ -59,7 +59,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:switch) { |name = nil, *args|
     if name.nil?
-      name = fuzzyfind(tmux.sessions.names)
+      name = fuzzyfind_from_map(tmux.sessions.name_map)
     end
 
     if name && args.empty?
@@ -111,8 +111,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    mapping = sessions.each_with_object({}) { |s, h| h[s.to_s] = s.name }
-    selected = fuzzyfind_from_map(mapping)
+    selected = fuzzyfind_from_map(sessions.name_map)
     print selected if selected
   end
 end

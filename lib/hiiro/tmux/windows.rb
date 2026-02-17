@@ -53,6 +53,12 @@ class Hiiro
         windows.map(&:target)
       end
 
+      def name_map
+        windows.each_with_object({}) do |window, h|
+          h[window.to_s] = window.target
+        end
+      end
+
       def empty?
         windows.empty?
       end

@@ -61,6 +61,12 @@ class Hiiro
         panes.map(&:target)
       end
 
+      def name_map
+        panes.each_with_object({}) do |pane, h|
+          h[pane.to_s] = pane.id
+        end
+      end
+
       def empty?
         panes.empty?
       end

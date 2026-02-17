@@ -16,8 +16,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     return nil if buffers.empty?
     return buffers.first.name if buffers.size == 1
 
-    mapping = buffers.each_with_object({}) { |b, h| h[b.to_s] = b.name }
-    fuzzyfind_from_map(mapping)
+    fuzzyfind_from_map(buffers.name_map)
   }
 
   add_subcmd(:ls) { |*args|
@@ -137,8 +136,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    mapping = buffers.each_with_object({}) { |b, h| h[b.to_s] = b.name }
-    selected = fuzzyfind_from_map(mapping)
+    selected = fuzzyfind_from_map(buffers.name_map)
     print selected if selected
   end
 end

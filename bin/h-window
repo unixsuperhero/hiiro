@@ -31,9 +31,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:kill) { |target = nil, *args|
     if target.nil?
-      windows = tmux.windows(all: true)
-      mapping = windows.each_with_object({}) { |w, h| h[w.to_s] = w.target }
-      target = fuzzyfind_from_map(mapping)
+      target = fuzzyfind_from_map(tmux.windows(all: true).name_map)
     end
 
     if target && args.empty?
@@ -57,9 +55,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:select) { |target = nil, *args|
     if target.nil?
-      windows = tmux.windows(all: true)
-      mapping = windows.each_with_object({}) { |w, h| h[w.to_s] = w.target }
-      target = fuzzyfind_from_map(mapping)
+      target = fuzzyfind_from_map(tmux.windows(all: true).name_map)
     end
 
     if target && args.empty?
