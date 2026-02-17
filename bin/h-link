@@ -193,162 +193,89 @@ class LinkManager
 end
 
 lm = LinkManager.new
-o = Hiiro.init(*ARGV, plugins: [Tmux, Pins], links_file: lm.links_file)
 
-o.add_subcmd(:add) do |*args|
-  links = lm.load_links
+Hiiro.run(*ARGV, plugins: [Tmux, Pins], links_file: lm.links_file) do
+  add_subcmd(:add) do |*add_args|
+    links = lm.load_links
 
-  if args.empty?
-    new_links = lm.edit_links
+    if add_args.empty?
+      new_links = lm.edit_links
 
-    links.concat(new_links)
+      links.concat(new_links)
+      lm.save_links(links)
+
+      if new_links.length == 1
+        puts "Saved link ##{links.length}: #{new_links.first.url}"
+      else
+        puts "Saved #{new_links.length} links (#{links.length - new_links.length + 1}-#{links.length})"
+      end
+      exit 0
+    end
+
+    url = add_args.shift
+    description = add_args.join(' ')
+
+    new_link = LinkManager::Link.new(
+      url: url,
+      description: description,
+      shorthand: nil,
+      created_at: Time.now.iso8601
+    )
+
+    links << new_link
     lm.save_links(links)
 
-    if new_links.length == 1
-      puts "Saved link ##{links.length}: #{new_links.first.url}"
+    puts "Saved link ##{links.length}: #{url}"
+  end
+
+  add_subcmd(:ls) do |*ls_args|
+    links = lm.load_links
+    if links.empty?
+      puts "No links saved."
     else
-      puts "Saved #{new_links.length} links (#{links.length - new_links.length + 1}-#{links.length})"
-    end
-    exit 0
-  end
-
-  url = args.shift
-  description = args.join(' ')
-
-  new_link = LinkManager::Link.new(
-    url: url,
-    description: description,
-    shorthand: nil,
-    created_at: Time.now.iso8601
-  )
-
-  links << new_link
-  lm.save_links(links)
-
-  puts "Saved link ##{links.length}: #{url}"
-end
-
-o.add_subcmd(:ls) do |*args|
-  links = lm.load_links
-  if links.empty?
-    puts "No links saved."
-  else
-    links.each_with_index do |link, idx|
-      puts link.display_string(idx)
-    end
-  end
-end
-
-o.add_subcmd(:list) do |*args|
-  o.run_subcmd(:ls, *args)
-end
-
-o.add_subcmd(:search) do |*args|
-  if args.empty?
-    puts "Usage: h link search <term> [term...]"
-    exit 1
-  end
-
-  links = lm.load_links
-  matches = links.each_with_index.select { |link, idx| link.matches?(*args) }
-
-  if matches.empty?
-    puts "No links found matching: #{args.join(' ')}"
-  else
-    matches.each do |link, idx|
-      puts link.display_string(idx)
-    end
-  end
-end
-
-o.add_subcmd(:select) do |*args|
-  links = lm.load_links
-
-  if links.empty?
-    STDERR.puts "No links saved."
-    exit 1
-  end
-
-  lines = lm.load_link_hash(links)
-
-  if args.any?
-    lines = lm.hash_matches?(lines, *args)
-  end
-
-  selected, status = o.fuzzyfind(lines.keys)
-
-  if status.success? && !selected.strip.empty?
-    link = lines[selected.strip]
-    if link
-      url = link.url
-
-      if lm.has_placeholders?(url)
-        values = lm.prompt_for_placeholder_values(url, link)
-        url = lm.substitute_placeholders(url, values)
+      links.each_with_index do |link, idx|
+        puts link.display_string(idx)
       end
-
-      puts url
     end
   end
-end
 
-o.add_subcmd(:editall) do |*args|
-  links_before = lm.load_links
-  system(ENV['EDITOR'] || 'vim', lm.links_file)
-
-  begin
-    links_after = lm.load_links
-  rescue => e
-    puts "ERROR: Unable to read updated file...reverting."
-    lm.save_links(links_before)
-  end
-end
-
-o.add_subcmd(:edit) do |*args|
-  if args.empty?
-    puts "Usage: h link edit <number|shorthand>"
-    exit 1
+  add_subcmd(:list) do |*list_args|
+    run_subcmd(:ls, *list_args)
   end
 
-  links = lm.load_links
-  idx, link = lm.find_link_by_ref(args.first, links)
+  add_subcmd(:search) do |*search_args|
+    if search_args.empty?
+      puts "Usage: h link search <term> [term...]"
+      exit 1
+    end
 
-  if link.nil?
-    puts "Link not found: #{args.first}"
-    exit 1
+    links = lm.load_links
+    matches = links.each_with_index.select { |link, idx| link.matches?(*search_args) }
+
+    if matches.empty?
+      puts "No links found matching: #{search_args.join(' ')}"
+    else
+      matches.each do |link, idx|
+        puts link.display_string(idx)
+      end
+    end
   end
 
-  updated_links = lm.edit_links(link)
+  add_subcmd(:select) do |*select_args|
+    links = lm.load_links
 
-  # Replace the original link with the first updated link
-  # If multiple links were added, insert them all
-  links[idx] = updated_links.first
-  if updated_links.length > 1
-    links.insert(idx + 1, *updated_links[1..-1])
-  end
+    if links.empty?
+      STDERR.puts "No links saved."
+      exit 1
+    end
 
-  lm.save_links(links)
-
-  if updated_links.length == 1
-    puts "Updated link ##{idx + 1}"
-  else
-    puts "Updated link ##{idx + 1} and added #{updated_links.length - 1} more"
-  end
-end
-
-o.add_subcmd(:open) do |*args|
-  links = lm.load_links
-
-  if args.empty?
     lines = lm.load_link_hash(links)
 
-    exit_code = 1
-
-    if args.any?
-      lines = lm.hash_matches?(lines, *args)
+    if select_args.any?
+      lines = lm.hash_matches?(lines, *select_args)
     end
 
-    selected, status = o.fuzzyfind(lines.keys)
+    selected, status = fuzzyfind(lines.keys)
 
     if status.success? && !selected.strip.empty?
       link = lines[selected.strip]
@@ -360,46 +287,113 @@ o.add_subcmd(:open) do |*args|
           url = lm.substitute_placeholders(url, values)
         end
 
-        system('open', url)
-        exit_code = 0
+        puts url
+      end
+    end
+  end
+
+  add_subcmd(:editall) do |*editall_args|
+    links_before = lm.load_links
+    system(ENV['EDITOR'] || 'vim', lm.links_file)
+
+    begin
+      links_after = lm.load_links
+    rescue => e
+      puts "ERROR: Unable to read updated file...reverting."
+      lm.save_links(links_before)
+    end
+  end
+
+  add_subcmd(:edit) do |*edit_args|
+    if edit_args.empty?
+      puts "Usage: h link edit <number|shorthand>"
+      exit 1
+    end
+
+    links = lm.load_links
+    idx, link = lm.find_link_by_ref(edit_args.first, links)
+
+    if link.nil?
+      puts "Link not found: #{edit_args.first}"
+      exit 1
+    end
+
+    updated_links = lm.edit_links(link)
+
+    # Replace the original link with the first updated link
+    # If multiple links were added, insert them all
+    links[idx] = updated_links.first
+    if updated_links.length > 1
+      links.insert(idx + 1, *updated_links[1..-1])
+    end
+
+    lm.save_links(links)
+
+    if updated_links.length == 1
+      puts "Updated link ##{idx + 1}"
+    else
+      puts "Updated link ##{idx + 1} and added #{updated_links.length - 1} more"
+    end
+  end
+
+  add_subcmd(:open) do |*open_args|
+    links = lm.load_links
+
+    if open_args.empty?
+      lines = lm.load_link_hash(links)
+
+      exit_code = 1
+
+      if open_args.any?
+        lines = lm.hash_matches?(lines, *open_args)
+      end
+
+      selected, status = fuzzyfind(lines.keys)
+
+      if status.success? && !selected.strip.empty?
+        link = lines[selected.strip]
+        if link
+          url = link.url
+
+          if lm.has_placeholders?(url)
+            values = lm.prompt_for_placeholder_values(url, link)
+            url = lm.substitute_placeholders(url, values)
+          end
+
+          system('open', url)
+          exit_code = 0
+        end
+      end
+
+      exit exit_code
+    end
+
+    idx, link = lm.find_link_by_ref(open_args.first, links)
+
+    if link.nil?
+      matches = lm.search_links(links, *open_args)
+
+      if matches.count == 1
+        link = matches.first
       end
     end
 
-    exit exit_code
-  end
-
-  idx, link = lm.find_link_by_ref(args.first, links)
-
-  if link.nil?
-    matches = lm.search_links(links, *args)
-
-    if matches.count == 1
-      link = matches.first
+    if link.nil?
+      puts "Link not found: #{open_args.first}"
+      exit 1
     end
+
+    url = link.url
+
+    if lm.has_placeholders?(url)
+      values = lm.prompt_for_placeholder_values(url, link)
+      url = lm.substitute_placeholders(url, values)
+    end
+
+    system('open', url)
   end
 
-  if link.nil?
-    puts "Link not found: #{args.first}"
-    exit 1
+  add_subcmd(:path) do |*path_args|
+    print lm.links_file
   end
-
-  url = link.url
-
-  if lm.has_placeholders?(url)
-    values = lm.prompt_for_placeholder_values(url, link)
-    url = lm.substitute_placeholders(url, values)
-  end
-
-  system('open', url)
-end
-
-o.add_subcmd(:path) do |*args|
-  print lm.links_file
-end
-
-begin
-  o.run
-rescue => e
-  require 'pry'
-  binding.pry
 end

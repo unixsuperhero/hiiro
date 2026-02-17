@@ -2,11 +2,10 @@
 
 require 'hiiro'
 
-Hiiro.init(*ARGV, plugins: [Pins]) { |hiiro|
-
-  hiiro.add_subcmd(:select) do |*args|
+Hiiro.run(*ARGV, plugins: [Pins]) do
+  add_subcmd(:select) do |*select_args|
     # Get git log with format: sha - subject
-    log_output = `git log --oneline -100 #{args.join(' ')}`.strip
+    log_output = `git log --oneline -100 #{select_args.join(' ')}`.strip
 
     if log_output.empty?
       STDERR.puts "No commits found"
@@ -18,27 +17,27 @@ Hiiro.init(*ARGV, plugins: [Pins]) { |hiiro|
       h[line] = sha
     end
 
-    selected = hiiro.fuzzyfind_from_map(lines)
+    selected = fuzzyfind_from_map(lines)
 
     if selected
       print selected
     end
   end
 
-  hiiro.add_subcmd(:ls) do |*args|
-    system('git', 'log', '--oneline', *args)
+  add_subcmd(:ls) do |*ls_args|
+    system('git', 'log', '--oneline', *ls_args)
   end
 
-  hiiro.add_subcmd(:show) do |sha = nil, *args|
+  add_subcmd(:show) do |sha = nil, *show_args|
     if sha.nil?
       sha = `h sha select`.strip
       next if sha.empty?
     end
 
-    system('git', 'show', sha, *args)
+    system('git', 'show', sha, *show_args)
   end
 
-  hiiro.add_subcmd(:copy) do |sha = nil, *args|
+  add_subcmd(:copy) do |sha = nil, *copy_args|
     if sha.nil?
       sha = `h sha select`.strip
       next if sha.empty?
@@ -47,6 +46,4 @@ Hiiro.init(*ARGV, plugins: [Pins]) { |hiiro|
     Hiiro::Shell.pipe(sha, 'pbcopy')
     puts "Copied #{sha} to clipboard"
   end
-
-}.run
-
+end

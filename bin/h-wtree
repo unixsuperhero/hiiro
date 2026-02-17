@@ -2,18 +2,18 @@
 
 require 'hiiro'
 
-Hiiro.run(*ARGV) do |h|
-  h.add_subcmd(:ls)  { |*args| system('git', 'worktree', 'list', *args) }
-  h.add_subcmd(:list)  { |*args| h.run_subcmd(:ls, *args) }
-  h.add_subcmd(:add)  { |*args| system('git', 'worktree', 'add', *args) }
-  h.add_subcmd(:lock)  { |*args| system('git', 'worktree', 'lock', *args) }
-  h.add_subcmd(:move)  { |*args| system('git', 'worktree', 'move', *args) }
-  h.add_subcmd(:prune)  { |*args| system('git', 'worktree', 'prune', *args) }
-  h.add_subcmd(:remove)  { |*args| system('git', 'worktree', 'remove', *args) }
-  h.add_subcmd(:repair)  { |*args| system('git', 'worktree', 'repair', *args) }
-  h.add_subcmd(:unlock)  { |*args| system('git', 'worktree', 'unlock', *args) }
+Hiiro.run(*ARGV) do
+  add_subcmd(:ls)  { |*args| system('git', 'worktree', 'list', *args) }
+  add_subcmd(:list)  { |*args| run_subcmd(:ls, *args) }
+  add_subcmd(:add)  { |*args| system('git', 'worktree', 'add', *args) }
+  add_subcmd(:lock)  { |*args| system('git', 'worktree', 'lock', *args) }
+  add_subcmd(:move)  { |*args| system('git', 'worktree', 'move', *args) }
+  add_subcmd(:prune)  { |*args| system('git', 'worktree', 'prune', *args) }
+  add_subcmd(:remove)  { |*args| system('git', 'worktree', 'remove', *args) }
+  add_subcmd(:repair)  { |*args| system('git', 'worktree', 'repair', *args) }
+  add_subcmd(:unlock)  { |*args| system('git', 'worktree', 'unlock', *args) }
 
-  h.add_subcmd(:select) do |*args|
+  add_subcmd(:select) do |*args|
     # Get worktree list
     output = `git worktree list`.strip
 
@@ -28,11 +28,10 @@ Hiiro.run(*ARGV) do |h|
       hash[line] = path
     end
 
-    selected = h.fuzzyfind_from_map(lines)
+    selected = fuzzyfind_from_map(lines)
 
     if selected
       print selected
     end
   end
 end
-

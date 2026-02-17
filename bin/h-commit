@@ -2,38 +2,36 @@
 
 require "hiiro"
 
-hiiro = Hiiro.init(*ARGV, plugins: [Pins])
+Hiiro.run(*ARGV, plugins: [Pins]) do
+  add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
 
-hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
+  add_subcmd(:select, :sk) { |*select_args|
+    # Pass all args to git log, with sensible defaults
+    git_args = ['git', 'log', '--oneline', '--decorate', '-n', '50']
+    git_args.concat(select_args) if select_args.any?
 
-hiiro.add_subcmd(:select, :sk) { |*args|
-  # Pass all args to git log, with sensible defaults
-  git_args = ['git', 'log', '--oneline', '--decorate', '-n', '50']
-  git_args.concat(args) if args.any?
+    commits = `#{git_args.shelljoin}`.lines.map(&:chomp)
 
-  commits = `#{git_args.shelljoin}`.lines.map(&:chomp)
+    if commits.empty?
+      puts "No commits found"
+      next
+    end
 
-  if commits.empty?
-    puts "No commits found"
-    next
-  end
+    require 'open3'
+    selected, status = Open3.capture2('sk', '--no-sort', stdin_data: commits.join("\n"))
 
-  require 'open3'
-  selected, status = Open3.capture2('sk', '--no-sort', stdin_data: commits.join("\n"))
+    if status.success? && !selected.strip.empty?
+      # Extract just the SHA from the selected line
+      sha = selected.strip.split.first
+      puts sha
+    end
+  }
 
-  if status.success? && !selected.strip.empty?
-    # Extract just the SHA from the selected line
-    sha = selected.strip.split.first
-    puts sha
-  end
-}
-
-hiiro.add_default {
-  puts "Usage: h commit <subcommand> [args]"
-  puts
-  puts "Subcommands:"
-  puts "  select, sk  Select a commit using sk and print its SHA"
-  puts "              Additional args are passed to git log"
-}
-
-hiiro.run
+  add_default {
+    puts "Usage: h commit <subcommand> [args]"
+    puts
+    puts "Subcommands:"
+    puts "  select, sk  Select a commit using sk and print its SHA"
+    puts "              Additional args are passed to git log"
+  }
+end

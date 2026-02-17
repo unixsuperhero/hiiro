@@ -5,7 +5,6 @@ require "fileutils"
 require "yaml"
 
 Hiiro.load_env
-hiiro = Hiiro.init(*ARGV, plugins: [Tasks])
 
 class BranchManager
   attr_reader :hiiro
@@ -117,344 +116,284 @@ class BranchManager
   end
 end
 
-manager = BranchManager.new(hiiro)
+Hiiro.run(*ARGV, plugins: [Tasks]) do
+  manager = BranchManager.new(self)
 
-hiiro.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
-hiiro.add_subcmd(:save) { manager.save }
-hiiro.add_subcmd(:current) { print `git branch --show-current` }
-hiiro.add_subcmd(:info) { manager.current }
-hiiro.add_subcmd(:select) do |*args|
-  branches = hiiro.git.branches(sort_by: 'authordate', ignore_case: true)
+  add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
+  add_subcmd(:save) { manager.save }
+  add_subcmd(:current) { print `git branch --show-current` }
+  add_subcmd(:info) { manager.current }
 
-  lines = branches.each_with_object({}) do |name, h|
-    h["  #{name}"] = name
+  add_subcmd(:select) do |*select_args|
+    branches = git.branches(sort_by: 'authordate', ignore_case: true)
+
+    lines = branches.each_with_object({}) do |name, h|
+      h["  #{name}"] = name
+    end
+
+    if select_args.any?
+      lines = hash_matches?(lines, *select_args)
+    end
+
+    require 'open3'
+    selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: lines.keys.join("\n"))
+
+    if status.success? && !selected.strip.empty?
+      puts lines[selected.chomp]
+    end
   end
 
-  if args.any?
-    lines = hash_matches?(lines, *args)
-  end
+  checkout_branch = lambda { |branch = nil, *checkout_args|
+    unless branch
+      # Use sk to select a branch
+      branches = git.branches(sort_by: 'authordate', ignore_case: true)
+      require 'open3'
+      selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: branches.join("\n"))
+      unless status.success? && !selected.strip.empty?
+        puts "No branch selected"
+        next
+      end
+      branch = selected.strip
+    end
 
-  require 'open3'
-  selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: lines.keys.join("\n"))
+    system('git', 'checkout', branch, *checkout_args)
+  }
 
-  if status.success? && !selected.strip.empty?
-    puts lines[selected.chomp]
-  end
+  add_subcmd(:checkout, &checkout_branch)
+  add_subcmd(:co, &checkout_branch)
+
+  remove_branch = lambda { |branch = nil, *remove_args|
+    unless branch
+      # Use sk to select a branch
+      branches = git.branches(sort_by: 'authordate', ignore_case: true)
+      require 'open3'
+      selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: branches.join("\n"))
+      unless status.success? && !selected.strip.empty?
+        puts "No branch selected"
+        next
+      end
+      branch = selected.strip
+    end
+
+    system('git', 'branch', '-d', branch, *remove_args)
+  }
+
+  add_subcmd(:remove, &remove_branch)
+  add_subcmd(:rm, &remove_branch)
+
+  add_subcmd(:duplicate) { |new_name = nil, source = nil|
+    unless new_name
+      puts "Usage: h branch duplicate <new_name> [source_branch]"
+      puts "  Creates a copy of source_branch (or current branch) as new_name"
+      next
+    end
+
+    source ||= git.branch
+    system('git', 'branch', new_name, source)
+    puts "Created branch '#{new_name}' from '#{source}'"
+  }
+
+  add_subcmd(:test) { |*test_args|
+    opts = Hiiro::Options.parse(test_args) do
+      option :remote, short: 'r', default: 'origin', desc: 'Remote name'
+      option :from, short: 'f', desc: 'Local branch or commit to push'
+      option :to, short: 't', desc: 'Remote branch name'
+      flag :force, short: 'F', desc: 'Force push'
+      flag :set_upstream, short: 'u', desc: 'Set upstream tracking'
+    end
+
+    if opts.help?
+      help(opts)
+      return
+    end
+
+    {
+      remote_as_method: opts.remote,
+      remote_as_sym_key: opts[:remote],
+      remote_as_string_key: opts['remote'],
+      force_as_method: opts.force,
+      force_as_sym_key: opts[:force],
+      force_as_string_key: opts['force'],
+    }.each do |k,v|
+      puts "#{k} => #{v}"
+    end
+  }
+
+  add_subcmd(:push) { |*push_args|
+    opts = Hiiro::Options.parse(push_args) do
+      option :remote, short: 'r', default: 'origin', desc: 'Remote name'
+      option :from, short: 'f', desc: 'Local branch or commit to push'
+      option :to, short: 't', desc: 'Remote branch name'
+      flag :force, short: 'F', desc: 'Force push'
+      flag :set_upstream, short: 'u', desc: 'Set upstream tracking'
+    end
+
+    local_ref = opts[:from] || git.branch
+    remote_branch = opts[:to] || local_ref
+
+    git_args = ['git', 'push']
+    git_args << '--force' if opts[:force]
+    git_args << '-u' if opts[:set_upstream]
+    git_args << opts[:remote]
+    git_args << "#{local_ref}:#{remote_branch}"
+
+    puts "Pushing #{local_ref} to #{opts[:remote]}/#{remote_branch}..."
+    system(*git_args)
+  }
+
+  add_subcmd(:diff) { |*diff_args|
+    case diff_args.length
+    when 0
+      # Compare current branch to main/master
+      base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
+      range = "#{base}..HEAD"
+    when 1
+      # Compare current branch to specified ref
+      range = "#{diff_args[0]}..HEAD"
+    else
+      # Compare two refs (from..to or from...to based on args)
+      from, to = diff_args[0..1]
+      range = "#{from}..#{to}"
+    end
+
+    system('git', 'log', '--oneline', '--decorate', range)
+  }
+
+  add_subcmd(:changed) { |*changed_args|
+    show_all = changed_args.delete('-a') || changed_args.delete('--all')
+    upstream = changed_args.first
+
+    upstream ||= %w[origin/master master origin/main main].find { |ref|
+      system("git rev-parse --verify #{ref} >/dev/null 2>&1")
+    }
+
+    unless upstream
+      puts "Cannot find master or origin/master"
+      next
+    end
+
+    forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
+    if forkpoint.empty?
+      forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
+    end
+
+    if forkpoint.empty?
+      puts "Could not find fork point"
+      next
+    end
+
+    if show_all
+      system('git', 'diff', '--name-only', "#{forkpoint}...HEAD")
+    else
+      system('git', 'diff', '--name-only', '--relative', "#{forkpoint}...HEAD")
+    end
+  }
+
+  add_subcmd(:ahead) { |*ahead_args|
+    case ahead_args.length
+    when 0
+      base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
+      ahead_of = base
+      branch = 'HEAD'
+    when 1
+      ahead_of = ahead_args[0]
+      branch = 'HEAD'
+    else
+      ahead_of, branch = ahead_args[0..1]
+    end
+
+    count = `git rev-list --count #{ahead_of}..#{branch}`.strip.to_i
+    puts "#{branch} is #{count} commit(s) ahead of #{ahead_of}"
+  }
+
+  add_subcmd(:behind) { |*behind_args|
+    case behind_args.length
+    when 0
+      base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
+      behind_of = base
+      branch = 'HEAD'
+    when 1
+      behind_of = behind_args[0]
+      branch = 'HEAD'
+    else
+      behind_of, branch = behind_args[0..1]
+    end
+
+    count = `git rev-list --count #{branch}..#{behind_of}`.strip.to_i
+    puts "#{branch} is #{count} commit(s) behind #{behind_of}"
+  }
+
+  add_subcmd(:log) { |upstream = nil|
+    upstream ||= %w[origin/master master origin/main main].find { |ref|
+      system("git rev-parse --verify #{ref} >/dev/null 2>&1")
+    }
+
+    unless upstream
+      puts "Cannot find master or origin/master"
+      next
+    end
+
+    forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
+    if forkpoint.empty?
+      forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
+    end
+
+    if forkpoint.empty?
+      puts "Could not find fork point"
+      next
+    end
+
+    system('git', 'log', '--oneline', '--decorate', "#{forkpoint}..HEAD")
+  }
+
+  add_subcmd(:forkpoint) { |upstream = nil, branch = nil|
+    branch ||= 'HEAD'
+    upstream ||= %w[origin/master master origin/main main].find { |ref|
+      system("git rev-parse --verify #{ref} >/dev/null 2>&1")
+    }
+
+    unless upstream
+      puts "Cannot find master or origin/master"
+      next
+    end
+
+    forkpoint = `git merge-base --fork-point #{upstream} #{branch} 2>/dev/null`.strip
+
+    if forkpoint.empty?
+      # Fallback to regular merge-base if fork-point fails
+      forkpoint = `git merge-base #{upstream} #{branch} 2>/dev/null`.strip
+    end
+
+    if forkpoint.empty?
+      puts "Could not find fork point between #{upstream} and #{branch}"
+    else
+      puts forkpoint
+    end
+  }
+
+  add_subcmd(:ancestor) { |*ancestor_args|
+    case ancestor_args.length
+    when 0
+      # Check if main/master is ancestor of HEAD
+      base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") }
+      unless base
+        puts "Cannot find main or master branch"
+        next
+      end
+      ancestor = base
+      descendant = 'HEAD'
+    when 1
+      # Check if arg is ancestor of HEAD
+      ancestor = ancestor_args[0]
+      descendant = 'HEAD'
+    else
+      ancestor, descendant = ancestor_args[0..1]
+    end
+
+    if system("git merge-base --is-ancestor #{ancestor} #{descendant}")
+      puts "Yes, #{ancestor} is an ancestor of #{descendant}"
+    else
+      puts "No, #{ancestor} is NOT an ancestor of #{descendant}"
+    end
+  }
 end
-
-checkout_branch = lambda { |branch = nil, *args|
-  unless branch
-    # Use sk to select a branch
-    branches = hiiro.git.branches(sort_by: 'authordate', ignore_case: true)
-    require 'open3'
-    selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: branches.join("\n"))
-    unless status.success? && !selected.strip.empty?
-      puts "No branch selected"
-      next
-    end
-    branch = selected.strip
-  end
-
-  system('git', 'checkout', branch, *args)
-}
-
-hiiro.add_subcmd(:checkout, &checkout_branch)
-hiiro.add_subcmd(:co, &checkout_branch)
-
-remove_branch = lambda { |branch = nil, *args|
-  unless branch
-    # Use sk to select a branch
-    branches = hiiro.git.branches(sort_by: 'authordate', ignore_case: true)
-    require 'open3'
-    selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: branches.join("\n"))
-    unless status.success? && !selected.strip.empty?
-      puts "No branch selected"
-      next
-    end
-    branch = selected.strip
-  end
-
-  system('git', 'branch', '-d', branch, *args)
-}
-
-hiiro.add_subcmd(:remove, &remove_branch)
-hiiro.add_subcmd(:rm, &remove_branch)
-
-hiiro.add_subcmd(:duplicate) { |new_name = nil, source = nil|
-  unless new_name
-    puts "Usage: h branch duplicate <new_name> [source_branch]"
-    puts "  Creates a copy of source_branch (or current branch) as new_name"
-    next
-  end
-
-  source ||= hiiro.git.branch
-  system('git', 'branch', new_name, source)
-  puts "Created branch '#{new_name}' from '#{source}'"
-}
-
-hiiro.add_subcmd(:test) { |*args|
-  opts = Hiiro::Options.parse(args) do
-    option :remote, short: 'r', default: 'origin', desc: 'Remote name'
-    option :from, short: 'f', desc: 'Local branch or commit to push'
-    option :to, short: 't', desc: 'Remote branch name'
-    flag :force, short: 'F', desc: 'Force push'
-    flag :set_upstream, short: 'u', desc: 'Set upstream tracking'
-  end
-
-  if opts.help?
-    hiiro.help(opts)
-    return
-  end
-
-  {
-    remote_as_method: opts.remote,
-    remote_as_sym_key: opts[:remote],
-    remote_as_string_key: opts['remote'],
-    force_as_method: opts.force,
-    force_as_sym_key: opts[:force],
-    force_as_string_key: opts['force'],
-  }.each do |k,v|
-    puts "#{k} => #{v}"
-  end
-}
-
-hiiro.add_subcmd(:push) { |*args|
-  opts = Hiiro::Options.parse(args) do
-    option :remote, short: 'r', default: 'origin', desc: 'Remote name'
-    option :from, short: 'f', desc: 'Local branch or commit to push'
-    option :to, short: 't', desc: 'Remote branch name'
-    flag :force, short: 'F', desc: 'Force push'
-    flag :set_upstream, short: 'u', desc: 'Set upstream tracking'
-  end
-
-  local_ref = opts[:from] || hiiro.git.branch
-  remote_branch = opts[:to] || local_ref
-
-  git_args = ['git', 'push']
-  git_args << '--force' if opts[:force]
-  git_args << '-u' if opts[:set_upstream]
-  git_args << opts[:remote]
-  git_args << "#{local_ref}:#{remote_branch}"
-
-  puts "Pushing #{local_ref} to #{opts[:remote]}/#{remote_branch}..."
-  system(*git_args)
-}
-
-hiiro.add_subcmd(:diff) { |*args|
-  case args.length
-  when 0
-    # Compare current branch to main/master
-    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
-    range = "#{base}..HEAD"
-  when 1
-    # Compare current branch to specified ref
-    range = "#{args[0]}..HEAD"
-  else
-    # Compare two refs (from..to or from...to based on args)
-    from, to = args[0..1]
-    range = "#{from}..#{to}"
-  end
-
-  system('git', 'log', '--oneline', '--decorate', range)
-}
-
-hiiro.add_subcmd(:changed) { |*args|
-  show_all = args.delete('-a') || args.delete('--all')
-  upstream = args.first
-
-  upstream ||= %w[origin/master master origin/main main].find { |ref|
-    system("git rev-parse --verify #{ref} >/dev/null 2>&1")
-  }
-
-  unless upstream
-    puts "Cannot find master or origin/master"
-    next
-  end
-
-  forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
-  if forkpoint.empty?
-    forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
-  end
-
-  if forkpoint.empty?
-    puts "Could not find fork point"
-    next
-  end
-
-  if show_all
-    system('git', 'diff', '--name-only', "#{forkpoint}...HEAD")
-  else
-    system('git', 'diff', '--name-only', '--relative', "#{forkpoint}...HEAD")
-  end
-}
-
-hiiro.add_subcmd(:ahead) { |*args|
-  case args.length
-  when 0
-    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
-    ahead_of = base
-    branch = 'HEAD'
-  when 1
-    ahead_of = args[0]
-    branch = 'HEAD'
-  else
-    ahead_of, branch = args[0..1]
-  end
-
-  count = `git rev-list --count #{ahead_of}..#{branch}`.strip.to_i
-  puts "#{branch} is #{count} commit(s) ahead of #{ahead_of}"
-}
-
-hiiro.add_subcmd(:behind) { |*args|
-  case args.length
-  when 0
-    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
-    behind_of = base
-    branch = 'HEAD'
-  when 1
-    behind_of = args[0]
-    branch = 'HEAD'
-  else
-    behind_of, branch = args[0..1]
-  end
-
-  count = `git rev-list --count #{branch}..#{behind_of}`.strip.to_i
-  puts "#{branch} is #{count} commit(s) behind #{behind_of}"
-}
-
-hiiro.add_subcmd(:log) { |upstream = nil|
-  upstream ||= %w[origin/master master origin/main main].find { |ref|
-    system("git rev-parse --verify #{ref} >/dev/null 2>&1")
-  }
-
-  unless upstream
-    puts "Cannot find master or origin/master"
-    next
-  end
-
-  forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
-  if forkpoint.empty?
-    forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
-  end
-
-  if forkpoint.empty?
-    puts "Could not find fork point"
-    next
-  end
-
-  system('git', 'log', '--oneline', '--decorate', "#{forkpoint}..HEAD")
-}
-
-hiiro.add_subcmd(:forkpoint) { |upstream = nil, branch = nil|
-  branch ||= 'HEAD'
-  upstream ||= %w[origin/master master origin/main main].find { |ref|
-    system("git rev-parse --verify #{ref} >/dev/null 2>&1")
-  }
-
-  unless upstream
-    puts "Cannot find master or origin/master"
-    next
-  end
-
-  forkpoint = `git merge-base --fork-point #{upstream} #{branch} 2>/dev/null`.strip
-
-  if forkpoint.empty?
-    # Fallback to regular merge-base if fork-point fails
-    forkpoint = `git merge-base #{upstream} #{branch} 2>/dev/null`.strip
-  end
-
-  if forkpoint.empty?
-    puts "Could not find fork point between #{upstream} and #{branch}"
-  else
-    puts forkpoint
-  end
-}
-
-hiiro.add_subcmd(:changed) { |*args|
-  show_all = args.delete('-a') || args.delete('--all')
-  upstream = args.first
-
-  upstream ||= %w[origin/master master origin/main main].find { |ref|
-    system("git rev-parse --verify #{ref} >/dev/null 2>&1")
-  }
-
-  unless upstream
-    puts "Cannot find master or origin/master"
-    next
-  end
-
-  forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
-  if forkpoint.empty?
-    forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
-  end
-
-  if forkpoint.empty?
-    puts "Could not find fork point"
-    next
-  end
-
-  if show_all
-    system('git', 'diff', '--name-only', "#{forkpoint}...HEAD")
-  else
-    system('git', 'diff', '--name-only', '--relative', "#{forkpoint}...HEAD")
-  end
-}
-
-
-hiiro.add_subcmd(:changed) { |*args|
-  show_all = args.delete('-a') || args.delete('--all')
-  upstream = args.first
-
-  upstream ||= %w[origin/master master origin/main main].find { |ref|
-    system("git rev-parse --verify #{ref} >/dev/null 2>&1")
-  }
-
-  unless upstream
-    puts "Cannot find master or origin/master"
-    next
-  end
-
-  forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
-  if forkpoint.empty?
-    forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
-  end
-
-  if forkpoint.empty?
-    puts "Could not find fork point"
-    next
-  end
-
-  if show_all
-    system('git', 'diff', '--name-only', "#{forkpoint}...HEAD")
-  else
-    system('git', 'diff', '--name-only', '--relative', "#{forkpoint}...HEAD")
-  end
-}
-
-hiiro.add_subcmd(:ancestor) { |*args|
-  case args.length
-  when 0
-    # Check if main/master is ancestor of HEAD
-    base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") }
-    unless base
-      puts "Cannot find main or master branch"
-      next
-    end
-    ancestor = base
-    descendant = 'HEAD'
-  when 1
-    # Check if arg is ancestor of HEAD
-    ancestor = args[0]
-    descendant = 'HEAD'
-  else
-    ancestor, descendant = args[0..1]
-  end
-
-  if system("git merge-base --is-ancestor #{ancestor} #{descendant}")
-    puts "Yes, #{ancestor} is an ancestor of #{descendant}"
-  else
-    puts "No, #{ancestor} is NOT an ancestor of #{descendant}"
-  end
-}
-
-hiiro.run

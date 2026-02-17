@@ -2,144 +2,143 @@
 
 require "hiiro"
 
-o = Hiiro.init(*ARGV, plugins: [Pins])
-tmux = o.tmux_client
+Hiiro.run(*ARGV, plugins: [Pins]) do
+  tmux = tmux_client
 
-def select_buffer(o, tmux, partial = nil)
-  buffers = tmux.buffers
-  return nil if buffers.empty?
+  select_buffer_proc = ->(partial = nil) {
+    buffers = tmux.buffers
+    return nil if buffers.empty?
 
-  if partial
-    buffers = buffers.matching(partial)
-  end
-
-  return nil if buffers.empty?
-  return buffers.first.name if buffers.size == 1
-
-  mapping = buffers.each_with_object({}) { |b, h| h[b.to_s] = b.name }
-  o.fuzzyfind_from_map(mapping)
-end
-
-o.add_subcmd(:ls) { |*args|
-  if args.empty?
-    tmux.buffers.each { |b| puts b.to_s }
-  else
-    system('tmux', 'list-buffers', *args)
-  end
-}
-
-o.add_subcmd(:show) { |name = nil, *args|
-  buffer_name = select_buffer(o, tmux, name)
-
-  unless buffer_name
-    puts "No buffer selected or found"
-    next
-  end
-
-  if args.empty?
-    content = tmux.show_buffer(buffer_name)
-    print content if content
-  else
-    system('tmux', 'show-buffer', '-b', buffer_name, *args)
-  end
-}
-
-o.add_subcmd(:copy) { |name = nil|
-  buffer_name = select_buffer(o, tmux, name)
-  unless buffer_name
-    puts "No buffer selected or found"
-    next
-  end
-
-  content = tmux.show_buffer(buffer_name)
-  if content
-    Hiiro::Shell.pipe(content, 'pbcopy')
-    puts "Copied buffer '#{buffer_name}' to clipboard"
-  end
-}
-
-o.add_subcmd(:save) { |path = nil, name = nil, *args|
-  if path.nil?
-    puts "Usage: h buffer save <path> [buffer_name]"
-    next
-  end
-
-  if name
-    tmux.save_buffer(path, name: name)
-  elsif args.empty?
-    buffer_name = select_buffer(o, tmux, nil)
-    if buffer_name
-      tmux.save_buffer(path, name: buffer_name)
+    if partial
+      buffers = buffers.matching(partial)
     end
-  else
-    system('tmux', 'save-buffer', path, *args)
+
+    return nil if buffers.empty?
+    return buffers.first.name if buffers.size == 1
+
+    mapping = buffers.each_with_object({}) { |b, h| h[b.to_s] = b.name }
+    fuzzyfind_from_map(mapping)
+  }
+
+  add_subcmd(:ls) { |*args|
+    if args.empty?
+      tmux.buffers.each { |b| puts b.to_s }
+    else
+      system('tmux', 'list-buffers', *args)
+    end
+  }
+
+  add_subcmd(:show) { |name = nil, *args|
+    buffer_name = select_buffer_proc.call(name)
+
+    unless buffer_name
+      puts "No buffer selected or found"
+      next
+    end
+
+    if args.empty?
+      content = tmux.show_buffer(buffer_name)
+      print content if content
+    else
+      system('tmux', 'show-buffer', '-b', buffer_name, *args)
+    end
+  }
+
+  add_subcmd(:copy) { |name = nil|
+    buffer_name = select_buffer_proc.call(name)
+    unless buffer_name
+      puts "No buffer selected or found"
+      next
+    end
+
+    content = tmux.show_buffer(buffer_name)
+    if content
+      Hiiro::Shell.pipe(content, 'pbcopy')
+      puts "Copied buffer '#{buffer_name}' to clipboard"
+    end
+  }
+
+  add_subcmd(:save) { |path = nil, name = nil, *args|
+    if path.nil?
+      puts "Usage: h buffer save <path> [buffer_name]"
+      next
+    end
+
+    if name
+      tmux.save_buffer(path, name: name)
+    elsif args.empty?
+      buffer_name = select_buffer_proc.call(nil)
+      if buffer_name
+        tmux.save_buffer(path, name: buffer_name)
+      end
+    else
+      system('tmux', 'save-buffer', path, *args)
+    end
+  }
+
+  add_subcmd(:load) { |path = nil, *args|
+    if path.nil?
+      puts "Usage: h buffer load <path>"
+      next
+    end
+
+    if args.empty?
+      tmux.load_buffer(path)
+    else
+      system('tmux', 'load-buffer', path, *args)
+    end
+  }
+
+  add_subcmd(:set) { |*args|
+    system('tmux', 'set-buffer', *args)
+  }
+
+  add_subcmd(:paste) { |name = nil, *args|
+    if name && args.empty?
+      tmux.paste_buffer(name: name)
+    elsif args.any?
+      system('tmux', 'paste-buffer', *[name && "-b", name, *args].compact)
+    else
+      tmux.paste_buffer
+    end
+  }
+
+  add_subcmd(:delete) { |name = nil, *args|
+    if name.nil?
+      name = select_buffer_proc.call(nil)
+    end
+
+    if name && args.empty?
+      tmux.delete_buffer(name)
+    elsif name
+      system('tmux', 'delete-buffer', '-b', name, *args)
+    end
+  }
+
+  add_subcmd(:choose) { |*args|
+    if args.empty?
+      tmux.choose_buffer
+    else
+      system('tmux', 'choose-buffer', *args)
+    end
+  }
+
+  add_subcmd(:clear) {
+    buffers = tmux.buffers
+    count = buffers.size
+    buffers.clear_all
+    puts "Cleared #{count} buffers"
+  }
+
+  add_subcmd(:select) do
+    buffers = tmux.buffers
+    if buffers.empty?
+      STDERR.puts "No buffers found"
+      next
+    end
+
+    mapping = buffers.each_with_object({}) { |b, h| h[b.to_s] = b.name }
+    selected = fuzzyfind_from_map(mapping)
+    print selected if selected
   end
-}
-
-o.add_subcmd(:load) { |path = nil, *args|
-  if path.nil?
-    puts "Usage: h buffer load <path>"
-    next
-  end
-
-  if args.empty?
-    tmux.load_buffer(path)
-  else
-    system('tmux', 'load-buffer', path, *args)
-  end
-}
-
-o.add_subcmd(:set) { |*args|
-  system('tmux', 'set-buffer', *args)
-}
-
-o.add_subcmd(:paste) { |name = nil, *args|
-  if name && args.empty?
-    tmux.paste_buffer(name: name)
-  elsif args.any?
-    system('tmux', 'paste-buffer', *[name && "-b", name, *args].compact)
-  else
-    tmux.paste_buffer
-  end
-}
-
-o.add_subcmd(:delete) { |name = nil, *args|
-  if name.nil?
-    name = select_buffer(o, tmux, nil)
-  end
-
-  if name && args.empty?
-    tmux.delete_buffer(name)
-  elsif name
-    system('tmux', 'delete-buffer', '-b', name, *args)
-  end
-}
-
-o.add_subcmd(:choose) { |*args|
-  if args.empty?
-    tmux.choose_buffer
-  else
-    system('tmux', 'choose-buffer', *args)
-  end
-}
-
-o.add_subcmd(:clear) {
-  buffers = tmux.buffers
-  count = buffers.size
-  buffers.clear_all
-  puts "Cleared #{count} buffers"
-}
-
-o.add_subcmd(:select) do
-  buffers = tmux.buffers
-  if buffers.empty?
-    STDERR.puts "No buffers found"
-    next
-  end
-
-  mapping = buffers.each_with_object({}) { |b, h| h[b.to_s] = b.name }
-  selected = o.fuzzyfind_from_map(mapping)
-  print selected if selected
 end
-
-o.run

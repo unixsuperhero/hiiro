@@ -2,8 +2,6 @@
 
 require "hiiro"
 
-o = Hiiro.init(*ARGV)
-
 # Helper to start or attach to a tmux session
 def start_tmux_session(session_name)
   session_name = session_name.to_s
@@ -38,162 +36,156 @@ def projects_from_config
   YAML.safe_load_file(projects_file)
 end
 
-# === OPEN PROJECT (default) ===
+Hiiro.run(*ARGV) do
+  # === OPEN PROJECT (default) ===
+  add_subcmd(:open) { |project_name|
+    re = /#{project_name}/i
 
-o.add_subcmd(:open) { |project_name|
-  re = /#{project_name}/i
+    conf_matches = (projects_from_config || {}).select { |k, v| k.match?(re) }
+    dir_matches = (project_dirs || {}).select { |proj, path| proj.match?(re) }
 
-  conf_matches = (projects_from_config || {}).select { |k, v| k.match?(re) }
-  dir_matches = (project_dirs || {}).select { |proj, path| proj.match?(re) }
-
-  matches = dir_matches.merge(conf_matches)
-  if matches.count > 1
-    matches = matches.select { |name, path| name == project_name }
-  end
-
-  case matches.count
-  when 0
-    name = 'proj'
-    path = File.join(Dir.home, 'proj')
-
-    unless Dir.exist?(path)
-      puts "Error: #{path.inspect} does not exist"
-      exit 1
+    matches = dir_matches.merge(conf_matches)
+    if matches.count > 1
+      matches = matches.select { |name, path| name == project_name }
     end
 
-    puts "changing dir: #{path}"
-    Dir.chdir(path)
+    case matches.count
+    when 0
+      name = 'proj'
+      path = File.join(Dir.home, 'proj')
 
-    start_tmux_session(name)
-  when 1
-    name, path = matches.first
+      unless Dir.exist?(path)
+        puts "Error: #{path.inspect} does not exist"
+        exit 1
+      end
 
-    puts "changing dir: #{path}"
-    Dir.chdir(path)
+      puts "changing dir: #{path}"
+      Dir.chdir(path)
 
-    start_tmux_session(name)
-  when (2..)
-    puts "ERROR: Multiple matches found"
+      start_tmux_session(name)
+    when 1
+      name, path = matches.first
+
+      puts "changing dir: #{path}"
+      Dir.chdir(path)
+
+      start_tmux_session(name)
+    when (2..)
+      puts "ERROR: Multiple matches found"
+      puts
+      puts "Matches:"
+      matches.each { |name, path|
+        puts format("  %s: %s", name, path)
+      }
+    end
+  }
+
+  # === LIST PROJECTS ===
+  add_subcmd(:list) { |*list_args|
+    dirs = project_dirs
+    conf = projects_from_config
+
+    all_projects = dirs.merge(conf)
+
+    puts "Projects:"
     puts
-    puts "Matches:"
-    matches.each { |name, path|
-      puts format("  %s: %s", name, path)
-    }
-  end
-}
+    all_projects.keys.sort.each do |name|
+      path = all_projects[name]
+      source = conf.key?(name) ? '[config]' : '[dir]'
+      puts format("  %-12s %-8s %s", name, source, path)
+    end
+  }
 
-# === LIST PROJECTS ===
+  add_subcmd(:ls) { |*ls_args|
+    run_subcmd(:list, *ls_args)
+  }
 
-o.add_subcmd(:list) { |*args|
-  dirs = project_dirs
-  conf = projects_from_config
+  # === SHOW CONFIG FILE ===
+  add_subcmd(:config) { |*config_args|
+    projects_file = File.join(Dir.home, '.config/hiiro', 'projects.yml')
 
-  all_projects = dirs.merge(conf)
+    if File.exist?(projects_file)
+      puts File.read(projects_file)
+    else
+      puts "No config file found at: #{projects_file}"
+      puts
+      puts "Create it with YAML format:"
+      puts "  project_name: /path/to/project"
+    end
+  }
 
-  puts "Projects:"
-  puts
-  all_projects.keys.sort.each do |name|
-    path = all_projects[name]
-    source = conf.key?(name) ? '[config]' : '[dir]'
-    puts format("  %-12s %-8s %s", name, source, path)
-  end
-}
+  # === EDIT CONFIG FILE ===
+  add_subcmd(:edit) { |*edit_args|
+    projects_file = File.join(Dir.home, '.config/hiiro', 'projects.yml')
+    editor = ENV['EDITOR'] || 'vim'
 
-o.add_subcmd(:ls) { |*args|
-  o.run_subcmd(:list, *args)
-}
+    # Create config dir if needed
+    config_dir = File.dirname(projects_file)
+    Dir.mkdir(config_dir) unless Dir.exist?(config_dir)
 
-# === SHOW CONFIG FILE ===
+    # Create empty file if it doesn't exist
+    unless File.exist?(projects_file)
+      File.write(projects_file, "# Project aliases\n# project_name: /path/to/project\n")
+    end
 
-o.add_subcmd(:config) { |*args|
-  projects_file = File.join(Dir.home, '.config/hiiro', 'projects.yml')
+    exec(editor, projects_file)
+  }
 
-  if File.exist?(projects_file)
-    puts File.read(projects_file)
-  else
-    puts "No config file found at: #{projects_file}"
-    puts
-    puts "Create it with YAML format:"
-    puts "  project_name: /path/to/project"
-  end
-}
+  # === SELECT PROJECT ===
+  add_subcmd(:select) { |*select_args|
+    dirs = project_dirs
+    conf = projects_from_config
 
-# === EDIT CONFIG FILE ===
+    all_projects = dirs.merge(conf)
 
-o.add_subcmd(:edit) { |*args|
-  projects_file = File.join(Dir.home, '.config/hiiro', 'projects.yml')
-  editor = ENV['EDITOR'] || 'vim'
+    if all_projects.empty?
+      STDERR.puts "No projects found"
+      next
+    end
 
-  # Create config dir if needed
-  config_dir = File.dirname(projects_file)
-  Dir.mkdir(config_dir) unless Dir.exist?(config_dir)
+    lines = all_projects.each_with_object({}) do |(name, path), h|
+      source = conf.key?(name) ? '[config]' : '[dir]'
+      display = format("%-15s %s  %s", name, source, path)
+      h[display] = path
+    end
 
-  # Create empty file if it doesn't exist
-  unless File.exist?(projects_file)
-    File.write(projects_file, "# Project aliases\n# project_name: /path/to/project\n")
-  end
+    selected = fuzzyfind_from_map(lines)
 
-  exec(editor, projects_file)
-}
+    if selected
+      print selected
+    end
+  }
 
-# === SELECT PROJECT ===
+  # === HELP ===
+  add_subcmd(:help) { |*help_args|
+    puts <<~HELP
+      h-project - Project directory and tmux session manager
 
-o.add_subcmd(:select) { |*args|
-  dirs = project_dirs
-  conf = projects_from_config
+      USAGE:
+        h-project <project_name>        Open project (fuzzy match) and start tmux session
+        h-project open <project_name>   Same as above
+        h-project list                  List all known projects
+        h-project ls                    Alias for list
+        h-project config                Show config file contents
+        h-project edit                  Edit config file
 
-  all_projects = dirs.merge(conf)
+      SOURCES:
+        Projects are discovered from two sources:
+        1. Directories in ~/proj/
+        2. Entries in ~/.config/hiiro/projects.yml
 
-  if all_projects.empty?
-    STDERR.puts "No projects found"
-    next
-  end
+      CONFIG FORMAT (projects.yml):
+        project_name: /path/to/project
+        another: /some/other/path
 
-  lines = all_projects.each_with_object({}) do |(name, path), h|
-    source = conf.key?(name) ? '[config]' : '[dir]'
-    display = format("%-15s %s  %s", name, source, path)
-    h[display] = path
-  end
+      MATCHING:
+        Project names are matched using regex (case insensitive).
+        If multiple matches are found, an exact match is preferred.
+        If still ambiguous, all matches are displayed.
+    HELP
+  }
 
-  selected = o.fuzzyfind_from_map(lines)
-
-  if selected
-    print selected
-  end
-}
-
-# === HELP ===
-
-o.add_subcmd(:help) { |*args|
-  puts <<~HELP
-    h-project - Project directory and tmux session manager
-
-    USAGE:
-      h-project <project_name>        Open project (fuzzy match) and start tmux session
-      h-project open <project_name>   Same as above
-      h-project list                  List all known projects
-      h-project ls                    Alias for list
-      h-project config                Show config file contents
-      h-project edit                  Edit config file
-
-    SOURCES:
-      Projects are discovered from two sources:
-      1. Directories in ~/proj/
-      2. Entries in ~/.config/hiiro/projects.yml
-
-    CONFIG FORMAT (projects.yml):
-      project_name: /path/to/project
-      another: /some/other/path
-
-    MATCHING:
-      Project names are matched using regex (case insensitive).
-      If multiple matches are found, an exact match is preferred.
-      If still ambiguous, all matches are displayed.
-  HELP
-}
-
-if o.runnable?
-  o.run
-else
-  o.run_subcmd(:help)
+  add_default {
+    run_subcmd(:help)
+  }
 end
