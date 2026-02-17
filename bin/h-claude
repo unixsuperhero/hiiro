@@ -4,6 +4,7 @@ require 'hiiro'
 require 'shellwords'
 
 opts = Hiiro::Options.setup {
+  flag(:danger, short: :d, default: false)
   flag(:horizontal, short: :h, default: false)
   flag(:percent, short: :p, default: false)
   option(:size, short: :s, default: nil)
@@ -12,6 +13,9 @@ opts = Hiiro::Options.setup {
 def start_command(opts)
   shell = ENV['SHELL'] || 'zsh'
   escaped_args = opts.args.map(&:shellescape)
+  if opts.danger
+    escaped_args = ['--dangerously-skip-permissions', *escaped_args]
+  end
   ['claude', *escaped_args, ";exec #{shell}"].join(' ')
 end
 
