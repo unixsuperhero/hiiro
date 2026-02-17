@@ -10,6 +10,7 @@ require_relative "hiiro/options"
 require_relative "hiiro/notification"
 require_relative "hiiro/fuzzyfind"
 require_relative "hiiro/todo"
+require_relative "hiiro/tmux"
 
 class String
   def underscore(camel_cased_word=self)
@@ -90,6 +91,10 @@ class Hiiro
       bin_name,
       *all_args,
     ].map(&:shellescape).join(' ')
+  end
+
+  def tmux_client
+    @tmux_client ||= Tmux.client!(self)
   end
 
   def make_child(subcmd, *args, **kwargs, &block)
