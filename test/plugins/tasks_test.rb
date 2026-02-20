@@ -29,6 +29,56 @@ class TmuxSessionTest < Minitest::Test
     refute_equal session, "test"
     refute_equal session, nil
   end
+
+  def test_current_returns_nil_when_not_in_tmux
+    original_tmux = ENV['TMUX']
+    ENV.delete('TMUX')
+
+    result = TmuxSession.current
+
+    assert_nil result
+  ensure
+    ENV['TMUX'] = original_tmux if original_tmux
+  end
+
+  def test_current_returns_session_when_in_tmux
+    original_tmux = ENV['TMUX']
+    ENV['TMUX'] = '/tmp/tmux-1000/default,12345,0'
+
+    # Stub the backtick call
+    TmuxSession.stub(:`, "my-session\n") do
+      result = TmuxSession.current
+
+      assert_instance_of TmuxSession, result
+      assert_equal "my-session", result.name
+    end
+  ensure
+    if original_tmux
+      ENV['TMUX'] = original_tmux
+    else
+      ENV.delete('TMUX')
+    end
+  end
+
+  def test_all_returns_array_of_sessions
+    TmuxSession.stub(:`, "session1\nsession2\nwork\n") do
+      sessions = TmuxSession.all
+
+      assert_equal 3, sessions.count
+      assert sessions.all? { |s| s.is_a?(TmuxSession) }
+      assert_equal "session1", sessions[0].name
+      assert_equal "session2", sessions[1].name
+      assert_equal "work", sessions[2].name
+    end
+  end
+
+  def test_all_returns_empty_array_when_no_sessions
+    TmuxSession.stub(:`, "") do
+      sessions = TmuxSession.all
+
+      assert_equal [], sessions
+    end
+  end
 end
 
 class TreeTest < Minitest::Test
@@ -193,6 +243,146 @@ class AppTest < Minitest::Test
     app = App.new(name: "my-app", path: "path/to/app")
 
     assert_equal "my-app", app.to_s
+  end
+end
+
+class EnvironmentTest < Minitest::Test
+  include TestHelpers
+
+  def test_current_returns_environment_with_pwd
+    env = Environment.current
+
+    assert_instance_of Environment, env
+    assert_equal Dir.pwd, env.path
+  end
+
+  def test_initialize_with_custom_path
+    env = Environment.new(path: "/custom/path")
+
+    assert_equal "/custom/path", env.path
+  end
+
+  def test_all_tasks_returns_tasks_from_config
+    with_temp_dir do |dir|
+      tasks_dir = File.join(dir, "tasks")
+      FileUtils.mkdir_p(tasks_dir)
+      tasks_file = File.join(tasks_dir, "tasks.yml")
+      File.write(tasks_file, <<~YAML)
+        tasks:
+          - name: task-one
+            tree: task-one/main
+          - name: task-two
+            tree: task-two/main
+      YAML
+
+      config = TaskManager::Config.new(tasks_file: tasks_file)
+      env = Environment.new(config: config)
+
+      assert_equal 2, env.all_tasks.count
+      assert_equal "task-one", env.all_tasks.first.name
+    end
+  end
+
+  def test_find_task_by_full_name
+    with_temp_dir do |dir|
+      tasks_dir = File.join(dir, "tasks")
+      FileUtils.mkdir_p(tasks_dir)
+      tasks_file = File.join(tasks_dir, "tasks.yml")
+      File.write(tasks_file, <<~YAML)
+        tasks:
+          - name: feature
+            tree: feature/main
+          - name: bugfix
+            tree: bugfix/main
+      YAML
+
+      config = TaskManager::Config.new(tasks_file: tasks_file)
+      env = Environment.new(config: config)
+
+      task = env.find_task("feature")
+
+      assert_equal "feature", task.name
+    end
+  end
+
+  def test_find_task_by_prefix
+    with_temp_dir do |dir|
+      tasks_dir = File.join(dir, "tasks")
+      FileUtils.mkdir_p(tasks_dir)
+      tasks_file = File.join(tasks_dir, "tasks.yml")
+      File.write(tasks_file, <<~YAML)
+        tasks:
+          - name: feature-auth
+            tree: feature-auth/main
+          - name: bugfix
+            tree: bugfix/main
+      YAML
+
+      config = TaskManager::Config.new(tasks_file: tasks_file)
+      env = Environment.new(config: config)
+
+      task = env.find_task("feat")
+
+      assert_equal "feature-auth", task.name
+    end
+  end
+
+  def test_find_task_returns_nil_for_no_match
+    with_temp_dir do |dir|
+      tasks_dir = File.join(dir, "tasks")
+      FileUtils.mkdir_p(tasks_dir)
+      tasks_file = File.join(tasks_dir, "tasks.yml")
+      File.write(tasks_file, "tasks: []\n")
+
+      config = TaskManager::Config.new(tasks_file: tasks_file)
+      env = Environment.new(config: config)
+
+      task = env.find_task("nonexistent")
+
+      assert_nil task
+    end
+  end
+
+  def test_find_task_with_slash_path
+    with_temp_dir do |dir|
+      tasks_dir = File.join(dir, "tasks")
+      FileUtils.mkdir_p(tasks_dir)
+      tasks_file = File.join(tasks_dir, "tasks.yml")
+      File.write(tasks_file, <<~YAML)
+        tasks:
+          - name: feature
+            tree: feature/main
+          - name: feature/api
+            tree: feature/api
+      YAML
+
+      config = TaskManager::Config.new(tasks_file: tasks_file)
+      env = Environment.new(config: config)
+
+      task = env.find_task("feature/api")
+
+      assert_equal "feature/api", task.name
+    end
+  end
+
+  def test_task_matcher_returns_matcher_instance
+    env = Environment.new(config: TaskManager::Config.new(tasks_file: "/nonexistent"))
+
+    matcher = env.task_matcher
+
+    assert_instance_of Hiiro::Matcher, matcher
+  end
+
+  def test_session_matcher_with_stubbed_sessions
+    env = Environment.new
+
+    TmuxSession.stub(:all, [TmuxSession.new("work"), TmuxSession.new("personal")]) do
+      # Force reload
+      env.instance_variable_set(:@all_sessions, nil)
+      matcher = env.session_matcher
+
+      assert_instance_of Hiiro::Matcher, matcher
+    end
   end
 end
 

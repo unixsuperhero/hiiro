@@ -32,6 +32,68 @@ module TestHelpers
       yield path
     end
   end
+
+  def with_yaml_file(data)
+    require 'yaml'
+    with_temp_dir do |dir|
+      path = File.join(dir, "test.yml")
+      File.write(path, YAML.dump(data))
+      yield path, dir
+    end
+  end
+end
+
+# Shared mock for Hiiro instance used by plugins
+class MockHiiro
+  attr_reader :bin_name, :subcmds, :attached_methods, :args
+
+  def initialize(bin_name = "h", args: [])
+    @bin_name = bin_name
+    @subcmds = {}
+    @attached_methods = []
+    @args = args
+  end
+
+  def add_subcmd(*names, &block)
+    names.each { |name| @subcmds[name.to_sym] = block }
+  end
+
+  def instance_eval(&block)
+    super(&block)
+  end
+
+  def define_singleton_method(name, &block)
+    @attached_methods << name
+    super(name, &block)
+  end
+end
+
+# Mock for capturing system calls
+module SystemCallCapture
+  def self.included(base)
+    base.class_eval do
+      attr_reader :system_calls
+
+      def setup
+        super if defined?(super)
+        @system_calls = []
+      end
+
+      def capture_system_calls
+        calls = @system_calls
+        original_system = Kernel.method(:system)
+
+        Kernel.define_method(:system) do |*args|
+          calls << args
+          true
+        end
+
+        yield
+      ensure
+        Kernel.define_method(:system, original_system)
+      end
+    end
+  end
 end
 
 # Test harness for loading bin files and testing subcommands
