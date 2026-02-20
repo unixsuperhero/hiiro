@@ -5,7 +5,7 @@ Manual testing instructions for verifying hiiro functionality in a Docker contai
 ## Prerequisites
 
 Your Docker container should have:
-- Ruby with bundler
+- Ruby with RubyGems
 - Bare repo at `~/work/.bare`
 - `sk` or `fzf` installed
 - `gh` CLI
@@ -22,18 +22,24 @@ mkdir -p ~/.config/hiiro/{pins,tasks,sounds}
 mkdir -p ~/proj
 mkdir -p ~/bin
 
-# Install hiiro (copies bins to ~/bin, plugins to ~/.config/hiiro/plugins)
-cd ~/work/main  # or wherever hiiro is cloned
-./bin/h setup
+# Install hiiro gem
+gem install hiiro
 
-# Add to PATH
+# Run setup (copies subcommand bins to ~/bin, plugins to ~/.config/hiiro/plugins)
+h setup
+
+# Add ~/bin to PATH (for the subcommand bins)
 export PATH="$HOME/bin:$PATH"
 
 # Verify installation
 which h
+h version
 ```
 
-**Expected:** `h` is found at `~/bin/h`
+**Expected:**
+- `h` is available (installed by gem)
+- `h version` prints version string
+- `~/bin` contains `h-todo`, `h-branch`, etc.
 
 ---
 
