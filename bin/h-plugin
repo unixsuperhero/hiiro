@@ -10,7 +10,7 @@ def plugin_files
   Dir.glob(File.join(BASE_DIR, '**/*'))
 end
 
-Hiiro.run(*ARGV, plugins: [Tmux, Pins], dir: BASE_DIR) do
+Hiiro.run(*ARGV, plugins: [Pins], dir: BASE_DIR) do
   add_subcmd(:path) { |*args|
     print get_value(:dir)
   }

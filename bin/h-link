@@ -194,7 +194,7 @@ end
 
 lm = LinkManager.new
 
-Hiiro.run(*ARGV, plugins: [Tmux, Pins], links_file: lm.links_file) do
+Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
   add_subcmd(:add) do |*add_args|
     links = lm.load_links
 
