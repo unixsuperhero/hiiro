@@ -97,6 +97,10 @@ class Hiiro
     @tmux_client ||= Tmux.client!(self)
   end
 
+  def start_tmux_session(name)
+    tmux_client.open_session(name)
+  end
+
   def make_child(subcmd, *args, **kwargs, &block)
     bin_name = [bin, subcmd.to_s].join(?-)
 
