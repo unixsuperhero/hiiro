@@ -117,15 +117,10 @@ class Task
   end
 
   def to_h
-    {
-      name: name,
-      parent_name: parent_name,
-      short_name: short_name,
-      session_name: session_name,
-      tree_name: tree_name,
-      subtask?: subtask?,
-      top_level?: top_level?
-    }
+    h = { name: name }
+    h[:tree] = tree_name if tree_name
+    h[:session] = session_name if session_name != name
+    h
   end
 end
 

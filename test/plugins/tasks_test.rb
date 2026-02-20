@@ -157,13 +157,10 @@ class TaskTest < Minitest::Test
     task = Task.new(name: "feature/api", tree: "feature/api", session: "feature")
 
     hash = task.to_h
+    # to_h returns serialization-compatible keys for Task.new
     assert_equal "feature/api", hash[:name]
-    assert_equal "feature", hash[:parent_name]
-    assert_equal "api", hash[:short_name]
-    assert_equal "feature", hash[:session_name]
-    assert_equal "feature/api", hash[:tree_name]
-    assert hash[:subtask?]
-    refute hash[:top_level?]
+    assert_equal "feature/api", hash[:tree]
+    assert_equal "feature", hash[:session]
   end
 end
 
