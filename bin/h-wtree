@@ -34,4 +34,25 @@ Hiiro.run(*ARGV) do
       print selected
     end
   end
+
+  add_subcmd(:copy) do |*args|
+    output = `git worktree list`.strip
+
+    if output.empty?
+      STDERR.puts "No worktrees found"
+      next
+    end
+
+    lines = output.split("\n").each_with_object({}) do |line, hash|
+      path = line.split.first
+      hash[line] = path
+    end
+
+    selected = fuzzyfind_from_map(lines)
+
+    if selected
+      Hiiro::Shell.pipe(selected, 'pbcopy')
+      puts "Copied worktree path '#{selected}' to clipboard"
+    end
+  end
 end

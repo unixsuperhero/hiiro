@@ -63,6 +63,17 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   }
 
+  add_subcmd(:copy) { |target = nil, *args|
+    if target.nil?
+      target = fuzzyfind_from_map(tmux.windows(all: true).name_map)
+    end
+
+    if target
+      Hiiro::Shell.pipe(target, 'pbcopy')
+      puts "Copied window '#{target}' to clipboard"
+    end
+  }
+
   add_subcmd(:sw, :switch) { |target = nil, *args|
     if target.nil?
       target = fuzzyfind_from_map(tmux.windows(all: true).name_map)

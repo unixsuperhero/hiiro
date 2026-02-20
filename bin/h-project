@@ -156,6 +156,32 @@ Hiiro.run(*ARGV) do
     end
   }
 
+  # === COPY PROJECT PATH ===
+  add_subcmd(:copy) { |*copy_args|
+    dirs = project_dirs
+    conf = projects_from_config
+
+    all_projects = dirs.merge(conf)
+
+    if all_projects.empty?
+      STDERR.puts "No projects found"
+      next
+    end
+
+    lines = all_projects.each_with_object({}) do |(name, path), h|
+      source = conf.key?(name) ? '[config]' : '[dir]'
+      display = format("%-15s %s  %s", name, source, path)
+      h[display] = path
+    end
+
+    selected = fuzzyfind_from_map(lines)
+
+    if selected
+      Hiiro::Shell.pipe(selected, 'pbcopy')
+      puts "Copied project path '#{selected}' to clipboard"
+    end
+  }
+
   # === HELP ===
   add_subcmd(:help) { |*help_args|
     puts <<~HELP

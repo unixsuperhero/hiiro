@@ -510,6 +510,33 @@ Hiiro.run(*ARGV, plugins: [Tasks, Tmux, Pins]) do
     end
   end
 
+  add_subcmd(:copy) do |*args|
+    output = `gh pr list --author @me --state open --json number,title,headRefName 2>/dev/null`.strip
+
+    if output.empty?
+      STDERR.puts "No open PRs found"
+      next
+    end
+
+    prs = JSON.parse(output) rescue []
+    if prs.empty?
+      STDERR.puts "No open PRs found"
+      next
+    end
+
+    lines = prs.each_with_object({}) do |pr, h|
+      display = "##{pr['number']} [#{pr['headRefName']}] #{pr['title']}"
+      h[display] = pr['number'].to_s
+    end
+
+    selected = fuzzyfind_from_map(lines)
+
+    if selected
+      Hiiro::Shell.pipe(selected, 'pbcopy')
+      puts "Copied PR ##{selected} to clipboard"
+    end
+  end
+
   # === PR Pinning ===
 
   add_subcmd(:pin) do |ref = nil, *pin_args|

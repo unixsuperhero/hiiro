@@ -275,9 +275,9 @@ Hiiro.run(*ARGV, plugins: [Tmux, Pins], links_file: lm.links_file) do
       lines = lm.hash_matches?(lines, *select_args)
     end
 
-    selected, status = fuzzyfind(lines.keys)
+    selected = fuzzyfind(lines.keys)
 
-    if status.success? && !selected.strip.empty?
+    if !selected.strip.empty?
       link = lines[selected.strip]
       if link
         url = link.url
@@ -288,6 +288,38 @@ Hiiro.run(*ARGV, plugins: [Tmux, Pins], links_file: lm.links_file) do
         end
 
         puts url
+      end
+    end
+  end
+
+  add_subcmd(:copy) do |*copy_args|
+    links = lm.load_links
+
+    if links.empty?
+      STDERR.puts "No links saved."
+      next
+    end
+
+    lines = lm.load_link_hash(links)
+
+    if copy_args.any?
+      lines = lm.hash_matches?(lines, *copy_args)
+    end
+
+    selected = fuzzyfind(lines.keys)
+
+    if !selected.strip.empty?
+      link = lines[selected.strip]
+      if link
+        url = link.url
+
+        if lm.has_placeholders?(url)
+          values = lm.prompt_for_placeholder_values(url, link)
+          url = lm.substitute_placeholders(url, values)
+        end
+
+        Hiiro::Shell.pipe(url, 'pbcopy')
+        puts "Copied URL '#{url}' to clipboard"
       end
     end
   end
@@ -348,9 +380,9 @@ Hiiro.run(*ARGV, plugins: [Tmux, Pins], links_file: lm.links_file) do
         lines = lm.hash_matches?(lines, *open_args)
       end
 
-      selected, status = fuzzyfind(lines.keys)
+      selected = fuzzyfind(lines.keys)
 
-      if status.success? && !selected.strip.empty?
+      if !selected.strip.empty?
         link = lines[selected.strip]
         if link
           url = link.url

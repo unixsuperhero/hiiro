@@ -143,6 +143,27 @@ Hiiro.run(*ARGV, plugins: [Tasks]) do
     end
   end
 
+  add_subcmd(:copy) do |*copy_args|
+    branches = git.branches(sort_by: 'authordate', ignore_case: true)
+
+    lines = branches.each_with_object({}) do |name, h|
+      h["  #{name}"] = name
+    end
+
+    if copy_args.any?
+      lines = hash_matches?(lines, *copy_args)
+    end
+
+    require 'open3'
+    selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: lines.keys.join("\n"))
+
+    if status.success? && !selected.strip.empty?
+      branch = lines[selected.chomp]
+      Hiiro::Shell.pipe(branch, 'pbcopy')
+      puts "Copied branch '#{branch}' to clipboard"
+    end
+  end
+
   add_subcmd(:co, :checkout) { |branch = nil, *checkout_args|
     unless branch
       # Use sk to select a branch

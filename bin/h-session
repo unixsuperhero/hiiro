@@ -112,4 +112,18 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     selected = fuzzyfind_from_map(sessions.name_map)
     print selected if selected
   end
+
+  add_subcmd(:copy) do
+    sessions = tmux.sessions
+    if sessions.empty?
+      STDERR.puts "No sessions found"
+      next
+    end
+
+    selected = fuzzyfind_from_map(sessions.name_map)
+    if selected
+      Hiiro::Shell.pipe(selected, 'pbcopy')
+      puts "Copied session '#{selected}' to clipboard"
+    end
+  end
 end
