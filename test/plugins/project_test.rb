@@ -1,5 +1,5 @@
 require "test_helper"
-require_relative "../../plugins/tmux"
+# require_relative "../../plugins/tmux"
 require_relative "../../plugins/project"
 
 class ProjectPluginTest < Minitest::Test

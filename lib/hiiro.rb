@@ -185,6 +185,7 @@ class Hiiro
         plugin_const = Kernel.const_get(plugin_const.to_sym)
       rescue => e
         puts "unable to load plugin: #{plugin_const}"
+        puts "Error message: #{e.message}"
         return
       end
     end
