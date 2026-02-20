@@ -35,6 +35,8 @@ class Hiiro
     end
 
     def show
+      return unless has_cmd?
+
       cmd = ['terminal-notifier']
       cmd += ['-message', options.message] if options.message
       cmd += ['-title', options.title.tr('()[]', '')] if options.title
@@ -49,6 +51,10 @@ class Hiiro
       if options.sound && sounds[options.sound]
         system('afplay', sounds[options.sound.downcase])
       end
+    end
+
+    def has_cmd?
+      system("command -v terminal-notifier &>/dev/null")
     end
   end
 end
