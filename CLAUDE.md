@@ -26,7 +26,20 @@ ruby -c bin/h
 ruby -c plugins/*.rb
 ```
 
-There is no build step or test suite. This is a pure Ruby CLI tool.
+## Testing
+
+Run the test suite with:
+
+```bash
+bundle exec rake test
+```
+
+Tests are organized under `test/`:
+- `test/hiiro/` - Core library tests (Matcher, Options, Shell, Fuzzyfind, Todo, etc.)
+- `test/plugins/` - Plugin tests (Pins, Tasks, Notify, Project)
+- `test/bin/` - Bin file tests using `Hiiro::TestHarness`
+
+The `Hiiro::TestHarness` class (in `test/test_helper.rb`) enables testing bin files by capturing the block passed to `Hiiro.run` and evaluating it in a test context with stubbed `system` calls.
 
 ## Architecture
 
@@ -157,9 +170,9 @@ Main entry point with class methods:
 Instance methods available in subcommand blocks:
 - `git` - Returns `Hiiro::Git` instance for git operations
 - `fuzzyfind(lines)` - Interactive selection via skim
+- `fuzzyfind_from_map(hash)` - Interactive selection returning mapped value
 - `pins` - Key-value storage per command
 - `todo_manager` - Todo item management
-- `history` - Command history tracking
 - `attach_method(name, &block)` - Add methods to hiiro instance dynamically
 - `make_child(subcmd, *args)` - Create nested Hiiro for sub-subcommands
 
@@ -232,30 +245,52 @@ tm.active                         # Items not done/skipped
 tm.filter_by_task("feature")      # Items for specific task
 ```
 
-### Hiiro::History (lib/hiiro/history.rb)
+### Hiiro::Shell (lib/hiiro/shell.rb)
 
-Command history tracking with tmux/git/task context:
+Utility for piping content to external commands:
 
 ```ruby
-History.track(cmd: full_command, hiiro: self)  # Auto-called after commands
-History.by_task("feature")                      # Filter by task
-History.by_branch("main")                       # Filter by git branch
-History.by_session("work")                      # Filter by tmux session
+Hiiro::Shell.pipe("content", "pbcopy")           # Pipe string to command
+Hiiro::Shell.pipe_lines(["a", "b"], "command")   # Join array with newlines and pipe
+```
+
+### Hiiro::Options (lib/hiiro/options.rb)
+
+Argument parsing with flag and option support:
+
+```ruby
+opts = Hiiro::Options.parse(args) do
+  option(:output, short: :o, desc: "Output file")
+  option(:verbose, short: :v, type: :flag, desc: "Verbose output")
+end
+opts.output    # Value of --output or -o
+opts.verbose   # true if --verbose or -v was passed
+opts.args      # Remaining non-option arguments
+```
+
+### Hiiro::Notification (lib/hiiro/notification.rb)
+
+macOS notification wrapper using terminal-notifier:
+
+```ruby
+Hiiro::Notification.show(hiiro)   # Show notification based on hiiro.args
+# Supports: -m message, -t title, -l link, -c command, -s sound
 ```
 
 ## Key Files
 
-- `bin/h` - Core framework (~420 lines)
-- `bin/h-*` - External subcommands (tmux wrappers, video operations)
-- `plugins/*.rb` - Reusable plugin modules (Pins, Project, Task, Tmux, Notify)
+- `bin/h` - Entry point that loads lib/hiiro.rb
+- `bin/h-*` - External subcommands (tmux wrappers, git helpers, todo, links, etc.)
+- `plugins/*.rb` - Reusable plugin modules (Pins, Project, Tasks, Notify)
 - `lib/hiiro.rb` - Main Hiiro class and Runners
-- `lib/hiiro/*.rb` - Supporting classes (Git, Matcher, Fuzzyfind, Todo, History)
+- `lib/hiiro/*.rb` - Supporting classes (Git, Matcher, Fuzzyfind, Todo, Shell, Options, Notification, Tmux)
 
 ## External Dependencies
 
 - Ruby with `pry` gem
 - `tmux` for session/window/pane management
-- `ffmpeg`/`ffprobe` for video operations (h-video)
+- `sk` (skim) or `fzf` for fuzzy finding
+- `gh` CLI for GitHub operations (h-pr)
 - `terminal-notifier` for macOS notifications (notify plugin)
 
 ## Configuration Locations
