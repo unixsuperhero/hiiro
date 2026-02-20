@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  hiiro-test:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: hiiro-test
+    stdin_open: true
+    tty: true
+    volumes:
+      # Mount source for live development (optional)
+      # - ..:/home/hiiro/work/main:ro
+      # Mount test results
+      - ./test-results:/home/hiiro/test-results
+    environment:
+      - TERM=xterm-256color
+      - EDITOR=cat  # Non-interactive editor for testing
+    command: /bin/bash
+
+  # Run the full test suite
+  hiiro-test-runner:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: hiiro-test-runner
+    volumes:
+      - ./test-results:/home/hiiro/test-results
+    environment:
+      - TERM=xterm-256color
+      - EDITOR=cat
+    command: /home/hiiro/work/hiiro-source/docker/run-health-check.sh

@@ -1,0 +1,22 @@
+# Docker-specific ignores
+test-results/
+*.log
+
+# Ruby/bundler
+vendor/
+.bundle/
+*.gem
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,15 @@
+# Docker build ignores
+.git/
+docker/test-results/
+vendor/
+.bundle/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
