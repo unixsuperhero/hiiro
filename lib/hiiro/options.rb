@@ -10,7 +10,22 @@ class Hiiro
       new(&block)
     end
 
+    # Support both: new(&block) for setup, or new(args, &block) for parse
+    def self.new(args = nil, &block)
+      instance = allocate
+      instance.send(:base_initialize, &block)
+      if args
+        instance.parse!(args)
+      else
+        instance
+      end
+    end
+
     def initialize(&block)
+      base_initialize(&block)
+    end
+
+    private def base_initialize(&block)
       @definitions = {}
       flag(:help, short: 'h', desc: 'Show this help message')
       instance_eval(&block) if block

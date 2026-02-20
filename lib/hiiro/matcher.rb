@@ -1,37 +1,43 @@
 class Hiiro
   class Matcher
     class << self
-      # Prefix matching class methods
+      # Prefix matching class methods - return unwrapped values for backward compatibility
       def find(items, prefix, key: nil, &block)
-        new(items, key, &block).by_prefix(prefix)
+        result = new(items, key, &block).by_prefix(prefix)
+        result.first&.item
       end
 
       def find_all(items, prefix, key: nil, &block)
-        new(items, key, &block).by_prefix(prefix)
+        result = new(items, key, &block).by_prefix(prefix)
+        result.matches.map(&:item)
       end
 
       def resolve(items, prefix, key: nil, &block)
-        new(items, key, &block).by_prefix(prefix)
+        result = new(items, key, &block).by_prefix(prefix)
+        result.resolved&.item
       end
 
       def find_path(items, prefix, key: nil, &block)
-        new(items, key, &block).find_path(prefix)
+        result = new(items, key, &block).find_path(prefix)
+        result.first&.item
       end
 
       def find_all_paths(items, prefix, key: nil, &block)
-        new(items, key, &block).find_all_paths(prefix)
+        result = new(items, key, &block).find_all_paths(prefix)
+        result.matches.map(&:item)
       end
 
       def resolve_path(items, prefix, key: nil, &block)
-        new(items, key, &block).resolve_path(prefix)
+        result = new(items, key, &block).resolve_path(prefix)
+        result.resolved&.item
       end
 
-      # Substring matching class methods
+      # Substring matching class methods - returns Result object
       def by_substring(items, substring, key: nil, &block)
         new(items, key, &block).by_substring(substring)
       end
 
-      # Prefix matching class methods (explicit)
+      # Prefix matching class methods (explicit) - returns Result object
       def by_prefix(items, prefix, key: nil, &block)
         new(items, key, &block).by_prefix(prefix)
       end

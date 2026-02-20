@@ -58,7 +58,7 @@ module Pins
     end
 
     def find(partial)
-      search(partial).match&.item
+      search(partial).first&.item
     end
 
     def find_all(partial)
