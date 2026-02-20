@@ -24,7 +24,7 @@ h setup
 
 This installs:
 - Plugins to `~/.config/hiiro/plugins/`
-- Subcommands (`h-video`, `h-buffer`, etc.) to `~/bin/`
+- Subcommands (`h-buffer`, `h-todo`, etc.) to `~/bin/`
 
 Ensure `~/bin` is in your `$PATH`.
 
@@ -37,6 +37,9 @@ brew install terminal-notifier
 
 # For fuzzy-finder
 brew install sk # (or fzf)
+
+# For GitHub PR management
+brew install gh
 ```
 
 ## Quick Start
@@ -60,41 +63,28 @@ h ping
 | `h ping` | Simple test command (returns "pong") |
 | `h setup` | Install plugins and subcommands to system paths |
 | `h edit` | Open the h script in your editor |
-| `h path` | Print the current directory |
-| `h ppath` | Print project path (git root + relative dir) |
-| `h rpath` | Print relative path from git root |
-| `h pin` | Per-command key-value storage (via Pins plugin) |
-| `h project` | Project navigation with tmux integration (via Project plugin) |
-| `h task` | Task management across git worktrees (via Task plugin) |
-| `h notify` | macOS desktop notifications via terminal-notifier (via Notify plugin) |
+| `h alert` | macOS desktop notifications via terminal-notifier |
+| `h task` | Task management across git worktrees (via Tasks plugin) |
+| `h subtask` | Subtask management within tasks (via Tasks plugin) |
 
 ### External Subcommands
 
 | Command | Description |
 |---------|-------------|
-| `h branch` | Record and manage git branch history for tasks |
+| `h app` | Manage app directories within tasks/projects |
+| `h branch` | Git branch management with fuzzy selection and copy |
 | `h buffer` | Tmux paste buffer management |
-| `h dot` | Compare directories and generate symlink/diff commands |
-| `h dotfiles` | Manage dotfiles in ~/proj/home |
-| `h home` | Manage home directory files with edit and search |
-| `h html` | Generate an HTML index of MP4 videos in current directory |
+| `h claude` | Claude CLI wrapper with tmux split support |
+| `h commit` | Select commits using fuzzy finder |
+| `h config` | Open config files (vim, git, tmux, zsh, starship, claude) |
 | `h link` | Manage saved links with URL, description, and shorthand |
-| `h mic` | Control macOS microphone input volume |
-| `h note` | Create, edit, list, and display notes |
 | `h pane` | Tmux pane management |
 | `h plugin` | Manage hiiro plugins (list, edit, search) |
-| `h pr` | Record PR information linked to tasks |
-| `h pr-monitor` | Monitor pull requests |
-| `h pr-watch` | Watch pull requests for updates |
-| `h project` | Open projects with tmux session management |
-| `h runtask` | Run templated task scripts |
-| `h serve` | Start a miniserve HTTP server on port 1111 |
+| `h pr` | GitHub PR management via gh CLI |
+| `h project` | Project navigation with tmux session management |
 | `h session` | Tmux session management |
 | `h sha` | Extract short SHA from git log |
-| `h subtask` | Shorthand for task subtask management |
-| `h task` | Comprehensive task manager for git worktrees |
-| `h video` | Video inspection and operations via ffprobe/ffmpeg |
-| `h vim` | Manage nvim configuration with edit and search |
+| `h todo` | Todo list management with tags and task association |
 | `h window` | Tmux window management |
 | `h wtree` | Git worktree management |
 
@@ -103,9 +93,9 @@ h ping
 Any subcommand can be abbreviated as long as the prefix uniquely matches:
 
 ```sh
-h ex hel    # matches h example hello
-h te        # matches h test (if unique)
-h pp        # matches h ppath
+h buf ls      # matches h buffer ls
+h ses ls      # matches h session ls
+h win         # matches h window
 ```
 
 If multiple commands match, the first match wins and a warning is logged (when logging is enabled).
@@ -118,8 +108,7 @@ Plugins are Ruby modules loaded from `~/.config/hiiro/plugins/`:
 |--------|-------------|
 | Pins | Per-command YAML key-value storage |
 | Project | Project directory navigation with tmux session management |
-| Task | Task lifecycle management across git worktrees with subtask support |
-| Tmux | Tmux session helpers used by Project and Task |
+| Tasks | Task lifecycle management across git worktrees with subtask support |
 | Notify | macOS desktop notifications via terminal-notifier |
 
 ## Adding Subcommands
@@ -145,12 +134,12 @@ For nested subcommands, use hiiro in your script:
 #!/usr/bin/env ruby
 # ~/bin/h-example
 
-load File.join(Dir.home, 'bin/h')
+require 'hiiro'
 
-Hiiro.init(*ARGV) do |hiiro|
-  hiiro.add_subcommand(:hello) { puts "Hi!" }
-  hiiro.add_subcommand(:bye)   { puts "Goodbye!" }
-end.run
+Hiiro.run(*ARGV) do
+  add_subcmd(:hello) { puts "Hi!" }
+  add_subcmd(:bye)   { puts "Goodbye!" }
+end
 ```
 
 ```sh
@@ -160,23 +149,21 @@ h example bye    # => Goodbye!
 
 ### Method 2: Inline Subcommands
 
-Modify `bin/h` directly to add subcommands to the base `h` command:
+Modify `exe/h` directly to add subcommands to the base `h` command:
 
 ```ruby
-hiiro = Hiiro.init(*ARGV, plugins: [Pins, Project, Task], cwd: Dir.pwd)
-
-hiiro.add_subcommand(:hello) do |*args|
-  puts "Hello, #{args.first || 'World'}!"
+Hiiro.run(*ARGV, plugins: [Tasks], cwd: Dir.pwd) do
+  add_subcmd(:hello) do |*args|
+    puts "Hello, #{args.first || 'World'}!"
+  end
 end
-
-hiiro.run
 ```
 
-Global values (like `cwd`) are passed to all subcommand handlers via keyword arguments:
+Global values (like `cwd`) are accessible via `get_value`:
 
 ```ruby
-hiiro.add_subcommand(:pwd) do |*args, **values|
-  puts values[:cwd]  # Access the cwd passed during init
+add_subcmd(:pwd) do |*args|
+  puts get_value(:cwd)
 end
 ```
 
@@ -212,7 +199,7 @@ end
 Load plugins in your command:
 
 ```ruby
-Hiiro.init(*ARGV, plugins: [MyPlugin]) do |hiiro|
+Hiiro.run(*ARGV, plugins: [MyPlugin]) do
   # ...
 end
 ```
@@ -228,6 +215,15 @@ All configuration lives in `~/.config/hiiro/`:
   tasks/          # Task metadata
   projects.yml    # Project aliases
   apps.yml        # App directory mappings
+  todo.yml        # Todo items
+```
+
+## Testing
+
+Run the test suite:
+
+```sh
+bundle exec rake test
 ```
 
 ## License
