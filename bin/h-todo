@@ -90,7 +90,7 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
   add_subcmd(:rm) do |*rm_args|
     id_or_index = rm_args.shift
     if id_or_index.nil?
-      puts "Usage: h todo rm <id|index>"
+      puts "Usage: h todo rm <id>"
       exit 1
     end
 
@@ -110,7 +110,7 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
   add_subcmd(:change) do |*change_args|
     id_or_index = change_args.shift
     if id_or_index.nil?
-      puts "Usage: h todo change <id|index> [--text TEXT] [--tags TAGS] [--status STATUS]"
+      puts "Usage: h todo change <id> [--text TEXT] [--tags TAGS] [--status STATUS]"
       exit 1
     end
 
@@ -146,7 +146,7 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
   add_subcmd(:start) do |*start_args|
     id_or_index = start_args.shift
     if id_or_index.nil?
-      puts "Usage: h todo start <id|index>"
+      puts "Usage: h todo start <id>"
       exit 1
     end
 
@@ -162,7 +162,7 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
   add_subcmd(:done) do |*done_args|
     id_or_index = done_args.shift
     if id_or_index.nil?
-      puts "Usage: h todo done <id|index>"
+      puts "Usage: h todo done <id>"
       exit 1
     end
 
@@ -178,7 +178,7 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
   add_subcmd(:skip) do |*skip_args|
     id_or_index = skip_args.shift
     if id_or_index.nil?
-      puts "Usage: h todo skip <id|index>"
+      puts "Usage: h todo skip <id>"
       exit 1
     end
 
@@ -194,7 +194,7 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
   add_subcmd(:reset) do |*reset_args|
     id_or_index = reset_args.shift
     if id_or_index.nil?
-      puts "Usage: h todo reset <id|index>"
+      puts "Usage: h todo reset <id>"
       exit 1
     end
 
@@ -245,22 +245,26 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
         add [text] [-t tags]  Add todo item(s)
                               With no args, opens editor for YAML input
 
-        rm, remove <id|index> Remove a todo item
+        rm, remove <id>       Remove a todo item
 
-        change <id|index>     Modify a todo item
+        change <id>           Modify a todo item
           --text TEXT         New text
           --tags TAGS         New tags
           --status STATUS     New status
 
-        start <id|index>      Mark item as started
-        done <id|index>       Mark item as done
-        skip <id|index>       Mark item as skipped
-        reset <id|index>      Reset item to not_started
+        start <id>            Mark item as started
+        done <id>             Mark item as done
+        skip <id>             Mark item as skipped
+        reset <id>            Reset item to not_started
 
         search <query>        Search items by text, tags, or task
 
         path                  Print path to todo.yml
         editall               Open todo.yml in editor
+
+      Item IDs:
+        Items are identified by a permanent numeric ID (1, 2, 3, ...).
+        IDs are never reused, even after items are deleted.
 
       Status icons:
         [ ] not_started

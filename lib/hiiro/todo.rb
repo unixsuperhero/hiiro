@@ -1,6 +1,5 @@
 require 'yaml'
 require 'fileutils'
-require 'securerandom'
 require 'tempfile'
 
 class Hiiro
@@ -24,7 +23,7 @@ class Hiiro
       created_at: nil,
       updated_at: nil
     )
-      @id = id || SecureRandom.hex(4)
+      @id = id
       @text = text
       @status = STATUSES.include?(status) ? status : 'not_started'
       @tags = tags
@@ -132,7 +131,13 @@ class Hiiro
     def initialize(file_path: nil)
       @todo_file = file_path || TODO_FILE
       @file_path = @todo_file
-      @items = load_items
+      @items, @next_id = load_items
+    end
+
+    def next_id!
+      id = @next_id
+      @next_id += 1
+      id
     end
 
     # --- High-level API ---
@@ -142,7 +147,8 @@ class Hiiro
     end
 
     def find(id)
-      items.find { |item| item.id == id || item.id.start_with?(id) }
+      id_int = id.to_i
+      items.find { |item| item.id == id_int }
     end
 
     def find_by_index(index)
@@ -151,6 +157,7 @@ class Hiiro
 
     def add(text, tags: nil, task_info: nil)
       item = TodoItem.new(
+        id: next_id!,
         text: text,
         tags: tags,
         task_name: task_info&.dig(:task_name),
@@ -189,6 +196,7 @@ class Hiiro
       updated_array.filter_map do |h|
         next if h['text'].nil? || h['text'].to_s.strip.empty?
         TodoItem.new(
+          id: next_id!,
           text: h['text'],
           status: h['status'] || 'not_started',
           tags: h['tags'],
@@ -273,14 +281,11 @@ class Hiiro
       items_to_show ||= show_all ? all : active
       return "No todo items found." if items_to_show.empty?
 
-      lines = []
-      items_to_show.each_with_index do |item, idx|
-        lines << format_item(item, idx)
-      end
+      lines = items_to_show.map { |item| format_item(item) }
       lines.join("\n")
     end
 
-    def format_item(item, index = nil)
+    def format_item(item)
       status_icon = case item.status
         when 'not_started' then '[ ]'
         when 'started' then '[>]'
@@ -288,8 +293,7 @@ class Hiiro
         when 'skip' then '[-]'
       end
 
-      idx_str = index ? format('%2d.', index) : '   '
-      line = "#{idx_str} #{status_icon} #{item.text}"
+      line = "#{item.id} #{status_icon} #{item.text}"
       line += "  [#{item.tags}]" if item.tags && !item.tags.empty?
       line += "  (#{item.full_task_name})" if item.has_task_info?
       line
@@ -297,12 +301,8 @@ class Hiiro
 
     private
 
-    def resolve_item(id_or_index)
-      if id_or_index.is_a?(Integer) || id_or_index =~ /^\d+$/
-        find_by_index(id_or_index.to_i)
-      else
-        find(id_or_index)
-      end
+    def resolve_item(id)
+      find(id)
     end
 
     def change_status(id_or_index, status)
@@ -322,15 +322,17 @@ class Hiiro
     end
 
     def load_items
-      return [] unless File.exist?(@file_path)
+      return [[], 1] unless File.exist?(@file_path)
 
       data = YAML.safe_load_file(@file_path) || {}
-      (data['todos'] || []).map { |h| TodoItem.from_h(h) }
+      items = (data['todos'] || []).map { |h| TodoItem.from_h(h) }
+      next_id = data['next_id'] || (items.map { |i| i.id.to_i }.max || 0) + 1
+      [items, next_id]
     end
 
     def save
       FileUtils.mkdir_p(File.dirname(@file_path))
-      data = { 'todos' => items.map(&:to_h) }
+      data = { 'next_id' => @next_id, 'todos' => items.map(&:to_h) }
       File.write(@file_path, YAML.dump(data))
     end
   end

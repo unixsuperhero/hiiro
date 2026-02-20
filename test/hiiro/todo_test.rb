@@ -8,7 +8,7 @@ class TodoItemTest < Minitest::Test
     assert_equal "Buy milk", item.text
     assert_equal "not_started", item.status
     assert_nil item.tags
-    refute_nil item.id
+    assert_nil item.id  # ID is assigned by TodoManager, not TodoItem
     refute_nil item.created_at
   end
 
@@ -287,11 +287,11 @@ class TodoManagerTest < Minitest::Test
     assert_equal "Second", found.text
   end
 
-  def test_remove_by_index
-    @manager.add("First")
+  def test_remove_by_id
+    first = @manager.add("First")
     @manager.add("Second")
 
-    removed = @manager.remove(0)
+    removed = @manager.remove(first.id)
 
     assert_equal "First", removed.text
     assert_equal 1, @manager.all.length
@@ -301,7 +301,7 @@ class TodoManagerTest < Minitest::Test
   def test_change_updates_item
     item = @manager.add("Original")
 
-    @manager.change(0, text: "Updated", tags: "new-tag")
+    @manager.change(item.id, text: "Updated", tags: "new-tag")
 
     assert_equal "Updated", item.text
     assert_equal "new-tag", item.tags
@@ -309,29 +309,29 @@ class TodoManagerTest < Minitest::Test
 
   def test_start_changes_status
     item = @manager.add("Task")
-    @manager.start(0)
+    @manager.start(item.id)
 
     assert_equal "started", item.status
   end
 
   def test_done_changes_status
     item = @manager.add("Task")
-    @manager.done(0)
+    @manager.done(item.id)
 
     assert_equal "done", item.status
   end
 
   def test_skip_changes_status
     item = @manager.add("Task")
-    @manager.skip(0)
+    @manager.skip(item.id)
 
     assert_equal "skip", item.status
   end
 
   def test_reset_changes_status
     item = @manager.add("Task")
-    @manager.start(0)
-    @manager.reset(0)
+    @manager.start(item.id)
+    @manager.reset(item.id)
 
     assert_equal "not_started", item.status
   end
@@ -439,14 +439,14 @@ class TodoManagerTest < Minitest::Test
 
   def test_format_item_includes_tags
     item = @manager.add("Task", tags: "urgent")
-    output = @manager.format_item(item, 0)
+    output = @manager.format_item(item)
 
     assert_includes output, "[urgent]"
   end
 
   def test_format_item_includes_task_name
     item = @manager.add("Task", task_info: { task_name: "feature" })
-    output = @manager.format_item(item, 0)
+    output = @manager.format_item(item)
 
     assert_includes output, "(feature)"
   end
