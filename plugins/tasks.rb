@@ -646,7 +646,7 @@ class TaskManager
       h[line] = val
     end
 
-    o.fuzzyfind_from_map(mapping)
+    hiiro.fuzzyfind_from_map(mapping)
   end
 
   def select_branch_interactive(prompt = nil)
@@ -657,7 +657,7 @@ class TaskManager
     end
     return nil if name_map.empty?
 
-    o.fuzzyfind_from_map(name_map)
+    hiiro.fuzzyfind_from_map(name_map)
   end
 
   # --- Private helpers ---
