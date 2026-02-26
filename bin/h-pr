@@ -5,6 +5,7 @@ require "time"
 require "fileutils"
 require "yaml"
 require "json"
+require "tempfile"
 
 Hiiro.load_env
 
@@ -252,6 +253,17 @@ class PinnedPRManager
     output = `gh pr list --author @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
     return [] if output.empty?
     JSON.parse(output) rescue []
+  end
+
+  def fetch_my_and_assigned_prs
+    authored = `gh pr list --author @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
+    assigned = `gh pr list --assignee @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
+
+    authored_prs = authored.empty? ? [] : (JSON.parse(authored) rescue [])
+    assigned_prs = assigned.empty? ? [] : (JSON.parse(assigned) rescue [])
+
+    # Dedupe by PR number
+    (authored_prs + assigned_prs).uniq { |pr| pr['number'] }
   end
 
   def refresh_status(pr)
@@ -666,6 +678,261 @@ Hiiro.run(*ARGV, plugins: [Tasks, Tmux, Pins]) do
     pinned_manager.save_pinned(pinned)
     puts "---"
     puts "Status updated at #{Time.now.strftime('%H:%M:%S')}"
+  end
+
+  add_subcmd(:update) do
+    pinned = pinned_manager.load_pinned
+
+    if pinned.empty?
+      puts "No pinned PRs to update"
+      next
+    end
+
+    puts "Updating status for #{pinned.length} PR(s)..."
+    pinned.each { |pr| pinned_manager.refresh_status(pr) }
+    pinned_manager.save_pinned(pinned)
+    puts "Done."
+  end
+
+  add_subcmd(:green) do
+    pinned = pinned_manager.load_pinned
+    pinned.each { |pr| pinned_manager.refresh_status(pr) }
+    pinned_manager.save_pinned(pinned)
+
+    filtered = pinned.select { |pr|
+      c = pr['checks']
+      c && c['failed'] == 0 && c['pending'] == 0 && c['success'] > 0
+    }
+
+    if filtered.empty?
+      puts "No PRs with passing checks"
+      next
+    end
+
+    puts "PRs with passing checks:"
+    puts
+    filtered.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+  end
+
+  add_subcmd(:red) do
+    pinned = pinned_manager.load_pinned
+    pinned.each { |pr| pinned_manager.refresh_status(pr) }
+    pinned_manager.save_pinned(pinned)
+
+    filtered = pinned.select { |pr|
+      c = pr['checks']
+      c && c['failed'] > 0
+    }
+
+    if filtered.empty?
+      puts "No PRs with failing checks"
+      next
+    end
+
+    puts "PRs with failing checks:"
+    puts
+    filtered.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+  end
+
+  add_subcmd(:old) do
+    pinned = pinned_manager.load_pinned
+    pinned.each { |pr| pinned_manager.refresh_status(pr) }
+    pinned_manager.save_pinned(pinned)
+
+    filtered = pinned.select { |pr| pr['state'] == 'MERGED' }
+
+    if filtered.empty?
+      puts "No merged PRs"
+      next
+    end
+
+    puts "Merged PRs:"
+    puts
+    filtered.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+  end
+
+  add_subcmd(:prune) do |*args|
+    # Alias to auto-unpin
+    pinned = pinned_manager.load_pinned
+
+    if pinned.empty?
+      puts "No pinned PRs"
+      next
+    end
+
+    pinned.each { |pr| pinned_manager.refresh_status(pr) }
+
+    merged_or_closed = pinned.select { |pr| pr['state'] == 'MERGED' || pr['state'] == 'CLOSED' }
+
+    if merged_or_closed.empty?
+      puts "No merged or closed PRs to prune"
+      pinned_manager.save_pinned(pinned)
+      next
+    end
+
+    puts "Pruning #{merged_or_closed.length} merged/closed PR(s):"
+    puts
+
+    merged_or_closed.each do |pr|
+      puts "  ##{pr['number']}: #{pr['title']} [#{pr['state']}]"
+      pinned_manager.unpin(pr['number'])
+    end
+
+    puts
+    puts "Done. #{pinned_manager.load_pinned.length} PR(s) still tracked."
+  end
+
+  add_subcmd(:draft) do
+    pinned = pinned_manager.load_pinned
+    pinned.each { |pr| pinned_manager.refresh_status(pr) }
+    pinned_manager.save_pinned(pinned)
+
+    filtered = pinned.select { |pr| pr['is_draft'] == true }
+
+    if filtered.empty?
+      puts "No draft PRs"
+      next
+    end
+
+    puts "Draft PRs:"
+    puts
+    filtered.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+  end
+
+  add_subcmd(:missing) do
+    my_prs = pinned_manager.fetch_my_and_assigned_prs
+    pinned_numbers = pinned_manager.load_pinned.map { |p| p['number'] }
+    missing = my_prs.reject { |pr| pinned_numbers.include?(pr['number']) }
+
+    if missing.empty?
+      puts "All your PRs are tracked"
+      next
+    end
+
+    puts "Untracked PRs (#{missing.count}):"
+    puts
+    missing.each { |pr| puts "  ##{pr['number']} [#{pr['headRefName']}] #{pr['title']}" }
+  end
+
+  add_subcmd(:amissing) do
+    my_prs = pinned_manager.fetch_my_and_assigned_prs
+    pinned_numbers = pinned_manager.load_pinned.map { |p| p['number'] }
+    missing = my_prs.reject { |pr| pinned_numbers.include?(pr['number']) }
+
+    if missing.empty?
+      puts "All your PRs are already tracked"
+      next
+    end
+
+    missing_numbers = missing.map { |pr| pr['number'] }
+
+    tmpfile = Tempfile.new(['missing-prs-', '.yml'])
+    tmpfile.write(missing_numbers.to_yaml)
+    tmpfile.close
+
+    system(ENV['EDITOR'] || 'nvim', tmpfile.path)
+
+    to_add = YAML.safe_load_file(tmpfile.path) || []
+    tmpfile.unlink
+
+    added = 0
+    to_add.each do |num|
+      pr_info = pinned_manager.fetch_pr_info(num)
+      next unless pr_info
+      pinned_manager.pin(pr_info)
+      puts "Tracked: ##{pr_info['number']} #{pr_info['title']}"
+      added += 1
+    end
+
+    puts
+    puts "Added #{added} PR(s) to tracking."
+  end
+
+  add_subcmd(:track) do
+    pr_info = pinned_manager.fetch_current_branch_pr
+    unless pr_info
+      puts "No PR for current branch"
+      next
+    end
+
+    if pinned_manager.pinned?(pr_info['number'])
+      puts "Already tracking ##{pr_info['number']}"
+      next
+    end
+
+    full_info = pinned_manager.fetch_pr_info(pr_info['number'])
+    pinned_manager.pin(full_info)
+    puts "Now tracking ##{pr_info['number']}: #{pr_info['title']}"
+  end
+
+  add_subcmd(:ignore) do |ref = nil|
+    # Alias to unpin
+    pinned = pinned_manager.load_pinned
+
+    if pinned.empty?
+      puts "No tracked PRs"
+      next
+    end
+
+    pr_number = nil
+
+    if ref.nil?
+      lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
+        h[pinned_manager.display_pinned(pr, idx)] = pr['number'].to_s
+      end
+
+      pr_number = fuzzyfind_from_map(lines)
+      unless pr_number
+        puts "No PR selected"
+        next
+      end
+    elsif ref =~ /^\d+$/
+      pr_number = ref
+    else
+      puts "Usage: h pr ignore [PR_NUMBER]"
+      next
+    end
+
+    if pinned_manager.unpin(pr_number)
+      puts "Stopped tracking PR ##{pr_number}"
+    else
+      puts "PR ##{pr_number} was not tracked"
+    end
+  end
+
+  add_subcmd(:rm) do |ref = nil|
+    # Alias to ignore/unpin
+    pinned = pinned_manager.load_pinned
+
+    if pinned.empty?
+      puts "No tracked PRs"
+      next
+    end
+
+    pr_number = nil
+
+    if ref.nil?
+      lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
+        h[pinned_manager.display_pinned(pr, idx)] = pr['number'].to_s
+      end
+
+      pr_number = fuzzyfind_from_map(lines)
+      unless pr_number
+        puts "No PR selected"
+        next
+      end
+    elsif ref =~ /^\d+$/
+      pr_number = ref
+    else
+      puts "Usage: h pr rm [PR_NUMBER]"
+      next
+    end
+
+    if pinned_manager.unpin(pr_number)
+      puts "Removed PR ##{pr_number} from tracking"
+    else
+      puts "PR ##{pr_number} was not tracked"
+    end
   end
 
   add_subcmd(:'suggest-unpin') do |*args|

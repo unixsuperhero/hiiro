@@ -906,6 +906,30 @@ module Tasks
         print tm.value_for_task(task_name, &:session_name)
       end
 
+      h.add_subcmd(:current) do
+        task = tm.current_task
+        next STDERR.puts("Not in a task") unless task
+        print task.name
+      end
+
+      h.add_subcmd(:cbranch) do
+        task = tm.current_task
+        next STDERR.puts("Not in a task") unless task
+        print task.branch if task.branch
+      end
+
+      h.add_subcmd(:ctree) do
+        task = tm.current_task
+        next STDERR.puts("Not in a task") unless task
+        print task.tree_name if task.tree_name
+      end
+
+      h.add_subcmd(:csession) do
+        task = tm.current_task
+        next STDERR.puts("Not in a task") unless task
+        print task.session_name if task.session_name
+      end
+
       h.add_subcmd(:status) { tm.status }
       h.add_subcmd(:st) { tm.status }
 

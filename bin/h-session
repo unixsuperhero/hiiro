@@ -1,8 +1,10 @@
 #!/usr/bin/env ruby
 
 require 'hiiro'
+require 'tempfile'
+require 'yaml'
 
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, plugins: [Pins, Tasks]) do
   tmux = tmux_client
 
   add_subcmd(:ls, :list) { |*args|
@@ -124,6 +126,47 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     if selected
       Hiiro::Shell.pipe(selected, 'pbcopy')
       puts "Copied session '#{selected}' to clipboard"
+    end
+  end
+
+  add_subcmd(:orphans) do
+    env = Environment.current
+    task_session_names = env.all_tasks.map(&:session_name)
+    orphans = env.all_sessions.reject { |s| task_session_names.include?(s.name) }
+
+    if orphans.empty?
+      puts "No orphan sessions"
+      next
+    end
+
+    puts "Orphan sessions (#{orphans.count}):"
+    orphans.each { |s| puts "  #{s.name}" }
+  end
+
+  add_subcmd(:okill) do
+    env = Environment.current
+    task_session_names = env.all_tasks.map(&:session_name)
+    orphans = env.all_sessions.reject { |s| task_session_names.include?(s.name) }
+
+    if orphans.empty?
+      puts "No orphan sessions to kill"
+      next
+    end
+
+    orphan_names = orphans.map(&:name)
+
+    tmpfile = Tempfile.new(['orphan-sessions-', '.yml'])
+    tmpfile.write(orphan_names.to_yaml)
+    tmpfile.close
+
+    system(ENV['EDITOR'] || 'nvim', tmpfile.path)
+
+    to_kill = YAML.safe_load_file(tmpfile.path) || []
+    tmpfile.unlink
+
+    to_kill.each do |name|
+      tmux.kill_session(name)
+      puts "Killed: #{name}"
     end
   end
 end
