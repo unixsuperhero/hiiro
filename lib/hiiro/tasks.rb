@@ -352,14 +352,28 @@ class Hiiro
     # --- Interactive selection with sk ---
 
     def select_task_interactive(prompt = nil)
-      names = if scope == :subtask
-        tasks.map(&:short_name)
+      task_list = if scope == :subtask
+        tasks.sort_by(&:short_name)
       else
-        environment.all_tasks.map(&:name)
+        environment.all_tasks.sort_by(&:name)
       end
-      return nil if names.empty?
+      return nil if task_list.empty?
 
-      hiiro.fuzzyfind(names.sort)
+      mapping = task_list.each_with_object({}) do |task, h|
+        display_name = scope == :subtask ? task.short_name : task.name
+        tree = environment.find_tree(task.tree_name)
+        branch = tree&.branch || (tree&.detached? ? '(detached)' : '(none)')
+        session = task.session_name || '(none)'
+
+        line = format("%-25s  tree: %-20s  branch: %-20s  session: %s",
+                     display_name,
+                     task.tree_name || '(none)',
+                     branch,
+                     session)
+        h[line] = display_name
+      end
+
+      hiiro.fuzzyfind_from_map(mapping)
     end
 
     def value_for_task(task_name = nil, &block)
