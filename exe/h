@@ -83,4 +83,8 @@ Hiiro.run(*ARGV, cwd: Dir.pwd) do
   add_subcmd(:alert) do |*args|
     Hiiro::Notification.show(self)
   end
+
+  add_subcmd(:queue) do |*args|
+    Hiiro::Queue.build_hiiro(self).run
+  end
 end
