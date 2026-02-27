@@ -50,6 +50,22 @@ class Hiiro
       File.exist?(path) ? YAML.safe_load_file(path) : nil
     end
 
+    def task_preview(name, status)
+      path = File.join(queue_dirs[status], "#{name}.md")
+      return nil unless File.exist?(path)
+
+      lines = File.readlines(path, chomp: true)
+      # Skip frontmatter
+      if lines.first == '---'
+        end_idx = lines[1..].index('---')
+        lines = lines[(end_idx + 2)..] if end_idx
+      end
+      first = lines&.find { |l| !l.strip.empty? }&.strip
+      return nil unless first
+
+      first.length > 60 ? "| #{first[0, 57]}..." : "| #{first}"
+    end
+
     def find_task(name)
       STATUSES.each do |status|
         md = File.join(queue_dirs[status.to_sym], "#{name}.md")
@@ -108,11 +124,19 @@ class Hiiro
         'dst_dir = exit_code == 0 ? "done" : "failed"; ' \
         'FileUtils.mv(src, File.join(qdir, dst_dir, name+".md")) if File.exist?(src); ' \
         'meta=File.join(qdir,"running",name+".meta"); ' \
-        'FileUtils.mv(meta, File.join(qdir, dst_dir, name+".meta")) if File.exist?(meta)'
+        'FileUtils.mv(meta, File.join(qdir, dst_dir, name+".meta")) if File.exist?(meta); ' \
+        'prompt=File.join(qdir,"running",name+".prompt"); ' \
+        'FileUtils.rm_f(prompt) if File.exist?(prompt)'
       ].shelljoin
 
+      # Write a clean prompt file (no frontmatter) for claude
+      prompt_body = prompt_obj ? prompt_obj.doc.content.strip : prompt_text
+      prompt_file = File.join(dirs[:running], "#{name}.prompt")
+      File.write(prompt_file, prompt_body + "\n")
+
       # Run claude interactively in tmux window, then cleanup on exit
-      shell_cmd = "cd #{Shellwords.shellescape(working_dir)} && claude #{Shellwords.shellescape(prompt_text)}; HQ_EXIT=$?; #{cleanup_ruby}; exec #{ENV['SHELL'] || 'zsh'}"
+      escaped_prompt = Shellwords.shellescape("run the prompt in the file @#{prompt_file}")
+      shell_cmd = "cd #{Shellwords.shellescape(working_dir)} && claude #{escaped_prompt}; HQ_EXIT=$?; #{cleanup_ruby}; exec #{ENV['SHELL'] || 'zsh'}"
 
       win_name = short_window_name(name)
       system('tmux', 'new-window', '-d', '-t', target_session, '-n', win_name, '-c', working_dir, shell_cmd)
@@ -228,7 +252,20 @@ class Hiiro
             next
           end
           tasks.each do |t|
-            puts "%-10s %s" % [t[:status], t[:name]]
+            line = "%-10s %s" % [t[:status], t[:name]]
+            meta = q.meta_for(t[:name], t[:status].to_sym)
+            if meta && t[:status] == 'running'
+              started = meta['started_at']
+              if started
+                elapsed = Time.now - Time.parse(started)
+                mins = (elapsed / 60).to_i
+                line += "  (#{mins}m)"
+              end
+              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
+            end
+            preview = q.task_preview(t[:name], t[:status].to_sym)
+            line += "  #{preview}" if preview
+            puts line
           end
         }
 
@@ -239,7 +276,20 @@ class Hiiro
             next
           end
           tasks.each do |t|
-            puts "%-10s %s" % [t[:status], t[:name]]
+            line = "%-10s %s" % [t[:status], t[:name]]
+            meta = q.meta_for(t[:name], t[:status].to_sym)
+            if meta && t[:status] == 'running'
+              started = meta['started_at']
+              if started
+                elapsed = Time.now - Time.parse(started)
+                mins = (elapsed / 60).to_i
+                line += "  (#{mins}m)"
+              end
+              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
+            end
+            preview = q.task_preview(t[:name], t[:status].to_sym)
+            line += "  #{preview}" if preview
+            puts line
           end
         }
 
