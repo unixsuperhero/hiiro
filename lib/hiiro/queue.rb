@@ -137,6 +137,251 @@ class Hiiro
       text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')[0, 60]
     end
 
+    def add_with_frontmatter(content, task_info: nil)
+      queue_dirs # ensure dirs exist
+
+      if task_info
+        fm = {}
+        fm['task_name'] = task_info[:task_name] if task_info[:task_name]
+        fm['tree_name'] = task_info[:tree_name] if task_info[:tree_name]
+        fm['session_name'] = task_info[:session_name] if task_info[:session_name]
+
+        if fm.any?
+          content = "---\n#{fm.map { |k, v| "#{k}: #{v}" }.join("\n")}\n---\n#{content}"
+        end
+      end
+
+      name = slugify(content.lines.reject { |l| l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip)
+      return nil if name.empty?
+
+      base_name = name
+      counter = 1
+      while File.exist?(File.join(DIR, 'pending', "#{name}.md"))
+        counter += 1
+        name = "#{base_name}-#{counter}"
+      end
+
+      path = File.join(DIR, 'pending', "#{name}.md")
+      File.write(path, content + "\n")
+      { name: name, path: path }
+    end
+
+    def self.build_hiiro(parent_hiiro, q=nil, task_info: nil)
+      q ||= current(parent_hiiro)
+      bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
+
+      Hiiro.init(
+        bin_name:,
+        args: parent_hiiro.args,
+      ) do |h|
+        h.add_subcmd(:watch) {
+          q.queue_dirs
+          puts "Watching #{File.join(DIR, 'pending')} ..."
+          puts "Press Ctrl-C to stop"
+          loop do
+            q.tasks_in(:pending).each { |name| q.launch_task(name) }
+            sleep 2
+          end
+        }
+
+        h.add_subcmd(:run) { |name = nil|
+          if name
+            name = name.sub(/\.md$/, '')
+            found = q.find_task(name)
+            if found.nil?
+              puts "Task not found: #{name}"
+              next
+            end
+            if found[:status] != 'pending'
+              puts "Task '#{name}' is #{found[:status]}, not pending"
+              next
+            end
+            q.launch_task(name)
+          else
+            pending = q.tasks_in(:pending)
+            if pending.empty?
+              puts "No pending tasks"
+              next
+            end
+            pending.each { |n| q.launch_task(n) }
+          end
+        }
+
+        h.add_subcmd(:ls) {
+          tasks = q.all_tasks
+          if tasks.empty?
+            puts "No tasks"
+            next
+          end
+          tasks.each do |t|
+            puts "%-10s %s" % [t[:status], t[:name]]
+          end
+        }
+
+        h.add_subcmd(:list) {
+          tasks = q.all_tasks
+          if tasks.empty?
+            puts "No tasks"
+            next
+          end
+          tasks.each do |t|
+            puts "%-10s %s" % [t[:status], t[:name]]
+          end
+        }
+
+        h.add_subcmd(:status) {
+          tasks = q.all_tasks
+          if tasks.empty?
+            puts "No tasks"
+            next
+          end
+          tasks.each do |t|
+            meta = q.meta_for(t[:name], t[:status].to_sym)
+            line = "%-10s %s" % [t[:status], t[:name]]
+            if meta
+              started = meta['started_at']
+              if started && t[:status] == 'running'
+                elapsed = Time.now - Time.parse(started)
+                mins = (elapsed / 60).to_i
+                line += "  (#{mins}m elapsed)"
+              end
+              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
+              line += "  dir:#{meta['working_dir']}" if meta['working_dir']
+            end
+            puts line
+          end
+        }
+
+        h.add_subcmd(:attach) { |name = nil|
+          running = q.tasks_in(:running)
+          if running.empty?
+            puts "No running tasks"
+            next
+          end
+
+          if name.nil?
+            name = running.size == 1 ? running.first : h.fuzzyfind(running)
+          end
+
+          if name
+            meta = q.meta_for(name, :running)
+            session = meta&.[]('tmux_session') || TMUX_SESSION
+            exec('tmux', 'select-window', '-t', "#{session}:#{name}")
+          end
+        }
+
+        h.add_subcmd(:add) { |*args|
+          q.queue_dirs
+
+          if args.empty? && !$stdin.tty?
+            content = $stdin.read.strip
+          elsif args.any?
+            content = args.join(' ')
+          else
+            require 'tempfile'
+            tmpfile = Tempfile.new(['hq-', '.md'])
+
+            # Pre-fill with frontmatter template if task_info is available
+            if task_info
+              fm_lines = ["---"]
+              fm_lines << "task_name: #{task_info[:task_name]}" if task_info[:task_name]
+              fm_lines << "tree_name: #{task_info[:tree_name]}" if task_info[:tree_name]
+              fm_lines << "session_name: #{task_info[:session_name]}" if task_info[:session_name]
+              fm_lines << "---"
+              fm_lines << ""
+              tmpfile.write(fm_lines.join("\n"))
+            end
+
+            tmpfile.close
+            editor = ENV['EDITOR'] || 'vim'
+            system(editor, tmpfile.path)
+            content = File.read(tmpfile.path).strip
+            tmpfile.unlink
+            if content.empty?
+              puts "Aborted (empty file)"
+              next
+            end
+          end
+
+          result = q.add_with_frontmatter(content, task_info: task_info)
+          if result
+            puts "Created: #{result[:path]}"
+          else
+            puts "Could not generate a task name"
+          end
+        }
+
+        h.add_subcmd(:kill) { |name = nil|
+          running = q.tasks_in(:running)
+          if running.empty?
+            puts "No running tasks"
+            next
+          end
+
+          if name.nil?
+            name = running.size == 1 ? running.first : h.fuzzyfind(running)
+          end
+
+          next unless name
+
+          meta = q.meta_for(name, :running)
+          session = meta&.[]('tmux_session') || TMUX_SESSION
+          system('tmux', 'kill-window', '-t', "#{session}:#{name}")
+
+          dirs = q.queue_dirs
+          md = File.join(dirs[:running], "#{name}.md")
+          meta_path = File.join(dirs[:running], "#{name}.meta")
+          FileUtils.mv(md, File.join(dirs[:failed], "#{name}.md")) if File.exist?(md)
+          FileUtils.mv(meta_path, File.join(dirs[:failed], "#{name}.meta")) if File.exist?(meta_path)
+          puts "Killed: #{name}"
+        }
+
+        h.add_subcmd(:retry) { |name = nil|
+          retryable = q.tasks_in(:failed) + q.tasks_in(:done)
+          if retryable.empty?
+            puts "No failed/done tasks to retry"
+            next
+          end
+
+          if name.nil?
+            name = retryable.size == 1 ? retryable.first : h.fuzzyfind(retryable)
+          end
+
+          next unless name
+
+          found = q.find_task(name)
+          unless found && %w[failed done].include?(found[:status])
+            puts "Task '#{name}' is not in failed/done state"
+            next
+          end
+
+          dirs = q.queue_dirs
+          src_dir = dirs[found[:status].to_sym]
+          FileUtils.mv(File.join(src_dir, "#{name}.md"), File.join(dirs[:pending], "#{name}.md"))
+          meta_path = File.join(src_dir, "#{name}.meta")
+          FileUtils.rm_f(meta_path) if File.exist?(meta_path)
+          puts "Moved to pending: #{name}"
+        }
+
+        h.add_subcmd(:clean) {
+          dirs = q.queue_dirs
+          count = 0
+          %i[done failed].each do |status|
+            Dir.glob(File.join(dirs[status], '*')).each do |f|
+              FileUtils.rm_f(f)
+              count += 1
+            end
+          end
+          puts "Cleaned #{count} files"
+        }
+
+        h.add_subcmd(:dir) {
+          q.queue_dirs
+          puts DIR
+        }
+      end
+    end
+
     class Prompt
       def self.from_file(path, hiiro: nil)
         return unless File.exist?(path)

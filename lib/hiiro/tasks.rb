@@ -761,6 +761,20 @@ class Hiiro
             puts "Usage: h #{tm.scope} todo <ls|add|rm|start|done|skip|search> [args]"
           end
         end
+
+        h.add_subcmd(:queue) do |*queue_args|
+          task = tm.current_task
+          task_info = if task
+            {
+              task_name: task.subtask? ? task.parent_name : task.name,
+              tree_name: task.tree_name,
+              session_name: task.session_name
+            }
+          end
+
+          q = Hiiro::Queue.current(parent_hiiro)
+          Hiiro::Queue.build_hiiro(h, q, task_info: task_info).run
+        end
       end
 
       task_hiiro
