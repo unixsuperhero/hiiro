@@ -125,7 +125,7 @@ class Hiiro
         #!/usr/bin/env bash
 
         cd #{Shellwords.shellescape(working_dir)}
-        cat #{Shellwords.shellescape(prompt_file)} | claude -p
+        cat #{Shellwords.shellescape(prompt_file)} | claude
         HQ_EXIT=$?
 
         # Move task files to done/failed based on exit code
