@@ -549,12 +549,7 @@ class Hiiro
 
   module Tasks
     def self.build_hiiro(parent_hiiro, tm)
-      bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
-
-      task_hiiro = Hiiro.init(
-        bin_name:,
-        args: parent_hiiro.args,
-      ) do |h|
+      task_hiiro = parent_hiiro.make_child(parent_hiiro.subcmd || '', *parent_hiiro.args) do |h|
         h.add_subcmd(:list) { tm.list }
         h.add_subcmd(:ls) { tm.list }
 
