@@ -89,7 +89,6 @@ class Hiiro
       FileUtils.mv(md_file, running_md)
 
       prompt_obj = Prompt.from_file(running_md, hiiro: hiiro)
-      prompt_text = File.read(running_md).strip
 
       # Determine target tmux session and working directory from frontmatter
       target_session = TMUX_SESSION
@@ -115,7 +114,8 @@ class Hiiro
       end
 
       # Write a clean prompt file (no frontmatter) for claude
-      prompt_body = prompt_obj ? prompt_obj.doc.content.strip : prompt_text
+      raw = File.read(running_md).strip
+      prompt_body = prompt_obj ? prompt_obj.doc.content.strip : strip_frontmatter(raw)
       prompt_file = File.join(dirs[:running], "#{name}.prompt")
       File.write(prompt_file, prompt_body + "\n")
 
@@ -123,10 +123,9 @@ class Hiiro
       script_path = File.join(dirs[:running], "#{name}.sh")
       File.write(script_path, <<~SH)
         #!/usr/bin/env bash
-        set -e
 
         cd #{Shellwords.shellescape(working_dir)}
-        claude "run the prompt in the file @#{prompt_file}"
+        cat #{Shellwords.shellescape(prompt_file)} | claude -p
         HQ_EXIT=$?
 
         # Move task files to done/failed based on exit code
@@ -168,6 +167,14 @@ class Hiiro
       File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
 
       puts "Launched: #{name} [#{target_session}:#{win_name}]"
+    end
+
+    def strip_frontmatter(text)
+      lines = text.lines
+      return text unless lines.first&.strip == '---'
+      end_idx = lines[1..].index { |l| l.strip == '---' }
+      return text unless end_idx
+      lines[(end_idx + 2)..].join.strip
     end
 
     def short_window_name(name)
