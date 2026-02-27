@@ -366,15 +366,27 @@ class Hiiro
           end
 
           if name.nil?
-            name = running.size == 1 ? running.first : h.fuzzyfind(running)
+            name = h.fuzzyfind(running)
+          else
+            result = Matcher.by_prefix(running, name)
+            if result.one?
+              name = result.first.item
+            elsif result.ambiguous?
+              puts "Ambiguous match for '#{name}':"
+              result.matches.each { |m| puts "  #{m.item}" }
+              next
+            else
+              puts "No running task matching: #{name}"
+              next
+            end
           end
 
-          if name
-            meta = q.meta_for(name, :running)
-            session = meta&.[]('tmux_session') || TMUX_SESSION
-            win = meta&.[]('tmux_window') || name
-            exec('tmux', 'select-window', '-t', "#{session}:#{win}")
-          end
+          next unless name
+
+          meta = q.meta_for(name, :running)
+          session = meta&.[]('tmux_session') || TMUX_SESSION
+          win = meta&.[]('tmux_window') || name
+          system('tmux', 'switch-client', '-t', "#{session}:#{win}")
         }
 
         h.add_subcmd(:add) { |*args|
