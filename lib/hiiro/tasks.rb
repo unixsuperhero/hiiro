@@ -645,8 +645,7 @@ class Hiiro
 
           task_info = if task
             {
-              task_name: task.subtask? ? task.parent_name : task.name,
-              subtask_name: task.subtask? ? task.short_name : nil,
+              task_name: task.name,
               tree: task.tree_name,
               branch: task.branch,
               session: task.session_name
@@ -761,7 +760,7 @@ class Hiiro
           task = tm.current_task
           task_info = if task
             {
-              task_name: task.subtask? ? task.parent_name : task.name,
+              task_name: task.name,
               tree_name: task.tree_name,
               session_name: task.session_name
             }
