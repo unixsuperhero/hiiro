@@ -265,6 +265,7 @@ class PinnedPRManager
 
     # Refresh if last check was more than 2 minutes ago
     (Time.now - last_check_time) > 120
+  end
 
 
   def batch_fetch_pr_info(pr_numbers)
