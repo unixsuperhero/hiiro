@@ -133,4 +133,48 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       puts "Window not found"
     end
   }
+
+  add_subcmd(:vsplit) {
+    system('tmux', 'select-layout', 'even-horizontal')
+  }
+
+  add_subcmd(:hsplit) {
+    system('tmux', 'select-layout', 'even-vertical')
+  }
+
+  add_subcmd(:layout) { |q=nil|
+    layouts = {
+      mhorizontal: 'main-vertical',
+      main_horizontal: 'main-vertical',
+      ehorizontal: 'even-vertical',
+      horizontal: 'even-vertical',
+      even_horizontal: 'even-vertical',
+
+      even_vertical: 'even-horizontal',
+      evertical: 'even-horizontal',
+      vertical: 'even-horizontal',
+      main_vertical: 'main-horizontal',
+      mvertical: 'main-horizontal',
+      main_vertical_mirrored: 'main-horizontal-mirrored',
+      mmvertical: 'main-horizontal-mirrored',
+
+      tiled: 'tiled',
+    }
+
+    if q.nil?
+      layout = fuzzyfind(layouts)
+    end
+
+    if layouts.values.include?(q)
+      layout = q
+    end
+
+    if layout.nil?
+      begin
+        _, layout = Hiiro::Matcher.resolve(layouts, q) { |k,v| k }
+      end
+    end
+
+    system('tmux', 'select-layout', layout)
+  }
 end
