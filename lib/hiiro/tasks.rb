@@ -177,21 +177,15 @@ class Hiiro
 
       items.each do |task|
         marker = (current && current.name == task.name) ? "*" : " "
-        tree = environment.find_tree(task.tree_name)
-        branch = tree&.branch || (tree&.detached? ? '(detached)' : nil)
-        branch_str = branch ? "  [#{branch}]" : ""
-
-        display_name = scope == :subtask ? task.short_name : task.name
-        puts format("%s %-25s  tree: %-20s%s", marker, display_name, task.tree_name || '(none)', branch_str)
+        line = task.display_line(scope: scope, environment: environment)
+        puts "#{marker} #{line}"
 
         if scope == :task
           subs = subtasks(task)
           subs.each do |st|
             sub_marker = (current && current.name == st.name) ? "*" : " "
-            sub_tree = environment.find_tree(st.tree_name)
-            sub_branch = sub_tree&.branch || (sub_tree&.detached? ? '(detached)' : nil)
-            sub_branch_str = sub_branch ? "  [#{sub_branch}]" : ""
-            puts format("%s - %-23s  tree: %-20s%s", sub_marker, st.short_name, st.tree_name || '(none)', sub_branch_str)
+            sub_line = st.display_line(scope: :subtask, environment: environment)
+            puts "#{sub_marker} - #{sub_line}"
           end
         end
       end
@@ -361,15 +355,7 @@ class Hiiro
 
       mapping = task_list.each_with_object({}) do |task, h|
         display_name = scope == :subtask ? task.short_name : task.name
-        tree = environment.find_tree(task.tree_name)
-        branch = tree&.branch || (tree&.detached? ? '(detached)' : '(none)')
-        session = task.session_name || '(none)'
-
-        line = format("%-25s  tree: %-20s  branch: %-20s  session: %s",
-                     display_name,
-                     task.tree_name || '(none)',
-                     branch,
-                     session)
+        line = task.display_line(scope: scope, environment: environment)
         h[line] = display_name
       end
 
@@ -906,6 +892,19 @@ class Hiiro
       h[:tree] = tree_name if tree_name
       h[:session] = session_name if session_name != name
       h
+    end
+
+    def display_line(scope: :task, environment:)
+      display_name = (scope == :subtask) ? short_name : name
+      tree = environment.find_tree(tree_name)
+      branch = tree&.branch || (tree&.detached? ? '(detached)' : '(none)')
+      session = session_name || '(none)'
+
+      format("%-25s  tree: %-20s  branch: %-20s  session: %s",
+             display_name,
+             tree_name || '(none)',
+             branch,
+             session)
     end
   end
 
