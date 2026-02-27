@@ -72,12 +72,33 @@ class Hiiro
       running_md = File.join(dirs[:running], "#{name}.md")
       FileUtils.mv(md_file, running_md)
 
-      prompt = File.read(running_md).strip
+      prompt_obj = Prompt.from_file(running_md, hiiro: hiiro)
+      prompt_text = File.read(running_md).strip
 
-      ensure_tmux_session
+      # Determine target tmux session and working directory from frontmatter
+      target_session = TMUX_SESSION
+      working_dir = Dir.pwd
+
+      if prompt_obj
+        if prompt_obj.task
+          target_session = prompt_obj.task.session_name
+          tree = prompt_obj.task.tree
+          working_dir = tree.path if tree
+        elsif prompt_obj.session
+          target_session = prompt_obj.session.name
+        end
+
+        if prompt_obj.tree
+          working_dir = prompt_obj.tree.path
+        end
+      end
+
+      # Ensure the target session exists
+      unless system('tmux', 'has-session', '-t', target_session, out: File::NULL, err: File::NULL)
+        system('tmux', 'new-session', '-d', '-s', target_session, '-c', working_dir)
+      end
 
       # Build the cleanup script that runs after claude exits
-      # Capture claude's exit code in $HQ_EXIT, then use it in the ruby cleanup
       cleanup_ruby = [
         'ruby', '-e',
         'require "fileutils"; ' \
@@ -91,20 +112,25 @@ class Hiiro
       ].shelljoin
 
       # Run claude interactively in tmux window, then cleanup on exit
-      shell_cmd = "claude #{Shellwords.shellescape(prompt)}; HQ_EXIT=$?; #{cleanup_ruby}; exec #{ENV['SHELL'] || 'zsh'}"
+      shell_cmd = "cd #{Shellwords.shellescape(working_dir)} && claude #{Shellwords.shellescape(prompt_text)}; HQ_EXIT=$?; #{cleanup_ruby}; exec #{ENV['SHELL'] || 'zsh'}"
 
-      system('tmux', 'new-window', '-t', TMUX_SESSION, '-n', name, shell_cmd)
+      system('tmux', 'new-window', '-t', target_session, '-n', name, '-c', working_dir, shell_cmd)
 
       # Write meta sidecar
       meta = {
-        'tmux_session' => TMUX_SESSION,
+        'tmux_session' => target_session,
         'tmux_window' => name,
         'started_at' => Time.now.iso8601,
-        'working_dir' => Dir.pwd,
+        'working_dir' => working_dir,
       }
+      if prompt_obj
+        meta['task_name'] = prompt_obj.task_name if prompt_obj.task_name
+        meta['tree_name'] = prompt_obj.tree_name if prompt_obj.tree_name
+        meta['session_name'] = prompt_obj.session_name if prompt_obj.session_name
+      end
       File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
 
-      puts "Launched: #{name}"
+      puts "Launched: #{name} [#{target_session}]"
     end
 
     def slugify(text)
@@ -134,23 +160,17 @@ class Hiiro
 
       def task
         return nil unless task_name
-
-        # USE hiiro.environment.task_match with task_name to get an instance of
-        # Task
+        hiiro&.environment&.find_task(task_name)
       end
 
       def session
         return nil unless session_name
-
-        # USE hiiro.environment.task_match with session_name to get an instance of
-        # TmuxSession
+        hiiro&.environment&.find_session(session_name)
       end
 
       def tree
         return nil unless tree_name
-
-        # USE hiiro.environment.task_match with tree_name to get an instance of
-        # Tree
+        hiiro&.environment&.find_tree(tree_name)
       end
     end
   end

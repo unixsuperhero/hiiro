@@ -416,7 +416,7 @@ class PinnedPRManager
   end
 end
 
-Hiiro.run(*ARGV, plugins: [Tasks, Tmux, Pins]) do
+Hiiro.run(*ARGV, plugins: [Pins]) do
   manager = PRManager.new(self)
   pinned_manager = PinnedPRManager.new
 

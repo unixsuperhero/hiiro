@@ -43,7 +43,7 @@ def send_cd(path)
   end
 end
 
-Hiiro.run(*ARGV, plugins: [:Tasks]) {
+Hiiro.run(*ARGV) {
   add_subcmd(:config) {
     editor = ENV['EDITOR'] || 'nvim'
     system(editor, APPS_FILE)

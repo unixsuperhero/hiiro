@@ -4,7 +4,7 @@ require 'hiiro'
 require 'tempfile'
 require 'yaml'
 
-Hiiro.run(*ARGV, plugins: [Pins, Tasks]) do
+Hiiro.run(*ARGV, plugins: [Pins]) do
   tmux = tmux_client
 
   add_subcmd(:ls, :list) { |*args|

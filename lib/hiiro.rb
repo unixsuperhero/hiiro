@@ -11,6 +11,7 @@ require_relative "hiiro/notification"
 require_relative "hiiro/fuzzyfind"
 require_relative "hiiro/todo"
 require_relative "hiiro/tmux"
+require_relative "hiiro/tasks"
 require_relative "hiiro/queue"
 
 class String
@@ -30,7 +31,7 @@ class Hiiro
   WORK_DIR = File.join(Dir.home, 'work')
   REPO_PATH = File.join(WORK_DIR, '.bare')
 
-  def self.init(*oargs, plugins: [], logging: false, **values, &block)
+  def self.init(*oargs, plugins: [], logging: false, tasks: false, task_scope: nil, **values, &block)
     load_env
 
     if values[:args]
@@ -42,7 +43,7 @@ class Hiiro
 
     bin_name = values[:bin_name] || $0
 
-    new(bin_name, *args, logging: logging, **values).tap do |hiiro|
+    new(bin_name, *args, logging: logging, tasks: tasks, task_scope: task_scope, **values).tap do |hiiro|
       hiiro.load_plugins(plugins)
 
       hiiro.add_subcommand(:pry) { |*args|
@@ -52,6 +53,18 @@ class Hiiro
       hiiro.add_subcmd(:edit, **values) { |*args|
         system(ENV['EDITOR'] || 'nvim', hiiro.bin)
       }
+
+      if hiiro.tasks_enabled?
+        hiiro.add_subcmd(:task) do |*args|
+          tm = TaskManager.new(hiiro, scope: :task)
+          Tasks.build_hiiro(hiiro, tm).run
+        end
+
+        hiiro.add_subcmd(:subtask) do |*args|
+          tm = TaskManager.new(hiiro, scope: :subtask)
+          Tasks.build_hiiro(hiiro, tm).run
+        end
+      end
 
       if block
         if block.arity == 1
@@ -63,8 +76,8 @@ class Hiiro
     end
   end
 
-  def self.run(*args, plugins: [], logging: false, **values, &block)
-    hiiro = init(*args, plugins:,logging:,**values, &block)
+  def self.run(*args, plugins: [], logging: false, tasks: false, task_scope: nil, **values, &block)
+    hiiro = init(*args, plugins:, logging:, tasks:, task_scope:, **values, &block)
 
     hiiro.run
   end
@@ -82,19 +95,41 @@ class Hiiro
   attr_reader :loaded_plugins
   attr_reader :logging
   attr_reader :global_values
+  attr_reader :task_scope
 
-  def initialize(bin, *all_args, logging: false, **values)
+  def initialize(bin, *all_args, logging: false, tasks: false, task_scope: nil, **values)
     @bin = bin
     @bin_name = File.basename(bin)
     @all_args = all_args
     @subcmd, *@args = all_args # normally i would never do this
     @loaded_plugins = []
     @logging = logging
+    @tasks_enabled = tasks
+    @task_scope = task_scope
     @global_values = values
     @full_command = [
       bin_name,
       *all_args,
     ].map(&:shellescape).join(' ')
+  end
+
+  def tasks_enabled?
+    @tasks_enabled
+  end
+
+  def environment
+    @environment ||= Environment.current
+  end
+  alias env environment
+
+  def task_manager
+    return nil unless tasks_enabled?
+    @task_manager ||= TaskManager.new(self, scope: task_scope || :task)
+  end
+  alias tm task_manager
+
+  def tasks
+    task_manager&.tasks
   end
 
   def tmux_client

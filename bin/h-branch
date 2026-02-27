@@ -116,7 +116,7 @@ class BranchManager
   end
 end
 
-Hiiro.run(*ARGV, plugins: [Tasks]) do
+Hiiro.run(*ARGV) do
   manager = BranchManager.new(self)
 
   add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
