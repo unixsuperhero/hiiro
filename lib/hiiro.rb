@@ -11,6 +11,7 @@ require_relative "hiiro/notification"
 require_relative "hiiro/fuzzyfind"
 require_relative "hiiro/todo"
 require_relative "hiiro/tmux"
+require_relative "hiiro/queue"
 
 class String
   def underscore(camel_cased_word=self)
@@ -109,6 +110,10 @@ class Hiiro
 
   def todo_manager
     @todo_manager ||= TodoManager.new
+  end
+
+  def queue
+    @queue ||= Queue.current
   end
 
   def run
