@@ -177,7 +177,7 @@ class Hiiro
       return nil unless task
 
       {
-        task_name: task.subtask? ? task.parent_name : task.name,
+        task_name: task.name,
         tree_name: task.tree_name,
         session_name: task.session_name,
       }
