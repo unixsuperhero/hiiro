@@ -3,6 +3,7 @@ require 'fileutils'
 require 'shellwords'
 require 'time'
 require 'front_matter_parser'
+require 'tempfile'
 
 class Hiiro
   class Queue
@@ -236,7 +237,10 @@ class Hiiro
       end
 
       name = slugify(content.lines.reject { |l| l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip)
-      return nil if name.empty?
+      binding.pry
+      if name.empty?
+        name = Time.now.strftime("%Y%m%d%H%M%S") + '-' + task_info[:task_name]
+      end
 
       base_name = name
       counter = 1
@@ -394,14 +398,13 @@ class Hiiro
           args, flag_task = q.extract_task_flag(args)
           ti = flag_task ? q.task_info_for(flag_task) : task_info
 
+          tmpfile = Tempfile.new(['hq-', '.md'])
+          prompt_file = tmpfile.path
           if args.empty? && !$stdin.tty?
             content = $stdin.read.strip
           elsif args.any?
             content = args.join(' ')
           else
-            require 'tempfile'
-            tmpfile = Tempfile.new(['hq-', '.md'])
-
             # Pre-fill with frontmatter template if task_info is available
             if ti
               fm_lines = ["---"]
