@@ -549,7 +549,7 @@ class Hiiro
 
   module Tasks
     def self.build_hiiro(parent_hiiro, tm)
-      task_hiiro = parent_hiiro.make_child(parent_hiiro.subcmd || '', *parent_hiiro.args) do |h|
+      task_hiiro = parent_hiiro.make_child do |h|
         h.add_subcmd(:list) { tm.list }
         h.add_subcmd(:ls) { tm.list }
 

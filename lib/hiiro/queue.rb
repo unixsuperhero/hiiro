@@ -169,7 +169,7 @@ class Hiiro
     def self.build_hiiro(parent_hiiro, q=nil, task_info: nil)
       q ||= current(parent_hiiro)
 
-      parent_hiiro.make_child(parent_hiiro.subcmd || '', *parent_hiiro.args) do |h|
+      parent_hiiro.make_child do |h|
         h.add_subcmd(:watch) {
           q.queue_dirs
           puts "Watching #{File.join(DIR, 'pending')} ..."

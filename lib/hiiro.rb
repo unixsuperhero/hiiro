@@ -140,10 +140,13 @@ class Hiiro
     tmux_client.open_session(name)
   end
 
-  def make_child(subcmd, *args, **kwargs, &block)
-    bin_name = [bin, subcmd.to_s].join(?-)
+  def make_child(custom_subcmd=nil, custom_args=nil, **kwargs, &block)
+    child_subcmd = custom_subcmd || subcmd
+    child_args = custom_args || args
 
-    Hiiro.init(bin_name:, args:, **kwargs, &block)
+    child_bin_name = [bin, child_subcmd.to_s].join(?-)
+
+    Hiiro.init(bin_name: child_bin_name, args: child_args, **kwargs, &block)
   end
 
   def todo_manager
