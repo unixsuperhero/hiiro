@@ -231,6 +231,7 @@ class Hiiro
       q ||= current(parent_hiiro)
 
       parent_hiiro.make_child do |h|
+        binding.pry
         h.add_subcmd(:watch) {
           q.queue_dirs
           puts "Watching #{File.join(DIR, 'pending')} ..."
