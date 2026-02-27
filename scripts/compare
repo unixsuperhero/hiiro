@@ -8,7 +8,7 @@ diff_dirs() {
 
 # s@Only in \(bin|plugins\): \(.*\)@cp -v \1/\2 $HOME/\1/@;
 
-diff_dirs | sed -E "s@Only in @@;s@: @/@;s@^(/.*(bin|plugins).*)@cp -v \\1 \\2/@;s@^(bin.*)@cp -v \\1 $HOME/bin/@;s@^(plugins.*)@cp -v \\1 $HOME/.config/hiiro/plugins/@;s@Files (.*) and (.*) differ@vim -d \\1 \\2@" | egrep 'cp -'
+diff_dirs | sed -E "s@Only in @@;s@: @/@;s@^(/.*(bin|plugins).*)@cp -v \\1 \\2/@;s@^(bin.*)@cp -v \\1 $HOME/bin/@;s@^(plugins.*)@cp -v \\1 $HOME/.config/hiiro/plugins/@;s@Files (.*) and (.*) differ@safe_nvim -d \\1 \\2@" | egrep 'cp -'
 
-diff_dirs | sed -E "s@Only in @@;s@: @/@;s@^(/.*(bin|plugins).*)@cp -v \\1 \\2/@;s@^(bin.*)@cp -v \\1 $HOME/bin/@;s@^(plugins.*)@cp -v \\1 $HOME/.config/hiiro/plugins/@;s@Files (.*) and (.*) differ@vim -d \\1 \\2@" | egrep -v 'cp -'
+diff_dirs | sed -E "s@Only in @@;s@: @/@;s@^(/.*(bin|plugins).*)@cp -v \\1 \\2/@;s@^(bin.*)@cp -v \\1 $HOME/bin/@;s@^(plugins.*)@cp -v \\1 $HOME/.config/hiiro/plugins/@;s@Files (.*) and (.*) differ@safe_nvim -d \\1 \\2@" | egrep -v 'cp -'
 

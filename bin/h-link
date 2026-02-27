@@ -7,6 +7,10 @@ require 'pry'
 require 'tempfile'
 require "hiiro"
 
+opts = Hiiro::Options.setup {
+  option(:shorthand, short: :s)
+}
+
 class LinkManager
   LINKS_FILE = File.join(Dir.home, '.config/hiiro/links.yml')
   LINK_TEMPLATE = {
@@ -215,10 +219,12 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
     url = add_args.shift
     description = add_args.join(' ')
 
+    vals = opts.parse!(add_args)
+
     new_link = LinkManager::Link.new(
       url: url,
       description: description,
-      shorthand: nil,
+      shorthand: vals.shorthand,
       created_at: Time.now.iso8601
     )
 

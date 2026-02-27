@@ -3,6 +3,20 @@
 require "hiiro"
 require "fileutils"
 
+def update_hiiro
+  if `gem list hiiro`.strip.empty?
+    system('gem', 'install', 'hiiro')
+  else
+    system('gem', 'update', 'hiiro')
+  end
+
+  system('h', 'setup')
+end
+
+def rbenv_versions
+  versions = `rbenv versions --bare`.lines(chomp: true)
+end
+
 Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
   add_subcmd(:version) { |*args|
     puts Hiiro::VERSION
@@ -10,6 +24,21 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
 
   add_subcmd(:ping) { |*args|
     puts "pong"
+  }
+
+  add_subcmd(:install) { |*args|
+    opts = Hiiro::Options.setup {
+      flag(:all, short: :a)
+    }.parse!(ARGV)
+
+    if opts.all
+      rbenv_versions.each do |ver|
+        ENV['RBENV_VERSION'] = ver
+        update_hiiro
+      end
+    else
+      update_hiiro
+    end
   }
 
   add_subcmd(:setup) do |*args|
