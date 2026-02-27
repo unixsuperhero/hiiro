@@ -169,6 +169,29 @@ class Hiiro
       puts "Launched: #{name} [#{target_session}:#{win_name}]"
     end
 
+    def task_info_for(task_name)
+      env = Environment.current rescue nil
+      return nil unless env
+
+      task = env.find_task(task_name)
+      return nil unless task
+
+      {
+        task_name: task.subtask? ? task.parent_name : task.name,
+        tree_name: task.tree_name,
+        session_name: task.session_name,
+      }
+    end
+
+    def extract_task_flag(args)
+      idx = args.index('-t')
+      return [args, nil] unless idx
+
+      task_name = args[idx + 1]
+      remaining = args[0...idx] + args[(idx + 2)..]
+      [remaining, task_name]
+    end
+
     def strip_frontmatter(text)
       lines = text.lines
       return text unless lines.first&.strip == '---'
@@ -231,7 +254,6 @@ class Hiiro
       q ||= current(parent_hiiro)
 
       parent_hiiro.make_child do |h|
-        binding.pry
         h.add_subcmd(:watch) {
           q.queue_dirs
           puts "Watching #{File.join(DIR, 'pending')} ..."
@@ -357,6 +379,8 @@ class Hiiro
 
         h.add_subcmd(:add) { |*args|
           q.queue_dirs
+          args, flag_task = q.extract_task_flag(args)
+          ti = flag_task ? q.task_info_for(flag_task) : task_info
 
           if args.empty? && !$stdin.tty?
             content = $stdin.read.strip
@@ -367,11 +391,11 @@ class Hiiro
             tmpfile = Tempfile.new(['hq-', '.md'])
 
             # Pre-fill with frontmatter template if task_info is available
-            if task_info
+            if ti
               fm_lines = ["---"]
-              fm_lines << "task_name: #{task_info[:task_name]}" if task_info[:task_name]
-              fm_lines << "tree_name: #{task_info[:tree_name]}" if task_info[:tree_name]
-              fm_lines << "session_name: #{task_info[:session_name]}" if task_info[:session_name]
+              fm_lines << "task_name: #{ti[:task_name]}" if ti[:task_name]
+              fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
+              fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
               fm_lines << "---"
               fm_lines << ""
               tmpfile.write(fm_lines.join("\n"))
@@ -388,7 +412,7 @@ class Hiiro
             end
           end
 
-          result = q.add_with_frontmatter(content, task_info: task_info)
+          result = q.add_with_frontmatter(content, task_info: ti)
           if result
             puts "Created: #{result[:path]}"
           else
@@ -396,9 +420,12 @@ class Hiiro
           end
         }
 
-        h.add_subcmd(:wip) { |name = nil|
+        h.add_subcmd(:wip) { |*args|
           q.queue_dirs
           editor = ENV['EDITOR'] || 'vim'
+          args, flag_task = q.extract_task_flag(args)
+          ti = flag_task ? q.task_info_for(flag_task) : task_info
+          name = args.first
 
           if name.nil?
             existing = q.tasks_in(:wip)
@@ -416,11 +443,11 @@ class Hiiro
 
           unless File.exist?(path)
             # Pre-fill with frontmatter if task_info available
-            if task_info
+            if ti
               fm_lines = ["---"]
-              fm_lines << "task_name: #{task_info[:task_name]}" if task_info[:task_name]
-              fm_lines << "tree_name: #{task_info[:tree_name]}" if task_info[:tree_name]
-              fm_lines << "session_name: #{task_info[:session_name]}" if task_info[:session_name]
+              fm_lines << "task_name: #{ti[:task_name]}" if ti[:task_name]
+              fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
+              fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
               fm_lines << "---"
               fm_lines << ""
               File.write(path, fm_lines.join("\n"))
