@@ -237,7 +237,7 @@ class Hiiro
       end
 
       name = slugify(content.lines.drop_while { |l| l.strip.empty? || l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip)
-      binding.pry
+
       if name.empty?
         name = Time.now.strftime("%Y%m%d%H%M%S") + '-' + task_info[:task_name]
       end
