@@ -114,12 +114,13 @@ class Hiiro
       # Run claude interactively in tmux window, then cleanup on exit
       shell_cmd = "cd #{Shellwords.shellescape(working_dir)} && claude #{Shellwords.shellescape(prompt_text)}; HQ_EXIT=$?; #{cleanup_ruby}; exec #{ENV['SHELL'] || 'zsh'}"
 
-      system('tmux', 'new-window', '-t', target_session, '-n', name, '-c', working_dir, shell_cmd)
+      win_name = short_window_name(name)
+      system('tmux', 'new-window', '-d', '-t', target_session, '-n', win_name, '-c', working_dir, shell_cmd)
 
       # Write meta sidecar
       meta = {
         'tmux_session' => target_session,
-        'tmux_window' => name,
+        'tmux_window' => win_name,
         'started_at' => Time.now.iso8601,
         'working_dir' => working_dir,
       }
@@ -130,7 +131,24 @@ class Hiiro
       end
       File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
 
-      puts "Launched: #{name} [#{target_session}]"
+      puts "Launched: #{name} [#{target_session}:#{win_name}]"
+    end
+
+    def short_window_name(name)
+      base = name[0, 8]
+      return base unless existing_window_name?(base)
+
+      # append digits to make unique
+      (2..99).each do |i|
+        candidate = "#{base[0, 7]}#{i}"
+        return candidate unless existing_window_name?(candidate)
+      end
+      base
+    end
+
+    def existing_window_name?(wname)
+      windows = `tmux list-windows -a -F '#\{window_name\}' 2>/dev/null`.lines(chomp: true)
+      windows.include?(wname)
     end
 
     def slugify(text)
@@ -262,7 +280,8 @@ class Hiiro
           if name
             meta = q.meta_for(name, :running)
             session = meta&.[]('tmux_session') || TMUX_SESSION
-            exec('tmux', 'select-window', '-t', "#{session}:#{name}")
+            win = meta&.[]('tmux_window') || name
+            exec('tmux', 'select-window', '-t', "#{session}:#{win}")
           end
         }
 
@@ -322,7 +341,8 @@ class Hiiro
 
           meta = q.meta_for(name, :running)
           session = meta&.[]('tmux_session') || TMUX_SESSION
-          system('tmux', 'kill-window', '-t', "#{session}:#{name}")
+          win = meta&.[]('tmux_window') || name
+          system('tmux', 'kill-window', '-t', "#{session}:#{win}")
 
           dirs = q.queue_dirs
           md = File.join(dirs[:running], "#{name}.md")

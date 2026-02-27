@@ -3,7 +3,7 @@
 require "hiiro"
 require "fileutils"
 
-Hiiro.run(*ARGV, cwd: Dir.pwd) do
+Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
   add_subcmd(:version) { |*args|
     puts Hiiro::VERSION
   }
