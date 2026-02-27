@@ -114,32 +114,44 @@ class Hiiro
         system('tmux', 'new-session', '-d', '-s', target_session, '-c', working_dir)
       end
 
-      # Build the cleanup script that runs after claude exits
-      cleanup_ruby = [
-        'ruby', '-e',
-        'require "fileutils"; ' \
-        "name=#{name.inspect}; qdir=#{DIR.inspect}; " \
-        'exit_code = ENV["HQ_EXIT"].to_i; ' \
-        'src=File.join(qdir,"running",name+".md"); ' \
-        'dst_dir = exit_code == 0 ? "done" : "failed"; ' \
-        'FileUtils.mv(src, File.join(qdir, dst_dir, name+".md")) if File.exist?(src); ' \
-        'meta=File.join(qdir,"running",name+".meta"); ' \
-        'FileUtils.mv(meta, File.join(qdir, dst_dir, name+".meta")) if File.exist?(meta); ' \
-        'prompt=File.join(qdir,"running",name+".prompt"); ' \
-        'FileUtils.rm_f(prompt) if File.exist?(prompt)'
-      ].shelljoin
-
       # Write a clean prompt file (no frontmatter) for claude
       prompt_body = prompt_obj ? prompt_obj.doc.content.strip : prompt_text
       prompt_file = File.join(dirs[:running], "#{name}.prompt")
       File.write(prompt_file, prompt_body + "\n")
 
-      # Run claude interactively in tmux window, then cleanup on exit
-      escaped_prompt = Shellwords.shellescape("run the prompt in the file @#{prompt_file}")
-      shell_cmd = "cd #{Shellwords.shellescape(working_dir)} && claude #{escaped_prompt}; HQ_EXIT=$?; #{cleanup_ruby}; exec #{ENV['SHELL'] || 'zsh'}"
+      # Write a launcher script
+      script_path = File.join(dirs[:running], "#{name}.sh")
+      File.write(script_path, <<~SH)
+        #!/usr/bin/env bash
+        set -e
+
+        cd #{Shellwords.shellescape(working_dir)}
+        claude "run the prompt in the file @#{prompt_file}"
+        HQ_EXIT=$?
+
+        # Move task files to done/failed based on exit code
+        ruby -e '
+          require "fileutils"
+          name = #{name.inspect}
+          qdir = #{DIR.inspect}
+          exit_code = ENV["HQ_EXIT"].to_i
+          dst_dir = exit_code == 0 ? "done" : "failed"
+          %w[.md .meta .prompt .sh].each do |ext|
+            src = File.join(qdir, "running", name + ext)
+            if ext == ".prompt" || ext == ".sh"
+              FileUtils.rm_f(src)
+            elsif File.exist?(src)
+              FileUtils.mv(src, File.join(qdir, dst_dir, name + ext))
+            end
+          end
+        '
+
+        exec #{Shellwords.shellescape(ENV['SHELL'] || 'zsh')}
+      SH
+      FileUtils.chmod(0755, script_path)
 
       win_name = short_window_name(name)
-      system('tmux', 'new-window', '-d', '-t', target_session, '-n', win_name, '-c', working_dir, shell_cmd)
+      system('tmux', 'new-window', '-d', '-t', target_session, '-n', win_name, '-c', working_dir, script_path)
 
       # Write meta sidecar
       meta = {
