@@ -4,7 +4,7 @@ require 'hiiro'
 require 'tempfile'
 require 'yaml'
 
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
   tmux = tmux_client
 
   add_subcmd(:ls, :list) { |*args|
@@ -130,7 +130,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:orphans) do
-    env = Environment.current
     task_session_names = env.all_tasks.map(&:session_name)
     orphans = env.all_sessions.reject { |s| task_session_names.include?(s.name) }
 
@@ -144,7 +143,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:okill) do
-    env = Environment.current
     task_session_names = env.all_tasks.map(&:session_name)
     orphans = env.all_sessions.reject { |s| task_session_names.include?(s.name) }
 
