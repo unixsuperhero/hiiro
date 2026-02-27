@@ -326,6 +326,65 @@ class Hiiro
           end
         }
 
+        h.add_subcmd(:wip) { |name = nil|
+          q.queue_dirs
+          editor = ENV['EDITOR'] || 'vim'
+
+          if name.nil?
+            existing = q.tasks_in(:wip)
+            if existing.any?
+              name = h.fuzzyfind(existing)
+              next unless name
+            else
+              puts "No wip tasks. Provide a name to create one."
+              next
+            end
+          end
+
+          name = name.sub(/\.md$/, '')
+          path = File.join(q.queue_dirs[:wip], "#{name}.md")
+
+          unless File.exist?(path)
+            # Pre-fill with frontmatter if task_info available
+            if task_info
+              fm_lines = ["---"]
+              fm_lines << "task_name: #{task_info[:task_name]}" if task_info[:task_name]
+              fm_lines << "tree_name: #{task_info[:tree_name]}" if task_info[:tree_name]
+              fm_lines << "session_name: #{task_info[:session_name]}" if task_info[:session_name]
+              fm_lines << "---"
+              fm_lines << ""
+              File.write(path, fm_lines.join("\n"))
+            end
+          end
+
+          system(editor, path)
+        }
+
+        h.add_subcmd(:ready) { |name = nil|
+          wip = q.tasks_in(:wip)
+          if wip.empty?
+            puts "No wip tasks"
+            next
+          end
+
+          if name.nil?
+            name = wip.size == 1 ? wip.first : h.fuzzyfind(wip)
+          end
+
+          next unless name
+
+          name = name.sub(/\.md$/, '')
+          src = File.join(q.queue_dirs[:wip], "#{name}.md")
+          unless File.exist?(src)
+            puts "Wip task not found: #{name}"
+            next
+          end
+
+          dst = File.join(q.queue_dirs[:pending], "#{name}.md")
+          FileUtils.mv(src, dst)
+          puts "Moved to pending: #{name}"
+        }
+
         h.add_subcmd(:kill) { |name = nil|
           running = q.tasks_in(:running)
           if running.empty?
