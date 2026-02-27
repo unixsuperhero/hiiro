@@ -2,6 +2,7 @@ require 'yaml'
 require 'fileutils'
 require 'shellwords'
 require 'time'
+require 'front_matter_parser'
 
 class Hiiro
   class Queue
@@ -9,8 +10,20 @@ class Hiiro
     TMUX_SESSION = 'hq'
     STATUSES = %w[wip pending running done failed].freeze
 
-    def self.current
-      @current ||= new
+    def self.current(hiiro=nil)
+      @current ||= new(hiiro)
+    end
+
+    attr_reader :hiiro
+
+    def initialize(hiiro=nil)
+      @hiiro = hiiro
+    end
+
+    def read_prompt(filepath)
+      return false unless File.exist?(filepath)
+
+      Prompt.from_file(filepath)
     end
 
     def queue_dirs
@@ -96,6 +109,49 @@ class Hiiro
 
     def slugify(text)
       text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')[0, 60]
+    end
+
+    class Prompt
+      def self.from_file(path, hiiro: nil)
+        return unless File.exist?(path)
+
+        new(FrontMatterParser::Parser.parse_file(path), hiiro:)
+      end
+
+      attr_reader :hiiro, :doc, :frontmatter, :prompt
+      attr_reader :task_name, :tree_name, :session_name
+
+      def initialize(doc, hiiro: nil)
+        @hiiro = hiiro
+        @doc = doc
+        @frontmatter = doc.front_matter
+        @prompt = prompt
+
+        @task_name = doc.front_matter['task_name']
+        @tree_name = doc.front_matter['tree_name']
+        @session_name = doc.front_matter['session_name']
+      end
+
+      def task
+        return nil unless task_name
+
+        # USE hiiro.environment.task_match with task_name to get an instance of
+        # Task
+      end
+
+      def session
+        return nil unless session_name
+
+        # USE hiiro.environment.task_match with session_name to get an instance of
+        # TmuxSession
+      end
+
+      def tree
+        return nil unless tree_name
+
+        # USE hiiro.environment.task_match with tree_name to get an instance of
+        # Tree
+      end
     end
   end
 end

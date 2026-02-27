@@ -1,9 +1,6 @@
 require 'yaml'
 require 'fileutils'
 
-WORK_DIR = File.join(Dir.home, 'work')
-REPO_PATH = File.join(WORK_DIR, '.bare')
-
 class TmuxSession
   attr_reader :name
 
@@ -35,12 +32,12 @@ end
 class Tree
   attr_reader :path, :head, :branch
 
-  def self.all(repo_path: REPO_PATH)
+  def self.all(repo_path: Hiiro::REPO_PATH)
     git = Hiiro::Git.new(nil, repo_path)
-    git.worktrees(repo_path: repo_path).map do |wt|
+    git.worktrees(repo_path: repo_path).filter_map do |wt|
       next if wt.bare?
       new(path: wt.path, head: wt.head, branch: wt.branch)
-    end.compact
+    end
   end
 
   def initialize(path:, head: nil, branch: nil)
@@ -50,8 +47,8 @@ class Tree
   end
 
   def name
-    @name ||= if path.start_with?(WORK_DIR + '/')
-      path.sub(WORK_DIR + '/', '')
+    @name ||= if path.start_with?(Hiiro::WORK_DIR + '/')
+      path.sub(Hiiro::WORK_DIR + '/', '')
     else
       File.basename(path)
     end
@@ -322,21 +319,21 @@ class TaskManager
     task_name = scope == :subtask ? "#{current_parent_task.name}/#{name}" : name
     subtree_name = scope == :subtask ? "#{current_parent_task.name}/#{name}" : "#{name}/main"
 
-    target_path = File.join(WORK_DIR, subtree_name)
+    target_path = File.join(Hiiro::WORK_DIR, subtree_name)
 
-    git = Hiiro::Git.new(nil, REPO_PATH)
+    git = Hiiro::Git.new(nil, Hiiro::REPO_PATH)
     available = find_available_tree
     if available
       puts "Renaming worktree '#{available.name}' to '#{subtree_name}'..."
       FileUtils.mkdir_p(File.dirname(target_path))
-      unless git.move_worktree(available.path, target_path, repo_path: REPO_PATH)
+      unless git.move_worktree(available.path, target_path, repo_path: Hiiro::REPO_PATH)
         puts "ERROR: Failed to rename worktree"
         return
       end
     else
       puts "Creating new worktree '#{subtree_name}'..."
       FileUtils.mkdir_p(File.dirname(target_path))
-      unless git.add_worktree_detached(target_path, repo_path: REPO_PATH)
+      unless git.add_worktree_detached(target_path, repo_path: Hiiro::REPO_PATH)
         puts "ERROR: Failed to create worktree"
         return
       end
@@ -365,7 +362,7 @@ class TaskManager
     end
 
     tree = environment.find_tree(task.tree_name)
-    tree_path = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
+    tree_path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
 
     session_name = task.session_name
     session_exists = system('tmux', 'has-session', '-t', session_name, err: File::NULL)
@@ -545,7 +542,7 @@ class TaskManager
     end
 
     tree = environment.find_tree(task.tree_name)
-    path = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
+    path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
     send_cd(path)
   end
 
@@ -558,7 +555,7 @@ class TaskManager
 
     if app_name.nil? || app_name.empty?
       tree = environment.find_tree(task.tree_name)
-      send_cd(tree&.path || File.join(WORK_DIR, task.tree_name))
+      send_cd(tree&.path || File.join(Hiiro::WORK_DIR, task.tree_name))
       return
     end
 
@@ -573,7 +570,7 @@ class TaskManager
     task = current_task
     tree_root = if task
       tree = environment.find_tree(task.tree_name)
-      tree&.path || File.join(WORK_DIR, task.tree_name)
+      tree&.path || File.join(Hiiro::WORK_DIR, task.tree_name)
     else
       Hiiro::Git.new(nil, Dir.pwd).root
     end
@@ -686,7 +683,7 @@ class TaskManager
 
   def resolve_app(app_name, task)
     tree = environment.find_tree(task.tree_name)
-    tree_root = tree ? tree.path : File.join(WORK_DIR, task.tree_name)
+    tree_root = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
 
     result = environment.app_matcher.find_all(app_name)
 

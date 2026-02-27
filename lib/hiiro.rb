@@ -27,6 +27,9 @@ class String
 end
 
 class Hiiro
+  WORK_DIR = File.join(Dir.home, 'work')
+  REPO_PATH = File.join(WORK_DIR, '.bare')
+
   def self.init(*oargs, plugins: [], logging: false, **values, &block)
     load_env
 
@@ -40,7 +43,7 @@ class Hiiro
     bin_name = values[:bin_name] || $0
 
     new(bin_name, *args, logging: logging, **values).tap do |hiiro|
-      hiiro.load_plugins(*plugins)
+      hiiro.load_plugins(plugins)
 
       hiiro.add_subcommand(:pry) { |*args|
         binding.pry
