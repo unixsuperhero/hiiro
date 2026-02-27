@@ -1,0 +1,313 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'yaml'
+require 'fileutils'
+require 'shellwords'
+require 'time'
+
+QUEUE_DIR = File.join(Dir.home, '.config/hiiro/queue')
+TMUX_SESSION = 'hq'
+STATUSES = %w[pending running done failed].freeze
+
+module QueueHelpers
+  def queue_dirs
+    STATUSES.each_with_object({}) do |name, h|
+      dir = File.join(QUEUE_DIR, name)
+      FileUtils.mkdir_p(dir)
+      h[name.to_sym] = dir
+    end
+  end
+
+  def tasks_in(status)
+    dir = queue_dirs[status]
+    Dir.glob(File.join(dir, '*.md')).sort.map { |f| File.basename(f, '.md') }
+  end
+
+  def all_tasks
+    STATUSES.flat_map do |status|
+      tasks_in(status.to_sym).map { |name| { name: name, status: status } }
+    end
+  end
+
+  def meta_for(name, status)
+    path = File.join(queue_dirs[status], "#{name}.meta")
+    File.exist?(path) ? YAML.safe_load_file(path) : nil
+  end
+
+  def find_task(name)
+    STATUSES.each do |status|
+      md = File.join(queue_dirs[status.to_sym], "#{name}.md")
+      return { name: name, status: status } if File.exist?(md)
+    end
+    nil
+  end
+
+  def ensure_tmux_session
+    unless system('tmux', 'has-session', '-t', TMUX_SESSION, out: File::NULL, err: File::NULL)
+      system('tmux', 'new-session', '-d', '-s', TMUX_SESSION)
+    end
+  end
+
+  def launch_task(name)
+    dirs = queue_dirs
+    md_file = File.join(dirs[:pending], "#{name}.md")
+    return unless File.exist?(md_file)
+
+    running_md = File.join(dirs[:running], "#{name}.md")
+    FileUtils.mv(md_file, running_md)
+
+    prompt = File.read(running_md).strip
+
+    ensure_tmux_session
+
+    # Build the cleanup script that runs after claude exits
+    # Capture claude's exit code in $HQ_EXIT, then use it in the ruby cleanup
+    cleanup_ruby = [
+      'ruby', '-e',
+      'require "fileutils"; ' \
+      "name=#{name.inspect}; qdir=#{QUEUE_DIR.inspect}; " \
+      'exit_code = ENV["HQ_EXIT"].to_i; ' \
+      'src=File.join(qdir,"running",name+".md"); ' \
+      'dst_dir = exit_code == 0 ? "done" : "failed"; ' \
+      'FileUtils.mv(src, File.join(qdir, dst_dir, name+".md")) if File.exist?(src); ' \
+      'meta=File.join(qdir,"running",name+".meta"); ' \
+      'FileUtils.mv(meta, File.join(qdir, dst_dir, name+".meta")) if File.exist?(meta)'
+    ].shelljoin
+
+    # Run claude interactively in tmux window, then cleanup on exit
+    shell_cmd = "claude #{Shellwords.shellescape(prompt)}; HQ_EXIT=$?; #{cleanup_ruby}; exec #{ENV['SHELL'] || 'zsh'}"
+
+    system('tmux', 'new-window', '-t', TMUX_SESSION, '-n', name, shell_cmd)
+
+    # Write meta sidecar
+    meta = {
+      'tmux_session' => TMUX_SESSION,
+      'tmux_window' => name,
+      'started_at' => Time.now.iso8601,
+      'working_dir' => Dir.pwd,
+    }
+    File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
+
+    puts "Launched: #{name}"
+  end
+
+  def slugify(text)
+    text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')[0, 60]
+  end
+end
+
+Hiiro.run(*ARGV) do
+  extend QueueHelpers
+
+  add_subcmd(:watch) {
+    queue_dirs # ensure dirs exist
+    puts "Watching #{File.join(QUEUE_DIR, 'pending')} ..."
+    puts "Press Ctrl-C to stop"
+    loop do
+      tasks_in(:pending).each { |name| launch_task(name) }
+      sleep 2
+    end
+  }
+
+  add_subcmd(:run) { |name = nil|
+    if name
+      name = name.sub(/\.md$/, '')
+      task = find_task(name)
+      if task.nil?
+        puts "Task not found: #{name}"
+        next
+      end
+      if task[:status] != 'pending'
+        puts "Task '#{name}' is #{task[:status]}, not pending"
+        next
+      end
+      launch_task(name)
+    else
+      pending = tasks_in(:pending)
+      if pending.empty?
+        puts "No pending tasks"
+        next
+      end
+      pending.each { |n| launch_task(n) }
+    end
+  }
+
+  add_subcmd(:ls) {
+    tasks = all_tasks
+    if tasks.empty?
+      puts "No tasks"
+      next
+    end
+    tasks.each do |t|
+      puts "%-10s %s" % [t[:status], t[:name]]
+    end
+  }
+
+  add_subcmd(:list) { |*args|
+    # alias for ls
+    runners.resolve('ls').handler.call(*args)
+  }
+
+  add_subcmd(:status) {
+    tasks = all_tasks
+    if tasks.empty?
+      puts "No tasks"
+      next
+    end
+    tasks.each do |t|
+      meta = meta_for(t[:name], t[:status].to_sym)
+      line = "%-10s %s" % [t[:status], t[:name]]
+      if meta
+        started = meta['started_at']
+        if started && t[:status] == 'running'
+          elapsed = Time.now - Time.parse(started)
+          mins = (elapsed / 60).to_i
+          line += "  (#{mins}m elapsed)"
+        end
+        line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
+        line += "  dir:#{meta['working_dir']}" if meta['working_dir']
+      end
+      puts line
+    end
+  }
+
+  add_subcmd(:attach) { |name = nil|
+    running = tasks_in(:running)
+    if running.empty?
+      puts "No running tasks"
+      next
+    end
+
+    if name.nil?
+      if running.size == 1
+        name = running.first
+      else
+        name = fuzzyfind(running)
+      end
+    end
+
+    if name
+      exec('tmux', 'select-window', '-t', "#{TMUX_SESSION}:#{name}")
+    end
+  }
+
+  add_subcmd(:add) { |*args|
+    queue_dirs # ensure dirs exist
+
+    if args.empty? && !$stdin.tty?
+      content = $stdin.read.strip
+      name = slugify(content.lines.first.to_s.strip)
+    elsif args.any?
+      content = args.join(' ')
+      name = slugify(content)
+    else
+      require 'tempfile'
+      tmpfile = Tempfile.new(['hq-', '.md'])
+      tmpfile.close
+      editor = ENV['EDITOR'] || 'vim'
+      system(editor, tmpfile.path)
+      content = File.read(tmpfile.path).strip
+      tmpfile.unlink
+      if content.empty?
+        puts "Aborted (empty file)"
+        next
+      end
+      name = slugify(content.lines.first.strip)
+    end
+
+    if name.empty?
+      puts "Could not generate a task name"
+      next
+    end
+
+    # Avoid name collisions
+    base_name = name
+    counter = 1
+    while File.exist?(File.join(QUEUE_DIR, 'pending', "#{name}.md"))
+      counter += 1
+      name = "#{base_name}-#{counter}"
+    end
+
+    path = File.join(QUEUE_DIR, 'pending', "#{name}.md")
+    File.write(path, content + "\n")
+    puts "Created: #{path}"
+  }
+
+  add_subcmd(:kill) { |name = nil|
+    running = tasks_in(:running)
+    if running.empty?
+      puts "No running tasks"
+      next
+    end
+
+    if name.nil?
+      if running.size == 1
+        name = running.first
+      else
+        name = fuzzyfind(running)
+      end
+    end
+
+    next unless name
+
+    # Kill the tmux window
+    system('tmux', 'kill-window', '-t', "#{TMUX_SESSION}:#{name}")
+
+    # Move files to failed
+    dirs = queue_dirs
+    md = File.join(dirs[:running], "#{name}.md")
+    meta_path = File.join(dirs[:running], "#{name}.meta")
+    FileUtils.mv(md, File.join(dirs[:failed], "#{name}.md")) if File.exist?(md)
+    FileUtils.mv(meta_path, File.join(dirs[:failed], "#{name}.meta")) if File.exist?(meta_path)
+    puts "Killed: #{name}"
+  }
+
+  add_subcmd(:retry) { |name = nil|
+    retryable = tasks_in(:failed) + tasks_in(:done)
+    if retryable.empty?
+      puts "No failed/done tasks to retry"
+      next
+    end
+
+    if name.nil?
+      if retryable.size == 1
+        name = retryable.first
+      else
+        name = fuzzyfind(retryable)
+      end
+    end
+
+    next unless name
+
+    task = find_task(name)
+    unless task && %w[failed done].include?(task[:status])
+      puts "Task '#{name}' is not in failed/done state"
+      next
+    end
+
+    dirs = queue_dirs
+    src_dir = dirs[task[:status].to_sym]
+    FileUtils.mv(File.join(src_dir, "#{name}.md"), File.join(dirs[:pending], "#{name}.md"))
+    meta_path = File.join(src_dir, "#{name}.meta")
+    FileUtils.rm_f(meta_path) if File.exist?(meta_path)
+    puts "Moved to pending: #{name}"
+  }
+
+  add_subcmd(:clean) {
+    dirs = queue_dirs
+    count = 0
+    %i[done failed].each do |status|
+      Dir.glob(File.join(dirs[status], '*')).each do |f|
+        FileUtils.rm_f(f)
+        count += 1
+      end
+    end
+    puts "Cleaned #{count} files"
+  }
+
+  add_subcmd(:dir) {
+    queue_dirs # ensure dirs exist
+    puts QUEUE_DIR
+  }
+end
