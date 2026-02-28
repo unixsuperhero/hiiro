@@ -80,7 +80,7 @@ class Hiiro
     # Session methods
 
     def session_exists?(name)
-      run_success?('has-session', '-t', name)
+      sessions.any?{|session| session.name == name }
     end
 
     def open_session(name, **opts)

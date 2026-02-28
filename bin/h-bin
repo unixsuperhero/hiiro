@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run do
+  add_subcmd(:list) do |*subcmd_names|
+    patterns = subcmd_names.flatten.compact
+      .map { |sc|
+      sc.sub(/^(h-)?/, '{h-,}')
+    }
+
+    all_bins = Hiiro::Bins.glob(patterns)
+    bins = all_bins.each_with_object({}) { |bin, h|
+      basename = File.basename(bin)
+      next if h.key?(basename)
+
+      h[basename] = bin
+    }.values
+
+    puts bins
+  end
+
+  add_subcmd(:edit) do |*subcmd_names|
+    patterns = subcmd_names.flatten.compact.map { |sc|
+      sc.sub(/^(h-)?/, '{h-,}')
+    }
+
+    all_bins = Hiiro::Bins.glob(patterns)
+    bins = all_bins.each_with_object({}) { |bin, h|
+      basename = File.basename(bin)
+      next if h.key?(basename)
+
+      h[basename] = bin
+    }.values
+
+    edit_files(*bins)
+  end
+end
