@@ -4,9 +4,8 @@ require 'hiiro'
 
 Hiiro.run do
   add_subcmd(:list) do |*subcmd_names|
-    patterns = subcmd_names.flatten.compact
-      .map { |sc|
-      sc.sub(/^(h-)?/, '{h-,}')
+    patterns = subcmd_names.flatten.compact.map { |sc|
+      sc.sub(/^(?!h-)/, '{h-,}')
     }
 
     all_bins = Hiiro::Bins.glob(patterns)
