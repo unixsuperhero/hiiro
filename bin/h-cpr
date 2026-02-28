@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+require "json"
+
+Hiiro.load_env
+
+output = `gh pr view --json number 2>/dev/null`.strip
+if output.empty?
+  STDERR.puts "No PR found for current branch"
+  exit 1
+end
+
+pr_number = begin
+  JSON.parse(output)['number'].to_s
+rescue JSON::ParserError
+  STDERR.puts "Could not parse PR info"
+  exit 1
+end
+
+if ARGV.empty?
+  exec('h', 'pr', 'view', pr_number)
+end
+
+subcmd, *rest = ARGV
+exec('h', 'pr', subcmd, pr_number, *rest)

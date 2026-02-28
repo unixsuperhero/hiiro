@@ -268,6 +268,87 @@ class PinnedPRManager
   end
 
 
+  def batch_fetch_pr_info(pr_numbers)
+    return {} if pr_numbers.empty?
+
+    # Build GraphQL query to fetch multiple PRs at once
+    pr_queries = pr_numbers.map.with_index do |num, idx|
+      <<~GRAPHQL.strip
+        pr#{idx}: pullRequest(number: #{num}) {
+          number
+          title
+          url
+          headRefName
+          state
+          isDraft
+          mergeable
+          reviewDecision
+          statusCheckRollup {
+            contexts(last: 100) {
+              nodes {
+                ... on CheckRun {
+                  conclusion
+                  status
+                }
+                ... on StatusContext {
+                  state
+                }
+              }
+            }
+          }
+          reviews(last: 50) {
+            nodes {
+              author {
+                login
+              }
+              state
+            }
+          }
+        }
+      GRAPHQL
+    end
+
+    query = <<~GRAPHQL
+      query {
+        repository(owner: "instacart", name: "carrot") {
+          #{pr_queries.join("\n")}
+        }
+      }
+    GRAPHQL
+
+    result = `gh api graphql -f query='#{query.gsub("'", "'\\''")}' 2>/dev/null`
+    return {} if result.empty?
+
+    data = JSON.parse(result)
+    repo_data = data.dig('data', 'repository')
+    return {} unless repo_data
+
+    # Convert GraphQL response to hash keyed by PR number
+    pr_info_by_number = {}
+    pr_numbers.each_with_index do |num, idx|
+      pr_data = repo_data["pr#{idx}"]
+      next unless pr_data
+
+      # Transform GraphQL response to match gh pr view format
+      pr_info_by_number[num] = {
+        'number' => pr_data['number'],
+        'title' => pr_data['title'],
+        'url' => pr_data['url'],
+        'headRefName' => pr_data['headRefName'],
+        'state' => pr_data['state'],
+        'isDraft' => pr_data['isDraft'],
+        'mergeable' => pr_data['mergeable'],
+        'reviewDecision' => pr_data['reviewDecision'],
+        'statusCheckRollup' => pr_data.dig('statusCheckRollup', 'contexts', 'nodes'),
+        'reviews' => pr_data.dig('reviews', 'nodes') || []
+      }
+    end
+
+    pr_info_by_number
+  rescue JSON::ParserError, StandardError
+    {}
+  end
+
   def refresh_all_status(prs, force: false)
     prs_to_refresh = prs.select { |pr| needs_refresh?(pr, force: force) }
 
