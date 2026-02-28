@@ -136,8 +136,8 @@ class Hiiro
     @tmux_client ||= Tmux.client!(self)
   end
 
-  def start_tmux_session(name)
-    tmux_client.open_session(name)
+  def start_tmux_session(name, **opts)
+    tmux_client.open_session(name, **opts)
   end
 
   def make_child(custom_subcmd=nil, custom_args=nil, **kwargs, &block)

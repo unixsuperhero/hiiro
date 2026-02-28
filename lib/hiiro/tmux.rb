@@ -23,8 +23,8 @@ class Hiiro
       end
     end
 
-    def self.open_session(name)
-      client.open_session(name)
+    def self.open_session(name, **opts)
+      client.open_session(name, **opts)
     end
 
     attr_reader :hiiro
@@ -83,11 +83,11 @@ class Hiiro
       run_success?('has-session', '-t', name)
     end
 
-    def open_session(name)
+    def open_session(name, **opts)
       session_name = name.to_s
 
       unless session_exists?(session_name)
-        run_system('new-session', '-d', '-A', '-s', session_name)
+        new_session(session_name, **opts, detached: true)
       end
 
       if in_tmux?
