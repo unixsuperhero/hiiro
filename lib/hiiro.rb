@@ -4,6 +4,7 @@ require "shellwords"
 require "pry"
 
 require_relative "hiiro/version"
+require_relative "hiiro/bins"
 require_relative "hiiro/matcher"
 require_relative "hiiro/git"
 require_relative "hiiro/options"
@@ -91,6 +92,20 @@ class Hiiro
       bin_name,
       *all_args,
     ].map(&:shellescape).join(' ')
+  end
+
+  def editor
+    editors = Bins.glob(%w[nvim vim vi]).find(&File.method(:executable?))
+
+    ENV['EDITOR'] || editors.first
+  end
+
+  def edit_files(*files)
+    if editor.match?(/vim/i)
+      system(editor, '-O', *files)
+    else
+      system(editor, *files)
+    end
   end
 
   def tmux_client
