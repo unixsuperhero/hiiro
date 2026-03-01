@@ -54,7 +54,7 @@ class Hiiro
     end
 
     def parse(args)
-      Args.new(@definitions, args)
+      Args.new(@definitions, args.flatten.compact)
     end
 
     def parse!(args)
