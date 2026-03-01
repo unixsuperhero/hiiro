@@ -1,27 +1,29 @@
 #!/usr/bin/env ruby
 
 require 'hiiro'
+require 'awesome_print'
 
 Hiiro.run {
-  add_subcmd(:symlinks) do |*args|
+  add_subcmd(:symlink_destinations) do |*args|
     opts = Hiiro::Options.parse(args) do
       option(:root, short: :r, desc: 'root path')
     end
 
     pwd = Hiiro::Paths.new(Dir.pwd)
-    outside_basedir = opts.args.inject({}) do |h,basedir|
+    outside = Hash.new { |h,k| h[k] = [] }
+
+    opts.args.each_with_object(outside) do |basedir,h|
       symlinks = pwd.symlinks_in(basedir)
 
-      outside_dir = symlinks
-        .reject{|l| l.dest_in_dir?(basedir) }
-        .tap do |outside|
-          outside.each do |link,dest|
-            puts
-            puts "LINK: #{link}"
-            puts "DEST: #{dest}"
-            puts "is outside => #{real_base}"
-          end
-        end
+      outside[basedir] = symlinks.reject{|l| l.dest_in_dir?(basedir) }
+    end
+
+    outside.each do |base, links|
+      puts "# symlinks outside of => #{base}"
+      dest_width = links.map{|l| l.dest.to_s.length }.max
+      links.each do |link|
+        printf("%-*s   # => %s\n", dest_width, link.dest, link.path)
+      end
     end
   end
 }

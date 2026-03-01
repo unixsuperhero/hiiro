@@ -33,6 +33,10 @@ class Hiiro
         path.readlink
       end
 
+      def dest_dir
+        path.directory? ? path : path.dirname
+      end
+
       def dest_in_dir?(dir)
         dir = Pathname.new(dir)
 
