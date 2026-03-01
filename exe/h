@@ -68,6 +68,15 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
     puts
 
     # Copy bin scripts, renaming from h-* to #{prefix}-*
+    bin_groups = {
+      'tmux'   => %w[buffer pane session window],
+      'git'    => %w[branch commit sha wtree],
+      'github' => %w[pr],
+      'claude' => %w[claude],
+      'hiiro'  => %w[bin plugin],
+      'other'  => %w[app config link misc project todo],
+    }
+
     bin_files = Dir["#{source_bins}/h-*"]
     if bin_files.any?
       bin_files.each do |src|
@@ -77,11 +86,26 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
         FileUtils.cp(src, dest_path)
         FileUtils.chmod(0755, dest_path)
       end
+
       puts "Installed #{bin_files.size} subcommands to #{dest_bin}"
-      bin_files.each do |f|
-        old_name = File.basename(f)
-        new_name = old_name.sub(/^h-/, "#{prefix}-")
-        puts "  - #{new_name}"
+      puts
+
+      bin_groups.each do |group, names|
+        matched = names.select { |n| bin_files.any? { |f| File.basename(f) == "h-#{n}" } }
+        next if matched.empty?
+
+        puts "  #{group}:"
+        matched.each { |n| puts "    #{prefix}-#{n}" }
+      end
+
+      # Any bins not in a group
+      grouped = bin_groups.values.flatten
+      ungrouped = bin_files
+        .map { |f| File.basename(f).sub(/^h-/, '') }
+        .reject { |n| grouped.include?(n) }
+      if ungrouped.any?
+        puts "  uncategorized:"
+        ungrouped.each { |n| puts "    #{prefix}-#{n}" }
       end
     else
       puts "No subcmds found in #{source_bins}"
