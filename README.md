@@ -82,6 +82,7 @@ h ping
 | `h plugin` | Manage hiiro plugins (list, edit, search) |
 | `h pr` | GitHub PR management via gh CLI |
 | `h project` | Project navigation with tmux session management |
+| `h queue` | Claude prompt queue with tmux-based task execution |
 | `h session` | Tmux session management |
 | `h sha` | Extract short SHA from git log |
 | `h todo` | Todo list management with tags and task association |
@@ -212,6 +213,7 @@ All configuration lives in `~/.config/hiiro/`:
 ~/.config/hiiro/
   plugins/        # Plugin files (auto-loaded)
   pins/           # Pin storage (per command)
+  queue/          # Prompt queue (wip, pending, running, done, failed)
   tasks/          # Task metadata
   projects.yml    # Project aliases
   apps.yml        # App directory mappings

@@ -79,24 +79,33 @@ class Hiiro
 
     # Session methods
 
+    def find_session(name)
+      normalized = name.to_s.tr('.', '_')
+      sessions.find { |s| s.name == normalized } ||
+        Matcher.by_prefix(sessions.map(&:name), normalized)&.resolved&.then { |m| sessions.find { |s| s.name == m.item } }
+    end
+
     def session_exists?(name)
-      sessions.any?{|session| session.name == name }
+      !find_session(name).nil?
     end
 
     def open_session(name, **opts)
-      session_name = name.to_s
+      session_name = name.to_s.tr('.', '_')
+      existing = find_session(session_name)
 
-      unless session_exists?(session_name)
+      unless existing
         new_session(session_name, **opts, detached: true)
       end
 
+      resolved_name = existing&.name || session_name
+
       if in_tmux?
-        switch_client(session_name)
+        switch_client(resolved_name)
       elsif in_nvim?
         puts "Can't attach to tmux inside a vim terminal"
         false
       else
-        attach_session(session_name)
+        attach_session(resolved_name)
       end
     end
 
@@ -110,25 +119,32 @@ class Hiiro
     end
 
     def kill_session(name)
-      run_system('kill-session', '-t', name)
+      resolved = find_session(name)&.name || name.to_s.tr('.', '_')
+      run_system('kill-session', '-t', resolved)
     end
 
     def attach_session(name)
-      run_system('attach-session', '-t', name)
+      resolved = find_session(name)&.name || name.to_s.tr('.', '_')
+      run_system('attach-session', '-t', resolved)
     end
 
     def switch_client(name)
-      run_system('switch-client', '-t', name)
+      resolved = find_session(name)&.name || name.to_s.tr('.', '_')
+      run_system('switch-client', '-t', resolved)
     end
 
     def detach_client(session: nil)
       args = ['detach-client']
-      args += ['-s', session] if session
+      if session
+        resolved = find_session(session)&.name || session.to_s.tr('.', '_')
+        args += ['-s', resolved]
+      end
       run_system(*args)
     end
 
     def rename_session(old_name, new_name)
-      run_system('rename-session', '-t', old_name, new_name)
+      resolved = find_session(old_name)&.name || old_name.to_s.tr('.', '_')
+      run_system('rename-session', '-t', resolved, new_name)
     end
 
     # Window methods
