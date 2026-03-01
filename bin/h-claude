@@ -2,6 +2,7 @@
 
 require 'hiiro'
 require 'shellwords'
+require 'tempfile'
 
 opts = Hiiro::Options.setup {
   flag(:danger, short: :d, default: false)
@@ -54,5 +55,101 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
     end
 
     system('tmux', 'split-window', '-v', '-l', size, start_command(opts))
+  }
+
+  add_subcmd(:env) { |*args|
+    ap ENV
+  }
+
+  add_subcmd(:inline) { |*args|
+    if args.empty? && !$stdin.tty?
+      prompt = $stdin.read.strip
+    elsif args.any?
+      prompt = args.join(' ')
+    else
+      tmpfile = Tempfile.new(['claude-inline-', '.md'])
+      tmpfile.close
+      editor = ENV['EDITOR'] || 'vim'
+      system(editor, tmpfile.path)
+      prompt = File.read(tmpfile.path).strip
+      tmpfile.unlink
+      if prompt.empty?
+        puts "Aborted (empty file)"
+        next
+      end
+    end
+
+    IO.popen(['claude', '-p'], 'w') { |io| io.write(prompt) }
+  }
+
+  add_subcmd(:loop) { |*args|
+    editor = ENV['EDITOR'] || 'vim'
+    separator = "-" * 72
+    history = []
+
+    loop do
+      tmpfile = Tempfile.new(['claude-loop-', '.md'])
+
+      if history.any?
+        lines = []
+        history.each_with_index do |(prev_prompt, response), i|
+          lines << "# Prompt #{i + 1} (old - do not edit)"
+          prev_prompt.lines.each { |l| lines << "> #{l.chomp}" }
+          lines << ""
+          lines << "## Response #{i + 1}"
+          lines << response
+          lines << ""
+        end
+        lines << separator
+        lines << "# Put your new prompt below this line"
+        lines << ""
+        tmpfile.write(lines.join("\n"))
+      end
+
+      tmpfile.close
+      system(editor, tmpfile.path)
+      content = File.read(tmpfile.path).strip
+      tmpfile.unlink
+
+      if content.empty?
+        puts "Done."
+        break
+      end
+
+      # Extract only the new prompt (below the separator)
+      if content.include?(separator)
+        new_prompt = content.split(separator, 2).last.strip
+        # Strip the instruction line if present
+        new_prompt = new_prompt.sub(/\A# Put your new prompt below this line\n*/, '').strip
+      else
+        new_prompt = content.strip
+      end
+
+      if new_prompt.empty?
+        puts "Done."
+        break
+      end
+
+      # Build the full prompt with context for claude
+      full_prompt = ""
+      if history.any?
+        history.each_with_index do |(prev_prompt, response), i|
+          full_prompt << "--- Previous prompt #{i + 1} ---\n#{prev_prompt}\n\n"
+          full_prompt << "--- Response #{i + 1} ---\n#{response}\n\n"
+        end
+        full_prompt << "--- New prompt ---\n"
+      end
+      full_prompt << new_prompt
+
+      puts "\nSending to claude...\n\n"
+      response = IO.popen(['claude', '-p'], 'r+') { |io|
+        io.write(full_prompt)
+        io.close_write
+        io.read
+      }
+
+      puts response
+      history << [new_prompt, response]
+    end
   }
 }

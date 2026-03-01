@@ -79,6 +79,10 @@ class Hiiro
     end
   end
 
+  def self.options(&block)
+    Options.setup(&block)
+  end
+
   def self.run(*args, plugins: [], logging: false, tasks: false, task_scope: nil, **values, &block)
     hiiro = init(*args, plugins:, logging:, tasks:, task_scope:, **values, &block)
 
@@ -99,6 +103,7 @@ class Hiiro
   attr_reader :logging
   attr_reader :global_values
   attr_reader :task_scope
+  attr_reader :opts
 
   def initialize(bin, *all_args, logging: false, tasks: false, task_scope: nil, **values)
     @bin = bin
@@ -208,9 +213,9 @@ class Hiiro
     runners.add_default(handler, **global_values, **values)
   end
 
-  def add_subcommand(*names, **values, &handler)
+  def add_subcommand(*names, opts: nil, **values, &handler)
     names.each do |name|
-      runners.add_subcommand(name, handler, **global_values, **values)
+      runners.add_subcommand(name, handler, opts: opts, **global_values, **values)
     end
   end
   alias add_subcmd add_subcommand
@@ -403,8 +408,8 @@ class Hiiro
       Dir.glob(pattern).map { |path| Bin.new(bin_name, path) }
     end
 
-    def add_subcommand(name, handler, **values)
-      @subcommands[name] = Subcommand.new(bin_name, name, handler, values)
+    def add_subcommand(name, handler, opts: nil, **values)
+      @subcommands[name] = Subcommand.new(bin_name, name, handler, values, opts: opts)
     end
 
     def run_subcommand(name, *args)
@@ -493,18 +498,24 @@ class Hiiro
     end
 
     class Subcommand
-      attr_reader :bin_name, :name, :handler, :values
+      attr_reader :bin_name, :name, :handler, :values, :opts
       alias subcommand_name name
 
-      def initialize(bin_name, name, handler, values={})
+      def initialize(bin_name, name, handler, values={}, opts: nil)
         @bin_name = bin_name
         @name = name.to_s
         @handler = handler
         @values = values || {}
+        @opts = opts
       end
 
       def run(*args)
-        handler.call(*args)
+        if opts
+          parsed = opts.parse(args)
+          handler.call(parsed)
+        else
+          handler.call(*args)
+        end
       end
 
       def exact_match?(subcmd)
