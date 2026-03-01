@@ -1,37 +1,44 @@
 #!/usr/bin/env ruby
 
 require "hiiro"
+require "delegate"
 
 class Hiiro
   class Paths
     attr_reader :base
 
-    def initialize(base)
+    def initialize(base=Dir.pwd)
       @base = Pathname.new base
     end
 
-    def child(path)
-      if File.absolute_path?(path)
-        Pathname.new(path)
-      else
-        base.join path
-      end
+    def from_base(file)
+      path = Pathname.new(file)
+      path.relative_path_from(base)
     end
 
     def symlinks_in(path)
-      subdir = child(path)
+      subdir = Pathname.new(path)
 
-      subdir.find.select(&:symlink?)
+      subdir.find
+        .select(&:symlink?)
+        .map { |link| Symlink.new(link) }
     end
 
-    def symlink_dest(link)
-      link.readlink.expand_path(link.dirname)
-    end
+    class Symlink < SimpleDelegator
+      def path
+        @path ||= Pathname.new(__getobj__)
+      end
 
-    def outside_dir?(file, dir)
-      relative_path = file.relative_path_from(dir)
+      def dest
+        path.readlink
+      end
 
-      relative_path.descend.first == Pathname.new('..')
+      def dest_in_dir?(dir)
+        dir = Pathname.new(dir)
+
+        relpath = dest.relative_path_from(dir)
+        relpath.descend.first.to_s != '..'
+      end
     end
   end
 end

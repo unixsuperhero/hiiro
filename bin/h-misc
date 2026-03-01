@@ -9,24 +9,19 @@ Hiiro.run {
     end
 
     pwd = Hiiro::Paths.new(Dir.pwd)
-    outside_basedir = opts.args.inject({}) do |basedir,h|
-      real_base = pwd.child(basedir)
-      symlinks = pwd.symlinks_in(real_base)
+    outside_basedir = opts.args.inject({}) do |h,basedir|
+      symlinks = pwd.symlinks_in(basedir)
 
-      mapping = symlinks.each_with_object({}) do |link,h|
-        h[link] = pwd.symlink_dest(link)
-      end
-
-      outside = mapping.select{|link,dest|
-        pwd.outside_dir?(dest, real_base)
-      }
-
-      outside.each do |link,dest|
-        puts
-        puts "LINK: #{link}"
-        puts "DEST: #{dest}"
-        puts "is outside => #{real_base}"
-      end
+      outside_dir = symlinks
+        .reject{|l| l.dest_in_dir?(basedir) }
+        .tap do |outside|
+          outside.each do |link,dest|
+            puts
+            puts "LINK: #{link}"
+            puts "DEST: #{dest}"
+            puts "is outside => #{real_base}"
+          end
+        end
     end
   end
 }
