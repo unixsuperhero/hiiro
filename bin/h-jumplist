@@ -172,11 +172,12 @@ Hiiro.run(*ARGV) do
     entries = read_entries
     pos = get_pos
 
-    # Deduplicate: skip if current position entry is same pane
+    # Deduplicate: skip if current position entry matches pane/window/session
     current_entry = entries[pos]
     if current_entry
-      current_pane = current_entry.split('|', 2).first
-      next if current_pane == pane_id
+      current_parts = current_entry.split('|')
+      current_key = current_parts[0..2]
+      next if current_key == [pane_id, window_id, session_name]
     end
 
     # If position is not at head, truncate forward history
