@@ -115,10 +115,10 @@ Hiiro.run(*ARGV) do
       next
     end
 
-    pane_id = tmux_display('#\{pane_id\}')
-    window_id = tmux_display('#\{window_id\}')
-    session_name = tmux_display('#\{session_name\}')
-    pane_cmd = tmux_display('#\{pane_current_command\}')
+    pane_id = tmux_display('#{pane_id}')
+    window_id = tmux_display('#{window_id}')
+    session_name = tmux_display('#{session_name}')
+    pane_cmd = tmux_display('#{pane_current_command}')
     timestamp = Time.now.to_i.to_s
 
     entries = read_entries
@@ -155,10 +155,10 @@ Hiiro.run(*ARGV) do
 
     # If at position 0, record current pane first so forward works
     if pos == 0
-      pane_id = tmux_display('#\{pane_id\}')
-      window_id = tmux_display('#\{window_id\}')
-      session_name = tmux_display('#\{session_name\}')
-      pane_cmd = tmux_display('#\{pane_current_command\}')
+      pane_id = tmux_display('#{pane_id}')
+      window_id = tmux_display('#{window_id}')
+      session_name = tmux_display('#{session_name}')
+      pane_cmd = tmux_display('#{pane_current_command}')
       timestamp = Time.now.to_i.to_s
 
       new_entry = [pane_id, window_id, session_name, timestamp, pane_cmd].join('|')
