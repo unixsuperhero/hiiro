@@ -37,6 +37,23 @@ def tmux_display(fmt)
   `tmux display-message -p '#{fmt}'`.strip
 end
 
+def prune_dead_entries(entries, pos)
+  new_entries = []
+  new_pos = pos
+  entries.each_with_index do |entry, i|
+    pane_id = entry.split('|', 2).first
+    if pane_exists?(pane_id)
+      new_entries << entry
+    else
+      new_pos -= 1 if i < pos
+    end
+  end
+  new_pos = new_pos.clamp(0, [new_entries.length - 1, 0].max)
+  write_entries(new_entries)
+  set_pos(new_pos)
+  [new_entries, new_pos]
+end
+
 Hiiro.run(*ARGV) do
   add_subcmd(:setup) do
     puts <<~SETUP
@@ -50,6 +67,40 @@ Hiiro.run(*ARGV) do
       bind-key -r C-b run-shell "h jumplist back"
       bind-key -r C-f run-shell "h jumplist forward"
     SETUP
+  end
+
+  add_subcmd(:ls) do
+    entries, pos = prune_dead_entries(read_entries, get_pos)
+
+    if entries.empty?
+      puts "Jumplist is empty."
+      next
+    end
+
+    entries.each_with_index do |entry, i|
+      parts = entry.split('|')
+      pane_id, window_id, session_name, timestamp, pane_cmd = parts
+      time_str = Time.at(timestamp.to_i).strftime('%H:%M:%S')
+      marker = i == pos ? " <--" : ""
+      puts "%3d) %s | %s | %s | %s | %s%s" % [i, session_name, window_id, pane_id, pane_cmd, time_str, marker]
+    end
+  end
+
+  add_subcmd(:list) do
+    entries, pos = prune_dead_entries(read_entries, get_pos)
+
+    if entries.empty?
+      puts "Jumplist is empty."
+      next
+    end
+
+    entries.each_with_index do |entry, i|
+      parts = entry.split('|')
+      pane_id, window_id, session_name, timestamp, pane_cmd = parts
+      time_str = Time.at(timestamp.to_i).strftime('%H:%M:%S')
+      marker = i == pos ? " <--" : ""
+      puts "%3d) %s | %s | %s | %s | %s%s" % [i, session_name, window_id, pane_id, pane_cmd, time_str, marker]
+    end
   end
 
   add_subcmd(:record) do
@@ -91,8 +142,7 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:back) do
-    entries = read_entries
-    pos = get_pos
+    entries, pos = prune_dead_entries(read_entries, get_pos)
 
     if entries.empty?
       system('tmux', 'display-message', 'Jumplist: empty')
@@ -117,67 +167,38 @@ Hiiro.run(*ARGV) do
       end
     end
 
-    # Find next valid entry going backward
     new_pos = pos + 1
-    while new_pos < entries.length
-      entry = entries[new_pos]
-      parts = entry.split('|')
-      target_pane = parts[0]
-      target_window = parts[1]
-      target_session = parts[2]
-
-      if pane_exists?(target_pane)
-        system('tmux', 'set-environment', 'TMUX_JUMPLIST_SUPPRESS', '1')
-        system('tmux', 'switch-client', '-t', target_session)
-        system('tmux', 'select-window', '-t', target_window)
-        system('tmux', 'select-pane', '-t', target_pane)
-        set_pos(new_pos)
-        next # exit the subcmd block
-      end
-
-      new_pos += 1
+    if new_pos < entries.length
+      parts = entries[new_pos].split('|')
+      system('tmux', 'set-environment', 'TMUX_JUMPLIST_SUPPRESS', '1')
+      system('tmux', 'switch-client', '-t', parts[2])
+      system('tmux', 'select-window', '-t', parts[1])
+      system('tmux', 'select-pane', '-t', parts[0])
+      set_pos(new_pos)
+    else
+      system('tmux', 'display-message', 'Jumplist: at oldest entry')
     end
-
-    system('tmux', 'display-message', 'Jumplist: at oldest entry')
   end
 
   add_subcmd(:forward) do
-    pos = get_pos
+    entries, pos = prune_dead_entries(read_entries, get_pos)
 
     if pos <= 0
       system('tmux', 'display-message', 'Jumplist: at newest entry')
       next
     end
 
-    entries = read_entries
-
     if entries.empty?
       system('tmux', 'display-message', 'Jumplist: empty')
       next
     end
 
-    # Find next valid entry going forward (toward index 0)
     new_pos = pos - 1
-    while new_pos >= 0
-      entry = entries[new_pos]
-      parts = entry.split('|')
-      target_pane = parts[0]
-      target_window = parts[1]
-      target_session = parts[2]
-
-      if pane_exists?(target_pane)
-        system('tmux', 'set-environment', 'TMUX_JUMPLIST_SUPPRESS', '1')
-        system('tmux', 'switch-client', '-t', target_session)
-        system('tmux', 'select-window', '-t', target_window)
-        system('tmux', 'select-pane', '-t', target_pane)
-        set_pos(new_pos)
-        next # exit the subcmd block
-      end
-
-      new_pos -= 1
-    end
-
-    system('tmux', 'display-message', 'Jumplist: at newest entry')
-    set_pos(0)
+    parts = entries[new_pos].split('|')
+    system('tmux', 'set-environment', 'TMUX_JUMPLIST_SUPPRESS', '1')
+    system('tmux', 'switch-client', '-t', parts[2])
+    system('tmux', 'select-window', '-t', parts[1])
+    system('tmux', 'select-pane', '-t', parts[0])
+    set_pos(new_pos)
   end
 end
