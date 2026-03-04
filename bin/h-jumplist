@@ -9,7 +9,7 @@ MAX_SIZE = 50
 FileUtils.mkdir_p(JUMPLIST_DIR)
 
 def client_name
-  @client_name ||= `tmux display-message -p '\#{client_name}'`.strip
+  @client_name ||= `tmux display-message -p '\#{client_name}'`.strip.tr('/', '_')
 end
 
 def jumplist_file
