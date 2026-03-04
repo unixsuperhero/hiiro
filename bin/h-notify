@@ -10,13 +10,16 @@ TYPE_PRESETS = {
   'warning' => { prefix: '[WARN]', sound: 'Purr',  title: 'Warning' },
 }
 
+NOTIFY_DIR = File.join(Dir.home, '.config', 'hiiro', 'notify')
+FileUtils.mkdir_p(NOTIFY_DIR)
+
 def session_name
   `tmux display-message -p '\#{session_name}'`.strip
 end
 
 def notify_file(session = nil)
   session ||= session_name
-  "/tmp/tmux-notifications-#{session}"
+  File.join(NOTIFY_DIR, "#{session}.log")
 end
 
 def read_notifications(session = nil)
@@ -40,11 +43,11 @@ def pane_exists?(pane_id)
 end
 
 Hiiro.run(*ARGV) do
-  opts = Hiiro::Options.parse(args) do
+  @opts = Hiiro::Options.parse(args) do
     option(:type, short: 't', desc: 'Notification type (success, error, info, warning)', default: 'info')
   end
 
-  preset = TYPE_PRESETS[opts.type] || TYPE_PRESETS['info']
+  @preset = TYPE_PRESETS[@opts.type] || TYPE_PRESETS['info']
 
   add_subcmd(:push) do |*push_args|
     message = push_args.join(' ')
@@ -66,13 +69,13 @@ Hiiro.run(*ARGV) do
     write_notifications(entries, session)
 
     # Show tmux display-message with type prefix
-    system('tmux', 'display-message', "#{preset[:prefix]} #{message}")
+    system('tmux', 'display-message', "#{@preset[:prefix]} #{message}")
 
     # Also send terminal-notifier
     system('terminal-notifier',
-      '-title', preset[:title],
+      '-title', @preset[:title],
       '-message', message,
-      '-sound', preset[:sound])
+      '-sound', @preset[:sound])
   end
 
   add_subcmd(:menu) do
