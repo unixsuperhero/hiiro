@@ -135,18 +135,19 @@ Hiiro.run(*ARGV) do
     entries = read_entries
     pos = get_pos
 
+    # Deduplicate: skip if current position entry is same pane
+    current_entry = entries[pos]
+    if current_entry
+      current_pane = current_entry.split('|', 2).first
+      next if current_pane == pane_id
+    end
+
     # If position is not at head, truncate forward history
     if pos > 0 && entries.any?
       entries = entries[pos..]
       set_pos(0)
     elsif pos > 0
       set_pos(0)
-    end
-
-    # Deduplicate: skip if most recent entry is same pane
-    if entries.any?
-      last_pane = entries[0].split('|', 2).first
-      next if last_pane == pane_id
     end
 
     # Prepend new entry (newest first)
