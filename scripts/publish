@@ -98,3 +98,5 @@ else
   end
   system 'git', 'checkout', 'main'
 end
+
+scripts/update
