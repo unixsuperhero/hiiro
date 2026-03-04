@@ -69,6 +69,10 @@ Hiiro.run(*ARGV) do
     SETUP
   end
 
+  add_subcmd(:path) do
+    print JUMPLIST_FILE
+  end
+
   add_subcmd(:ls) do
     entries, pos = prune_dead_entries(read_entries, get_pos)
 
