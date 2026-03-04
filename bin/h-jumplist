@@ -80,6 +80,19 @@ Hiiro.run(*ARGV) do
     SETUP
   end
 
+  add_subcmd(:clear) do
+    pane_id = tmux_display('#{pane_id}')
+    window_id = tmux_display('#{window_id}')
+    session_name = tmux_display('#{session_name}')
+    pane_cmd = tmux_display('#{pane_current_command}')
+    timestamp = Time.now.to_i.to_s
+
+    entry = [pane_id, window_id, session_name, timestamp, pane_cmd].join('|')
+    write_entries([entry])
+    set_pos(0)
+    puts "Jumplist cleared."
+  end
+
   add_subcmd(:path) do
     print jumplist_file
   end
