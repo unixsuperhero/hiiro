@@ -1,0 +1,148 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+require "fileutils"
+
+TYPE_PRESETS = {
+  'success' => { prefix: '[OK]',   sound: 'Glass', title: 'Success' },
+  'error'   => { prefix: '[ERR]',  sound: 'Basso', title: 'Error' },
+  'info'    => { prefix: '[INFO]', sound: 'Pop',   title: 'Info' },
+  'warning' => { prefix: '[WARN]', sound: 'Purr',  title: 'Warning' },
+}
+
+def session_name
+  `tmux display-message -p '\#{session_name}'`.strip
+end
+
+def notify_file(session = nil)
+  session ||= session_name
+  "/tmp/tmux-notifications-#{session}"
+end
+
+def read_notifications(session = nil)
+  file = notify_file(session)
+  return [] unless File.exist?(file)
+  File.readlines(file, chomp: true).reject(&:empty?)
+end
+
+def write_notifications(entries, session = nil)
+  file = notify_file(session)
+  if entries.empty?
+    File.delete(file) if File.exist?(file)
+  else
+    File.write(file, entries.join("\n") + "\n")
+  end
+end
+
+def pane_exists?(pane_id)
+  panes = `tmux list-panes -a -F '\#{pane_id}' 2>/dev/null`.strip.split("\n")
+  panes.include?(pane_id)
+end
+
+Hiiro.run(*ARGV) do
+  opts = Hiiro::Options.parse(args) do
+    option(:type, short: 't', desc: 'Notification type (success, error, info, warning)', default: 'info')
+  end
+
+  preset = TYPE_PRESETS[opts.type] || TYPE_PRESETS['info']
+
+  add_subcmd(:push) do |*push_args|
+    message = push_args.join(' ')
+    if message.empty?
+      puts "Usage: h notify push [-t TYPE] \"message\""
+      next
+    end
+
+    pane_id = `tmux display-message -p '\#{pane_id}'`.strip
+    window_id = `tmux display-message -p '\#{window_id}'`.strip
+    session = session_name
+    pane_cmd = `tmux display-message -p '\#{pane_current_command}'`.strip
+    timestamp = Time.now.to_i.to_s
+
+    entry = [pane_id, window_id, session, timestamp, pane_cmd, message].join('|')
+
+    entries = read_notifications(session)
+    entries.unshift(entry)
+    write_notifications(entries, session)
+
+    # Show tmux display-message with type prefix
+    system('tmux', 'display-message', "#{preset[:prefix]} #{message}")
+
+    # Also send terminal-notifier
+    system('terminal-notifier',
+      '-title', preset[:title],
+      '-message', message,
+      '-sound', preset[:sound])
+  end
+
+  add_subcmd(:menu) do
+    session = session_name
+    entries = read_notifications(session)
+
+    if entries.empty?
+      system('tmux', 'display-message', 'No notifications')
+      next
+    end
+
+    # Build display-menu arguments
+    menu_args = ['-T', 'Notifications']
+
+    entries.first(10).each_with_index do |line, idx|
+      parts = line.split('|')
+      pane_id = parts[0]
+      cmd = parts[4]
+      msg = parts[5..].join('|')
+      msg = msg[0..46] + '...' if msg.length > 50
+
+      label = "#{idx}: [#{pane_id}] #{cmd}: #{msg}"
+      menu_args.push(label, idx.to_s, "run-shell 'h notify jump #{idx}'")
+    end
+
+    # Separator and clear option
+    menu_args.push('', '', 'Clear all', 'c', "run-shell 'h notify clear'")
+
+    system('tmux', 'display-menu', *menu_args)
+  end
+
+  add_subcmd(:jump) do |index_str = nil|
+    if index_str.nil?
+      puts "Usage: h notify jump INDEX"
+      next
+    end
+
+    index = index_str.to_i
+    session = session_name
+    entries = read_notifications(session)
+
+    if index >= entries.length
+      system('tmux', 'display-message', 'Notification not found')
+      next
+    end
+
+    entry = entries[index]
+    parts = entry.split('|')
+    target_pane = parts[0]
+    target_window = parts[1]
+
+    unless pane_exists?(target_pane)
+      system('tmux', 'display-message', "Pane #{target_pane} no longer exists")
+      entries.delete_at(index)
+      write_notifications(entries, session)
+      next
+    end
+
+    system('tmux', 'select-window', '-t', target_window)
+    system('tmux', 'select-pane', '-t', target_pane)
+
+    # Remove the notification
+    entries.delete_at(index)
+    write_notifications(entries, session)
+  end
+
+  add_subcmd(:clear) do
+    session = session_name
+    file = notify_file(session)
+    File.delete(file) if File.exist?(file)
+    system('tmux', 'display-message', 'Notifications cleared')
+  end
+end

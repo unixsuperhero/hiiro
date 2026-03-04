@@ -1,0 +1,183 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+require "fileutils"
+
+JUMPLIST_DIR = File.join(Dir.home, '.config', 'hiiro', 'jumplist')
+JUMPLIST_FILE = File.join(JUMPLIST_DIR, 'entries')
+POS_FILE = File.join(JUMPLIST_DIR, 'position')
+MAX_SIZE = 50
+
+FileUtils.mkdir_p(JUMPLIST_DIR)
+
+def read_entries
+  return [] unless File.exist?(JUMPLIST_FILE)
+  File.readlines(JUMPLIST_FILE, chomp: true).reject(&:empty?)
+end
+
+def write_entries(entries)
+  File.write(JUMPLIST_FILE, entries.join("\n") + "\n")
+end
+
+def get_pos
+  return 0 unless File.exist?(POS_FILE)
+  File.read(POS_FILE).strip.to_i
+end
+
+def set_pos(n)
+  File.write(POS_FILE, n.to_s)
+end
+
+def pane_exists?(pane_id)
+  panes = `tmux list-panes -a -F '\#{pane_id}' 2>/dev/null`.strip.split("\n")
+  panes.include?(pane_id)
+end
+
+def tmux_display(fmt)
+  `tmux display-message -p '#{fmt}'`.strip
+end
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:setup) do
+    puts <<~SETUP
+      # Add the following to your tmux.conf:
+
+      # --- Jumplist hooks (record pane/window navigation) ---
+      set-hook -g after-select-pane  "run-shell -b 'h jumplist record'"
+      set-hook -g after-select-window "run-shell -b 'h jumplist record'"
+
+      # --- Jumplist keybindings ---
+      bind-key -r C-b run-shell "h jumplist back"
+      bind-key -r C-f run-shell "h jumplist forward"
+    SETUP
+  end
+
+  add_subcmd(:record) do
+    # Check suppression flag
+    suppress = `tmux show-environment TMUX_JUMPLIST_SUPPRESS 2>/dev/null`.strip
+    if suppress == "TMUX_JUMPLIST_SUPPRESS=1"
+      system('tmux', 'set-environment', '-u', 'TMUX_JUMPLIST_SUPPRESS')
+      next
+    end
+
+    pane_id = tmux_display('#\{pane_id\}')
+    window_id = tmux_display('#\{window_id\}')
+    session_name = tmux_display('#\{session_name\}')
+    pane_cmd = tmux_display('#\{pane_current_command\}')
+    timestamp = Time.now.to_i.to_s
+
+    entries = read_entries
+    pos = get_pos
+
+    # If position is not at head, truncate forward history
+    if pos > 0 && entries.any?
+      entries = entries[pos..]
+      set_pos(0)
+    elsif pos > 0
+      set_pos(0)
+    end
+
+    # Deduplicate: skip if most recent entry is same pane
+    if entries.any?
+      last_pane = entries[0].split('|', 2).first
+      next if last_pane == pane_id
+    end
+
+    # Prepend new entry (newest first)
+    new_entry = [pane_id, window_id, session_name, timestamp, pane_cmd].join('|')
+    entries.unshift(new_entry)
+    entries = entries.first(MAX_SIZE)
+    write_entries(entries)
+  end
+
+  add_subcmd(:back) do
+    entries = read_entries
+    pos = get_pos
+
+    if entries.empty?
+      system('tmux', 'display-message', 'Jumplist: empty')
+      next
+    end
+
+    # If at position 0, record current pane first so forward works
+    if pos == 0
+      pane_id = tmux_display('#\{pane_id\}')
+      window_id = tmux_display('#\{window_id\}')
+      session_name = tmux_display('#\{session_name\}')
+      pane_cmd = tmux_display('#\{pane_current_command\}')
+      timestamp = Time.now.to_i.to_s
+
+      new_entry = [pane_id, window_id, session_name, timestamp, pane_cmd].join('|')
+
+      # Only prepend if different from current head
+      if entries.empty? || entries[0].split('|', 2).first != pane_id
+        entries.unshift(new_entry)
+        entries = entries.first(MAX_SIZE)
+        write_entries(entries)
+      end
+    end
+
+    # Find next valid entry going backward
+    new_pos = pos + 1
+    while new_pos < entries.length
+      entry = entries[new_pos]
+      parts = entry.split('|')
+      target_pane = parts[0]
+      target_window = parts[1]
+      target_session = parts[2]
+
+      if pane_exists?(target_pane)
+        system('tmux', 'set-environment', 'TMUX_JUMPLIST_SUPPRESS', '1')
+        system('tmux', 'switch-client', '-t', target_session)
+        system('tmux', 'select-window', '-t', target_window)
+        system('tmux', 'select-pane', '-t', target_pane)
+        set_pos(new_pos)
+        next # exit the subcmd block
+      end
+
+      new_pos += 1
+    end
+
+    system('tmux', 'display-message', 'Jumplist: at oldest entry')
+  end
+
+  add_subcmd(:forward) do
+    pos = get_pos
+
+    if pos <= 0
+      system('tmux', 'display-message', 'Jumplist: at newest entry')
+      next
+    end
+
+    entries = read_entries
+
+    if entries.empty?
+      system('tmux', 'display-message', 'Jumplist: empty')
+      next
+    end
+
+    # Find next valid entry going forward (toward index 0)
+    new_pos = pos - 1
+    while new_pos >= 0
+      entry = entries[new_pos]
+      parts = entry.split('|')
+      target_pane = parts[0]
+      target_window = parts[1]
+      target_session = parts[2]
+
+      if pane_exists?(target_pane)
+        system('tmux', 'set-environment', 'TMUX_JUMPLIST_SUPPRESS', '1')
+        system('tmux', 'switch-client', '-t', target_session)
+        system('tmux', 'select-window', '-t', target_window)
+        system('tmux', 'select-pane', '-t', target_pane)
+        set_pos(new_pos)
+        next # exit the subcmd block
+      end
+
+      new_pos -= 1
+    end
+
+    system('tmux', 'display-message', 'Jumplist: at newest entry')
+    set_pos(0)
+  end
+end
