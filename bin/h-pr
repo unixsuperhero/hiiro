@@ -268,87 +268,7 @@ class PinnedPRManager
   end
 
 
-  def batch_fetch_pr_info(pr_numbers)
-    return {} if pr_numbers.empty?
-
-    # Build GraphQL query to fetch multiple PRs at once
-    pr_queries = pr_numbers.map.with_index do |num, idx|
-      <<~GRAPHQL.strip
-        pr#{idx}: pullRequest(number: #{num}) {
-          number
-          title
-          url
-          headRefName
-          state
-          isDraft
-          mergeable
-          reviewDecision
-          statusCheckRollup {
-            contexts {
-              ... on CheckRun {
-                conclusion
-                status
-              }
-              ... on StatusContext {
-                state
-              }
-            }
-          }
-          reviews(last: 50) {
-            nodes {
-              author {
-                login
-              }
-              state
-            }
-          }
-        }
-      GRAPHQL
-    end
-
-    query = <<~GRAPHQL
-      query {
-        repository(owner: "instacart", name: "carrot") {
-          #{pr_queries.join("\n")}
-        }
-      }
-    GRAPHQL
-
-    result = `gh api graphql -f query='#{query.gsub("'", "'\\''")}' 2>/dev/null`
-    return {} if result.empty?
-
-    data = JSON.parse(result)
-    repo_data = data.dig('data', 'repository')
-    return {} unless repo_data
-
-    # Convert GraphQL response to hash keyed by PR number
-    pr_info_by_number = {}
-    pr_numbers.each_with_index do |num, idx|
-      pr_data = repo_data["pr#{idx}"]
-      next unless pr_data
-
-      # Transform GraphQL response to match gh pr view format
-      pr_info_by_number[num] = {
-        'number' => pr_data['number'],
-        'title' => pr_data['title'],
-        'url' => pr_data['url'],
-        'headRefName' => pr_data['headRefName'],
-        'state' => pr_data['state'],
-        'isDraft' => pr_data['isDraft'],
-        'mergeable' => pr_data['mergeable'],
-        'reviewDecision' => pr_data['reviewDecision'],
-        'statusCheckRollup' => pr_data['statusCheckRollup'],
-        'reviews' => pr_data.dig('reviews', 'nodes') || []
-      }
-    end
-
-    pr_info_by_number
-  rescue JSON::ParserError, StandardError
-    {}
-  end
-
   def refresh_all_status(prs, force: false)
-    # Determine which PRs need refreshing
     prs_to_refresh = prs.select { |pr| needs_refresh?(pr, force: force) }
 
     if prs_to_refresh.empty?
@@ -356,25 +276,7 @@ class PinnedPRManager
       return prs
     end
 
-    # Batch fetch all PR info at once
-    pr_numbers = prs_to_refresh.map { |pr| pr['number'] }
-    fetched_info = batch_fetch_pr_info(pr_numbers)
-
-    # Update each PR with fetched info
-    prs_to_refresh.each do |pr|
-      info = fetched_info[pr['number']]
-      next unless info
-
-      pr['state'] = info['state']
-      pr['title'] = info['title']
-      pr['checks'] = summarize_checks(info['statusCheckRollup'])
-      pr['reviews'] = summarize_reviews(info['reviews'])
-      pr['review_decision'] = info['reviewDecision']
-      pr['is_draft'] = info['isDraft']
-      pr['mergeable'] = info['mergeable']
-      pr['last_checked'] = Time.now.iso8601
-    end
-
+    prs_to_refresh.each { |pr| refresh_status(pr, force: true) }
     prs
   end
 
@@ -766,6 +668,32 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   end
 
+  add_subcmd(:ls) do |*ls_args|
+    update = ls_args.include?('-u') || ls_args.include?('--update')
+
+    pinned = pinned_manager.load_pinned
+
+    if pinned.empty?
+      puts "No pinned PRs"
+      next
+    end
+
+    if update
+      puts "Updating status for #{pinned.length} PR(s)..."
+      pinned_manager.refresh_all_status(pinned, force: true)
+      pinned_manager.save_pinned(pinned)
+      puts
+    end
+
+    pinned.each_with_index do |pr, idx|
+      puts pinned_manager.display_pinned(pr, idx)
+    end
+
+    last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
+    puts "---"
+    puts "Last updated: #{last_checked || 'never'}"
+  end
+
   add_subcmd(:status) do |*status_args|
     pinned = pinned_manager.load_pinned
 
@@ -775,12 +703,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     compact = status_args.include?('-c') || status_args.include?('--compact')
-    force = status_args.include?('-U') || status_args.include?('--force-update')
-
-    puts "Refreshing status for #{pinned.length} pinned PR(s)..."
-    puts
-
-    pinned_manager.refresh_all_status(pinned, force: force)
 
     pinned.each_with_index do |pr, idx|
       if compact
@@ -791,9 +713,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       end
     end
 
-    pinned_manager.save_pinned(pinned)
+    last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
     puts "---"
-    puts "Status updated at #{Time.now.strftime('%H:%M:%S')}"
+    puts "Last updated: #{last_checked || 'never'}"
   end
 
   add_subcmd(:update) do |*update_args|
@@ -814,10 +736,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:green) do |*green_args|
     pinned = pinned_manager.load_pinned
-    force = green_args.include?('-U') || green_args.include?('--force-update')
-
-    pinned_manager.refresh_all_status(pinned, force: force)
-    pinned_manager.save_pinned(pinned)
 
     filtered = pinned.select { |pr|
       c = pr['checks']
@@ -836,10 +754,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:red) do |*red_args|
     pinned = pinned_manager.load_pinned
-    force = red_args.include?('-U') || red_args.include?('--force-update')
-
-    pinned_manager.refresh_all_status(pinned, force: force)
-    pinned_manager.save_pinned(pinned)
 
     filtered = pinned.select { |pr|
       c = pr['checks']
@@ -858,10 +772,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:old) do |*old_args|
     pinned = pinned_manager.load_pinned
-    force = old_args.include?('-U') || old_args.include?('--force-update')
-
-    pinned_manager.refresh_all_status(pinned, force: force)
-    pinned_manager.save_pinned(pinned)
 
     filtered = pinned.select { |pr| pr['state'] == 'MERGED' }
 
@@ -884,14 +794,10 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    force = args.include?('-U') || args.include?('--force-update')
-    pinned_manager.refresh_all_status(pinned, force: force)
-
     merged_or_closed = pinned.select { |pr| pr['state'] == 'MERGED' || pr['state'] == 'CLOSED' }
 
     if merged_or_closed.empty?
       puts "No merged or closed PRs to prune"
-      pinned_manager.save_pinned(pinned)
       next
     end
 
@@ -909,10 +815,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:draft) do |*draft_args|
     pinned = pinned_manager.load_pinned
-    force = draft_args.include?('-U') || draft_args.include?('--force-update')
-
-    pinned_manager.refresh_all_status(pinned, force: force)
-    pinned_manager.save_pinned(pinned)
 
     filtered = pinned.select { |pr| pr['is_draft'] == true }
 
@@ -1077,11 +979,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    # Refresh all statuses first
-    force = args.include?('-U') || args.include?('--force-update')
-    pinned_manager.refresh_all_status(pinned, force: force)
-    pinned_manager.save_pinned(pinned)
-
     merged = pinned.select { |pr| pr['state'] == 'MERGED' }
     closed = pinned.select { |pr| pr['state'] == 'CLOSED' }
 
@@ -1109,15 +1006,10 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    # Refresh all statuses first
-    force = args.include?('-U') || args.include?('--force-update')
-    pinned_manager.refresh_all_status(pinned, force: force)
-
     merged_or_closed = pinned.select { |pr| pr['state'] == 'MERGED' || pr['state'] == 'CLOSED' }
 
     if merged_or_closed.empty?
       puts "No merged or closed PRs to unpin"
-      pinned_manager.save_pinned(pinned)
       next
     end
 
