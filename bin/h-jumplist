@@ -66,9 +66,14 @@ end
 
 Hiiro.run(*ARGV) do
   add_subcmd(:setup) do
-    puts <<~SETUP
-      # Add the following to your tmux.conf:
+    conf_dir = File.join(Dir.home, '.config', 'tmux')
+    conf_file = File.join(conf_dir, 'h-jumplist.tmux.conf')
+    tmux_conf = File.join(Dir.home, '.tmux.conf')
+    source_line = "source-file #{conf_file}"
 
+    FileUtils.mkdir_p(conf_dir)
+
+    jumplist_conf = <<~CONF
       # --- Jumplist hooks (record pane/window/session navigation) ---
       set-hook -g after-select-pane  "run-shell -b 'h jumplist record'"
       set-hook -g after-select-window "run-shell -b 'h jumplist record'"
@@ -79,7 +84,24 @@ Hiiro.run(*ARGV) do
       # --- Jumplist keybindings ---
       bind-key -r C-b run-shell "h jumplist back"
       bind-key -r C-f run-shell "h jumplist forward"
-    SETUP
+    CONF
+
+    File.write(conf_file, jumplist_conf)
+    puts "Wrote #{conf_file}"
+
+    if File.exist?(tmux_conf)
+      existing = File.read(tmux_conf)
+      if existing.include?(source_line)
+        puts "#{tmux_conf} already sources #{conf_file}"
+        next
+      end
+    end
+
+    File.open(tmux_conf, 'a') do |f|
+      f.puts
+      f.puts source_line
+    end
+    puts "Added '#{source_line}' to #{tmux_conf}"
   end
 
   add_subcmd(:clear) do
