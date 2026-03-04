@@ -59,9 +59,10 @@ Hiiro.run(*ARGV) do
     puts <<~SETUP
       # Add the following to your tmux.conf:
 
-      # --- Jumplist hooks (record pane/window navigation) ---
+      # --- Jumplist hooks (record pane/window/session navigation) ---
       set-hook -g after-select-pane  "run-shell -b 'h jumplist record'"
       set-hook -g after-select-window "run-shell -b 'h jumplist record'"
+      set-hook -g client-session-changed "run-shell -b 'h jumplist record'"
 
       # --- Jumplist keybindings ---
       bind-key -r C-b run-shell "h jumplist back"
