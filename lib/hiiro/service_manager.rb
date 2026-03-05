@@ -205,11 +205,12 @@ class Hiiro
         return false
       end
 
-      # Coerce start command to array
       start_cmds = Array(start_cmd)
-
       base_dir = svc[:base_dir]
       session = tmux_info[:session] || current_tmux_session
+
+      # Write start commands to an executable tempfile
+      script = write_start_script(svc_name, start_cmds, base_dir)
 
       if session && !skip_window_creation
         # Create a new tmux window for this service
@@ -225,16 +226,9 @@ class Hiiro
       end
 
       if pane_id
-        # Send each start command to the pane
-        combined_cmd = start_cmds.join(' && ')
-        system('tmux', 'send-keys', '-t', pane_id, combined_cmd, 'Enter')
+        system('tmux', 'send-keys', '-t', pane_id, script, 'Enter')
       else
-        combined_cmd = start_cmds.join(' && ')
-        if base_dir
-          system("cd #{base_dir} && #{combined_cmd} &")
-        else
-          system("#{combined_cmd} &")
-        end
+        system("#{script} &")
       end
 
       # Record state
@@ -659,6 +653,20 @@ class Hiiro
     end
 
     private
+
+    def write_start_script(svc_name, cmds, base_dir)
+      dir = File.join(STATE_DIR, 'scripts')
+      FileUtils.mkdir_p(dir)
+      path = File.join(dir, "#{svc_name}.sh")
+
+      lines = ["#!/usr/bin/env bash", "set -e"]
+      lines << "cd #{base_dir}" if base_dir
+      lines.concat(cmds)
+
+      File.write(path, lines.join("\n") + "\n")
+      File.chmod(0755, path)
+      path
+    end
 
     def current_tmux_session
       return nil unless ENV['TMUX']
