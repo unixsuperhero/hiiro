@@ -1,0 +1,289 @@
+# Example services.yml
+# Place at ~/.config/hiiro/services.yml
+#
+# Base env templates referenced by base_env live in:
+#   ~/.config/hiiro/env_templates/
+
+# =============================================================================
+# Simple service - single start command, no env files
+# =============================================================================
+redis:
+  base_dir: ""
+  host: localhost
+  port: 6379
+  start:
+    - redis-server
+
+# Usage:
+#   h service start redis
+#   h service stop redis          # sends C-c
+
+# =============================================================================
+# Rails API - multiple init steps, single env file with variations
+# =============================================================================
+api-rails:
+  base_dir: ~/work/api
+  host: localhost
+  port: 3000
+  init:
+    - bundle install
+    - bin/rails db:migrate
+  start:
+    - bundle exec rails s -p 3000
+  cleanup:
+    - rm -f tmp/pids/server.pid
+  env_files:
+    - env_file: .env.development
+      base_env: api-rails.env
+      env_vars:
+        DATABASE_URL:
+          variations:
+            local: postgres://localhost:5432/api_dev
+            docker: postgres://db:5432/api_dev
+            staging: postgres://readonly:pass@staging-db.internal:5432/api
+        REDIS_URL:
+          variations:
+            local: redis://localhost:6379
+            docker: redis://redis:6379
+        LOG_LEVEL:
+          variations:
+            local: debug
+            quiet: warn
+
+# Usage:
+#   h service start api-rails
+#     -> uses "local" for all variations (DATABASE_URL=postgres://localhost..., REDIS_URL=redis://localhost..., LOG_LEVEL=debug)
+#
+#   h service start api-rails --use DATABASE_URL=docker --use REDIS_URL=docker
+#     -> uses docker DB and redis, LOG_LEVEL defaults to "local" (debug)
+#
+#   h service start api-rails --use DATABASE_URL=staging --use LOG_LEVEL=quiet
+#     -> connects to staging DB (readonly), quiet logging, REDIS_URL defaults to local
+#
+#   h service start api-rails --use LOG_LEVEL=quiet
+#     -> everything local except warn-level logging
+
+# =============================================================================
+# GraphQL service - multiple env files
+# =============================================================================
+graphql:
+  base_dir: ~/work/graphql
+  host: localhost
+  port: 4000
+  init:
+    - npm install
+  start:
+    - npm run dev
+  env_files:
+    - env_file: .env.local
+      base_env: graphql.env
+      env_vars:
+        API_URL:
+          variations:
+            local: http://localhost:3000
+            staging: https://api.staging.example.com
+            production: https://api.example.com
+        AUTH_PROVIDER:
+          variations:
+            local: http://localhost:8080/auth
+            staging: https://auth.staging.example.com
+            production: https://auth.example.com
+    - env_file: .env.test
+      base_env: graphql-test.env
+      env_vars:
+        API_URL:
+          variations:
+            local: http://localhost:3001
+            mock: http://localhost:9999
+
+# Usage:
+#   h service start graphql
+#     -> writes BOTH env files:
+#        .env.local   gets API_URL=http://localhost:3000, AUTH_PROVIDER=http://localhost:8080/auth
+#        .env.test    gets API_URL=http://localhost:3001
+#
+#   h service start graphql --use API_URL=staging --use AUTH_PROVIDER=staging
+#     -> .env.local   gets API_URL=https://api.staging.example.com, AUTH_PROVIDER=https://auth.staging.example.com
+#        .env.test    gets API_URL=http://localhost:3001 (no "staging" variation defined for .env.test, falls back to "local")
+#
+#   h service start graphql --use API_URL=mock
+#     -> .env.local   gets API_URL=http://localhost:3000 (no "mock" variation in .env.local, falls back to "local")
+#        .env.test    gets API_URL=http://localhost:9999 (uses "mock" variation)
+#
+#   h service start graphql --use API_URL=production --use AUTH_PROVIDER=production
+#     -> .env.local   gets API_URL=https://api.example.com, AUTH_PROVIDER=https://auth.example.com
+#        .env.test    gets API_URL=http://localhost:3001 (no "production" defined, falls back to "local")
+
+# =============================================================================
+# Frontend - depends on graphql URL
+# =============================================================================
+frontend:
+  base_dir: ~/work/frontend
+  host: localhost
+  port: 8080
+  start:
+    - npm run dev
+  env_files:
+    - env_file: .env.local
+      base_env: frontend.env
+      env_vars:
+        GRAPHQL_URL:
+          variations:
+            local: http://localhost:4000/graphql
+            staging: https://graphql.staging.example.com/graphql
+            production: https://graphql.example.com/graphql
+        FEATURE_FLAGS:
+          variations:
+            local: all
+            staging: released
+            production: released
+
+# Usage:
+#   h service start frontend
+#     -> GRAPHQL_URL=http://localhost:4000/graphql, FEATURE_FLAGS=all
+#
+#   h service start frontend --use GRAPHQL_URL=staging --use FEATURE_FLAGS=staging
+#     -> GRAPHQL_URL=https://graphql.staging.example.com/graphql, FEATURE_FLAGS=released
+
+# =============================================================================
+# Worker with custom stop command
+# =============================================================================
+sidekiq:
+  base_dir: ~/work/api
+  host: localhost
+  port: ""
+  start:
+    - bundle exec sidekiq -C config/sidekiq.yml
+  stop: "pkill -f sidekiq"
+  env_files:
+    - env_file: .env.development
+      base_env: api-rails.env
+      env_vars:
+        REDIS_URL:
+          variations:
+            local: redis://localhost:6379
+            docker: redis://redis:6379
+
+# Usage:
+#   h service start sidekiq
+#   h service stop sidekiq    # runs "pkill -f sidekiq" instead of C-c
+
+# =============================================================================
+# Multi-command start - seed data then launch
+# =============================================================================
+demo-server:
+  base_dir: ~/work/demo
+  host: localhost
+  port: 5000
+  init:
+    - npm install
+  start:
+    - npm run db:seed
+    - npm run build:assets
+    - npm start
+  env_files:
+    - env_file: .env
+      base_env: demo.env
+      env_vars:
+        DEMO_MODE:
+          variations:
+            local: full
+            lite: minimal
+
+# Usage:
+#   h service start demo-server
+#     -> creates a script that runs: db:seed && build:assets && start
+#     -> DEMO_MODE=full
+#
+#   h service start demo-server --use DEMO_MODE=lite
+#     -> same commands, DEMO_MODE=minimal
+
+# =============================================================================
+# SERVICE GROUPS
+# =============================================================================
+
+# Full local stack - everything pointing at localhost
+full-stack:
+  services:
+    - name: redis
+    - name: api-rails
+      use:
+        DATABASE_URL: local
+        REDIS_URL: local
+        LOG_LEVEL: local
+    - name: graphql
+      use:
+        API_URL: local
+        AUTH_PROVIDER: local
+    - name: frontend
+      use:
+        GRAPHQL_URL: local
+        FEATURE_FLAGS: local
+
+# Usage:
+#   h service start full-stack
+#     -> creates ONE tmux window with 4 split panes (redis, api-rails, graphql, frontend)
+#     -> all services use "local" variations
+
+# Frontend + GraphQL against staging API (no local rails needed)
+staging-fe:
+  services:
+    - name: graphql
+      use:
+        API_URL: staging
+        AUTH_PROVIDER: staging
+    - name: frontend
+      use:
+        GRAPHQL_URL: local
+        FEATURE_FLAGS: staging
+
+# Usage:
+#   h service start staging-fe
+#     -> ONE tmux window, 2 split panes
+#     -> graphql points at staging API/auth
+#     -> frontend points at local graphql (which proxies to staging)
+
+# Backend only - rails + sidekiq + redis, docker DB
+backend-docker:
+  services:
+    - name: redis
+    - name: api-rails
+      use:
+        DATABASE_URL: docker
+        REDIS_URL: docker
+        LOG_LEVEL: local
+    - name: sidekiq
+      use:
+        REDIS_URL: docker
+
+# Usage:
+#   h service start backend-docker
+#     -> 3 split panes: redis, api-rails, sidekiq
+#     -> all using docker postgres and redis URLs
+
+# =============================================================================
+# QUICK REFERENCE - all start commands
+# =============================================================================
+#
+# Start with defaults (all "local" variations):
+#   h service start <name>
+#
+# Start with specific variations:
+#   h service start <name> --use VAR=variation
+#   h service start <name> --use VAR1=v1 --use VAR2=v2
+#
+# Start a group (pre-configured variation combos):
+#   h service start <group-name>
+#
+# Interactive selection (no name):
+#   h service start
+#
+# Other commands:
+#   h service stop [name]       # C-c (or custom stop cmd), fuzzy select if no name
+#   h service attach [name]     # switch to service's tmux pane
+#   h service status [name]     # show service details
+#   h service reset [name]      # clear stale running state
+#   h service clean             # auto-prune dead panes from state
+#   h service ls                # list all services + status
+#   h service env <name>        # show env file config and variations
+#   h service groups            # list all groups and members
