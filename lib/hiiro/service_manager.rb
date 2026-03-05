@@ -50,50 +50,15 @@ class Hiiro
       svc = find_service(svc_name)
       return unless svc
 
-      env_vars = svc[:env_vars]
-      return unless env_vars || svc[:base_env]
-
       base_dir = svc[:base_dir]
-      env_file = svc[:env_file]
-      base_env = svc[:base_env]
+      return unless base_dir
 
-      # Copy base env template if configured
-      if base_env && env_file && base_dir
-        src = File.join(ENV_TEMPLATES_DIR, base_env)
-        dest = File.join(base_dir, env_file)
-        if File.exist?(src)
-          FileUtils.mkdir_p(File.dirname(dest))
-          FileUtils.cp(src, dest)
-        end
+      env_file_configs = build_env_file_configs(svc)
+      return if env_file_configs.empty?
+
+      env_file_configs.each do |efc|
+        prepare_single_env(base_dir, efc, variation_overrides)
       end
-
-      # Inject variation values into env file
-      return unless env_vars && env_file && base_dir
-
-      dest = File.join(base_dir, env_file)
-      lines = File.exist?(dest) ? File.readlines(dest) : []
-
-      env_vars.each do |var_name, var_config|
-        next unless var_config.is_a?(Hash) && var_config['variations']
-
-        variation = (variation_overrides[var_name] || variation_overrides[var_name.to_sym] || 'local').to_s
-        value = var_config['variations'][variation]
-        next unless value
-
-        # Replace existing line or append
-        replaced = false
-        lines.map! do |line|
-          if line.match?(/\A#{Regexp.escape(var_name)}=/)
-            replaced = true
-            "#{var_name}=#{value}\n"
-          else
-            line
-          end
-        end
-        lines << "#{var_name}=#{value}\n" unless replaced
-      end
-
-      File.write(dest, lines.join)
     end
 
     def start_group(name, tmux_info: {}, task_info: {})
@@ -131,8 +96,6 @@ class Hiiro
         member_name = member['name'] || member[:name]
         use_overrides = member['use'] || member[:use] || {}
 
-        prepare_env(member_name, variation_overrides: use_overrides)
-
         svc = find_service(member_name)
         next unless svc
 
@@ -152,7 +115,7 @@ class Hiiro
           pane: pane_id,
         )
 
-        start(member_name, tmux_info: member_tmux_info, task_info: task_info, skip_env: true, skip_window_creation: true)
+        start(member_name, tmux_info: member_tmux_info, task_info: task_info, variation_overrides: use_overrides, skip_window_creation: true)
       end
       true
     end
@@ -219,11 +182,6 @@ class Hiiro
         return false
       end
 
-      # Prepare env file unless already handled by start_group
-      unless skip_env
-        prepare_env(svc_name, variation_overrides: variation_overrides)
-      end
-
       # Run init commands
       if svc[:init]
         svc[:init].each do |cmd|
@@ -234,6 +192,11 @@ class Hiiro
             system(cmd)
           end
         end
+      end
+
+      # Prepare env files after init (e.g., init may install deps that generate .env templates)
+      unless skip_env
+        prepare_env(svc_name, variation_overrides: variation_overrides)
       end
 
       # Start the service
@@ -628,6 +591,9 @@ class Hiiro
             'init' => [],
             'start' => [''],
             'cleanup' => [],
+            'env_files' => [
+              { 'env_file' => '.env', 'base_env' => '', 'env_vars' => {} },
+            ],
           }
 
           require 'tempfile'
@@ -702,35 +668,93 @@ class Hiiro
             next
           end
 
-          env_vars = svc[:env_vars]
-          unless env_vars
-            puts "No env_vars configured for '#{svc[:name]}'"
+          configs = sm.send(:build_env_file_configs, svc)
+          if configs.empty?
+            puts "No env files configured for '#{svc[:name]}'"
             next
           end
 
-          puts "Env vars for '#{svc[:name]}':"
-          puts
-          env_vars.each do |var_name, var_config|
-            next unless var_config.is_a?(Hash) && var_config['variations']
-
-            puts "  #{var_name}:"
-            var_config['variations'].each do |variation, value|
-              puts "    #{variation}: #{value}"
-            end
-          end
-
-          if svc[:base_env]
+          puts "Env files for '#{svc[:name]}':"
+          configs.each do |efc|
             puts
-            puts "Base env template: #{svc[:base_env]}"
-          end
-          if svc[:env_file]
-            puts "Env file: #{svc[:env_file]}"
+            puts "  #{efc[:env_file] || '(no dest)'}"
+            puts "    template: #{efc[:base_env]}" if efc[:base_env]
+
+            env_vars = efc[:env_vars]
+            next unless env_vars
+
+            env_vars.each do |var_name, var_config|
+              variations = var_config.is_a?(Hash) && (var_config['variations'] || var_config[:variations])
+              next unless variations
+
+              puts "    #{var_name}:"
+              variations.each do |variation, value|
+                puts "      #{variation}: #{value}"
+              end
+            end
           end
         end
       end
     end
 
     private
+
+    # Normalize env file config into an array of hashes,
+    # supporting both old single-env format and new env_files array
+    def build_env_file_configs(svc)
+      if svc[:env_files]
+        Array(svc[:env_files]).map { |ef| symbolize_keys(ef.is_a?(Hash) ? ef : {}) }
+      elsif svc[:env_file] || svc[:base_env] || svc[:env_vars]
+        [{ env_file: svc[:env_file], base_env: svc[:base_env], env_vars: svc[:env_vars] }]
+      else
+        []
+      end
+    end
+
+    def prepare_single_env(base_dir, efc, variation_overrides)
+      env_file = efc[:env_file]
+      base_env = efc[:base_env]
+      env_vars = efc[:env_vars]
+
+      # Copy base env template if configured
+      if base_env && env_file
+        src = File.join(ENV_TEMPLATES_DIR, base_env)
+        dest = File.join(base_dir, env_file)
+        if File.exist?(src)
+          FileUtils.mkdir_p(File.dirname(dest))
+          FileUtils.cp(src, dest)
+        end
+      end
+
+      # Inject variation values into env file
+      return unless env_vars && env_file
+
+      dest = File.join(base_dir, env_file)
+      lines = File.exist?(dest) ? File.readlines(dest) : []
+
+      env_vars.each do |var_name, var_config|
+        var_config = symbolize_keys(var_config) if var_config.is_a?(Hash)
+        variations = var_config.is_a?(Hash) && (var_config[:variations] || var_config['variations'])
+        next unless variations
+
+        variation = (variation_overrides[var_name] || variation_overrides[var_name.to_sym] || 'local').to_s
+        value = variations[variation]
+        next unless value
+
+        replaced = false
+        lines.map! do |line|
+          if line.match?(/\A#{Regexp.escape(var_name.to_s)}=/)
+            replaced = true
+            "#{var_name}=#{value}\n"
+          else
+            line
+          end
+        end
+        lines << "#{var_name}=#{value}\n" unless replaced
+      end
+
+      File.write(dest, lines.join)
+    end
 
     def stale_pane?(pane_id)
       return true unless pane_id
