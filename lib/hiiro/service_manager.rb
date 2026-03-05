@@ -471,8 +471,13 @@ class Hiiro
 
         h.add_subcmd(:start) do |svc_name=nil, *extra_args|
           unless svc_name
-            puts "Usage: service start <name> [--use VAR=variation ...]"
-            next
+            all = sm.services.keys
+            if all.empty?
+              puts "No services configured"
+              next
+            end
+            svc_name = h.fuzzyfind(all)
+            next unless svc_name
           end
 
           # Parse --use flags from extra_args
@@ -515,8 +520,13 @@ class Hiiro
 
         h.add_subcmd(:stop) do |svc_name=nil|
           unless svc_name
-            puts "Usage: service stop <name>"
-            next
+            running = sm.running_services.keys
+            if running.empty?
+              puts "No running services"
+              next
+            end
+            svc_name = h.fuzzyfind(running)
+            next unless svc_name
           end
 
           sm.stop(svc_name)
@@ -524,8 +534,13 @@ class Hiiro
 
         h.add_subcmd(:reset) do |svc_name=nil|
           unless svc_name
-            puts "Usage: service reset <name>"
-            next
+            running = sm.running_services.keys
+            if running.empty?
+              puts "No running services"
+              next
+            end
+            svc_name = h.fuzzyfind(running)
+            next unless svc_name
           end
 
           sm.reset(svc_name)
@@ -537,8 +552,13 @@ class Hiiro
 
         h.add_subcmd(:attach) do |svc_name=nil|
           unless svc_name
-            puts "Usage: service attach <name>"
-            next
+            running = sm.running_services.keys
+            if running.empty?
+              puts "No running services"
+              next
+            end
+            svc_name = h.fuzzyfind(running)
+            next unless svc_name
           end
 
           sm.attach(svc_name)
@@ -588,8 +608,13 @@ class Hiiro
 
         h.add_subcmd(:status) do |svc_name=nil|
           unless svc_name
-            puts "Usage: service status <name>"
-            next
+            running = sm.running_services.keys
+            if running.empty?
+              puts "No running services"
+              next
+            end
+            svc_name = h.fuzzyfind(running)
+            next unless svc_name
           end
 
           sm.status(svc_name)
