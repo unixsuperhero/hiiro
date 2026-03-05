@@ -166,6 +166,44 @@ class Hiiro
       load_state
     end
 
+    def reset(name)
+      svc = find_service(name)
+      unless svc
+        puts "Service '#{name}' not found"
+        return false
+      end
+
+      svc_name = svc[:name]
+      state = load_state
+      unless state.key?(svc_name)
+        puts "Service '#{svc_name}' is not in running state"
+        return false
+      end
+
+      state.delete(svc_name)
+      save_state(state)
+      puts "Reset service '#{svc_name}' (cleared from running state)"
+      true
+    end
+
+    def clean
+      state = load_state
+      return puts("No running services to clean") if state.empty?
+
+      stale = state.select { |_, info| stale_pane?(info['tmux_pane']) }
+      if stale.empty?
+        puts "All running services have live panes"
+        return false
+      end
+
+      stale.each do |svc_name, _|
+        state.delete(svc_name)
+        puts "Cleaned stale service '#{svc_name}'"
+      end
+      save_state(state)
+      true
+    end
+
     def start(name, tmux_info: {}, task_info: {}, variation_overrides: {}, skip_env: false, skip_window_creation: false)
       svc = find_service(name)
       unless svc
@@ -482,6 +520,19 @@ class Hiiro
           sm.stop(svc_name)
         end
 
+        h.add_subcmd(:reset) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service reset <name>"
+            next
+          end
+
+          sm.reset(svc_name)
+        end
+
+        h.add_subcmd(:clean) do
+          sm.clean
+        end
+
         h.add_subcmd(:attach) do |svc_name=nil|
           unless svc_name
             puts "Usage: service attach <name>"
@@ -653,6 +704,11 @@ class Hiiro
     end
 
     private
+
+    def stale_pane?(pane_id)
+      return true unless pane_id
+      !system('tmux', 'has-session', '-t', pane_id, [:out, :err] => '/dev/null')
+    end
 
     def write_start_script(svc_name, cmds, base_dir)
       dir = File.join(STATE_DIR, 'scripts')
