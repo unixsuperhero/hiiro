@@ -50,8 +50,7 @@ class Hiiro
       svc = find_service(svc_name)
       return unless svc
 
-      base_dir = svc[:base_dir]
-      return unless base_dir
+      base_dir = resolve_base_dir(svc[:base_dir])
 
       env_file_configs = build_env_file_configs(svc)
       return if env_file_configs.empty?
@@ -86,7 +85,7 @@ class Hiiro
       first_member = members.first
       first_name = first_member['name'] || first_member[:name]
       first_svc = find_service(first_name)
-      first_base_dir = first_svc&.[](:base_dir) || Dir.pwd
+      first_base_dir = resolve_base_dir(first_svc&.[](:base_dir))
 
       # Create a new window for the group
       window_target = create_tmux_window(session, group[:name], first_base_dir)
@@ -99,7 +98,7 @@ class Hiiro
         svc = find_service(member_name)
         next unless svc
 
-        base_dir = svc[:base_dir] || Dir.pwd
+        base_dir = resolve_base_dir(svc[:base_dir])
 
         if idx == 0
           # First service uses the initial pane
@@ -184,13 +183,9 @@ class Hiiro
 
       # Run init commands
       if svc[:init]
+        base_dir = resolve_base_dir(svc[:base_dir])
         svc[:init].each do |cmd|
-          base_dir = svc[:base_dir]
-          if base_dir
-            system("cd #{base_dir} && #{cmd}")
-          else
-            system(cmd)
-          end
+          system("cd #{base_dir} && #{cmd}")
         end
       end
 
@@ -207,7 +202,7 @@ class Hiiro
       end
 
       start_cmds = Array(start_cmd)
-      base_dir = svc[:base_dir]
+      base_dir = resolve_base_dir(svc[:base_dir])
       session = tmux_info[:session] || current_tmux_session
 
       # Write start commands to an executable tempfile
@@ -215,7 +210,7 @@ class Hiiro
 
       if session && !skip_window_creation
         # Create a new tmux window for this service
-        window_target = create_tmux_window(session, svc_name, base_dir || Dir.pwd)
+        window_target = create_tmux_window(session, svc_name, base_dir)
         pane_id = capture_pane_id(window_target)
       elsif session && skip_window_creation
         # Pane already created by start_group
@@ -228,10 +223,8 @@ class Hiiro
 
       if pane_id
         system('tmux', 'send-keys', '-t', pane_id, script, 'Enter')
-      elsif base_dir
-        system("cd #{base_dir} && #{script} &")
       else
-        system("#{script} &")
+        system("cd #{base_dir} && #{script} &")
       end
 
       # Record state
@@ -816,6 +809,15 @@ class Hiiro
 
     def symbolize_keys(hash)
       hash.each_with_object({}) { |(k, v), h| h[k.to_sym] = v }
+    end
+
+    def resolve_base_dir(base_dir)
+      return Dir.pwd if base_dir.nil? || base_dir.to_s.empty?
+
+      git_root = `git rev-parse --show-toplevel 2>/dev/null`.chomp
+      root = git_root.empty? ? Dir.pwd : git_root
+
+      File.join(root, base_dir)
     end
   end
 end
