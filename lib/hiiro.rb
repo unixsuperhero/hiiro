@@ -124,6 +124,10 @@ class Hiiro
     ].map(&:shellescape).join(' ')
   end
 
+  def this
+    self
+  end
+
   def tasks_enabled?
     @tasks_enabled
   end
