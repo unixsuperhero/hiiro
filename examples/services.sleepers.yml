@@ -1,0 +1,41 @@
+---
+s1:
+  base_dir: lib
+  host: localhost
+  port: '1111'
+  init:
+  - 'echo pwd: $PWD'
+  - pwd
+  - echo
+  - echo sleeper 1
+  start:
+  - sleep 1d
+  cleanup:
+  - ls -lA
+  env_files:
+  - env_file: ".env"
+    base_env: ''
+    env_vars:
+      hello: world
+s2:
+  base_dir: lib
+  host: localhost
+  port: '2222'
+  init:
+  - 'echo pwd: $PWD'
+  - pwd
+  - echo
+  - echo sleeper 2
+  start:
+  - sleep 2d
+  cleanup:
+  - ls -lA
+  env_files:
+  - env_file: ".env"
+    base_env: ''
+    env_vars:
+      bye: world
+ss:
+  services:
+  - name: s1
+  - name: s2
