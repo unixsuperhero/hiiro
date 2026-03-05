@@ -7,6 +7,7 @@ class Hiiro
     CONFIG_FILE = File.join(Dir.home, '.config', 'hiiro', 'services.yml')
     STATE_DIR = File.join(Dir.home, '.config', 'hiiro', 'services')
     STATE_FILE = File.join(STATE_DIR, 'running.yml')
+    ENV_TEMPLATES_DIR = File.join(Dir.home, '.config', 'hiiro', 'env_templates')
 
     attr_reader :config_file, :state_file
 
@@ -30,6 +31,94 @@ class Hiiro
       { name: svc_name, **symbolize_keys(configs[svc_name]) }
     end
 
+    def find_group(name)
+      configs = services
+      names = configs.keys.select { |k| configs[k].is_a?(Hash) && configs[k].key?('services') }
+      return nil if names.empty?
+
+      structs = names.map { |k| OpenStruct.new(name: k) }
+      result = Hiiro::Matcher.new(structs, :name).by_prefix(name)
+      match = result.resolved || result.first
+      return nil unless match
+
+      group_name = match.item.name
+      { name: group_name, **symbolize_keys(configs[group_name]) }
+    end
+
+    def prepare_env(svc_name, variation_overrides: {})
+      svc = find_service(svc_name)
+      return unless svc
+
+      env_vars = svc[:env_vars]
+      return unless env_vars || svc[:base_env]
+
+      base_dir = svc[:base_dir]
+      env_file = svc[:env_file]
+      base_env = svc[:base_env]
+
+      # Copy base env template if configured
+      if base_env && env_file && base_dir
+        src = File.join(ENV_TEMPLATES_DIR, base_env)
+        dest = File.join(base_dir, env_file)
+        if File.exist?(src)
+          FileUtils.mkdir_p(File.dirname(dest))
+          FileUtils.cp(src, dest)
+        end
+      end
+
+      # Inject variation values into env file
+      return unless env_vars && env_file && base_dir
+
+      dest = File.join(base_dir, env_file)
+      lines = File.exist?(dest) ? File.readlines(dest) : []
+
+      env_vars.each do |var_name, var_config|
+        next unless var_config.is_a?(Hash) && var_config['variations']
+
+        variation = (variation_overrides[var_name] || variation_overrides[var_name.to_sym] || 'local').to_s
+        value = var_config['variations'][variation]
+        next unless value
+
+        # Replace existing line or append
+        replaced = false
+        lines.map! do |line|
+          if line.match?(/\A#{Regexp.escape(var_name)}=/)
+            replaced = true
+            "#{var_name}=#{value}\n"
+          else
+            line
+          end
+        end
+        lines << "#{var_name}=#{value}\n" unless replaced
+      end
+
+      File.write(dest, lines.join)
+    end
+
+    def start_group(name, tmux_info: {}, task_info: {})
+      group = find_group(name)
+      unless group
+        puts "Group '#{name}' not found"
+        return false
+      end
+
+      members = group[:services]
+      unless members && !members.empty?
+        puts "Group '#{group[:name]}' has no services"
+        return false
+      end
+
+      puts "Starting group '#{group[:name]}'..."
+      members.each do |member|
+        member_name = member['name'] || member[:name]
+        use_overrides = member['use'] || member[:use] || {}
+
+        prepare_env(member_name, variation_overrides: use_overrides)
+        start(member_name, tmux_info: tmux_info, task_info: task_info, skip_env: true)
+      end
+      true
+    end
+
     def running?(name)
       state = load_state
       state.key?(name)
@@ -39,7 +128,7 @@ class Hiiro
       load_state
     end
 
-    def start(name, tmux_info: {}, task_info: {})
+    def start(name, tmux_info: {}, task_info: {}, variation_overrides: {}, skip_env: false)
       svc = find_service(name)
       unless svc
         puts "Service '#{name}' not found"
@@ -52,6 +141,11 @@ class Hiiro
         info = running_services[svc_name]
         puts "Service '#{svc_name}' is already running (pid: #{info['pid']}, pane: #{info['tmux_pane']})"
         return false
+      end
+
+      # Prepare env file unless already handled by start_group
+      unless skip_env
+        prepare_env(svc_name, variation_overrides: variation_overrides)
       end
 
       # Run init commands
@@ -283,10 +377,22 @@ class Hiiro
           h.run_subcmd(:ls)
         end
 
-        h.add_subcmd(:start) do |svc_name=nil|
+        h.add_subcmd(:start) do |svc_name=nil, *extra_args|
           unless svc_name
-            puts "Usage: service start <name>"
+            puts "Usage: service start <name> [--use VAR=variation ...]"
             next
+          end
+
+          # Parse --use flags from extra_args
+          variation_overrides = {}
+          extra_args.each_with_index do |arg, i|
+            if arg == '--use' && extra_args[i + 1]
+              key, val = extra_args[i + 1].split('=', 2)
+              variation_overrides[key] = val if key && val
+            elsif arg.start_with?('--use=')
+              key, val = arg.sub('--use=', '').split('=', 2)
+              variation_overrides[key] = val if key && val
+            end
           end
 
           tmux_info = {
@@ -308,7 +414,13 @@ class Hiiro
             end
           end
 
-          sm.start(svc_name, tmux_info: tmux_info, task_info: task_info)
+          # Check if it's a group or individual service
+          group = sm.find_group(svc_name)
+          if group
+            sm.start_group(svc_name, tmux_info: tmux_info, task_info: task_info)
+          else
+            sm.start(svc_name, tmux_info: tmux_info, task_info: task_info, variation_overrides: variation_overrides)
+          end
         end
 
         h.add_subcmd(:stop) do |svc_name=nil|
@@ -432,6 +544,61 @@ class Hiiro
         h.add_subcmd(:config) do
           editor = ENV['EDITOR'] || 'nvim'
           system(editor, sm.config_file)
+        end
+
+        h.add_subcmd(:groups) do
+          configs = sm.services
+          groups = configs.select { |_, v| v.is_a?(Hash) && v.key?('services') }
+
+          if groups.empty?
+            puts "No service groups configured."
+            next
+          end
+
+          puts "Service groups:"
+          puts
+          groups.each do |name, cfg|
+            members = (cfg['services'] || []).map { |m| m['name'] || m[:name] }.compact
+            puts format("  %-20s  %s", name, members.join(', '))
+          end
+        end
+
+        h.add_subcmd(:env) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service env <name>"
+            next
+          end
+
+          svc = sm.find_service(svc_name)
+          unless svc
+            puts "Service '#{svc_name}' not found"
+            next
+          end
+
+          env_vars = svc[:env_vars]
+          unless env_vars
+            puts "No env_vars configured for '#{svc[:name]}'"
+            next
+          end
+
+          puts "Env vars for '#{svc[:name]}':"
+          puts
+          env_vars.each do |var_name, var_config|
+            next unless var_config.is_a?(Hash) && var_config['variations']
+
+            puts "  #{var_name}:"
+            var_config['variations'].each do |variation, value|
+              puts "    #{variation}: #{value}"
+            end
+          end
+
+          if svc[:base_env]
+            puts
+            puts "Base env template: #{svc[:base_env]}"
+          end
+          if svc[:env_file]
+            puts "Env file: #{svc[:env_file]}"
+          end
         end
       end
     end
