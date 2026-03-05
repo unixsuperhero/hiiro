@@ -109,13 +109,50 @@ class Hiiro
         return false
       end
 
+      session = tmux_info[:session] || current_tmux_session
+      unless session
+        puts "tmux is required to start a service group"
+        return false
+      end
+
       puts "Starting group '#{group[:name]}'..."
-      members.each do |member|
+
+      # Create one window for the group, split panes for each service
+      first_member = members.first
+      first_name = first_member['name'] || first_member[:name]
+      first_svc = find_service(first_name)
+      first_base_dir = first_svc&.[](:base_dir) || Dir.pwd
+
+      # Create a new window for the group
+      window_target = create_tmux_window(session, group[:name], first_base_dir)
+      first_pane_id = capture_pane_id(window_target)
+
+      members.each_with_index do |member, idx|
         member_name = member['name'] || member[:name]
         use_overrides = member['use'] || member[:use] || {}
 
         prepare_env(member_name, variation_overrides: use_overrides)
-        start(member_name, tmux_info: tmux_info, task_info: task_info, skip_env: true)
+
+        svc = find_service(member_name)
+        next unless svc
+
+        base_dir = svc[:base_dir] || Dir.pwd
+
+        if idx == 0
+          # First service uses the initial pane
+          pane_id = first_pane_id
+        else
+          # Subsequent services get split panes
+          pane_id = split_tmux_pane(window_target, base_dir)
+        end
+
+        member_tmux_info = tmux_info.merge(
+          session: session,
+          window: window_target,
+          pane: pane_id,
+        )
+
+        start(member_name, tmux_info: member_tmux_info, task_info: task_info, skip_env: true, skip_window_creation: true)
       end
       true
     end
@@ -129,7 +166,7 @@ class Hiiro
       load_state
     end
 
-    def start(name, tmux_info: {}, task_info: {}, variation_overrides: {}, skip_env: false)
+    def start(name, tmux_info: {}, task_info: {}, variation_overrides: {}, skip_env: false, skip_window_creation: false)
       svc = find_service(name)
       unless svc
         puts "Service '#{name}' not found"
@@ -168,20 +205,35 @@ class Hiiro
         return false
       end
 
+      # Coerce start command to array
+      start_cmds = Array(start_cmd)
+
       base_dir = svc[:base_dir]
-      pane_id = tmux_info[:pane] || ENV['TMUX_PANE']
+      session = tmux_info[:session] || current_tmux_session
+
+      if session && !skip_window_creation
+        # Create a new tmux window for this service
+        window_target = create_tmux_window(session, svc_name, base_dir || Dir.pwd)
+        pane_id = capture_pane_id(window_target)
+      elsif session && skip_window_creation
+        # Pane already created by start_group
+        pane_id = tmux_info[:pane]
+        window_target = tmux_info[:window]
+      else
+        pane_id = nil
+        window_target = nil
+      end
 
       if pane_id
-        if base_dir
-          system('tmux', 'send-keys', '-t', pane_id, "cd #{base_dir} && #{start_cmd}", 'Enter')
-        else
-          system('tmux', 'send-keys', '-t', pane_id, start_cmd, 'Enter')
-        end
+        # Send each start command to the pane
+        combined_cmd = start_cmds.join(' && ')
+        system('tmux', 'send-keys', '-t', pane_id, combined_cmd, 'Enter')
       else
+        combined_cmd = start_cmds.join(' && ')
         if base_dir
-          system("cd #{base_dir} && #{start_cmd} &")
+          system("cd #{base_dir} && #{combined_cmd} &")
         else
-          system("#{start_cmd} &")
+          system("#{combined_cmd} &")
         end
       end
 
@@ -189,8 +241,8 @@ class Hiiro
       state = load_state
       state[svc_name] = {
         'pid' => nil,
-        'tmux_session' => tmux_info[:session],
-        'tmux_window' => tmux_info[:window],
+        'tmux_session' => session || tmux_info[:session],
+        'tmux_window' => window_target || tmux_info[:window],
         'tmux_pane' => pane_id,
         'task' => task_info[:task_name],
         'tree' => task_info[:tree],
@@ -220,7 +272,7 @@ class Hiiro
       info = running_services[svc_name]
       pane_id = info['tmux_pane']
 
-      if svc[:stop]
+      if svc[:stop] && !svc[:stop].to_s.strip.empty?
         stop_cmd = svc[:stop]
         if info['pid']
           stop_cmd = stop_cmd.gsub('$PID', info['pid'].to_s)
@@ -260,9 +312,14 @@ class Hiiro
       info = running_services[svc_name]
       pane_id = info['tmux_pane']
       session = info['tmux_session']
+      window = info['tmux_window']
 
       if session
         system('tmux', 'switch-client', '-t', session)
+      end
+
+      if window
+        system('tmux', 'select-window', '-t', window)
       end
 
       if pane_id
@@ -398,8 +455,6 @@ class Hiiro
 
           tmux_info = {
             session: ENV['TMUX'] ? `tmux display-message -p '#S'`.chomp : nil,
-            window: ENV['TMUX'] ? `tmux display-message -p '#I'`.chomp : nil,
-            pane: ENV['TMUX_PANE'],
           }
 
           task_info = {}
@@ -499,8 +554,7 @@ class Hiiro
             'host' => 'localhost',
             'port' => '',
             'init' => [],
-            'start' => '',
-            'stop' => '',
+            'start' => [''],
             'cleanup' => [],
           }
 
@@ -605,6 +659,26 @@ class Hiiro
     end
 
     private
+
+    def current_tmux_session
+      return nil unless ENV['TMUX']
+      `tmux display-message -p '#S'`.chomp
+    end
+
+    def create_tmux_window(session, name, start_dir)
+      system('tmux', 'new-window', '-d', '-t', session, '-n', name, '-c', start_dir)
+      "#{session}:#{name}"
+    end
+
+    def capture_pane_id(window_target)
+      `tmux list-panes -t #{window_target} -F '\#{pane_id}'`.chomp.split("\n").last
+    end
+
+    def split_tmux_pane(window_target, start_dir)
+      system('tmux', 'split-window', '-d', '-t', window_target, '-c', start_dir)
+      system('tmux', 'select-layout', '-t', window_target, 'even-vertical')
+      `tmux list-panes -t #{window_target} -F '\#{pane_id}'`.chomp.split("\n").last
+    end
 
     def load_config
       return {} unless File.exist?(config_file)
