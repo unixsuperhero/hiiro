@@ -277,13 +277,153 @@ Hiiro::Notification.show(hiiro)   # Show notification based on hiiro.args
 # Supports: -m message, -t title, -l link, -c command, -s sound
 ```
 
+### Hiiro::Queue (lib/hiiro/queue.rb)
+
+Task queue that pipes prompts to `claude` via tmux. Tasks are markdown files with optional YAML frontmatter (`task_name`, `tree_name`, `session_name`) that flow through statuses: `wip` -> `pending` -> `running` -> `done`/`failed`.
+
+Subcommands (`h queue <subcmd>`):
+- `ls`/`list` - List all tasks with status, elapsed time, and preview
+- `status` - Detailed status with working directory info
+- `add` - Create a new prompt (opens editor or accepts stdin/args, supports `-t <task>` flag)
+- `wip` - Create/edit a work-in-progress prompt
+- `ready` - Move wip task to pending
+- `run [name]` - Launch pending task(s) in tmux windows
+- `watch` - Continuously poll and launch pending tasks
+- `attach [name]` - Switch to running task's tmux window (fuzzy select if no name)
+- `kill [name]` - Kill running task's tmux window, move to failed
+- `retry [name]` - Move failed/done task back to pending
+- `clean` - Remove all done/failed task files
+- `dir` - Print queue directory path
+
+Config: `~/.config/hiiro/queue/{wip,pending,running,done,failed}/`
+
+Key internals:
+- `Queue::Prompt` - Parses frontmatter to resolve task/tree/session for working directory
+- Tasks launch in tmux windows within the task's session (from frontmatter) or default `hq` session
+- Launcher script runs `cat prompt | claude`, then moves files to done/failed based on exit code
+
+### Hiiro::ServiceManager (lib/hiiro/service_manager.rb)
+
+Manages background development services with tmux integration, env file management, and service groups.
+
+Subcommands (`h service <subcmd>`):
+- `ls`/`list` - List all services with running status, port, and base_dir
+- `start <name> [--use VAR=variation ...]` - Start a service or group; prepares env file first
+- `stop <name>` - Stop a running service (sends C-c to tmux pane or runs stop command)
+- `attach <name>` - Switch to service's tmux pane
+- `open <name>` - Open service URL in browser
+- `url <name>` / `port <name>` - Print service URL or port
+- `status <name>` - Show detailed service info (pid, pane, task, started_at)
+- `add` - Add new service via editor template
+- `rm`/`remove <name>` - Remove a service
+- `config` - Edit services.yml
+- `groups` - List all service groups and their members
+- `env <name>` - Show env_vars, their variation options, and base_env/env_file config
+
+Service config (`~/.config/hiiro/services.yml`):
+```yaml
+my-rails:
+  base_dir: apps/myapp
+  host: localhost
+  port: 3000
+  init: ["bundle install"]
+  start: bundle exec rails s -p 3000
+  stop: ""
+  cleanup: []
+  env_file: .env.development          # destination in base_dir
+  base_env: my-rails.env              # template in ~/.config/hiiro/env_templates/
+  env_vars:
+    GRAPHQL_URL:
+      variations:
+        local: http://localhost:4000/graphql
+        staging: https://graphql.staging.example.com/graphql
+```
+
+Service group config (same file, distinguished by `services:` key):
+```yaml
+my-stack:
+  services:
+    - name: my-rails
+      use:
+        GRAPHQL_URL: staging
+    - name: my-graphql
+```
+
+Key internals:
+- `prepare_env(svc_name, variation_overrides:)` - Copies base_env template from `~/.config/hiiro/env_templates/` to `base_dir/env_file`, then injects variation values
+- `find_group(name)` / `start_group(name, ...)` - Detect and start service groups, applying per-member `use:` overrides
+- Default variation is `local` when not specified
+- State tracked in `~/.config/hiiro/services/running.yml`
+
+### Hiiro::RunnerTool (lib/hiiro/runner_tool.rb)
+
+Run dev tools (linters, formatters, test suites) against changed files.
+
+Subcommands (`h run [change_set] [tool_type] [file_group]`):
+- Default (no subcmd) - Run matching tools with positional filters
+- `ls` - List configured tools with type, group, extensions, and variations
+- `add` - Add new tool via editor template
+- `rm <name>` - Remove a tool
+- `config` - Edit tools.yml
+
+Arguments (positional, any order):
+- **change_set**: `dirty` (default, git status), `branch` (diff from main), `all`
+- **tool_type**: `lint`, `test`, `format`
+- **file_type_group**: custom group identifier (e.g., `ruby`, `frontend`)
+- `--variation`/`-v <name>` - Use a named tool variation
+
+Config (`~/.config/hiiro/tools.yml`):
+```yaml
+rubocop:
+  tool_type: lint
+  command: "rubocop [FILENAMES]"
+  file_type_group: ruby
+  file_extensions: "rb"
+  variations:
+    quick: "rubocop --only Style [FILENAMES]"
+    fix: "rubocop -A [FILENAMES]"
+```
+
+`[FILENAMES]` is replaced with the space-joined list of matching files.
+
+### Hiiro::AppFiles (lib/hiiro/app_files.rb)
+
+Track frequently-used files per application, open them together in your editor.
+
+Subcommands (`h file <subcmd>`):
+- `ls [app_name]` - List tracked files (all apps or specific app)
+- `add <app> <file1> [file2 ...]` - Add files to an app's file list
+- `rm <app> <file1> [file2 ...]` - Remove files
+- `edit <app>` - Open all tracked files in editor (vim uses `-O` for vertical splits)
+
+Config: `~/.config/hiiro/app_files.yml`
+
+Files are resolved relative to the current task's tree root when an environment is available.
+
+### Jumplist (bin/h-jumplist)
+
+Vim-style navigation history for tmux. Records pane/window/session changes and lets you jump backward/forward through your navigation history.
+
+Subcommands (`h jumplist <subcmd>`):
+- `setup` - Install tmux hooks and keybindings (`Ctrl-B` back, `Ctrl-F` forward)
+- `record` - Record current position (called automatically by tmux hooks)
+- `back` - Navigate to previous position
+- `forward` - Navigate to next position
+- `ls`/`list` - Show history with timestamps and current position marker
+- `clear` - Clear history
+- `path` - Print jumplist file path
+
+Config: `~/.config/hiiro/jumplist/` (per-client entries and position files, max 50 entries)
+
+Dead panes are automatically pruned. Duplicate consecutive entries are deduplicated. Forward history is truncated when navigating to a new location (like vim).
+
 ## Key Files
 
-- `bin/h` - Entry point that loads lib/hiiro.rb
-- `bin/h-*` - External subcommands (tmux wrappers, git helpers, todo, links, etc.)
+- `exe/h` - Entry point that loads lib/hiiro.rb
+- `bin/h-*` - External subcommands (tmux wrappers, git helpers, jumplist, etc.)
 - `plugins/*.rb` - Reusable plugin modules (Pins, Project, Tasks, Notify)
 - `lib/hiiro.rb` - Main Hiiro class and Runners
-- `lib/hiiro/*.rb` - Supporting classes (Git, Matcher, Fuzzyfind, Todo, Shell, Options, Notification, Tmux)
+- `lib/hiiro/*.rb` - Supporting classes (Git, Matcher, Fuzzyfind, Todo, Shell, Options, Notification, Tmux, Queue, ServiceManager, RunnerTool, AppFiles)
 
 ## External Dependencies
 
@@ -292,6 +432,7 @@ Hiiro::Notification.show(hiiro)   # Show notification based on hiiro.args
 - `sk` (skim) or `fzf` for fuzzy finding
 - `gh` CLI for GitHub operations (h-pr)
 - `terminal-notifier` for macOS notifications (notify plugin)
+- `claude` CLI for queue task execution
 
 ## Configuration Locations
 
@@ -299,8 +440,15 @@ All config lives in `~/.config/hiiro/`:
 - `plugins/` - Auto-loaded plugin files
 - `pins/` - Per-command YAML key-value storage
 - `tasks/` - Task metadata for worktree management
+- `queue/` - Prompt queue (wip, pending, running, done, failed)
+- `services/` - Service runtime state
+- `jumplist/` - Per-client tmux navigation history
+- `env_templates/` - Base .env template files for services
 - `projects.yml` - Project directory aliases
 - `apps.yml` - App directory mappings for task plugin
+- `services.yml` - Service and service group definitions
+- `tools.yml` - Runner tool definitions
+- `app_files.yml` - Per-app tracked file lists
 
 
 # Groups of files

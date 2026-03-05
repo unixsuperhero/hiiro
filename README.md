@@ -83,6 +83,10 @@ h ping
 | `h pr` | GitHub PR management via gh CLI |
 | `h project` | Project navigation with tmux session management |
 | `h queue` | Claude prompt queue with tmux-based task execution |
+| `h jumplist` | Vim-style tmux navigation history (back/forward through panes) |
+| `h service` | Manage background dev services with env variations and groups |
+| `h file` | Track and open frequently-used files per app |
+| `h run` | Run dev tools (lint/test/format) against changed files |
 | `h session` | Tmux session management |
 | `h sha` | Extract short SHA from git log |
 | `h todo` | Todo list management with tags and task association |
@@ -214,9 +218,15 @@ All configuration lives in `~/.config/hiiro/`:
   plugins/        # Plugin files (auto-loaded)
   pins/           # Pin storage (per command)
   queue/          # Prompt queue (wip, pending, running, done, failed)
+  services/       # Service runtime state
+  jumplist/       # Per-client tmux navigation history
+  env_templates/  # Base .env templates for services
   tasks/          # Task metadata
   projects.yml    # Project aliases
   apps.yml        # App directory mappings
+  services.yml    # Service and service group definitions
+  tools.yml       # Runner tool definitions
+  app_files.yml   # Per-app tracked file lists
   todo.yml        # Todo items
 ```
 
