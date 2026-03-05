@@ -1,6 +1,8 @@
 # Example services.yml
 # Place at ~/.config/hiiro/services.yml
 #
+# base_dir is always relative to the repo root (where init/start commands run)
+#
 # Base env templates referenced by base_env live in:
 #   ~/.config/hiiro/env_templates/
 
@@ -22,7 +24,7 @@ redis:
 # Rails API - multiple init steps, single env file with variations
 # =============================================================================
 api-rails:
-  base_dir: ~/work/api
+  base_dir: apps/api
   host: localhost
   port: 3000
   init:
@@ -67,7 +69,7 @@ api-rails:
 # GraphQL service - multiple env files
 # =============================================================================
 graphql:
-  base_dir: ~/work/graphql
+  base_dir: services/graphql
   host: localhost
   port: 4000
   init:
@@ -118,7 +120,7 @@ graphql:
 # Frontend - depends on graphql URL
 # =============================================================================
 frontend:
-  base_dir: ~/work/frontend
+  base_dir: apps/frontend
   host: localhost
   port: 8080
   start:
@@ -149,7 +151,7 @@ frontend:
 # Worker with custom stop command
 # =============================================================================
 sidekiq:
-  base_dir: ~/work/api
+  base_dir: apps/api
   host: localhost
   port: ""
   start:
@@ -172,7 +174,7 @@ sidekiq:
 # Multi-command start - seed data then launch
 # =============================================================================
 demo-server:
-  base_dir: ~/work/demo
+  base_dir: apps/demo
   host: localhost
   port: 5000
   init:
