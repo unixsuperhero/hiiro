@@ -241,3 +241,118 @@ bundle exec rake test
 ## License
 
 MIT
+
+
+# COMPLEX SERVICES
+
+```sh
+
+❯ in this setup...can you configure a couple complex services that use variations, etc.  i need examples of how to configure it. and then can you show me how to run it for different variations
+
+⏺ Here's an example ~/.config/hiiro/services.yml:
+
+  # Individual services
+  api-rails:
+    base_dir: ~/work/api
+    host: localhost
+    port: 3000
+    init:
+      - bundle install
+    start:
+      - bin/rails s -p 3000
+    cleanup: []
+    env_file: .env.development
+    base_env: api-rails.env
+    env_vars:
+      DATABASE_URL:
+        variations:
+          local: postgres://localhost:5432/api_dev
+          docker: postgres://db:5432/api_dev
+      REDIS_URL:
+        variations:
+          local: redis://localhost:6379
+          docker: redis://redis:6379
+
+  graphql:
+    base_dir: ~/work/graphql
+    host: localhost
+    port: 4000
+    init:
+      - npm install
+    start:
+      - npm run dev
+    env_file: .env.local
+    base_env: graphql.env
+    env_vars:
+      API_URL:
+        variations:
+          local: http://localhost:3000
+          staging: https://api.staging.example.com
+      AUTH_PROVIDER:
+        variations:
+          local: http://localhost:8080/auth
+          staging: https://auth.staging.example.com
+
+  frontend:
+    base_dir: ~/work/frontend
+    host: localhost
+    port: 8080
+    start:
+      - npm run dev
+    env_file: .env.local
+    base_env: frontend.env
+    env_vars:
+      GRAPHQL_URL:
+        variations:
+          local: http://localhost:4000/graphql
+          staging: https://graphql.staging.example.com/graphql
+
+  # Service groups
+  full-stack:
+    services:
+      - name: api-rails
+        use:
+          DATABASE_URL: local
+          REDIS_URL: local
+      - name: graphql
+        use:
+          API_URL: local
+          AUTH_PROVIDER: local
+      - name: frontend
+        use:
+          GRAPHQL_URL: local
+
+  staging-fe:
+    services:
+      - name: graphql
+        use:
+          API_URL: staging
+          AUTH_PROVIDER: staging
+      - name: frontend
+        use:
+          GRAPHQL_URL: local
+
+  Usage:
+
+  # Start a single service (defaults to "local" variations)
+  h service start api-rails
+
+  # Start with specific variations
+  h service start api-rails --use DATABASE_URL=docker --use REDIS_URL=docker
+
+  # Start the full local stack (one window, 3 split panes)
+  h service start full-stack
+
+  # Start frontend pointing at staging backends
+  h service start staging-fe
+
+  # No args — fuzzy select from all services + groups
+  h service start
+
+  The key ideas:
+  - local is the default variation — if you don't pass --use, each env var gets its local value
+  - Groups let you pre-bake variation combos — full-stack vs staging-fe are just different use: presets for the same services
+  - Base env templates live in ~/.config/hiiro/env_templates/ (e.g., api-rails.env) — they get copied to base_dir/env_file first, then variations are injected on top
+
+
+```
