@@ -2,6 +2,7 @@ require "fileutils"
 require "yaml"
 require "shellwords"
 require "pry"
+require "ostruct"
 
 require_relative "hiiro/version"
 require_relative "hiiro/bins"

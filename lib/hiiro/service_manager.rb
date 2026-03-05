@@ -1,6 +1,7 @@
 require 'yaml'
 require 'fileutils'
 require 'time'
+require 'ostruct'
 
 class Hiiro
   class ServiceManager
