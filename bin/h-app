@@ -202,4 +202,21 @@ Hiiro.run(*ARGV) {
     save_apps(apps)
     puts "Removed app '#{app_name}' (was: #{removed_path})"
   }
+
+  self_hiiro = self
+
+  add_subcmd(:service) do |*svc_args|
+    sm = Hiiro::ServiceManager.new
+    Hiiro::ServiceManager.build_hiiro(self_hiiro, sm).run
+  end
+
+  add_subcmd(:run) do |*run_args|
+    rt = Hiiro::RunnerTool.new
+    Hiiro::RunnerTool.build_hiiro(self_hiiro, rt, git: git).run
+  end
+
+  add_subcmd(:file) do |*file_args|
+    af = Hiiro::AppFiles.new
+    Hiiro::AppFiles.build_hiiro(self_hiiro, af, environment: environment).run
+  end
 }

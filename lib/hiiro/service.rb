@@ -1,0 +1,465 @@
+require 'yaml'
+require 'fileutils'
+require 'time'
+
+class Hiiro
+  class ServiceManager
+    CONFIG_FILE = File.join(Dir.home, '.config', 'hiiro', 'services.yml')
+    STATE_DIR = File.join(Dir.home, '.config', 'hiiro', 'services')
+    STATE_FILE = File.join(STATE_DIR, 'running.yml')
+
+    attr_reader :config_file, :state_file
+
+    def initialize(config_file: CONFIG_FILE, state_file: STATE_FILE)
+      @config_file = config_file
+      @state_file = state_file
+    end
+
+    def services
+      load_config
+    end
+
+    def find_service(name)
+      configs = services
+      names = configs.keys.map { |k| OpenStruct.new(name: k) }
+      result = Hiiro::Matcher.new(names, :name).by_prefix(name)
+      match = result.resolved || result.first
+      return nil unless match
+
+      svc_name = match.item.name
+      { name: svc_name, **symbolize_keys(configs[svc_name]) }
+    end
+
+    def running?(name)
+      state = load_state
+      state.key?(name)
+    end
+
+    def running_services
+      load_state
+    end
+
+    def start(name, tmux_info: {}, task_info: {})
+      svc = find_service(name)
+      unless svc
+        puts "Service '#{name}' not found"
+        return false
+      end
+
+      svc_name = svc[:name]
+
+      if running?(svc_name)
+        info = running_services[svc_name]
+        puts "Service '#{svc_name}' is already running (pid: #{info['pid']}, pane: #{info['tmux_pane']})"
+        return false
+      end
+
+      # Run init commands
+      if svc[:init]
+        svc[:init].each do |cmd|
+          base_dir = svc[:base_dir]
+          if base_dir
+            system("cd #{base_dir} && #{cmd}")
+          else
+            system(cmd)
+          end
+        end
+      end
+
+      # Start the service
+      start_cmd = svc[:start]
+      unless start_cmd
+        puts "No start command configured for '#{svc_name}'"
+        return false
+      end
+
+      base_dir = svc[:base_dir]
+      pane_id = tmux_info[:pane] || ENV['TMUX_PANE']
+
+      if pane_id
+        if base_dir
+          system('tmux', 'send-keys', '-t', pane_id, "cd #{base_dir} && #{start_cmd}", 'Enter')
+        else
+          system('tmux', 'send-keys', '-t', pane_id, start_cmd, 'Enter')
+        end
+      else
+        if base_dir
+          system("cd #{base_dir} && #{start_cmd} &")
+        else
+          system("#{start_cmd} &")
+        end
+      end
+
+      # Record state
+      state = load_state
+      state[svc_name] = {
+        'pid' => nil,
+        'tmux_session' => tmux_info[:session],
+        'tmux_window' => tmux_info[:window],
+        'tmux_pane' => pane_id,
+        'task' => task_info[:task_name],
+        'tree' => task_info[:tree],
+        'branch' => task_info[:branch],
+        'started_at' => Time.now.iso8601,
+      }
+      save_state(state)
+
+      puts "Started service '#{svc_name}'"
+      true
+    end
+
+    def stop(name)
+      svc = find_service(name)
+      unless svc
+        puts "Service '#{name}' not found"
+        return false
+      end
+
+      svc_name = svc[:name]
+
+      unless running?(svc_name)
+        puts "Service '#{svc_name}' is not running"
+        return false
+      end
+
+      info = running_services[svc_name]
+      pane_id = info['tmux_pane']
+
+      if svc[:stop]
+        stop_cmd = svc[:stop]
+        if info['pid']
+          stop_cmd = stop_cmd.gsub('$PID', info['pid'].to_s)
+        end
+        system(stop_cmd)
+      elsif pane_id
+        system('tmux', 'send-keys', '-t', pane_id, 'C-c')
+      end
+
+      # Run cleanup commands
+      if svc[:cleanup]
+        svc[:cleanup].each { |cmd| system(cmd) }
+      end
+
+      # Remove from state
+      state = load_state
+      state.delete(svc_name)
+      save_state(state)
+
+      puts "Stopped service '#{svc_name}'"
+      true
+    end
+
+    def attach(name)
+      svc = find_service(name)
+      unless svc
+        puts "Service '#{name}' not found"
+        return false
+      end
+
+      svc_name = svc[:name]
+      unless running?(svc_name)
+        puts "Service '#{svc_name}' is not running"
+        return false
+      end
+
+      info = running_services[svc_name]
+      pane_id = info['tmux_pane']
+      session = info['tmux_session']
+
+      if session
+        system('tmux', 'switch-client', '-t', session)
+      end
+
+      if pane_id
+        system('tmux', 'select-pane', '-t', pane_id)
+      end
+
+      true
+    end
+
+    def url(name)
+      svc = find_service(name)
+      return nil unless svc
+
+      host = svc[:host] || 'localhost'
+      port = svc[:port]
+      return nil unless port
+
+      "http://#{host}:#{port}"
+    end
+
+    def port(name)
+      svc = find_service(name)
+      svc&.[](:port)
+    end
+
+    def host(name)
+      svc = find_service(name)
+      svc&.[](:host) || 'localhost'
+    end
+
+    def status(name)
+      svc = find_service(name)
+      unless svc
+        puts "Service '#{name}' not found"
+        return
+      end
+
+      svc_name = svc[:name]
+      puts "Service: #{svc_name}"
+      puts "Base dir: #{svc[:base_dir] || '(none)'}"
+      puts "URL: #{url(svc_name) || '(none)'}"
+
+      if running?(svc_name)
+        info = running_services[svc_name]
+        puts "Status: running"
+        puts "PID: #{info['pid'] || '(unknown)'}"
+        puts "Pane: #{info['tmux_pane'] || '(unknown)'}"
+        puts "Task: #{info['task'] || '(none)'}"
+        puts "Started: #{info['started_at']}"
+      else
+        puts "Status: stopped"
+      end
+    end
+
+    def services_for_dir(base_dir)
+      configs = services
+      configs.select { |_, v| v['base_dir'] == base_dir }
+    end
+
+    def add_service(config_hash)
+      name = config_hash.delete('name') || config_hash.delete(:name)
+      unless name
+        puts "Service name required"
+        return false
+      end
+
+      configs = load_config
+      if configs.key?(name)
+        puts "Service '#{name}' already exists"
+        return false
+      end
+
+      configs[name] = config_hash.transform_keys(&:to_s)
+      save_config(configs)
+      puts "Added service '#{name}'"
+      true
+    end
+
+    def remove_service(name)
+      configs = load_config
+      unless configs.key?(name)
+        puts "Service '#{name}' not found"
+        return false
+      end
+
+      configs.delete(name)
+      save_config(configs)
+      puts "Removed service '#{name}'"
+      true
+    end
+
+    def self.build_hiiro(parent_hiiro, sm, task_manager: nil)
+      parent_hiiro.make_child(:service) do |h|
+        h.add_subcmd(:ls) do
+          configs = sm.services
+          if configs.empty?
+            puts "No services configured."
+            puts "Use 'service add' to add one, or edit #{sm.config_file}"
+            next
+          end
+
+          running = sm.running_services
+          puts "Services:"
+          puts
+          configs.each do |name, cfg|
+            status = running.key?(name) ? "running" : "stopped"
+            port_str = cfg['port'] ? ":#{cfg['port']}" : ""
+            puts format("  %-20s  [%s]%s  %s", name, status, port_str, cfg['base_dir'] || '')
+          end
+        end
+
+        h.add_subcmd(:list) do
+          h.run_subcmd(:ls)
+        end
+
+        h.add_subcmd(:start) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service start <name>"
+            next
+          end
+
+          tmux_info = {
+            session: ENV['TMUX'] ? `tmux display-message -p '#S'`.chomp : nil,
+            window: ENV['TMUX'] ? `tmux display-message -p '#I'`.chomp : nil,
+            pane: ENV['TMUX_PANE'],
+          }
+
+          task_info = {}
+          if task_manager
+            task = task_manager.current_task
+            if task
+              task_info = {
+                task_name: task.name,
+                tree: task.tree_name,
+                branch: task.branch,
+                session: task.session_name,
+              }
+            end
+          end
+
+          sm.start(svc_name, tmux_info: tmux_info, task_info: task_info)
+        end
+
+        h.add_subcmd(:stop) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service stop <name>"
+            next
+          end
+
+          sm.stop(svc_name)
+        end
+
+        h.add_subcmd(:attach) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service attach <name>"
+            next
+          end
+
+          sm.attach(svc_name)
+        end
+
+        h.add_subcmd(:open) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service open <name>"
+            next
+          end
+
+          svc_url = sm.url(svc_name)
+          if svc_url
+            system('open', svc_url)
+          else
+            puts "No URL configured for '#{svc_name}'"
+          end
+        end
+
+        h.add_subcmd(:url) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service url <name>"
+            next
+          end
+
+          svc_url = sm.url(svc_name)
+          if svc_url
+            puts svc_url
+          else
+            puts "No URL configured for '#{svc_name}'"
+          end
+        end
+
+        h.add_subcmd(:port) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service port <name>"
+            next
+          end
+
+          p = sm.port(svc_name)
+          if p
+            puts p
+          else
+            puts "No port configured for '#{svc_name}'"
+          end
+        end
+
+        h.add_subcmd(:status) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service status <name>"
+            next
+          end
+
+          sm.status(svc_name)
+        end
+
+        h.add_subcmd(:add) do |*add_args|
+          template = {
+            'base_dir' => '',
+            'host' => 'localhost',
+            'port' => '',
+            'init' => [],
+            'start' => '',
+            'stop' => '',
+            'cleanup' => [],
+          }
+
+          require 'tempfile'
+          tmpfile = Tempfile.new(['service', '.yml'])
+          tmpfile.write(YAML.dump({ 'new_service' => template }))
+          tmpfile.close
+
+          editor = ENV['EDITOR'] || 'nvim'
+          system(editor, tmpfile.path)
+
+          begin
+            data = YAML.safe_load_file(tmpfile.path, permitted_classes: [Symbol]) || {}
+            data.each do |name, cfg|
+              sm.add_service({ 'name' => name }.merge(cfg || {}))
+            end
+          rescue => e
+            puts "Error parsing config: #{e.message}"
+          ensure
+            tmpfile.unlink
+          end
+        end
+
+        h.add_subcmd(:rm) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service rm <name>"
+            next
+          end
+
+          sm.remove_service(svc_name)
+        end
+
+        h.add_subcmd(:remove) do |svc_name=nil|
+          unless svc_name
+            puts "Usage: service remove <name>"
+            next
+          end
+
+          sm.remove_service(svc_name)
+        end
+
+        h.add_subcmd(:config) do
+          editor = ENV['EDITOR'] || 'nvim'
+          system(editor, sm.config_file)
+        end
+      end
+    end
+
+    private
+
+    def load_config
+      return {} unless File.exist?(config_file)
+      YAML.safe_load_file(config_file, permitted_classes: [Symbol]) || {}
+    end
+
+    def save_config(data)
+      FileUtils.mkdir_p(File.dirname(config_file))
+      File.write(config_file, YAML.dump(data))
+    end
+
+    def load_state
+      return {} unless File.exist?(state_file)
+      YAML.safe_load_file(state_file, permitted_classes: [Symbol]) || {}
+    end
+
+    def save_state(data)
+      FileUtils.mkdir_p(File.dirname(state_file))
+      File.write(state_file, YAML.dump(data))
+    end
+
+    def symbolize_keys(hash)
+      hash.each_with_object({}) { |(k, v), h| h[k.to_sym] = v }
+    end
+  end
+end

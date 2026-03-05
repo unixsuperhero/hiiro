@@ -769,6 +769,21 @@ class Hiiro
           q = Hiiro::Queue.current(parent_hiiro)
           Hiiro::Queue.build_hiiro(h, q, task_info: task_info).run
         end
+
+        h.add_subcmd(:service) do |*svc_args|
+          sm = Hiiro::ServiceManager.new
+          Hiiro::ServiceManager.build_hiiro(h, sm, task_manager: tm).run
+        end
+
+        h.add_subcmd(:run) do |*run_args|
+          rt = Hiiro::RunnerTool.new
+          Hiiro::RunnerTool.build_hiiro(h, rt, git: parent_hiiro.git).run
+        end
+
+        h.add_subcmd(:file) do |*file_args|
+          af = Hiiro::AppFiles.new
+          Hiiro::AppFiles.build_hiiro(h, af, environment: tm.environment).run
+        end
       end
 
       task_hiiro

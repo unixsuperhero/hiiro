@@ -16,6 +16,9 @@ require_relative "hiiro/queue"
 require_relative "hiiro/tasks"
 require_relative "hiiro/tmux"
 require_relative "hiiro/todo"
+require_relative "hiiro/service"
+require_relative "hiiro/runner_tool"
+require_relative "hiiro/app_files"
 
 class String
   def underscore(camel_cased_word=self)
