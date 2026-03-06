@@ -6,7 +6,7 @@ require 'awesome_print'
 Hiiro.run {
   add_subcmd(:symlink_destinations) do |*args|
     opts = Hiiro::Options.parse(args) do
-      option(:root, short: :r, desc: 'root path')
+      option(:root, short: :r, default: `git rev-parse --show-toplevel 2>/dev/null`.strip, desc: 'root path')
     end
 
     repo_root = Pathname.new(opts.root || git.root)

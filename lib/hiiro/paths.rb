@@ -33,9 +33,22 @@ class Hiiro
         path.readlink
       end
 
-      def dest_relative_to(root)
+      def root
+        `git rev-parse --show-toplevel 2>/dev/null`.chomp
+      end
+
+      def root_path
+        Pathname.new root
+      end
+
+      def dest_from_root
         abs = (path.dirname + dest).cleanpath
-        abs.relative_path_from(Pathname.new(root))
+        abs.relative_path_from(root_path)
+      end
+
+      def dest_relative_to(base_dir)
+        abs = (path.dirname + dest).cleanpath
+        abs.relative_path_from(Pathname.new(base_dir))
       end
 
       def dest_dir
