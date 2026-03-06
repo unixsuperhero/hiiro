@@ -400,6 +400,8 @@ class PinnedPRManager
     pr
   end
 
+  FAILED_CONCLUSIONS = %w[FAILURE ERROR TIMED_OUT STALE STARTUP_FAILURE ACTION_REQUIRED].freeze
+
   def summarize_checks(rollup)
     return nil unless rollup
 
@@ -407,9 +409,17 @@ class PinnedPRManager
     return nil if contexts.empty?
 
     total = contexts.length
-    success = contexts.count { |c| c['conclusion'] == 'SUCCESS' }
-    pending = contexts.count { |c| c['status'] == 'PENDING' || c['status'] == 'IN_PROGRESS' }
-    failed = contexts.count { |c| c['conclusion'] == 'FAILURE' || c['conclusion'] == 'ERROR' }
+    success = contexts.count do |c|
+      c['conclusion'] == 'SUCCESS' || c['state'] == 'SUCCESS'
+    end
+    pending = contexts.count do |c|
+      %w[QUEUED IN_PROGRESS PENDING REQUESTED WAITING].include?(c['status']) ||
+        c['state'] == 'PENDING'
+    end
+    failed = contexts.count do |c|
+      FAILED_CONCLUSIONS.include?(c['conclusion']) ||
+        %w[FAILURE ERROR].include?(c['state'])
+    end
 
     { 'total' => total, 'success' => success, 'pending' => pending, 'failed' => failed }
   end
