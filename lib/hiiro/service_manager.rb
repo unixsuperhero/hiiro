@@ -745,7 +745,7 @@ class Hiiro
     end
 
     def write_shell_script(path, cmds)
-      lines = ["#!/usr/bin/env bash"]
+      lines = ["#!/bin/bash"]
       lines.concat(cmds)
       File.write(path, lines.join("\n") + "\n")
       File.chmod(0755, path)
