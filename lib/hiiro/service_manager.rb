@@ -82,8 +82,8 @@ class Hiiro
       puts "Starting group '#{group[:name]}'..."
 
       # Create one window for the group, split panes for each service
-      window_target = create_tmux_window(session, group[:name])
-      first_pane_id = capture_pane_id(window_target)
+      window_target, first_pane_id = create_tmux_window(session, group[:name])
+      last_pane_id = first_pane_id
 
       members.each_with_index do |member, idx|
         member_name = member['name'] || member[:name]
@@ -95,7 +95,9 @@ class Hiiro
         if idx == 0
           pane_id = first_pane_id
         else
-          pane_id = split_tmux_pane(window_target)
+          # Split from the last pane so each new pane is distinct
+          pane_id = split_tmux_pane(window_target, last_pane_id)
+          last_pane_id = pane_id
         end
 
         member_tmux_info = tmux_info.merge(
@@ -193,8 +195,7 @@ class Hiiro
 
       if session && !skip_window_creation
         # Create a new tmux window for this service
-        window_target = create_tmux_window(session, svc_name)
-        pane_id = capture_pane_id(window_target)
+        window_target, pane_id = create_tmux_window(session, svc_name)
       elsif session && skip_window_creation
         # Pane already created by start_group
         pane_id = tmux_info[:pane]
@@ -800,18 +801,15 @@ class Hiiro
     end
 
     def create_tmux_window(session, name)
-      system('tmux', 'new-window', '-d', '-t', session, '-n', name)
-      "#{session}:#{name}"
+      pane_id = `tmux new-window -d -t #{session} -n #{name} -P -F '\#{pane_id}'`.chomp
+      window_target = "#{session}:#{name}"
+      [window_target, pane_id]
     end
 
-    def capture_pane_id(window_target)
-      `tmux list-panes -t #{window_target} -F '\#{pane_id}'`.chomp.split("\n").last
-    end
-
-    def split_tmux_pane(window_target)
-      system('tmux', 'split-window', '-d', '-t', window_target)
+    def split_tmux_pane(window_target, target_pane_id)
+      pane_id = `tmux split-window -d -t #{target_pane_id} -P -F '\#{pane_id}'`.chomp
       system('tmux', 'select-layout', '-t', window_target, 'even-vertical')
-      `tmux list-panes -t #{window_target} -F '\#{pane_id}'`.chomp.split("\n").last
+      pane_id
     end
 
     def send_to_pane(pane_id, base_dir, script)
