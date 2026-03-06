@@ -364,6 +364,17 @@ class Hiiro
 
         h.add_subcmd(:attach) { |name = nil|
           running = q.tasks_in(:running)
+
+          if name.nil? && running.empty?
+            # Switch to (or create) the hq session
+            work_dir = File.expand_path('~/work')
+            unless system('tmux', 'has-session', '-t', TMUX_SESSION, out: File::NULL, err: File::NULL)
+              system('tmux', 'new-session', '-d', '-s', TMUX_SESSION, '-c', work_dir)
+            end
+            system('tmux', 'switch-client', '-t', TMUX_SESSION)
+            next
+          end
+
           if running.empty?
             puts "No running tasks"
             next
