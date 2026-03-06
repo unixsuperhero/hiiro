@@ -181,32 +181,25 @@ class Hiiro
         return false
       end
 
-      # Run init commands
-      if svc[:init]
-        base_dir = resolve_base_dir(svc[:base_dir])
-        svc[:init].each do |cmd|
-          system("cd #{base_dir} && #{cmd}")
-        end
-      end
-
-      # Prepare env files after init (e.g., init may install deps that generate .env templates)
-      unless skip_env
-        prepare_env(svc_name, variation_overrides: variation_overrides)
-      end
-
-      # Start the service
       start_cmd = svc[:start]
       unless start_cmd
         puts "No start command configured for '#{svc_name}'"
         return false
       end
 
+      # Build separate init/env/start scripts + a launcher that runs them in order
+      init_cmds = Array(svc[:init] || [])
       start_cmds = Array(start_cmd)
+      script = write_launcher_script(
+        svc_name,
+        init_cmds: init_cmds,
+        start_cmds: start_cmds,
+        env_prep: !skip_env,
+        variation_overrides: variation_overrides,
+      )
+
       base_dir = resolve_base_dir(svc[:base_dir])
       session = tmux_info[:session] || current_tmux_session
-
-      # Write start commands to an executable tempfile
-      script = write_start_script(svc_name, start_cmds)
 
       if session && !skip_window_creation
         # Create a new tmux window for this service
@@ -754,17 +747,61 @@ class Hiiro
       !system('tmux', 'has-session', '-t', pane_id, [:out, :err] => '/dev/null')
     end
 
-    def write_start_script(svc_name, cmds)
+    def scripts_dir
       dir = File.join(STATE_DIR, 'scripts')
       FileUtils.mkdir_p(dir)
-      path = File.join(dir, "#{svc_name}.sh")
+      dir
+    end
 
+    def write_shell_script(path, cmds)
       lines = ["#!/usr/bin/env bash", "set -e"]
       lines.concat(cmds)
-
       File.write(path, lines.join("\n") + "\n")
       File.chmod(0755, path)
       path
+    end
+
+    def write_env_prep_script(svc_name, variation_overrides)
+      path = File.join(scripts_dir, "#{svc_name}-env.rb")
+      overrides_literal = variation_overrides.map { |k, v| "#{k.inspect} => #{v.inspect}" }.join(", ")
+
+      code = <<~RUBY
+        #!/usr/bin/env ruby
+        require 'hiiro'
+        sm = Hiiro::ServiceManager.new
+        sm.prepare_env(#{svc_name.inspect}, variation_overrides: { #{overrides_literal} })
+      RUBY
+
+      File.write(path, code)
+      File.chmod(0755, path)
+      path
+    end
+
+    def write_launcher_script(svc_name, init_cmds:, start_cmds:, env_prep: true, variation_overrides: {})
+      dir = scripts_dir
+
+      # Write init script (may be empty)
+      init_path = File.join(dir, "#{svc_name}-init.sh")
+      write_shell_script(init_path, init_cmds)
+
+      # Write start script
+      start_path = File.join(dir, "#{svc_name}-start.sh")
+      write_shell_script(start_path, start_cmds)
+
+      # Write env prep script
+      env_path = nil
+      if env_prep
+        env_path = write_env_prep_script(svc_name, variation_overrides)
+      end
+
+      # Write launcher that orchestrates: init -> env -> start
+      launcher_path = File.join(dir, "#{svc_name}.sh")
+      steps = []
+      steps << init_path unless init_cmds.empty?
+      steps << env_path if env_path
+      steps << "exec #{start_path}"
+
+      write_shell_script(launcher_path, steps)
     end
 
     def current_tmux_session
