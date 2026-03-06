@@ -9,6 +9,7 @@ Hiiro.run {
       option(:root, short: :r, desc: 'root path')
     end
 
+    repo_root = Pathname.new(opts.root || git.root)
     pwd = Hiiro::Paths.new(Dir.pwd)
     outside = Hash.new { |h,k| h[k] = [] }
 
@@ -20,9 +21,10 @@ Hiiro.run {
 
     outside.each do |base, links|
       puts "# symlinks outside of => #{base}"
-      dest_width = links.map{|l| l.dest.to_s.length }.max
+      dest_width = links.map{|l| l.dest_relative_to(repo_root).to_s.length }.max
       links.each do |link|
-        printf("%-*s   # => %s\n", dest_width, link.dest, link.path)
+        rel_dest = link.dest_relative_to(repo_root)
+        printf("%-*s   # => %s\n", dest_width, rel_dest, link.path)
       end
     end
   end

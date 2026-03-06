@@ -33,6 +33,11 @@ class Hiiro
         path.readlink
       end
 
+      def dest_relative_to(root)
+        abs = (path.dirname + dest).cleanpath
+        abs.relative_path_from(Pathname.new(root))
+      end
+
       def dest_dir
         path.directory? ? path : path.dirname
       end
