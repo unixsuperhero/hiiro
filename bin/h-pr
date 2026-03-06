@@ -357,7 +357,23 @@ class PinnedPRManager
       return prs
     end
 
-    prs_to_refresh.each { |pr| refresh_status(pr, force: true) }
+    pr_numbers = prs_to_refresh.map { |pr| pr['number'] }
+    infos = batch_fetch_pr_info(pr_numbers)
+
+    prs_to_refresh.each do |pr|
+      info = infos[pr['number']]
+      next unless info
+
+      pr['state'] = info['state']
+      pr['title'] = info['title']
+      pr['checks'] = summarize_checks(info['statusCheckRollup'])
+      pr['reviews'] = summarize_reviews(info['reviews'])
+      pr['review_decision'] = info['reviewDecision']
+      pr['is_draft'] = info['isDraft']
+      pr['mergeable'] = info['mergeable']
+      pr['last_checked'] = Time.now.iso8601
+    end
+
     prs
   end
 
