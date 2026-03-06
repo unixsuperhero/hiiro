@@ -434,15 +434,18 @@ class PinnedPRManager
       ""
     end
 
-    reviews_str = if pr['reviews']
-      r = pr['reviews']
-      parts = []
-      parts << "#{r['approved']} approved" if r['approved'] > 0
-      parts << "#{r['changes_requested']} changes" if r['changes_requested'] > 0
-      parts.empty? ? "" : " | #{parts.join(', ')}"
-    else
-      ""
-    end
+    reviews_str =
+      if pr['reviews']
+        reviews = pr['reviews'].map do |r|
+          parts = []
+          parts << "#{r['approved']} approved" if r['approved'] > 0
+          parts << "#{r['changes_requested']} changes" if r['changes_requested'] > 0
+          parts.empty? ? "" : " | #{parts.join(', ')}"
+        end
+        reviews.join('; ')
+      else
+        ""
+      end
 
     "#{num} #{state_icon} ##{pr['number']} #{pr['title']}#{checks_str}#{reviews_str}".strip
   end
@@ -517,34 +520,55 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   manager = PRManager.new(self)
   pinned_manager = PinnedPRManager.new
 
+  resolve_pr = ->(ref) {
+    if ref.nil?
+      pinned = pinned_manager.load_pinned
+      if pinned.empty?
+        STDERR.puts "No pinned PRs. Use a PR number or 'h pr pin' to track PRs."
+        return nil
+      end
+      lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
+        h[pinned_manager.display_pinned(pr, idx)] = pr['number'].to_s
+      end
+      return fuzzyfind_from_map(lines)
+    end
+
+    if (pin_value = pins.get(ref.to_s))
+      return pin_value
+    end
+
+    pinned = pinned_manager.load_pinned
+
+    if pinned.any? { |pr| pr['number'].to_s == ref.to_s }
+      return ref.to_s
+    end
+
+    if ref.to_s =~ /^\d+$/ && ref.to_i > 0
+      idx = ref.to_i - 1
+      return pinned[idx]['number'].to_s if idx < pinned.length
+    end
+
+    ref.to_s
+  }
+
   watch_block = ->(original_pr_number=nil, *watch_args) {
     watch = get_value(:watch)
     fail_fast = get_value(:fail_fast)
 
-    pr_valid = false
-    pr_number = nil
-    if !original_pr_number.nil? && pin_value = pins.get(original_pr_number)
-      pr_valid = true
-      pr_number = pin_value
-    end
-
-    pr_args = [pr_valid ? pr_number : original_pr_number].compact
-    check_args = [*pr_args, *watch_args]
+    pr_number = resolve_pr.call(original_pr_number)
+    return unless pr_number
 
     base_cmd = %w[gh pr checks]
     base_cmd << '--watch' if watch
     base_cmd << '--fail-fast' if fail_fast
 
-    command = [
-      *base_cmd,
-      *check_args,
-    ]
+    command = [*base_cmd, pr_number, *watch_args]
 
-    puts command: command, base_cmd: base_cmd, args: check_args;
+    puts command: command, base_cmd: base_cmd, args: [pr_number, *watch_args];
 
     result = system(*command)
 
-    pr_info = JSON.parse(`gh pr view #{pr_args.first} --json url,number,title`)
+    pr_info = JSON.parse(`gh pr view #{pr_number} --json url,number,title`)
     pr_url = pr_info['url']
     pr_num = pr_info['number']
     pr_title = pr_info['title']
@@ -589,8 +613,14 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
   add_subcmd(:save) { |pr_number=nil| manager.save(pr_number) }
   add_subcmd(:current) { manager.current }
-  add_subcmd(:open) { |pr_number=nil| manager.open(pr_number) }
-  add_subcmd(:view) { |pr_number=nil| manager.view(pr_number) }
+  add_subcmd(:open) { |pr_number=nil|
+    pr_number = resolve_pr.call(pr_number)
+    manager.open(pr_number) if pr_number
+  }
+  add_subcmd(:view) { |pr_number=nil|
+    pr_number = resolve_pr.call(pr_number)
+    manager.view(pr_number) if pr_number
+  }
 
   add_subcmd(:select) do |*args|
     # Get my open PRs
