@@ -82,13 +82,7 @@ class Hiiro
       puts "Starting group '#{group[:name]}'..."
 
       # Create one window for the group, split panes for each service
-      first_member = members.first
-      first_name = first_member['name'] || first_member[:name]
-      first_svc = find_service(first_name)
-      first_base_dir = resolve_base_dir(first_svc&.[](:base_dir))
-
-      # Create a new window for the group
-      window_target = create_tmux_window(session, group[:name], first_base_dir)
+      window_target = create_tmux_window(session, group[:name])
       first_pane_id = capture_pane_id(window_target)
 
       members.each_with_index do |member, idx|
@@ -98,14 +92,10 @@ class Hiiro
         svc = find_service(member_name)
         next unless svc
 
-        base_dir = resolve_base_dir(svc[:base_dir])
-
         if idx == 0
-          # First service uses the initial pane
           pane_id = first_pane_id
         else
-          # Subsequent services get split panes
-          pane_id = split_tmux_pane(window_target, base_dir)
+          pane_id = split_tmux_pane(window_target)
         end
 
         member_tmux_info = tmux_info.merge(
@@ -203,7 +193,7 @@ class Hiiro
 
       if session && !skip_window_creation
         # Create a new tmux window for this service
-        window_target = create_tmux_window(session, svc_name, base_dir)
+        window_target = create_tmux_window(session, svc_name)
         pane_id = capture_pane_id(window_target)
       elsif session && skip_window_creation
         # Pane already created by start_group
@@ -215,7 +205,7 @@ class Hiiro
       end
 
       if pane_id
-        system('tmux', 'send-keys', '-t', pane_id, script, 'Enter')
+        send_to_pane(pane_id, base_dir, script)
       else
         system("cd #{base_dir} && #{script} &")
       end
@@ -754,7 +744,7 @@ class Hiiro
     end
 
     def write_shell_script(path, cmds)
-      lines = ["#!/usr/bin/env bash", "set -e"]
+      lines = ["#!/usr/bin/env bash"]
       lines.concat(cmds)
       File.write(path, lines.join("\n") + "\n")
       File.chmod(0755, path)
@@ -809,8 +799,8 @@ class Hiiro
       `tmux display-message -p '#S'`.chomp
     end
 
-    def create_tmux_window(session, name, start_dir)
-      system('tmux', 'new-window', '-d', '-t', session, '-n', name, '-c', start_dir)
+    def create_tmux_window(session, name)
+      system('tmux', 'new-window', '-d', '-t', session, '-n', name)
       "#{session}:#{name}"
     end
 
@@ -818,10 +808,14 @@ class Hiiro
       `tmux list-panes -t #{window_target} -F '\#{pane_id}'`.chomp.split("\n").last
     end
 
-    def split_tmux_pane(window_target, start_dir)
-      system('tmux', 'split-window', '-d', '-t', window_target, '-c', start_dir)
+    def split_tmux_pane(window_target)
+      system('tmux', 'split-window', '-d', '-t', window_target)
       system('tmux', 'select-layout', '-t', window_target, 'even-vertical')
       `tmux list-panes -t #{window_target} -F '\#{pane_id}'`.chomp.split("\n").last
+    end
+
+    def send_to_pane(pane_id, base_dir, script)
+      system('tmux', 'send-keys', '-t', pane_id, "cd #{base_dir} && #{script}", 'Enter')
     end
 
     def load_config
