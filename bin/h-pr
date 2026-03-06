@@ -245,14 +245,20 @@ class PinnedPRManager
     JSON.parse(output) rescue []
   end
 
+  def fetch_assigned_prs
+    output = `gh pr list --assignee @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
+    return [] if output.empty?
+    JSON.parse(output) rescue []
+  end
+
   def fetch_my_and_assigned_prs
-    authored = `gh pr list --author @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
-    assigned = `gh pr list --assignee @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
+    authored_prs = fetch_my_prs
+    assigned_prs = fetch_assigned_prs
 
-    authored_prs = authored.empty? ? [] : (JSON.parse(authored) rescue [])
-    assigned_prs = assigned.empty? ? [] : (JSON.parse(assigned) rescue [])
+    authored_numbers = authored_prs.map { |pr| pr['number'] }.to_set
+    assigned_prs.each { |pr| pr['assigned'] = true unless authored_numbers.include?(pr['number']) }
+    authored_prs.each { |pr| pr['authored'] = true }
 
-    # Dedupe by PR number
     (authored_prs + assigned_prs).uniq { |pr| pr['number'] }
   end
 
@@ -953,6 +959,40 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     filtered.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
   end
 
+  add_subcmd(:assigned) do
+    prs = pinned_manager.fetch_assigned_prs
+
+    if prs.empty?
+      puts "No PRs assigned to you"
+      next
+    end
+
+    pinned_numbers = pinned_manager.load_pinned.map { |p| p['number'] }.to_set
+    puts "PRs assigned to you (#{prs.count}):"
+    puts
+    prs.each_with_index do |pr, i|
+      tracked = pinned_numbers.include?(pr['number']) ? ' [tracked]' : ''
+      puts "  #{i + 1}. ##{pr['number']} #{pr['title']} [#{pr['headRefName']}]#{tracked}"
+    end
+  end
+
+  add_subcmd(:created) do
+    prs = pinned_manager.fetch_my_prs
+
+    if prs.empty?
+      puts "No open PRs created by you"
+      next
+    end
+
+    pinned_numbers = pinned_manager.load_pinned.map { |p| p['number'] }.to_set
+    puts "PRs created by you (#{prs.count}):"
+    puts
+    prs.each_with_index do |pr, i|
+      tracked = pinned_numbers.include?(pr['number']) ? ' [tracked]' : ''
+      puts "  #{i + 1}. ##{pr['number']} #{pr['title']} [#{pr['headRefName']}]#{tracked}"
+    end
+  end
+
   add_subcmd(:missing) do
     my_prs = pinned_manager.fetch_my_and_assigned_prs
     pinned_numbers = pinned_manager.load_pinned.map { |p| p['number'] }
@@ -965,7 +1005,10 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     puts "Untracked PRs (#{missing.count}):"
     puts
-    missing.each { |pr| puts "  ##{pr['number']} [#{pr['headRefName']}] #{pr['title']}" }
+    missing.each do |pr|
+      relationship = pr['assigned'] ? 'assigned' : 'authored'
+      puts "  ##{pr['number']} [#{pr['headRefName']}] #{pr['title']} (#{relationship})"
+    end
   end
 
   add_subcmd(:amissing) do
@@ -983,8 +1026,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     tmpfile = Tempfile.new(['missing-prs-', '.yml'])
     lines = ['---']
     missing.each do |pr|
+      relationship = pr['assigned'] ? 'assigned' : 'authored'
       lines << ''
-      lines << "# [#{pr['headRefName']}] #{pr['title']}"
+      lines << "# [#{relationship}] [#{pr['headRefName']}] #{pr['title']}"
       lines << "# url: #{pr['url']}"
       lines << "- #{pr['number']}"
     end
