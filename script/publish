@@ -99,4 +99,4 @@ else
   system 'git', 'checkout', 'main'
 end
 
-system('./scripts/update')
+system('./script/update')
