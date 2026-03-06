@@ -452,13 +452,11 @@ class PinnedPRManager
 
     reviews_str =
       if pr['reviews']
-        reviews = pr['reviews'].map do |r|
-          parts = []
-          parts << "#{r['approved']} approved" if r['approved'] > 0
-          parts << "#{r['changes_requested']} changes" if r['changes_requested'] > 0
-          parts.empty? ? "" : " | #{parts.join(', ')}"
-        end
-        reviews.join('; ')
+        r = pr['reviews']
+        parts = []
+        parts << "#{r['approved']} approved" if r['approved'].to_i > 0
+        parts << "#{r['changes_requested']} changes" if r['changes_requested'].to_i > 0
+        parts.empty? ? "" : " | #{parts.join(', ')}"
       else
         ""
       end
