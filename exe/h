@@ -147,7 +147,7 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
     Hiiro::Queue.build_hiiro(self).run
   end
 
-  add_subcmd(:service) do |*svc_args|
+  add_subcmd(:service, :svc) do |*svc_args|
     sm = Hiiro::ServiceManager.new
     Hiiro::ServiceManager.build_hiiro(this, sm).run
   end
