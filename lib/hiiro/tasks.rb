@@ -18,7 +18,7 @@ class Hiiro
       environment.config
     end
 
-    # --- Scope-aware queries ---
+    # --- Data Access (Low-Level) ---
 
     def tasks
       if scope == :subtask
@@ -36,15 +36,19 @@ class Hiiro
       environment.all_tasks.select { |t| t.parent_name == task.name }
     end
 
-    def task_by_service_info(info)
-      if name = info['task']
-        task_by_name(name)
-      elsif session = info['tmux_session']
-        task_by_session(session)
-      elsif tree = info['tree']
-        task_by_tree(tree)
-      end
+    def current_task
+      environment.task
     end
+
+    def current_session
+      environment.session
+    end
+
+    def current_tree
+      environment.tree
+    end
+
+    # --- Task Lookup (Low-Level) ---
 
     def task_by_name(name)
       return slash_lookup(name) if name.include?('/')
@@ -61,19 +65,34 @@ class Hiiro
       environment.task_matcher.resolve(session_name, :session_name).resolved&.item
     end
 
-    def current_task
-      environment.task
+    def task_by_service_info(info)
+      if name = info['task']
+        task_by_name(name)
+      elsif session = info['tmux_session']
+        task_by_session(session)
+      elsif tree = info['tree']
+        task_by_tree(tree)
+      end
     end
 
-    def current_session
-      environment.session
+    # --- Mid-Level: Task Resolution ---
+
+    def resolve_task_path(task)
+      tree = environment.find_tree(task.tree_name)
+      tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
     end
 
-    def current_tree
-      environment.tree
+    def resolve_app_path(app_name, task)
+      resolver = AppResolver.new(environment, task)
+      resolver.resolve(app_name)
     end
 
-    # --- Actions ---
+    def find_available_tree
+      assigned_tree_names = environment.all_tasks.map(&:tree_name)
+      environment.all_trees.find { |tree| !assigned_tree_names.include?(tree.name) }
+    end
+
+    # --- High-Level Actions ---
 
     def start_task(name, app_name: nil)
       existing = task_by_name(name)
@@ -83,43 +102,8 @@ class Hiiro
         return
       end
 
-      task_name = scope == :subtask ? "#{current_parent_task.name}/#{name}" : name
-      subtree_name = scope == :subtask ? "#{current_parent_task.name}/#{name}" : "#{name}/main"
-
-      target_path = File.join(Hiiro::WORK_DIR, subtree_name)
-
-      git = Hiiro::Git.new(nil, Hiiro::REPO_PATH)
-      available = find_available_tree
-      if available
-        puts "Renaming worktree '#{available.name}' to '#{subtree_name}'..."
-        FileUtils.mkdir_p(File.dirname(target_path))
-        unless git.move_worktree(available.path, target_path, repo_path: Hiiro::REPO_PATH)
-          puts "ERROR: Failed to rename worktree"
-          return
-        end
-      else
-        puts "Creating new worktree '#{subtree_name}'..."
-        FileUtils.mkdir_p(File.dirname(target_path))
-        unless git.add_worktree_detached(target_path, repo_path: Hiiro::REPO_PATH)
-          puts "ERROR: Failed to create worktree"
-          return
-        end
-      end
-
-      session_name = task_name
-      task = Task.new(name: task_name, tree: subtree_name, session: session_name)
-      config.save_task(task)
-
-      base_dir = target_path
-      if app_name
-        app = environment.find_app(app_name)
-        base_dir = app.resolve(target_path) if app
-      end
-
-      Dir.chdir(base_dir)
-      hiiro.start_tmux_session(session_name)
-
-      puts "Started task '#{task_name}' in worktree '#{subtree_name}'"
+      starter = TaskStarter.new(self, name, app_name: app_name)
+      starter.start
     end
 
     def switch_to_task(task, app_name: nil)
@@ -128,31 +112,8 @@ class Hiiro
         return
       end
 
-      tree = environment.find_tree(task.tree_name)
-      tree_path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
-
-      session_name = task.session_name
-      session_exists = system('tmux', 'has-session', '-t', session_name, err: File::NULL)
-
-      if session_exists
-        hiiro.start_tmux_session(session_name)
-      else
-        base_dir = tree_path
-        if app_name
-          app = environment.find_app(app_name)
-          base_dir = app.resolve(tree_path) if app
-        end
-
-        if Dir.exist?(base_dir)
-          Dir.chdir(base_dir)
-          hiiro.start_tmux_session(session_name)
-        else
-          puts "ERROR: Path '#{base_dir}' does not exist"
-          return
-        end
-      end
-
-      puts "Switched to '#{task.name}'"
+      switcher = TaskSwitcher.new(self, task, app_name: app_name)
+      switcher.switch
     end
 
     def stop_task(task)
@@ -163,69 +124,7 @@ class Hiiro
 
       config.remove_task(task.name)
       subtasks(task).each { |st| config.remove_task(st.name) }
-
       puts "Stopped task '#{task.name}' (worktree available for reuse)"
-    end
-
-    def list
-      items = tasks
-      if items.empty?
-        puts scope == :subtask ? "No subtasks found" : "No tasks found"
-        puts "Use 'h #{scope} start NAME' to create one."
-        return
-      end
-
-      current = current_task
-      label = scope == :subtask ? "Subtasks" : "Tasks"
-      if scope == :subtask && current
-        parent = current_parent_task
-        label = "Subtasks of '#{parent&.name}'" if parent
-      end
-
-      puts "#{label}:"
-      puts
-
-      items.each do |task|
-        marker = (current && current.name == task.name) ? "*" : " "
-        line = task.display_line(scope: scope, environment: environment)
-        puts "#{marker} #{line}"
-
-        if scope == :task
-          subs = subtasks(task)
-          subs.each do |st|
-            sub_marker = (current && current.name == st.name) ? "*" : " "
-            sub_line = st.display_line(scope: :subtask, environment: environment)
-            puts "#{sub_marker} - #{sub_line}"
-          end
-        end
-      end
-
-      available = environment.all_trees.reject { |t|
-        environment.all_tasks.any? { |task| task.tree_name == t.name }
-      }
-
-      if available.any?
-        puts
-        available.each do |tree|
-          branch_str = tree.branch ? "  [#{tree.branch}]" : tree.detached? ? "  [(detached)]" : ""
-          puts format("  %-25s  (available)%s", tree.name, branch_str)
-        end
-      end
-    end
-
-    def status
-      task = current_task
-      unless task
-        puts "Not currently in a task session"
-        return
-      end
-
-      puts "Task: #{task.name}"
-      puts "Worktree: #{task.tree_name}"
-      tree = environment.find_tree(task.tree_name)
-      puts "Path: #{tree&.path || '(unknown)'}"
-      puts "Session: #{task.session_name}"
-      puts "Parent: #{task.parent_name}" if task.subtask?
     end
 
     def save
@@ -246,7 +145,7 @@ class Hiiro
         return
       end
 
-      result = resolve_app(app_name, task)
+      result = resolve_app_path(app_name, task)
       return unless result
 
       resolved_name, app_path = result
@@ -254,19 +153,33 @@ class Hiiro
       puts "Opened '#{resolved_name}' in new window (#{app_path})"
     end
 
-    def list_apps
-      apps = environment.all_apps
-      if apps.any?
-        puts "Configured apps:"
-        puts
-        apps.each do |app|
-          puts format("  %-20s => %s", app.name, app.relative_path)
-        end
-      else
-        puts "No apps configured."
-        puts "Create #{APPS_FILE} with format:"
-        puts "  app_name: relative/path/from/repo"
+    def cd_to_task(task)
+      unless task
+        puts "Task not found"
+        return
       end
+
+      path = resolve_task_path(task)
+      send_cd(path)
+    end
+
+    def cd_to_app(app_name = nil)
+      task = current_task
+      unless task
+        puts "ERROR: Not currently in a task session"
+        return
+      end
+
+      if app_name.nil? || app_name.empty?
+        send_cd(resolve_task_path(task))
+        return
+      end
+
+      result = resolve_app_path(app_name, task)
+      return unless result
+
+      _resolved_name, app_path = result
+      send_cd(app_path)
     end
 
     def branch(task_name = nil)
@@ -292,42 +205,10 @@ class Hiiro
       end
     end
 
-    def cd_to_task(task)
-      unless task
-        puts "Task not found"
-        return
-      end
-
-      tree = environment.find_tree(task.tree_name)
-      path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
-      send_cd(path)
-    end
-
-    def cd_to_app(app_name = nil)
-      task = current_task
-      unless task
-        puts "ERROR: Not currently in a task session"
-        return
-      end
-
-      if app_name.nil? || app_name.empty?
-        tree = environment.find_tree(task.tree_name)
-        send_cd(tree&.path || File.join(Hiiro::WORK_DIR, task.tree_name))
-        return
-      end
-
-      result = resolve_app(app_name, task)
-      return unless result
-
-      _resolved_name, app_path = result
-      send_cd(app_path)
-    end
-
     def app_path(app_name = nil)
       task = current_task
       tree_root = if task
-        tree = environment.find_tree(task.tree_name)
-        tree&.path || File.join(Hiiro::WORK_DIR, task.tree_name)
+        resolve_task_path(task)
       else
         Hiiro::Git.new(nil, Dir.pwd).root
       end
@@ -353,56 +234,11 @@ class Hiiro
       end
     end
 
-    # --- Interactive selection with sk ---
+    # --- Interactive Selection ---
 
     def select_task_interactive(prompt = nil)
-      task_list = if scope == :subtask
-        tasks.sort_by(&:short_name)
-      else
-        environment.all_tasks.sort_by(&:name)
-      end
-
-      mapping = {}
-
-      task_list.each do |task|
-        display_name = scope == :subtask ? task.short_name : task.name
-        line = task.display_line(scope: scope, environment: environment)
-        mapping[line] = { type: :task, name: display_name }
-      end
-
-      # Add non-task tmux sessions (exclude sessions that belong to tasks)
-      if scope == :task
-        task_session_names = environment.all_tasks.map(&:session_name)
-        extra_sessions = environment.all_sessions.reject { |s| task_session_names.include?(s.name) }
-        extra_sessions.sort_by(&:name).each do |session|
-          line = format("%-25s  (tmux session)", session.name)
-          mapping[line] = { type: :session, name: session.name }
-        end
-      end
-
-      return nil if mapping.empty?
-
-      selected = hiiro.fuzzyfind_from_map(mapping)
-      selected
-    end
-
-    def value_for_task(task_name = nil, &block)
-      if task_name
-        task = task_by_name(task_name)
-        return block.call(task) if task
-      end
-
-      task_list = scope == :subtask ? tasks.sort_by(&:short_name) : environment.all_tasks.sort_by(&:name)
-
-      mapping = task_list.each_with_object({}) do |task, h|
-        name = scope == :subtask ? task.short_name : task.name
-        val = block.call(task)&.to_s
-
-        line = format("%-25s  | %s", name, val)
-        h[line] = val
-      end
-
-      hiiro.fuzzyfind_from_map(mapping)
+      selector = TaskSelector.new(self)
+      selector.select
     end
 
     def select_branch_interactive(prompt = nil)
@@ -416,7 +252,39 @@ class Hiiro
       hiiro.fuzzyfind_from_map(name_map)
     end
 
-    # --- Private helpers ---
+    def value_for_task(task_name = nil, &block)
+      if task_name
+        task = task_by_name(task_name)
+        return block.call(task) if task
+      end
+
+      task_list = scope == :subtask ? tasks.sort_by(&:short_name) : environment.all_tasks.sort_by(&:name)
+
+      mapping = task_list.each_with_object({}) do |task, h|
+        name = scope == :subtask ? task.short_name : task.name
+        val = block.call(task)&.to_s
+        line = format("%-25s  | %s", name, val)
+        h[line] = val
+      end
+
+      hiiro.fuzzyfind_from_map(mapping)
+    end
+
+    # --- Presentation ---
+
+    def list
+      TaskPresenter.print_list(self)
+    end
+
+    def list_apps
+      TaskPresenter.print_apps(environment.all_apps)
+    end
+
+    def status
+      TaskPresenter.print_status(current_task, environment)
+    end
+
+    # --- Private Helpers ---
 
     private
 
@@ -428,19 +296,156 @@ class Hiiro
       task = current_task
       return nil unless task
 
-      if task.subtask?
-        environment.find_task(task.parent_name)
+      task.subtask? ? environment.find_task(task.parent_name) : task
+    end
+
+    def send_cd(path)
+      pane = ENV['TMUX_PANE']
+      if pane
+        system('tmux', 'send-keys', '-t', pane, "cd #{path}\n")
       else
-        task
+        system('tmux', 'send-keys', "cd #{path}\n")
       end
     end
 
-    def find_available_tree
-      assigned_tree_names = environment.all_tasks.map(&:tree_name)
-      environment.all_trees.find { |tree| !assigned_tree_names.include?(tree.name) }
+    def capture_tmux_windows(session)
+      output = `tmux list-windows -t #{session} -F '\\#{window_index}:\\#{window_name}:\\#{pane_current_path}' 2>/dev/null`
+      output.lines.map(&:strip).map { |line|
+        idx, name, path = line.split(':')
+        { 'index' => idx, 'name' => name, 'path' => path }
+      }
+    end
+  end
+
+  # Orchestrates starting a new task
+  class TaskStarter
+    attr_reader :manager, :name, :app_name
+
+    def initialize(manager, name, app_name: nil)
+      @manager = manager
+      @name = name
+      @app_name = app_name
     end
 
-    def resolve_app(app_name, task)
+    def start
+      task_name = build_task_name
+      subtree_name = build_subtree_name
+      target_path = File.join(Hiiro::WORK_DIR, subtree_name)
+
+      unless setup_worktree(target_path)
+        return
+      end
+
+      session_name = task_name
+      task = Task.new(name: task_name, tree: subtree_name, session: session_name)
+      manager.config.save_task(task)
+
+      base_dir = resolve_base_dir(target_path)
+      Dir.chdir(base_dir)
+      manager.hiiro.start_tmux_session(session_name)
+
+      puts "Started task '#{task_name}' in worktree '#{subtree_name}'"
+    end
+
+    private
+
+    def build_task_name
+      manager.scope == :subtask ? "#{current_parent.name}/#{name}" : name
+    end
+
+    def build_subtree_name
+      manager.scope == :subtask ? "#{current_parent.name}/#{name}" : "#{name}/main"
+    end
+
+    def current_parent
+      manager.send(:current_parent_task)
+    end
+
+    def setup_worktree(target_path)
+      git = Hiiro::Git.new(nil, Hiiro::REPO_PATH)
+      available = manager.find_available_tree
+
+      if available
+        puts "Renaming worktree '#{available.name}' to '#{build_subtree_name}'..."
+        FileUtils.mkdir_p(File.dirname(target_path))
+        unless git.move_worktree(available.path, target_path, repo_path: Hiiro::REPO_PATH)
+          puts "ERROR: Failed to rename worktree"
+          return false
+        end
+      else
+        puts "Creating new worktree '#{build_subtree_name}'..."
+        FileUtils.mkdir_p(File.dirname(target_path))
+        unless git.add_worktree_detached(target_path, repo_path: Hiiro::REPO_PATH)
+          puts "ERROR: Failed to create worktree"
+          return false
+        end
+      end
+      true
+    end
+
+    def resolve_base_dir(target_path)
+      if app_name
+        app = manager.environment.find_app(app_name)
+        app ? app.resolve(target_path) : target_path
+      else
+        target_path
+      end
+    end
+  end
+
+  # Orchestrates switching to an existing task
+  class TaskSwitcher
+    attr_reader :manager, :task, :app_name
+
+    def initialize(manager, task, app_name: nil)
+      @manager = manager
+      @task = task
+      @app_name = app_name
+    end
+
+    def switch
+      tree_path = manager.resolve_task_path(task)
+      session_name = task.session_name
+      session_exists = system('tmux', 'has-session', '-t', session_name, err: File::NULL)
+
+      if session_exists
+        manager.hiiro.start_tmux_session(session_name)
+      else
+        base_dir = resolve_base_dir(tree_path)
+        if Dir.exist?(base_dir)
+          Dir.chdir(base_dir)
+          manager.hiiro.start_tmux_session(session_name)
+        else
+          puts "ERROR: Path '#{base_dir}' does not exist"
+          return
+        end
+      end
+
+      puts "Switched to '#{task.name}'"
+    end
+
+    private
+
+    def resolve_base_dir(tree_path)
+      if app_name
+        app = manager.environment.find_app(app_name)
+        app ? app.resolve(tree_path) : tree_path
+      else
+        tree_path
+      end
+    end
+  end
+
+  # Handles app path resolution
+  class AppResolver
+    attr_reader :environment, :task
+
+    def initialize(environment, task)
+      @environment = environment
+      @task = task
+    end
+
+    def resolve(app_name)
       tree = environment.find_tree(task.tree_name)
       tree_root = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
 
@@ -448,15 +453,7 @@ class Hiiro
 
       case result.count
       when 0
-        exact = File.join(tree_root, app_name)
-        return [app_name, exact] if Dir.exist?(exact)
-
-        nested = File.join(tree_root, app_name, app_name)
-        return [app_name, nested] if Dir.exist?(nested)
-
-        puts "ERROR: App '#{app_name}' not found"
-        list_apps
-        nil
+        try_direct_paths(tree_root, app_name)
       when 1
         app = result.first.item
         [app.name, app.resolve(tree_root)]
@@ -472,23 +469,462 @@ class Hiiro
       end
     end
 
-    def send_cd(path)
-      pane = ENV['TMUX_PANE']
-      if pane
-        system('tmux', 'send-keys', '-t', pane, "cd #{path}\n")
-      else
-        system('tmux', 'send-keys', "cd #{path}\n")
+    private
+
+    def try_direct_paths(tree_root, app_name)
+      exact = File.join(tree_root, app_name)
+      return [app_name, exact] if Dir.exist?(exact)
+
+      nested = File.join(tree_root, app_name, app_name)
+      return [app_name, nested] if Dir.exist?(nested)
+
+      puts "ERROR: App '#{app_name}' not found"
+      TaskPresenter.print_apps(environment.all_apps)
+      nil
+    end
+  end
+
+  # Handles interactive task selection
+  class TaskSelector
+    attr_reader :manager
+
+    def initialize(manager)
+      @manager = manager
+    end
+
+    def select
+      mapping = build_mapping
+      return nil if mapping.empty?
+      manager.hiiro.fuzzyfind_from_map(mapping)
+    end
+
+    private
+
+    def build_mapping
+      mapping = {}
+
+      task_list = manager.scope == :subtask ? manager.tasks.sort_by(&:short_name) : manager.environment.all_tasks.sort_by(&:name)
+
+      task_list.each do |task|
+        display_name = manager.scope == :subtask ? task.short_name : task.name
+        line = task.display_line(scope: manager.scope, environment: manager.environment)
+        mapping[line] = { type: :task, name: display_name }
+      end
+
+      if manager.scope == :task
+        add_extra_sessions(mapping)
+      end
+
+      mapping
+    end
+
+    def add_extra_sessions(mapping)
+      task_session_names = manager.environment.all_tasks.map(&:session_name)
+      extra_sessions = manager.environment.all_sessions.reject { |s| task_session_names.include?(s.name) }
+
+      extra_sessions.sort_by(&:name).each do |session|
+        line = format("%-25s  (tmux session)", session.name)
+        mapping[line] = { type: :session, name: session.name }
+      end
+    end
+  end
+
+  # Presentation layer for task output
+  module TaskPresenter
+    module_function
+
+    def print_list(tm)
+      items = tm.tasks
+      if items.empty?
+        puts tm.scope == :subtask ? "No subtasks found" : "No tasks found"
+        puts "Use 'h #{tm.scope} start NAME' to create one."
+        return
+      end
+
+      current = tm.current_task
+      label = build_label(tm)
+
+      puts "#{label}:"
+      puts
+
+      items.each do |task|
+        print_task_line(task, current, tm)
+      end
+
+      print_available_trees(tm)
+    end
+
+    def print_task_line(task, current, tm)
+      marker = (current && current.name == task.name) ? "*" : " "
+      line = task.display_line(scope: tm.scope, environment: tm.environment)
+      puts "#{marker} #{line}"
+
+      return unless tm.scope == :task
+
+      tm.subtasks(task).each do |st|
+        sub_marker = (current && current.name == st.name) ? "*" : " "
+        sub_line = st.display_line(scope: :subtask, environment: tm.environment)
+        puts "#{sub_marker} - #{sub_line}"
       end
     end
 
-    def capture_tmux_windows(session)
-      output = `tmux list-windows -t #{session} -F '\#{window_index}:\#{window_name}:\#{pane_current_path}' 2>/dev/null`
-      output.lines.map(&:strip).map { |line|
-        idx, name, path = line.split(':')
-        { 'index' => idx, 'name' => name, 'path' => path }
+    def print_available_trees(tm)
+      available = tm.environment.all_trees.reject { |t|
+        tm.environment.all_tasks.any? { |task| task.tree_name == t.name }
       }
+
+      return unless available.any?
+
+      puts
+      available.each do |tree|
+        branch_str = tree.branch ? "  [#{tree.branch}]" : tree.detached? ? "  [(detached)]" : ""
+        puts format("  %-25s  (available)%s", tree.name, branch_str)
+      end
     end
 
+    def build_label(tm)
+      if tm.scope == :subtask && tm.current_task
+        parent = tm.send(:current_parent_task)
+        parent ? "Subtasks of '#{parent.name}'" : "Subtasks"
+      else
+        tm.scope == :subtask ? "Subtasks" : "Tasks"
+      end
+    end
+
+    def print_status(task, environment)
+      unless task
+        puts "Not currently in a task session"
+        return
+      end
+
+      puts "Task: #{task.name}"
+      puts "Worktree: #{task.tree_name}"
+      tree = environment.find_tree(task.tree_name)
+      puts "Path: #{tree&.path || '(unknown)'}"
+      puts "Session: #{task.session_name}"
+      puts "Parent: #{task.parent_name}" if task.subtask?
+    end
+
+    def print_apps(apps)
+      if apps.any?
+        puts "Configured apps:"
+        puts
+        apps.each do |app|
+          puts format("  %-20s => %s", app.name, app.relative_path)
+        end
+      else
+        puts "No apps configured."
+        puts "Create #{TaskManager::APPS_FILE} with format:"
+        puts "  app_name: relative/path/from/repo"
+      end
+    end
+  end
+
+  # Handles building the Hiiro command interface
+  module Tasks
+    def self.build_hiiro(parent_hiiro, tm)
+      TaskCommands.new(tm, parent_hiiro).build
+    end
+  end
+
+  class TaskCommands
+    attr_reader :manager, :parent_hiiro
+
+    def initialize(manager, parent_hiiro)
+      @manager = manager
+      @parent_hiiro = parent_hiiro
+    end
+
+    def build
+      tm = manager
+      h = parent_hiiro
+
+      h.make_child do |child|
+        # List commands
+        child.add_subcmd(:list) { tm.list }
+        child.add_subcmd(:ls) { tm.list }
+
+        # Task lifecycle
+        child.add_subcmd(:start) { |task_name, app_name=nil| tm.start_task(task_name, app_name: app_name) }
+        child.add_subcmd(:switch) { |task_name=nil, app_name=nil| TaskActions.switch(tm, child, task_name, app_name) }
+        child.add_subcmd(:stop) { |task_name=nil| TaskActions.stop(tm, child, task_name) }
+
+        # App commands
+        child.add_subcmd(:app) { |app_name=nil| TaskActions.app(tm, child, app_name) }
+        child.add_subcmd(:apps) { tm.list_apps }
+        child.add_subcmd(:cd) { |app_name=nil| tm.cd_to_app(app_name) }
+        child.add_subcmd(:path) { |app_name=nil| tm.app_path(app_name) }
+
+        # Value selectors
+        child.add_subcmd(:branch) { |task_name=nil| print tm.value_for_task(task_name, &:branch) }
+        child.add_subcmd(:tree) { |task_name=nil| print tm.value_for_task(task_name, &:tree_name) }
+        child.add_subcmd(:session) { |task_name=nil| print tm.value_for_task(task_name, &:session_name) }
+
+        # Current task info
+        child.add_subcmd(:current) { TaskActions.current(tm) }
+        child.add_subcmd(:cbranch) { TaskActions.cbranch(tm) }
+        child.add_subcmd(:ctree) { TaskActions.ctree(tm) }
+        child.add_subcmd(:csession) { TaskActions.csession(tm) }
+
+        # Status commands
+        child.add_subcmd(:status) { tm.status }
+        child.add_subcmd(:st) { tm.status }
+        child.add_subcmd(:save) { tm.save }
+
+        # Edit
+        child.add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
+
+        # Nested subcommands
+        child.add_subcmd(:todo) { |*args| TaskActions.todo(tm, parent_hiiro, args) }
+        child.add_subcmd(:queue) { |*args| TaskActions.queue(tm, parent_hiiro, child) }
+        child.add_subcmd(:service) { |*args| TaskActions.service(tm, child) }
+        child.add_subcmd(:run) { |*args| TaskActions.run(parent_hiiro, child) }
+        child.add_subcmd(:file) { |*args| TaskActions.file(tm, child) }
+      end
+    end
+  end
+
+  # High-level actions with side effects
+  module TaskActions
+    module_function
+
+    def switch(tm, h, task_name, app_name)
+      if task_name.nil?
+        selected = tm.select_task_interactive
+        return unless selected
+
+        if selected.is_a?(Hash)
+          if selected[:type] == :session
+            h.start_tmux_session(selected[:name])
+            puts "Switched to session '#{selected[:name]}'"
+            return
+          else
+            task_name = selected[:name]
+          end
+        else
+          task_name = selected
+        end
+      end
+
+      task = tm.task_by_name(task_name)
+
+      unless task
+        session = tm.environment.find_session(task_name)
+        if session
+          h.start_tmux_session(session.name)
+          puts "Switched to session '#{session.name}'"
+          return
+        end
+      end
+
+      tm.switch_to_task(task, app_name: app_name)
+    end
+
+    def stop(tm, h, task_name)
+      if task_name.nil?
+        task_name = tm.select_task_interactive
+        return unless task_name
+      end
+      task = tm.task_by_name(task_name)
+      tm.stop_task(task)
+    end
+
+    def app(tm, h, app_name)
+      if app_name.nil?
+        names = tm.environment.all_apps.map(&:name)
+        app_name = h.fuzzyfind(names)
+        return unless app_name
+      end
+      tm.open_app(app_name)
+    end
+
+    def current(tm)
+      task = tm.current_task
+      return STDERR.puts("Not in a task") unless task
+      print task.name
+    end
+
+    def cbranch(tm)
+      task = tm.current_task
+      return STDERR.puts("Not in a task") unless task
+      print task.branch if task.branch
+    end
+
+    def ctree(tm)
+      task = tm.current_task
+      return STDERR.puts("Not in a task") unless task
+      print task.tree_name if task.tree_name
+    end
+
+    def csession(tm)
+      task = tm.current_task
+      return STDERR.puts("Not in a task") unless task
+      print task.session_name if task.session_name
+    end
+
+    def todo(tm, parent_hiiro, args)
+      TodoActions.handle(tm, parent_hiiro, args)
+    end
+
+    def queue(tm, parent_hiiro, h)
+      task = tm.current_task
+      task_info = task ? { task_name: task.name, tree_name: task.tree_name, session_name: task.session_name } : nil
+
+      q = Hiiro::Queue.current(parent_hiiro)
+      Hiiro::Queue.build_hiiro(h, q, task_info: task_info).run
+    end
+
+    def service(tm, h)
+      sm = Hiiro::ServiceManager.new
+      Hiiro::ServiceManager.build_hiiro(h, sm, task_manager: tm).run
+    end
+
+    def run(parent_hiiro, h)
+      rt = Hiiro::RunnerTool.new
+      Hiiro::RunnerTool.build_hiiro(h, rt, git: parent_hiiro.git).run
+    end
+
+    def file(tm, h)
+      af = Hiiro::AppFiles.new
+      Hiiro::AppFiles.build_hiiro(h, af, environment: tm.environment).run
+    end
+  end
+
+  # Handles todo subcommand actions
+  module TodoActions
+    module_function
+
+    def handle(tm, parent_hiiro, args)
+      todo_manager = Hiiro::TodoManager.new
+      task = tm.current_task
+      task_info = build_task_info(task)
+
+      subcmd = args.shift
+      case subcmd
+      when 'ls', 'list', nil then list(todo_manager, task, args)
+      when 'add' then add(todo_manager, task_info, args)
+      when 'rm', 'remove' then remove(todo_manager, tm, args)
+      when 'start' then start(todo_manager, tm, args)
+      when 'done' then done(todo_manager, tm, args)
+      when 'skip' then skip(todo_manager, tm, args)
+      when 'search' then search(todo_manager, args)
+      else puts "Usage: h #{tm.scope} todo <ls|add|rm|start|done|skip|search> [args]"
+      end
+    end
+
+    def build_task_info(task)
+      return nil unless task
+      { task_name: task.name, tree: task.tree_name, branch: task.branch, session: task.session_name }
+    end
+
+    def list(todo_manager, task, args)
+      show_all = args.delete('-a') || args.delete('--all')
+      items = if show_all
+        todo_manager.all
+      elsif task
+        todo_manager.filter_by_task(task.name).select { |i| %w[not_started started].include?(i.status) }
+      else
+        todo_manager.active
+      end
+
+      if items.empty?
+        puts task ? "No todo items for task '#{task.name}'." : "No todo items found."
+      else
+        puts todo_manager.list(items)
+      end
+    end
+
+    def add(todo_manager, task_info, args)
+      if args.empty?
+        new_items = todo_manager.edit_items(task_info: task_info)
+        if new_items.empty?
+          puts "No items added."
+          return
+        end
+        todo_manager.add_items(new_items)
+        if new_items.length == 1
+          puts "Added: #{todo_manager.format_item(new_items.first)}"
+        else
+          puts "Added #{new_items.length} items:"
+          new_items.each { |item| puts "  #{todo_manager.format_item(item)}" }
+        end
+        return
+      end
+
+      tags, text = parse_add_args(args)
+      item = todo_manager.add(text, tags: tags, task_info: task_info)
+      puts "Added: #{todo_manager.format_item(item)}"
+    end
+
+    def parse_add_args(args)
+      tags = nil
+      text_parts = []
+      while args.any?
+        arg = args.shift
+        case arg
+        when '-t', '--tags'
+          tags = args.shift
+        else
+          text_parts << arg
+        end
+      end
+      [tags, text_parts.join(' ')]
+    end
+
+    def remove(todo_manager, tm, args)
+      id_or_index = args.shift
+      unless id_or_index
+        puts "Usage: h #{tm.scope} todo rm <id|index>"
+        return
+      end
+      item = todo_manager.remove(id_or_index)
+      puts item ? "Removed: #{item.text}" : "Item not found: #{id_or_index}"
+    end
+
+    def start(todo_manager, tm, args)
+      id_or_index = args.shift
+      unless id_or_index
+        puts "Usage: h #{tm.scope} todo start <id|index>"
+        return
+      end
+      item = todo_manager.start(id_or_index)
+      puts item ? "Started: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
+    end
+
+    def done(todo_manager, tm, args)
+      id_or_index = args.shift
+      unless id_or_index
+        puts "Usage: h #{tm.scope} todo done <id|index>"
+        return
+      end
+      item = todo_manager.done(id_or_index)
+      puts item ? "Done: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
+    end
+
+    def skip(todo_manager, tm, args)
+      id_or_index = args.shift
+      unless id_or_index
+        puts "Usage: h #{tm.scope} todo skip <id|index>"
+        return
+      end
+      item = todo_manager.skip(id_or_index)
+      puts item ? "Skipped: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
+    end
+
+    def search(todo_manager, args)
+      query = args.join(' ')
+      if query.empty?
+        puts "Usage: h todo search <query>"
+        return
+      end
+      items = todo_manager.search(query)
+      puts items.empty? ? "No items matching: #{query}" : todo_manager.list(items)
+    end
+  end
+
+  # --- Config class remains the same ---
+
+  class TaskManager
     class Config
       attr_reader :tasks_file, :apps_file
 
@@ -571,279 +1007,13 @@ class Hiiro
     end
   end
 
-  module Tasks
-    def self.build_hiiro(parent_hiiro, tm)
-      task_hiiro = parent_hiiro.make_child do |h|
-        h.add_subcmd(:list) { tm.list }
-        h.add_subcmd(:ls) { tm.list }
-
-        h.add_subcmd(:start) do |task_name, app_name=nil|
-          tm.start_task(task_name, app_name: app_name)
-        end
-
-        h.add_subcmd(:switch) do |task_name=nil, app_name=nil|
-          if task_name.nil?
-            selected = tm.select_task_interactive
-            next unless selected
-
-            if selected.is_a?(Hash)
-              if selected[:type] == :session
-                h.start_tmux_session(selected[:name])
-                puts "Switched to session '#{selected[:name]}'"
-                next
-              else
-                task_name = selected[:name]
-              end
-            else
-              task_name = selected
-            end
-          end
-
-          task = tm.task_by_name(task_name)
-
-          # If no task found, check for a matching tmux session
-          unless task
-            session = tm.environment.find_session(task_name)
-            if session
-              h.start_tmux_session(session.name)
-              puts "Switched to session '#{session.name}'"
-              next
-            end
-          end
-
-          tm.switch_to_task(task, app_name: app_name)
-        end
-
-        h.add_subcmd(:app) do |app_name=nil|
-          if app_name.nil?
-            names = tm.environment.all_apps.map(&:name)
-            app_name = h.fuzzyfind(names)
-            next unless app_name
-          end
-          tm.open_app(app_name)
-        end
-
-        h.add_subcmd(:apps) { tm.list_apps }
-
-        h.add_subcmd(:cd) do |app_name=nil|
-          tm.cd_to_app(app_name)
-        end
-
-        h.add_subcmd(:path) do |app_name=nil|
-          tm.app_path(app_name)
-        end
-
-        h.add_subcmd(:branch) do |task_name=nil|
-          print tm.value_for_task(task_name, &:branch)
-        end
-
-        h.add_subcmd(:tree) do |task_name=nil|
-          print tm.value_for_task(task_name, &:tree_name)
-        end
-
-        h.add_subcmd(:session) do |task_name=nil|
-          print tm.value_for_task(task_name, &:session_name)
-        end
-
-        h.add_subcmd(:current) do
-          task = tm.current_task
-          next STDERR.puts("Not in a task") unless task
-          print task.name
-        end
-
-        h.add_subcmd(:cbranch) do
-          task = tm.current_task
-          next STDERR.puts("Not in a task") unless task
-          print task.branch if task.branch
-        end
-
-        h.add_subcmd(:ctree) do
-          task = tm.current_task
-          next STDERR.puts("Not in a task") unless task
-          print task.tree_name if task.tree_name
-        end
-
-        h.add_subcmd(:csession) do
-          task = tm.current_task
-          next STDERR.puts("Not in a task") unless task
-          print task.session_name if task.session_name
-        end
-
-        h.add_subcmd(:status) { tm.status }
-        h.add_subcmd(:st) { tm.status }
-
-        h.add_subcmd(:save) { tm.save }
-
-        h.add_subcmd(:stop) do |task_name=nil|
-          if task_name.nil?
-            task_name = tm.select_task_interactive
-            next unless task_name
-          end
-          task = tm.task_by_name(task_name)
-          tm.stop_task(task)
-        end
-
-        h.add_subcmd(:edit) do
-          system(ENV['EDITOR'] || 'nvim', __FILE__)
-        end
-
-        h.add_subcmd(:todo) do |*todo_args|
-          todo_manager = Hiiro::TodoManager.new
-          task = tm.current_task
-
-          task_info = if task
-            {
-              task_name: task.name,
-              tree: task.tree_name,
-              branch: task.branch,
-              session: task.session_name
-            }
-          end
-
-          todo_subcmd = todo_args.shift
-          case todo_subcmd
-          when 'ls', 'list', nil
-            show_all = todo_args.delete('-a') || todo_args.delete('--all')
-            items = if show_all
-              todo_manager.all
-            elsif task
-              todo_manager.filter_by_task(task.name).select { |i| %w[not_started started].include?(i.status) }
-            else
-              todo_manager.active
-            end
-
-            if items.empty?
-              puts task ? "No todo items for task '#{task.name}'." : "No todo items found."
-            else
-              puts todo_manager.list(items)
-            end
-
-          when 'add'
-            if todo_args.empty?
-              new_items = todo_manager.edit_items(task_info: task_info)
-              if new_items.empty?
-                puts "No items added."
-                next
-              end
-              todo_manager.add_items(new_items)
-              if new_items.length == 1
-                puts "Added: #{todo_manager.format_item(new_items.first)}"
-              else
-                puts "Added #{new_items.length} items:"
-                new_items.each { |item| puts "  #{todo_manager.format_item(item)}" }
-              end
-              next
-            end
-
-            tags = nil
-            text_parts = []
-            while todo_args.any?
-              arg = todo_args.shift
-              case arg
-              when '-t', '--tags'
-                tags = todo_args.shift
-              else
-                text_parts << arg
-              end
-            end
-            text = text_parts.join(' ')
-            item = todo_manager.add(text, tags: tags, task_info: task_info)
-            puts "Added: #{todo_manager.format_item(item)}"
-
-          when 'rm', 'remove'
-            id_or_index = todo_args.shift
-            unless id_or_index
-              puts "Usage: h #{tm.scope} todo rm <id|index>"
-              next
-            end
-            item = todo_manager.remove(id_or_index)
-            puts item ? "Removed: #{item.text}" : "Item not found: #{id_or_index}"
-
-          when 'start'
-            id_or_index = todo_args.shift
-            unless id_or_index
-              puts "Usage: h #{tm.scope} todo start <id|index>"
-              next
-            end
-            item = todo_manager.start(id_or_index)
-            puts item ? "Started: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
-
-          when 'done'
-            id_or_index = todo_args.shift
-            unless id_or_index
-              puts "Usage: h #{tm.scope} todo done <id|index>"
-              next
-            end
-            item = todo_manager.done(id_or_index)
-            puts item ? "Done: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
-
-          when 'skip'
-            id_or_index = todo_args.shift
-            unless id_or_index
-              puts "Usage: h #{tm.scope} todo skip <id|index>"
-              next
-            end
-            item = todo_manager.skip(id_or_index)
-            puts item ? "Skipped: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
-
-          when 'search'
-            query = todo_args.join(' ')
-            if query.empty?
-              puts "Usage: h #{tm.scope} todo search <query>"
-              next
-            end
-            items = todo_manager.search(query)
-            if items.empty?
-              puts "No items matching: #{query}"
-            else
-              puts todo_manager.list(items)
-            end
-
-          else
-            puts "Usage: h #{tm.scope} todo <ls|add|rm|start|done|skip|search> [args]"
-          end
-        end
-
-        h.add_subcmd(:queue) do |*queue_args|
-          task = tm.current_task
-          task_info = if task
-            {
-              task_name: task.name,
-              tree_name: task.tree_name,
-              session_name: task.session_name
-            }
-          end
-
-          q = Hiiro::Queue.current(parent_hiiro)
-          Hiiro::Queue.build_hiiro(h, q, task_info: task_info).run
-        end
-
-        h.add_subcmd(:service) do |*svc_args|
-          sm = Hiiro::ServiceManager.new
-          Hiiro::ServiceManager.build_hiiro(h, sm, task_manager: tm).run
-        end
-
-        h.add_subcmd(:run) do |*run_args|
-          rt = Hiiro::RunnerTool.new
-          Hiiro::RunnerTool.build_hiiro(h, rt, git: parent_hiiro.git).run
-        end
-
-        h.add_subcmd(:file) do |*file_args|
-          af = Hiiro::AppFiles.new
-          Hiiro::AppFiles.build_hiiro(h, af, environment: tm.environment).run
-        end
-      end
-
-      task_hiiro
-    end
-  end
+  # --- Value objects remain the same ---
 
   class TmuxSession
     attr_reader :name
 
     def self.current
       return nil unless ENV['TMUX']
-
       name = `tmux display-message -p '#S'`.chomp
       new(name)
     end

@@ -1,5 +1,14 @@
 require "test_helper"
-require_relative "../../plugins/tasks"
+require "hiiro/tasks"
+
+# Alias Hiiro-namespaced classes to top-level for test compatibility
+TmuxSession = Hiiro::TmuxSession unless defined?(TmuxSession)
+Tree = Hiiro::Tree unless defined?(Tree)
+Task = Hiiro::Task unless defined?(Task)
+App = Hiiro::App unless defined?(App)
+Environment = Hiiro::Environment unless defined?(Environment)
+TaskManager = Hiiro::TaskManager unless defined?(TaskManager)
+WORK_DIR = Hiiro::WORK_DIR unless defined?(WORK_DIR)
 
 class TmuxSessionTest < Minitest::Test
   def test_tmux_session_initialization
