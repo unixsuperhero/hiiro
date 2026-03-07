@@ -111,6 +111,50 @@ class Hiiro
       true
     end
 
+    def stop_group(name)
+      group = find_group(name)
+      unless group
+        puts "Group '#{name}' not found"
+        return false
+      end
+
+      members = group[:services]
+      unless members && !members.empty?
+        puts "Group '#{group[:name]}' has no services"
+        return false
+      end
+
+      puts "Stopping group '#{group[:name]}'..."
+
+      members.each do |member|
+        member_name = member['name'] || member[:name]
+        stop(member_name)
+      end
+      true
+    end
+
+    def reset_group(name)
+      group = find_group(name)
+      unless group
+        puts "Group '#{name}' not found"
+        return false
+      end
+
+      members = group[:services]
+      unless members && !members.empty?
+        puts "Group '#{group[:name]}' has no services"
+        return false
+      end
+
+      puts "Resetting group '#{group[:name]}'..."
+
+      members.each do |member|
+        member_name = member['name'] || member[:name]
+        reset(member_name)
+      end
+      true
+    end
+
     def running?(name)
       state = load_state
       state.key?(name)
@@ -477,7 +521,13 @@ class Hiiro
             next unless svc_name
           end
 
-          sm.stop(svc_name)
+          # Check if it's a group or individual service
+          group = sm.find_group(svc_name)
+          if group
+            sm.stop_group(svc_name)
+          else
+            sm.stop(svc_name)
+          end
         end
 
         h.add_subcmd(:reset) do |svc_name=nil|
@@ -491,7 +541,13 @@ class Hiiro
             next unless svc_name
           end
 
-          sm.reset(svc_name)
+          # Check if it's a group or individual service
+          group = sm.find_group(svc_name)
+          if group
+            sm.reset_group(svc_name)
+          else
+            sm.reset(svc_name)
+          end
         end
 
         h.add_subcmd(:clean) do
