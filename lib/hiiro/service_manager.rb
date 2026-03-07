@@ -850,12 +850,13 @@ class Hiiro
       end
 
       # Write launcher that orchestrates: init -> env -> start -> reset
+      # Use trap to ensure reset runs even on Ctrl+C
       launcher_path = File.join(dir, "#{svc_name}.sh")
       steps = []
+      steps << "trap 'h service reset #{svc_name}' EXIT"
       steps << init_path unless init_cmds.empty?
       steps << env_path if env_path
       steps << start_path
-      steps << "h service reset #{svc_name}"
 
       write_shell_script(launcher_path, steps)
     end
