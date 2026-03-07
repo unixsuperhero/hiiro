@@ -351,15 +351,29 @@ class Hiiro
       else
         environment.all_tasks.sort_by(&:name)
       end
-      return nil if task_list.empty?
 
-      mapping = task_list.each_with_object({}) do |task, h|
+      mapping = {}
+
+      task_list.each do |task|
         display_name = scope == :subtask ? task.short_name : task.name
         line = task.display_line(scope: scope, environment: environment)
-        h[line] = display_name
+        mapping[line] = { type: :task, name: display_name }
       end
 
-      hiiro.fuzzyfind_from_map(mapping)
+      # Add non-task tmux sessions (exclude sessions that belong to tasks)
+      if scope == :task
+        task_session_names = environment.all_tasks.map(&:session_name)
+        extra_sessions = environment.all_sessions.reject { |s| task_session_names.include?(s.name) }
+        extra_sessions.sort_by(&:name).each do |session|
+          line = format("%-25s  (tmux session)", session.name)
+          mapping[line] = { type: :session, name: session.name }
+        end
+      end
+
+      return nil if mapping.empty?
+
+      selected = hiiro.fuzzyfind_from_map(mapping)
+      selected
     end
 
     def value_for_task(task_name = nil, &block)
@@ -559,10 +573,34 @@ class Hiiro
 
         h.add_subcmd(:switch) do |task_name=nil, app_name=nil|
           if task_name.nil?
-            task_name = tm.select_task_interactive
-            next unless task_name
+            selected = tm.select_task_interactive
+            next unless selected
+
+            if selected.is_a?(Hash)
+              if selected[:type] == :session
+                h.start_tmux_session(selected[:name])
+                puts "Switched to session '#{selected[:name]}'"
+                next
+              else
+                task_name = selected[:name]
+              end
+            else
+              task_name = selected
+            end
           end
+
           task = tm.task_by_name(task_name)
+
+          # If no task found, check for a matching tmux session
+          unless task
+            session = tm.environment.find_session(task_name)
+            if session
+              h.start_tmux_session(session.name)
+              puts "Switched to session '#{session.name}'"
+              next
+            end
+          end
+
           tm.switch_to_task(task, app_name: app_name)
         end
 
