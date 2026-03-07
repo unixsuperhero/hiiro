@@ -9,7 +9,7 @@ class Hiiro
   class Git
     attr_reader :hiiro, :pwd
 
-    def initialize(hiiro, pwd)
+    def initialize(hiiro, pwd=Dir.pwd)
       @hiiro = hiiro
       @pwd = pwd
     end

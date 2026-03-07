@@ -5,10 +5,11 @@ require "delegate"
 
 class Hiiro
   class Paths
-    attr_reader :base
+    attr_reader :base, :hiiro
 
-    def initialize(base=Dir.pwd)
+    def initialize(base=Dir.pwd, hiiro: nil)
       @base = Pathname.new base
+      @hiiro = hiiro
     end
 
     def from_base(file)
@@ -17,14 +18,21 @@ class Hiiro
     end
 
     def symlinks_in(path)
-      subdir = Pathname.new(path)
+      subdir = Pathname.new(path).expand_path
 
       subdir.find
         .select(&:symlink?)
-        .map { |link| Symlink.new(link) }
+        .map { |link| Symlink.new(link, hiiro) }
     end
 
     class Symlink < SimpleDelegator
+      attr_reader :hiiro
+
+      def initialize(path, hiiro=nil)
+        @hiiro = hiiro
+        super(path)
+      end
+
       def path
         @path ||= Pathname.new(__getobj__)
       end
@@ -34,21 +42,23 @@ class Hiiro
       end
 
       def root
-        `git rev-parse --show-toplevel 2>/dev/null`.chomp
+        @root ||= hiiro&.git&.root || `git rev-parse --show-toplevel 2>/dev/null`.chomp
       end
 
       def root_path
         Pathname.new root
       end
 
+      def abs_dest
+        (path.dirname + dest).cleanpath
+      end
+
       def dest_from_root
-        abs = (path.dirname + dest).cleanpath
-        abs.relative_path_from(root_path)
+        abs_dest.relative_path_from(root_path)
       end
 
       def dest_relative_to(base_dir)
-        abs = (path.dirname + dest).cleanpath
-        abs.relative_path_from(Pathname.new(base_dir))
+        abs_dest.relative_path_from(Pathname.new(base_dir))
       end
 
       def dest_dir
