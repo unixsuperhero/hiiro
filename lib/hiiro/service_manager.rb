@@ -399,9 +399,17 @@ class Hiiro
           puts "Services:"
           puts
           configs.each do |name, cfg|
-            status = running.key?(name) ? "running" : "stopped"
-            port_str = cfg['port'] ? ":#{cfg['port']}" : ""
-            puts format("  %-20s  [%s]%s  %s", name, status, port_str, cfg['base_dir'] || '')
+            is_running = running.key?(name)
+            status_emoji = is_running ? "🟢" : "🔴"
+            host = cfg['host'] || 'localhost'
+            url_str = cfg['port'] ? " #{host}:#{cfg['port']}" : ""
+            extra = ""
+            if is_running
+              info = running[name]
+              parts = [info['task'], info['branch']].compact.reject(&:empty?)
+              extra = "  (#{parts.join(' • ')})" unless parts.empty?
+            end
+            puts format("  %-20s  %s%s%s", name, status_emoji, url_str, extra)
           end
         end
 
