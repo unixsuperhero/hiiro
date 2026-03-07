@@ -80,7 +80,7 @@ class Hiiro
     # Session methods
 
     def find_session(name)
-      normalized = name.to_s.tr('.', '_')
+      normalized = normalize_session_name(name)
       sessions.find { |s| s.name == normalized } ||
         Matcher.by_prefix(sessions.map(&:name), normalized)&.resolved&.then { |m| sessions.find { |s| s.name == m.item } }
     end
@@ -90,7 +90,7 @@ class Hiiro
     end
 
     def open_session(name, **opts)
-      session_name = name.to_s.tr('.', '_')
+      session_name = normalize_session_name(name)
       existing = find_session(session_name)
 
       unless existing
@@ -119,32 +119,25 @@ class Hiiro
     end
 
     def kill_session(name)
-      resolved = find_session(name)&.name || name.to_s.tr('.', '_')
-      run_system('kill-session', '-t', resolved)
+      run_system('kill-session', '-t', resolved_session_name(name))
     end
 
     def attach_session(name)
-      resolved = find_session(name)&.name || name.to_s.tr('.', '_')
-      run_system('attach-session', '-t', resolved)
+      run_system('attach-session', '-t', resolved_session_name(name))
     end
 
     def switch_client(name)
-      resolved = find_session(name)&.name || name.to_s.tr('.', '_')
-      run_system('switch-client', '-t', resolved)
+      run_system('switch-client', '-t', resolved_session_name(name))
     end
 
     def detach_client(session: nil)
       args = ['detach-client']
-      if session
-        resolved = find_session(session)&.name || session.to_s.tr('.', '_')
-        args += ['-s', resolved]
-      end
+      args += ['-s', resolved_session_name(session)] if session
       run_system(*args)
     end
 
     def rename_session(old_name, new_name)
-      resolved = find_session(old_name)&.name || old_name.to_s.tr('.', '_')
-      run_system('rename-session', '-t', resolved, new_name)
+      run_system('rename-session', '-t', resolved_session_name(old_name), new_name)
     end
 
     # Window methods
@@ -317,6 +310,17 @@ class Hiiro
     end
 
     private
+
+    # Normalize session name by replacing dots with underscores.
+    # tmux doesn't allow dots in session names.
+    def normalize_session_name(name)
+      name.to_s.tr('.', '_')
+    end
+
+    # Resolve a session name, preferring an existing session match over normalization.
+    def resolved_session_name(name)
+      find_session(name)&.name || normalize_session_name(name)
+    end
 
     def run_safe(*args)
       output = `tmux #{args.shelljoin} 2>/dev/null`.strip

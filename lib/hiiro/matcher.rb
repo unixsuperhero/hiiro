@@ -126,7 +126,7 @@ class Hiiro
       PathResult.new(
         matcher: self,
         all_items: all_items(key, &block),
-        prefix: prefix,
+        pattern: prefix,
         key: key || @key,
         block: block || @block
       )
@@ -155,14 +155,14 @@ class Hiiro
       end
     end
 
-    class Result
-      attr_reader :matcher, :all_items, :key, :block, :pattern, :match_type
+    # Base class for match results. Subclasses implement #matches.
+    class BaseResult
+      attr_reader :matcher, :all_items, :key, :block, :pattern
 
-      def initialize(matcher:, all_items:, pattern:, match_type: :prefix, key: nil, block: nil)
+      def initialize(matcher:, all_items:, pattern:, key: nil, block: nil)
         @matcher = matcher
         @all_items = all_items
         @pattern = pattern
-        @match_type = match_type
         @key = key
         @block = block
       end
@@ -172,17 +172,9 @@ class Hiiro
         pattern
       end
 
+      # Subclasses must implement this
       def matches
-        @matches ||= all_items.select { |item|
-          case match_type
-          when :prefix
-            item.extracted_item.to_s.start_with?(pattern.to_s)
-          when :substring
-            item.extracted_item.to_s.include?(pattern.to_s)
-          else
-            item.extracted_item.to_s.start_with?(pattern.to_s)
-          end
-        }
+        raise NotImplementedError, "#{self.class}#matches must be implemented"
       end
 
       def count
@@ -224,69 +216,43 @@ class Hiiro
       end
     end
 
-    class PathResult
-      attr_reader :matcher, :all_items, :key, :block, :prefix
+    class Result < BaseResult
+      attr_reader :match_type
 
-      def initialize(matcher:, all_items:, prefix:, key: nil, block: nil)
-        @matcher = matcher
-        @all_items = all_items
-        @prefix = prefix
-        @key = key
-        @block = block
+      def initialize(matcher:, all_items:, pattern:, match_type: :prefix, key: nil, block: nil)
+        super(matcher: matcher, all_items: all_items, pattern: pattern, key: key, block: block)
+        @match_type = match_type
       end
 
       def matches
+        @matches ||= all_items.select { |item|
+          case match_type
+          when :prefix
+            item.extracted_item.to_s.start_with?(pattern.to_s)
+          when :substring
+            item.extracted_item.to_s.include?(pattern.to_s)
+          else
+            item.extracted_item.to_s.start_with?(pattern.to_s)
+          end
+        }
+      end
+    end
+
+    class PathResult < BaseResult
+      def matches
         @matches ||= begin
-          prefixes = prefix.to_s.split('/')
+          segments = pattern.to_s.split('/')
 
           items_with_paths = all_items.map { |item|
             [item, item.extracted_item.to_s.split('/')]
           }
 
-          prefixes.each_with_index do |seg, i|
+          segments.each_with_index do |seg, i|
             items_with_paths = items_with_paths.select { |_, path| path[i]&.start_with?(seg) }
           end
 
           items_with_paths.map(&:first)
         end
-      end
-
-      def count
-        matches.count
-      end
-
-      def ambiguous?
-        count > 1
-      end
-
-      def exact_match
-        all_items.find { |item| item.extracted_item == prefix }
-      end
-
-      def match
-        one? ? matches.first : nil
-      end
-
-      def match?
-        matches.any?
-      end
-
-      def exact?
-        !exact_match.nil?
-      end
-
-      def one?
-        count == 1
-      end
-
-      # Returns item for resolve semantics: exact match, or single match, otherwise nil
-      def resolved
-        exact_match || match
-      end
-
-      # Returns the first matching item (for find semantics)
-      def first
-        matches.first
       end
     end
   end

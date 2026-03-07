@@ -3,12 +3,76 @@ require 'fileutils'
 require 'tempfile'
 
 class Hiiro
-  class TodoItem
-    STATUSES = %w[not_started started done skip].freeze
+  # Value object representing a todo item's status.
+  # Encapsulates valid statuses, icons, and active/completed predicates.
+  class TodoStatus
+    VALID = %w[not_started started done skip].freeze
+    ICONS = {
+      'not_started' => '[ ]',
+      'started' => '[>]',
+      'done' => '[x]',
+      'skip' => '[-]'
+    }.freeze
 
-    attr_accessor :id, :text, :status, :tags
+    attr_reader :value
+
+    def initialize(value)
+      @value = VALID.include?(value) ? value : 'not_started'
+    end
+
+    def icon
+      ICONS[@value]
+    end
+
+    def active?
+      @value == 'not_started' || @value == 'started'
+    end
+
+    def completed?
+      @value == 'done' || @value == 'skip'
+    end
+
+    def not_started?
+      @value == 'not_started'
+    end
+
+    def started?
+      @value == 'started'
+    end
+
+    def done?
+      @value == 'done'
+    end
+
+    def skip?
+      @value == 'skip'
+    end
+
+    def to_s
+      @value
+    end
+
+    # Allows implicit conversion to string (e.g., for string interpolation and comparisons)
+    alias to_str to_s
+
+    def ==(other)
+      case other
+      when TodoStatus then @value == other.value
+      when String then @value == other
+      else false
+      end
+    end
+
+    def self.valid?(value)
+      VALID.include?(value)
+    end
+  end
+
+  class TodoItem
+    attr_accessor :id, :text, :tags
     attr_accessor :task_name, :subtask_name, :tree, :branch, :session
     attr_accessor :created_at, :updated_at
+    attr_reader :status
 
     def initialize(
       id: nil,
@@ -25,7 +89,7 @@ class Hiiro
     )
       @id = id
       @text = text
-      @status = STATUSES.include?(status) ? status : 'not_started'
+      @status = TodoStatus.new(status)
       @tags = tags
       @task_name = task_name
       @subtask_name = subtask_name
@@ -34,6 +98,10 @@ class Hiiro
       @session = session
       @created_at = created_at || Time.now.to_s
       @updated_at = updated_at || @created_at
+    end
+
+    def status=(value)
+      @status = value.is_a?(TodoStatus) ? value : TodoStatus.new(value)
     end
 
     def tags_list
@@ -67,8 +135,8 @@ class Hiiro
     end
 
     def update_status(new_status)
-      return false unless STATUSES.include?(new_status)
-      @status = new_status
+      return false unless TodoStatus.valid?(new_status)
+      @status = TodoStatus.new(new_status)
       @updated_at = Time.now.to_s
       true
     end
@@ -77,7 +145,7 @@ class Hiiro
       h = {
         'id' => id,
         'text' => text,
-        'status' => status,
+        'status' => status.to_s,
         'created_at' => created_at,
         'updated_at' => updated_at
       }
@@ -256,7 +324,7 @@ class Hiiro
     end
 
     def filter_by_status(*statuses)
-      items.select { |item| statuses.include?(item.status) }
+      items.select { |item| statuses.any? { |s| item.status == s } }
     end
 
     def filter_by_tag(tag)
@@ -268,11 +336,11 @@ class Hiiro
     end
 
     def active
-      filter_by_status('not_started', 'started')
+      items.select { |item| item.status.active? }
     end
 
     def completed
-      filter_by_status('done', 'skip')
+      items.select { |item| item.status.completed? }
     end
 
     # --- List display ---
@@ -286,14 +354,7 @@ class Hiiro
     end
 
     def format_item(item)
-      status_icon = case item.status
-        when 'not_started' then '[ ]'
-        when 'started' then '[>]'
-        when 'done' then '[x]'
-        when 'skip' then '[-]'
-      end
-
-      line = "#{item.id} #{status_icon} #{item.text}"
+      line = "#{item.id} #{item.status.icon} #{item.text}"
       line += "  [#{item.tags}]" if item.tags && !item.tags.empty?
       line += "  (#{item.full_task_name})" if item.has_task_info?
       line
@@ -316,7 +377,7 @@ class Hiiro
     def editable_hash(item)
       {
         'text' => item.text,
-        'status' => item.status,
+        'status' => item.status.to_s,
         'tags' => item.tags
       }
     end
