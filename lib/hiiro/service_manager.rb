@@ -442,18 +442,22 @@ class Hiiro
           running = sm.running_services
           puts "Services:"
           puts
-          configs.each do |name, cfg|
-            is_running = running.key?(name)
-            status_emoji = is_running ? "🟢" : "🔴"
-            host = cfg['host'] || 'localhost'
-            url_str = cfg['port'] ? " #{host}:#{cfg['port']}" : ""
-            extra = ""
-            if is_running
-              info = running[name]
-              parts = [info['task'], info['branch']].compact.reject(&:empty?)
-              extra = "  (#{parts.join(' • ')})" unless parts.empty?
-            end
-            puts format("  %-20s  %s%s%s", name, status_emoji, url_str, extra)
+          configs
+            .sort_by{ |name,_| running.key?(name) ? :running : :stopped }
+            .each do |name, cfg|
+              is_running = running.key?(name)
+              status_emoji = is_running ? "🟢" : "🔴"
+              host = cfg['host'] || 'localhost'
+              url_str = cfg['port'] ? " #{host}:#{cfg['port']}" : ""
+              extra = ""
+              if is_running
+                info = running[name]
+                task = task_manager&.task_by_service_info(info)
+                branch = task&.branch
+                parts = [info['task'], branch].compact.reject(&:empty?)
+                extra = "  (#{parts.join(' • ')})" unless parts.empty?
+              end
+              puts format("  %-20s  %s%s%s", name, status_emoji, url_str, extra)
           end
         end
 

@@ -36,6 +36,16 @@ class Hiiro
       environment.all_tasks.select { |t| t.parent_name == task.name }
     end
 
+    def task_by_service_info(info)
+      if name = info['task']
+        task_by_name(name)
+      elsif session = info['tmux_session']
+        task_by_session(session)
+      elsif tree = info['tree']
+        task_by_tree(tree)
+      end
+    end
+
     def task_by_name(name)
       return slash_lookup(name) if name.include?('/')
 
