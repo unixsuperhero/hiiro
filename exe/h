@@ -4,6 +4,9 @@ require "hiiro"
 require "fileutils"
 
 def update_hiiro(version=nil)
+  ENV['RBENV_VERSION'] = version.to_s if version
+  puts "INSTALLING RUBY VERSION #{version}"
+  puts
   env = version ? { 'RBENV_VERSION' => version.to_s } : {}
 
   gems = Hiiro::Shell.capture_output('gem', 'list', 'hiiro', **env)
