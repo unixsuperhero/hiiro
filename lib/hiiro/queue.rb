@@ -261,7 +261,8 @@ class Hiiro
       name = slugify(content.lines.drop_while { |l| l.strip.empty? || l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip)
 
       if name.empty?
-        name = Time.now.strftime("%Y%m%d%H%M%S") + '-' + task_info[:task_name]
+        name = Time.now.strftime("%Y%m%d%H%M%S")
+        name += '-' + task_info[:task_name] if task_info&.key?(:task_name)
       end
 
       base_name = name
