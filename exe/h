@@ -149,7 +149,8 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
 
   add_subcmd(:service, :svc) do |*svc_args|
     sm = Hiiro::ServiceManager.new
-    Hiiro::ServiceManager.build_hiiro(this, sm).run
+    tm = Hiiro::TaskManager.new(this)
+    Hiiro::ServiceManager.build_hiiro(this, sm, task_manager: tm).run
   end
 
   add_subcmd(:run) do |*run_args|
