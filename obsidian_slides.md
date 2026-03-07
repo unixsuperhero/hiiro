@@ -156,6 +156,9 @@ so...
 
 `h service` will only spawn one instance of each service
 
+if ppl want to run multiple instances, then
+i can setup pooling to affect .env values
+
 ---
 #### `h service` (cont'd)
 
