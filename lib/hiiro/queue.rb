@@ -184,13 +184,35 @@ class Hiiro
       }
     end
 
-    def extract_task_flag(args)
-      idx = args.index('-t')
-      return [args, nil] unless idx
+    def select_task(hiiro)
+      env = Environment.current rescue nil
+      return nil unless env
 
-      task_name = args[idx + 1]
-      remaining = args[0...idx] + args[(idx + 2)..]
-      [remaining, task_name]
+      tasks = env.all_tasks.sort_by(&:name)
+      return nil if tasks.empty?
+
+      mapping = tasks.each_with_object({}) do |task, h|
+        line = format("%-25s  tree: %-20s", task.name, task.tree_name || '(none)')
+        h[line] = task.name
+      end
+
+      hiiro.fuzzyfind_from_map(mapping)
+    end
+
+    def resolve_task_info(opts, hiiro, default_task_info)
+      task_name = if opts.choose
+        select_task(hiiro)
+      elsif opts.task
+        opts.task
+      else
+        nil
+      end
+
+      if task_name
+        task_info_for(task_name)
+      else
+        default_task_info
+      end
     end
 
     def strip_frontmatter(text)
@@ -403,8 +425,12 @@ class Hiiro
 
         h.add_subcmd(:add) { |*args|
           q.queue_dirs
-          args, flag_task = q.extract_task_flag(args)
-          ti = flag_task ? q.task_info_for(flag_task) : task_info
+          opts = Hiiro::Options.parse(args) do
+            option(:task, short: :t, desc: 'Task name')
+            flag(:choose, short: :T, desc: 'Choose task interactively')
+          end
+          args = opts.args
+          ti = q.resolve_task_info(opts, h, task_info)
 
           tmpfile = Tempfile.new(['hq-', '.md'])
           prompt_file = tmpfile.path
@@ -446,8 +472,12 @@ class Hiiro
         h.add_subcmd(:wip) { |*args|
           q.queue_dirs
           editor = ENV['EDITOR'] || 'vim'
-          args, flag_task = q.extract_task_flag(args)
-          ti = flag_task ? q.task_info_for(flag_task) : task_info
+          opts = Hiiro::Options.parse(args) do
+            option(:task, short: :t, desc: 'Task name')
+            flag(:choose, short: :T, desc: 'Choose task interactively')
+          end
+          args = opts.args
+          ti = q.resolve_task_info(opts, h, task_info)
           name = args.first
 
           if name.nil?
