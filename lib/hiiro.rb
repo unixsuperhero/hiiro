@@ -486,34 +486,30 @@ class Hiiro
       cmd&.run(*args)
     end
 
+    def subcmd_result
+      return nil unless subcmd
+      @subcmd_result ||= Matcher.by_prefix(all_runners, subcmd.to_s, key: :subcommand_name)
+    end
+
     def exact_runner
-      all_runners.find { |r| r.exact_match?(subcmd) }
+      subcmd_result&.exact_match&.item
     end
 
     def unambiguous_runner
-      return nil if subcmd.nil?
-
+      return nil unless subcmd_result
       matches = matching_runners
-      return matches.first if matches.count == 1
-
-      nil
+      matches.first if matches.count == 1
     end
 
     def ambiguous_matches
-      return [] if subcmd.nil?
-
+      return [] unless subcmd_result
       matches = matching_runners
-      return matches if matches.count > 1
-
-      []
+      matches.count > 1 ? matches : []
     end
 
     def matching_runners
-      remove_child_runners(all_matching_runners)
-    end
-
-    def all_matching_runners
-      all_runners.select { |r| r.match?(subcmd) }
+      return [] unless subcmd_result
+      remove_child_runners(subcmd_result.matches.map(&:item))
     end
 
     def remove_child_runners(list)
