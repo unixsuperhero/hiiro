@@ -258,7 +258,8 @@ class Hiiro
         end
       end
 
-      name = slugify(content.lines.drop_while { |l| l.strip.empty? || l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip)
+      content_lines =content.lines.drop_while { |l| l.strip.empty? || l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip
+      name = slugify(content_lines)
 
       if name.empty?
         name = Time.now.strftime("%Y%m%d%H%M%S")
@@ -462,7 +463,7 @@ class Hiiro
             end
           end
 
-          result = q.add_with_frontmatter(content)
+          result = q.add_with_frontmatter(content, task_info:)
           if result
             puts "Created: #{result[:path]}"
           else
