@@ -58,7 +58,7 @@ Hiiro shows the candidates.
 `h s` matches several commands:
 
 ```bash
-h s || true
+h s
 ```
 
 ---
@@ -70,7 +70,7 @@ A longer prefix narrows the match.
 `h se` gets closer:
 
 ```bash
-h se || true
+h se
 ```
 
 ---
@@ -110,7 +110,7 @@ h task
 List current tasks:
 
 ```bash
-h task ls || true
+h task ls
 ```
 
 ---
@@ -120,7 +120,7 @@ h task ls || true
 `h ta ls` = `h task ls`
 
 ```bash
-h ta ls || true
+h ta ls
 ```
 
 ---
@@ -140,7 +140,7 @@ h subtask
 List current subtasks:
 
 ```bash
-h subtask ls || true
+h subtask ls
 ```
 
 ---
@@ -150,7 +150,7 @@ h subtask ls || true
 `h su ls` = `h subtask ls`
 
 ```bash
-h su ls || true
+h su ls
 ```
 
 ---
@@ -170,7 +170,7 @@ h queue
 List queued jobs:
 
 ```bash
-h queue ls || true
+h queue ls
 ```
 
 ---
@@ -180,7 +180,7 @@ h queue ls || true
 Show queue status:
 
 ```bash
-h queue status || true
+h queue status
 ```
 
 ---
@@ -190,7 +190,7 @@ h queue status || true
 `h q ls` = `h queue ls`
 
 ```bash
-h q ls || true
+h q ls
 ```
 
 ---

@@ -301,18 +301,78 @@ class Hiiro
   end
 
   def list_runners(list)
-    max_name = list.map { |r| r.subcommand_name.length }.max || 0
-    max_type = list.map { |r| r.type.to_s.length }.max || 0
-    max_params = list.map { |r| r.params_string.to_s.length }.max || 0
+    sorted = list.sort_by(&:subcommand_name)
+    vars = build_location_vars(sorted)
 
-    list.each do |r|
-      name = r.subcommand_name.ljust(max_name)
-      type = "(#{r.type})".ljust(max_type + 2)
-      params = r.params_string
+    vars.each { |var_name, path| puts "export #{var_name}=\"#{path}\"" }
+    puts if vars.any?
+
+    max_name   = sorted.map { |r| r.subcommand_name.length }.max || 0
+    max_type   = sorted.map { |r| r.type.to_s.length }.max || 0
+    max_params = sorted.map { |r| r.params_string.to_s.length }.max || 0
+
+    sorted.each do |r|
+      name       = r.subcommand_name.ljust(max_name)
+      type       = "(#{r.type})".ljust(max_type + 2)
+      params     = r.params_string
       params_col = params ? params.ljust(max_params) : ''.ljust(max_params)
-      location = r.location
+      location   = shorten_location(r.location, vars)
       puts "  #{name}  #{params_col}  #{type}  #{location}"
     end
+  end
+
+  def build_location_vars(list)
+    paths = list.map { |r| r.location }.compact.map { |loc| loc.sub(/:\d+$/, '') }
+    dirs  = paths.map { |p| File.dirname(p) }.uniq
+
+    ancestors = consolidate_dirs(dirs, min_depth: 4)
+
+    vars = {}
+    ancestors.sort.each do |ancestor|
+      name = auto_var_name(ancestor, vars)
+      vars[name] = ancestor
+    end
+    vars
+  end
+
+  # Recursively group directories under their common ancestor when that
+  # ancestor is deep enough to be a useful alias (>= min_depth components).
+  def consolidate_dirs(dirs, min_depth:)
+    return dirs if dirs.length <= 1
+
+    lca       = dirs.reduce { |a, b| path_lca(a, b) }
+    lca_depth = lca.delete_prefix('/').split('/').reject(&:empty?).length
+
+    if lca_depth >= min_depth
+      [lca]
+    else
+      lca_parts = lca.split('/')
+      subgroups = dirs.group_by { |d| d.split('/').first(lca_parts.length + 1).join('/') }
+      subgroups.flat_map { |_, group| consolidate_dirs(group, min_depth: min_depth) }.uniq
+    end
+  end
+
+  def path_lca(a, b)
+    a_parts = a.split('/')
+    b_parts = b.split('/')
+    a_parts.zip(b_parts).take_while { |x, y| x == y }.map(&:first).join('/')
+  end
+
+  def auto_var_name(path, existing_vars)
+    parts = path.delete_prefix('/').split('/')
+    (1..parts.length).each do |n|
+      candidate = parts.last(n).join('_').upcase.gsub(/[^A-Z0-9]/, '_').squeeze('_').delete_prefix('_').delete_suffix('_')
+      return candidate unless existing_vars.key?(candidate)
+    end
+    "DIR_#{existing_vars.length + 1}"
+  end
+
+  def shorten_location(loc, vars)
+    return loc if loc.nil?
+    vars.sort_by { |_, path| -path.length }.each do |var_name, path|
+      return loc.sub(path, "$#{var_name}") if loc.start_with?(path + '/') || loc == path
+    end
+    loc
   end
 
   def log(message)

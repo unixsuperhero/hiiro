@@ -1,6 +1,6 @@
 ## `hiiro`
 
-#### new features
+New AI Workflow Utilities
 ---
 > Technology is supposed to make our lives easier, allowing us to do things more quickly and efficiently.
 > - James Surowiecki
