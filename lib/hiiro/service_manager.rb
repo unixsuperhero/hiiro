@@ -93,14 +93,14 @@ class Hiiro
         return false
       end
 
-      launcher = ServiceLauncher.new(self, svc,
+      launch = ServiceLaunch.new(self, svc,
         tmux_info: tmux_info,
         task_info: task_info,
         variation_overrides: variation_overrides,
         skip_env: skip_env,
         skip_window_creation: skip_window_creation
       )
-      launcher.launch
+      launch.execute
     end
 
     def stop(name)
@@ -115,8 +115,8 @@ class Hiiro
         return false
       end
 
-      stopper = ServiceStopper.new(self, svc)
-      stopper.stop
+      stop_action = ServiceStop.new(self, svc)
+      stop_action.execute
     end
 
     def reset(name)
@@ -199,7 +199,7 @@ class Hiiro
         return false
       end
 
-      GroupLauncher.new(self, group, tmux_info: tmux_info, task_info: task_info).launch
+      GroupLaunch.new(self, group, tmux_info: tmux_info, task_info: task_info).execute
     end
 
     def stop_group(name)
@@ -232,7 +232,7 @@ class Hiiro
       svc = find_service(svc_name)
       return unless svc
 
-      EnvPreparer.new(svc, variation_overrides: variation_overrides).prepare
+      EnvPreparation.new(svc, variation_overrides: variation_overrides).execute
     end
 
     # --- Config Management ---
@@ -430,7 +430,7 @@ class Hiiro
   end
 
   # Orchestrates launching a single service
-  class ServiceLauncher
+  class ServiceLaunch
     attr_reader :manager, :service, :tmux_info, :task_info, :variation_overrides, :skip_env, :skip_window_creation
 
     def initialize(manager, service, tmux_info: {}, task_info: {}, variation_overrides: {}, skip_env: false, skip_window_creation: false)
@@ -443,7 +443,7 @@ class Hiiro
       @skip_window_creation = skip_window_creation
     end
 
-    def launch
+    def execute
       script = write_launcher_script
       base_dir = manager.resolve_base_dir(service.base_dir)
       session = tmux_info[:session] || manager.current_tmux_session
@@ -534,7 +534,7 @@ class Hiiro
   end
 
   # Handles stopping a service
-  class ServiceStopper
+  class ServiceStop
     attr_reader :manager, :service
 
     def initialize(manager, service)
@@ -542,7 +542,7 @@ class Hiiro
       @service = service
     end
 
-    def stop
+    def execute
       info = manager.running_services[service.name]
       pane_id = info['tmux_pane']
 
@@ -565,7 +565,7 @@ class Hiiro
   end
 
   # Orchestrates launching a service group
-  class GroupLauncher
+  class GroupLaunch
     attr_reader :manager, :group, :tmux_info, :task_info
 
     def initialize(manager, group, tmux_info: {}, task_info: {})
@@ -575,7 +575,7 @@ class Hiiro
       @task_info = task_info
     end
 
-    def launch
+    def execute
       session = tmux_info[:session] || manager.current_tmux_session
       unless session
         puts "tmux is required to start a service group"
@@ -616,7 +616,7 @@ class Hiiro
   end
 
   # Handles env file preparation
-  class EnvPreparer
+  class EnvPreparation
     ENV_TEMPLATES_DIR = ServiceManager::ENV_TEMPLATES_DIR
 
     attr_reader :service, :variation_overrides
@@ -626,7 +626,7 @@ class Hiiro
       @variation_overrides = variation_overrides
     end
 
-    def prepare
+    def execute
       base_dir = resolve_base_dir
       service.env_file_configs.each do |efc|
         prepare_single_env(base_dir, efc)

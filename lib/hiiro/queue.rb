@@ -78,15 +78,7 @@ class Hiiro
 
     # --- Atomic Operations (Low-Level) ---
 
-    def strip_frontmatter(text)
-      lines = text.lines
-      return text unless lines.first&.strip == '---'
-      end_idx = lines[1..].index { |l| l.strip == '---' }
-      return text unless end_idx
-      lines[(end_idx + 2)..].join.strip
-    end
-
-    def slugify(text)
+    def slug(text)
       text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')[0, 60]
     end
 
@@ -108,7 +100,7 @@ class Hiiro
 
     def generate_task_name(content, task_info: nil)
       content_lines = content.lines.drop_while { |l| l.strip.empty? || l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip
-      name = slugify(content_lines)
+      name = slug(content_lines)
 
       if name.empty?
         name = Time.now.strftime("%Y%m%d%H%M%S")
@@ -213,8 +205,8 @@ class Hiiro
     end
 
     def launch_task(name)
-      launcher = TaskLauncher.new(self, name, hiiro: hiiro)
-      launcher.launch
+      launch = QueueLaunch.new(self, name, hiiro: hiiro)
+      launch.execute
     end
 
     # --- Presentation (delegated to QueuePresenter) ---
@@ -323,8 +315,8 @@ class Hiiro
     end
   end
 
-  # Orchestrates launching a task in tmux
-  class TaskLauncher
+  # Orchestrates launching a queue task in tmux
+  class QueueLaunch
     attr_reader :queue, :name, :hiiro
 
     def initialize(queue, name, hiiro: nil)
@@ -333,7 +325,7 @@ class Hiiro
       @hiiro = hiiro
     end
 
-    def launch
+    def execute
       return false unless move_to_running
       return false unless prompt_obj = load_prompt
 
@@ -395,15 +387,17 @@ class Hiiro
     end
 
     def write_files(prompt_obj, target)
-      running_md = queue.task_path(name, :running)
-      raw = File.read(running_md).strip
-      prompt_body = prompt_obj ? prompt_obj.doc.content.strip : queue.strip_frontmatter(raw)
+      prompt_body = prompt_obj&.content || raw_content_without_frontmatter
 
-      # Write clean prompt file
       File.write(queue.prompt_path(name), prompt_body + "\n")
-
-      # Write launcher script
       write_launcher_script(target)
+    end
+
+    def raw_content_without_frontmatter
+      running_md = queue.task_path(name, :running)
+      raw = File.read(running_md)
+      # Parse inline to extract content without frontmatter
+      Prompt.new(FrontMatterParser::Parser.new(:md).call(raw)).content
     end
 
     def write_launcher_script(target)
@@ -776,26 +770,49 @@ class Hiiro
   end
 
   class Queue
-    # Prompt parsing (data object)
+    # Value object representing a parsed prompt with frontmatter
     class Prompt
       def self.from_file(path, hiiro: nil)
         return unless File.exist?(path)
         new(FrontMatterParser::Parser.parse_file(path), hiiro: hiiro)
       end
 
-      attr_reader :hiiro, :doc, :frontmatter, :prompt
-      attr_reader :task_name, :tree_name, :session_name
+      attr_reader :hiiro, :doc
 
       def initialize(doc, hiiro: nil)
         @hiiro = hiiro
         @doc = doc
-        @frontmatter = doc.front_matter
-        @prompt = prompt
-
-        @task_name = doc.front_matter['task_name']
-        @tree_name = doc.front_matter['tree_name']
-        @session_name = doc.front_matter['session_name']
       end
+
+      # --- Data Accessors (noun-named) ---
+
+      def frontmatter
+        doc.front_matter
+      end
+
+      def frontmatter_value(key)
+        frontmatter[key]
+      end
+
+      def content
+        doc.content.strip
+      end
+
+      alias_method :body, :content
+
+      def task_name
+        frontmatter_value('task_name')
+      end
+
+      def tree_name
+        frontmatter_value('tree_name')
+      end
+
+      def session_name
+        frontmatter_value('session_name')
+      end
+
+      # --- Related Objects ---
 
       def task
         return nil unless task_name

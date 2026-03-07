@@ -83,8 +83,8 @@ class Hiiro
     end
 
     def resolve_app_path(app_name, task)
-      resolver = AppResolver.new(environment, task)
-      resolver.resolve(app_name)
+      resolution = AppResolution.new(environment, task)
+      resolution.path_for(app_name)
     end
 
     def find_available_tree
@@ -102,8 +102,8 @@ class Hiiro
         return
       end
 
-      starter = TaskStarter.new(self, name, app_name: app_name)
-      starter.start
+      start_action = TaskStart.new(self, name, app_name: app_name)
+      start_action.execute
     end
 
     def switch_to_task(task, app_name: nil)
@@ -112,8 +112,8 @@ class Hiiro
         return
       end
 
-      switcher = TaskSwitcher.new(self, task, app_name: app_name)
-      switcher.switch
+      switch_action = TaskSwitch.new(self, task, app_name: app_name)
+      switch_action.execute
     end
 
     def stop_task(task)
@@ -237,8 +237,8 @@ class Hiiro
     # --- Interactive Selection ---
 
     def select_task_interactive(prompt = nil)
-      selector = TaskSelector.new(self)
-      selector.select
+      selection = TaskSelection.new(self)
+      selection.selected
     end
 
     def select_branch_interactive(prompt = nil)
@@ -318,7 +318,7 @@ class Hiiro
   end
 
   # Orchestrates starting a new task
-  class TaskStarter
+  class TaskStart
     attr_reader :manager, :name, :app_name
 
     def initialize(manager, name, app_name: nil)
@@ -327,7 +327,7 @@ class Hiiro
       @app_name = app_name
     end
 
-    def start
+    def execute
       task_name = build_task_name
       subtree_name = build_subtree_name
       target_path = File.join(Hiiro::WORK_DIR, subtree_name)
@@ -394,7 +394,7 @@ class Hiiro
   end
 
   # Orchestrates switching to an existing task
-  class TaskSwitcher
+  class TaskSwitch
     attr_reader :manager, :task, :app_name
 
     def initialize(manager, task, app_name: nil)
@@ -403,7 +403,7 @@ class Hiiro
       @app_name = app_name
     end
 
-    def switch
+    def execute
       tree_path = manager.resolve_task_path(task)
       session_name = task.session_name
       session_exists = system('tmux', 'has-session', '-t', session_name, err: File::NULL)
@@ -437,7 +437,7 @@ class Hiiro
   end
 
   # Handles app path resolution
-  class AppResolver
+  class AppResolution
     attr_reader :environment, :task
 
     def initialize(environment, task)
@@ -445,7 +445,7 @@ class Hiiro
       @task = task
     end
 
-    def resolve(app_name)
+    def path_for(app_name)
       tree = environment.find_tree(task.tree_name)
       tree_root = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
 
@@ -485,17 +485,20 @@ class Hiiro
   end
 
   # Handles interactive task selection
-  class TaskSelector
+  class TaskSelection
     attr_reader :manager
 
     def initialize(manager)
       @manager = manager
     end
 
-    def select
-      mapping = build_mapping
+    def selected
       return nil if mapping.empty?
       manager.hiiro.fuzzyfind_from_map(mapping)
+    end
+
+    def mapping
+      @mapping ||= build_mapping
     end
 
     private
