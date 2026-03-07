@@ -35,9 +35,6 @@ class Hiiro
       puts "Started task '#{task_name_val}' in worktree '#{subtree_name_val}'"
     end
 
-    # Alias for backwards compatibility
-    alias_method :execute, :call
-
     private
 
     # Generate the task name (noun-named per Phase 5).
@@ -49,10 +46,6 @@ class Hiiro
     def subtree_name
       manager.scope == :subtask ? "#{current_parent.name}/#{name}" : "#{name}/main"
     end
-
-    # Backwards compatibility aliases
-    alias_method :build_task_name, :task_name
-    alias_method :build_subtree_name, :subtree_name
 
     def current_parent
       manager.send(:current_parent_task)
@@ -90,7 +83,5 @@ class Hiiro
       end
     end
 
-    # Backwards compatibility alias
-    alias_method :resolve_base_dir, :base_dir_path
   end
 end

@@ -43,9 +43,6 @@ class Hiiro
         true
       end
 
-      # Alias for backwards compatibility
-      alias_method :execute, :call
-
       private
 
       def pane_for_launch(session, base_dir)
@@ -117,11 +114,6 @@ class Hiiro
         })
       end
 
-      # Backwards compatibility aliases
-      alias_method :write_launcher_script, :launcher_script_path
-      alias_method :write_shell_script, :shell_script_path
-      alias_method :write_env_prep_script, :env_prep_script_path
-      alias_method :create_or_use_pane, :pane_for_launch
     end
   end
 end

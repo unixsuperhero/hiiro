@@ -34,9 +34,6 @@ class Hiiro
       puts "Switched to '#{task.name}'"
     end
 
-    # Alias for backwards compatibility
-    alias_method :execute, :call
-
     private
 
     # Get the base directory path (noun-named per Phase 5).
@@ -49,7 +46,5 @@ class Hiiro
       end
     end
 
-    # Backwards compatibility alias
-    alias_method :resolve_base_dir, :base_dir_path
   end
 end

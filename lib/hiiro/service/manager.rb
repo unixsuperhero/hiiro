@@ -310,9 +310,6 @@ class Hiiro
         File.join(root, base_dir)
       end
 
-      # Backwards compatibility alias
-      alias_method :resolve_base_dir, :base_dir_path
-
       private
 
       def load_config

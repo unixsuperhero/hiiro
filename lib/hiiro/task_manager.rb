@@ -23,7 +23,6 @@ require_relative 'task/manager'
 require_relative 'task/start'
 require_relative 'task/switch'
 require_relative 'task/app_resolution'
-require_relative 'task/selection'
 require_relative 'task/commands'
 require_relative 'task/actions'
 

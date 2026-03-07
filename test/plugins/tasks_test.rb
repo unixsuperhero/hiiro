@@ -1,5 +1,5 @@
 require "test_helper"
-require "hiiro/tasks"
+require "hiiro/task_manager"
 
 # Alias Hiiro-namespaced classes to top-level for test compatibility
 TmuxSession = Hiiro::TmuxSession unless defined?(TmuxSession)

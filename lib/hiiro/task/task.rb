@@ -10,6 +10,19 @@ class Hiiro
       @session_name = session || name
     end
 
+    # --- Class Methods ---
+
+    # Start a new task with the given name.
+    # Creates a worktree, saves the task, and opens a tmux session.
+    #
+    # @param manager [TaskManager] the task manager
+    # @param name [String] the task name
+    # @param app_name [String, nil] optional app to open in
+    # @return [void]
+    def self.start_new(manager, name, app_name: nil)
+      TaskStart.new(manager, name, app_name: app_name).call
+    end
+
     # --- Name Accessors ---
 
     def parent_name

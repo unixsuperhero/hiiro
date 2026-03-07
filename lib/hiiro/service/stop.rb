@@ -34,8 +34,6 @@ class Hiiro
         true
       end
 
-      # Alias for backwards compatibility
-      alias_method :execute, :call
     end
   end
 end

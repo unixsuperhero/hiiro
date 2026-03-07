@@ -207,11 +207,6 @@ class Hiiro
         add_task(content, task_info: task_info)
       end
 
-      # Alias old method names to new noun-based names
-      alias_method :generate_task_name, :task_name_for
-      alias_method :build_frontmatter, :frontmatter_for
-      alias_method :build_content_with_frontmatter, :content_with_frontmatter
-      alias_method :short_window_name, :window_name
     end
   end
 end

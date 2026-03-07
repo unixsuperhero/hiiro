@@ -98,11 +98,6 @@ class Hiiro
         environment.all_trees.find { |tree| !assigned_tree_names.include?(tree.name) }
       end
 
-      # Backwards compatibility aliases
-      alias_method :resolve_task_path, :task_path
-      alias_method :resolve_app_path, :app_path
-      alias_method :find_available_tree, :available_tree
-
       # --- High-Level Actions ---
 
       def start_task(name, app_name: nil)
@@ -113,8 +108,7 @@ class Hiiro
           return
         end
 
-        start_action = TaskStart.new(self, name, app_name: app_name)
-        start_action.call
+        Task.start_new(self, name, app_name: app_name)
       end
 
       def switch_to_task(task, app_name: nil)
@@ -248,8 +242,33 @@ class Hiiro
       # --- Interactive Selection ---
 
       def select_task_interactive(prompt = nil)
-        selection = TaskSelection.new(self)
-        selection.selected
+        mapping = selection_mapping
+        return nil if mapping.empty?
+        hiiro.fuzzyfind_from_map(mapping)
+      end
+
+      def selection_mapping
+        mapping = {}
+
+        task_list = scope == :subtask ? tasks.sort_by(&:short_name) : environment.all_tasks.sort_by(&:name)
+
+        task_list.each do |task|
+          display_name = scope == :subtask ? task.short_name : task.name
+          line = task.display_line(scope: scope, environment: environment)
+          mapping[line] = { type: :task, name: display_name }
+        end
+
+        if scope == :task
+          task_session_names = environment.all_tasks.map(&:session_name)
+          extra_sessions = environment.all_sessions.reject { |s| task_session_names.include?(s.name) }
+
+          extra_sessions.sort_by(&:name).each do |session|
+            line = format("%-25s  (tmux session)", session.name)
+            mapping[line] = { type: :session, name: session.name }
+          end
+        end
+
+        mapping
       end
 
       def select_branch_interactive(prompt = nil)
@@ -327,9 +346,6 @@ class Hiiro
         }
       end
 
-      # Backwards compatibility alias
-      alias_method :capture_tmux_windows, :tmux_windows
-      alias_method :app_path, :print_app_path
     end
   end
 end

@@ -24,9 +24,6 @@ class Hiiro
         end
       end
 
-      # Alias for backwards compatibility
-      alias_method :execute, :call
-
       private
 
       def base_dir_path
@@ -88,8 +85,6 @@ class Hiiro
         hash.each_with_object({}) { |(k, v), h| h[k.to_sym] = v }
       end
 
-      # Backwards compatibility alias
-      alias_method :resolve_base_dir, :base_dir_path
     end
   end
 end
