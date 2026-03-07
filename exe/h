@@ -9,14 +9,18 @@ def update_hiiro(version=nil)
   puts
   env = version ? { 'RBENV_VERSION' => version.to_s } : {}
 
-  gems = Hiiro::Shell.capture_output('gem', 'list', 'hiiro', **env)
-  if gems.strip.empty?
-    system(env, 'gem', 'install', 'hiiro')
-  else
-    system(env, 'gem', 'update', 'hiiro')
-  end
+  gems = Hiiro::Shell.capture_output('rbenv', 'exec', 'gem', 'list', 'hiiro', **env)
 
-  system(env, 'h', 'setup')
+  puts gems
+  puts
+  puts
+  # if gems.strip.empty?
+  #   system(env, 'rbenv', 'exec', 'gem', 'install', 'hiiro')
+  # else
+  #   system(env, 'rbenv', 'exec', 'gem', 'update', 'hiiro')
+  # end
+  #
+  # system(env, 'rbenv', 'exec', 'h', 'setup')
 end
 
 def rbenv_versions
