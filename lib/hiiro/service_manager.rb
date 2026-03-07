@@ -849,12 +849,13 @@ class Hiiro
         env_path = write_env_prep_script(svc_name, variation_overrides)
       end
 
-      # Write launcher that orchestrates: init -> env -> start
+      # Write launcher that orchestrates: init -> env -> start -> reset
       launcher_path = File.join(dir, "#{svc_name}.sh")
       steps = []
       steps << init_path unless init_cmds.empty?
       steps << env_path if env_path
-      steps << "exec #{start_path}"
+      steps << start_path
+      steps << "h service reset #{svc_name}"
 
       write_shell_script(launcher_path, steps)
     end
