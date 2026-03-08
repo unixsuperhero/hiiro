@@ -558,14 +558,13 @@ class Hiiro
         new(FrontMatterParser::Parser.parse_file(path), hiiro:)
       end
 
-      attr_reader :hiiro, :doc, :frontmatter, :prompt
+      attr_reader :hiiro, :doc, :frontmatter
       attr_reader :task_name, :tree_name, :session_name
 
       def initialize(doc, hiiro: nil)
         @hiiro = hiiro
         @doc = doc
         @frontmatter = doc.front_matter
-        @prompt = prompt
 
         @task_name = doc.front_matter['task_name']
         @tree_name = doc.front_matter['tree_name']
