@@ -118,9 +118,7 @@ class Hiiro
         end
 
         h.add_subcmd(:todo) do |*todo_args|
-          todo_manager = Hiiro::TodoManager.new
           task = tm.current_task
-
           task_info = if task
             {
               task_name: task.name,
@@ -130,108 +128,8 @@ class Hiiro
             }
           end
 
-          todo_subcmd = todo_args.shift
-          case todo_subcmd
-          when 'ls', 'list', nil
-            show_all = todo_args.delete('-a') || todo_args.delete('--all')
-            items = if show_all
-              todo_manager.all
-            elsif task
-              todo_manager.filter_by_task(task.name).select { |i| %w[not_started started].include?(i.status) }
-            else
-              todo_manager.active
-            end
-
-            if items.empty?
-              puts task ? "No todo items for task '#{task.name}'." : "No todo items found."
-            else
-              puts todo_manager.list(items)
-            end
-
-          when 'add'
-            if todo_args.empty?
-              new_items = todo_manager.edit_items(task_info: task_info)
-              if new_items.empty?
-                puts "No items added."
-                next
-              end
-              todo_manager.add_items(new_items)
-              if new_items.length == 1
-                puts "Added: #{todo_manager.format_item(new_items.first)}"
-              else
-                puts "Added #{new_items.length} items:"
-                new_items.each { |item| puts "  #{todo_manager.format_item(item)}" }
-              end
-              next
-            end
-
-            tags = nil
-            text_parts = []
-            while todo_args.any?
-              arg = todo_args.shift
-              case arg
-              when '-t', '--tags'
-                tags = todo_args.shift
-              else
-                text_parts << arg
-              end
-            end
-            text = text_parts.join(' ')
-            item = todo_manager.add(text, tags: tags, task_info: task_info)
-            puts "Added: #{todo_manager.format_item(item)}"
-
-          when 'rm', 'remove'
-            id_or_index = todo_args.shift
-            unless id_or_index
-              puts "Usage: h #{tm.scope} todo rm <id|index>"
-              next
-            end
-            item = todo_manager.remove(id_or_index)
-            puts item ? "Removed: #{item.text}" : "Item not found: #{id_or_index}"
-
-          when 'start'
-            id_or_index = todo_args.shift
-            unless id_or_index
-              puts "Usage: h #{tm.scope} todo start <id|index>"
-              next
-            end
-            item = todo_manager.start(id_or_index)
-            puts item ? "Started: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
-
-          when 'done'
-            id_or_index = todo_args.shift
-            unless id_or_index
-              puts "Usage: h #{tm.scope} todo done <id|index>"
-              next
-            end
-            item = todo_manager.done(id_or_index)
-            puts item ? "Done: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
-
-          when 'skip'
-            id_or_index = todo_args.shift
-            unless id_or_index
-              puts "Usage: h #{tm.scope} todo skip <id|index>"
-              next
-            end
-            item = todo_manager.skip(id_or_index)
-            puts item ? "Skipped: #{todo_manager.format_item(item)}" : "Item not found: #{id_or_index}"
-
-          when 'search'
-            query = todo_args.join(' ')
-            if query.empty?
-              puts "Usage: h #{tm.scope} todo search <query>"
-              next
-            end
-            items = todo_manager.search(query)
-            if items.empty?
-              puts "No items matching: #{query}"
-            else
-              puts todo_manager.list(items)
-            end
-
-          else
-            puts "Usage: h #{tm.scope} todo <ls|add|rm|start|done|skip|search> [args]"
-          end
+          todo_manager = Hiiro::TodoManager.new
+          Hiiro::TodoManager.build_hiiro(h, todo_manager, task_info: task_info).run
         end
 
         h.add_subcmd(:queue) do |*queue_args|
