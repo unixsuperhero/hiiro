@@ -362,14 +362,7 @@ class Hiiro
     end
 
     def select_branch_interactive(prompt = nil)
-      name_map = if scope == :subtask
-        tasks.sort_by(&:short_name).each_with_object({}) { |t, h| h[format('%-25s  | %s', t.short_name, t.branch)] = t.branch }
-      else
-        environment.all_tasks.sort_by(&:name).each_with_object({}) { |t, h| h[format('%-25s  | %s', t.name, t.branch)] = t.branch }
-      end
-      return nil if name_map.empty?
-
-      hiiro.fuzzyfind_from_map(name_map)
+      value_for_task(nil, &:branch)
     end
 
     # --- Private helpers ---
@@ -392,8 +385,7 @@ class Hiiro
     end
 
     def available_tree
-      assigned_tree_names = environment.all_tasks.map(&:tree_name)
-      environment.all_trees.find { |tree| !assigned_tree_names.include?(tree.name) }
+      available_trees.first
     end
 
     def resolved_app(app_name, task)

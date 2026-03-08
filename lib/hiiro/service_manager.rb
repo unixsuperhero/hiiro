@@ -172,9 +172,10 @@ class Hiiro
       end
 
       svc_name = svc.name
+      state = load_state
 
-      if running?(svc_name)
-        info = running_services[svc_name]
+      if state.key?(svc_name)
+        info = state[svc_name]
         puts "Service '#{svc_name}' is already running (pid: #{info['pid']}, pane: #{info['tmux_pane']})"
         return false
       end
@@ -213,9 +214,6 @@ class Hiiro
       else
         system("cd #{base_dir} && #{script} &")
       end
-
-      # Record state
-      state = load_state
       state[svc_name] = {
         'pid' => nil,
         'tmux_session' => session || tmux_info[:session],
@@ -240,13 +238,14 @@ class Hiiro
       end
 
       svc_name = svc.name
+      state = load_state
+      info = state[svc_name]
 
-      unless running?(svc_name)
+      unless info
         puts "Service '#{svc_name}' is not running"
         return false
       end
 
-      info = running_services[svc_name]
       pane_id = info['tmux_pane']
 
       if svc.stop_command && !svc.stop_command.to_s.strip.empty?
@@ -263,7 +262,6 @@ class Hiiro
       svc.cleanup_commands.each { |cmd| system(cmd) }
 
       # Remove from state
-      state = load_state
       state.delete(svc_name)
       save_state(state)
 
@@ -279,12 +277,13 @@ class Hiiro
       end
 
       svc_name = svc.name
-      unless running?(svc_name)
+      info = load_state[svc_name]
+
+      unless info
         puts "Service '#{svc_name}' is not running"
         return false
       end
 
-      info = running_services[svc_name]
       pane_id = info['tmux_pane']
       session = info['tmux_session']
       window = info['tmux_window']
@@ -330,8 +329,8 @@ class Hiiro
       puts "Base dir: #{svc.base_dir || '(none)'}"
       puts "URL: #{svc.url || '(none)'}"
 
-      if running?(svc.name)
-        info = running_services[svc.name]
+      info = load_state[svc.name]
+      if info
         puts "Status: running"
         puts "PID: #{info['pid'] || '(unknown)'}"
         puts "Pane: #{info['tmux_pane'] || '(unknown)'}"
@@ -462,43 +461,24 @@ class Hiiro
           end
         end
 
-        h.add_subcmd(:stop) do |svc_name=nil|
-          unless svc_name
-            running = sm.running_services.keys
-            if running.empty?
-              puts "No running services"
-              next
+        %i[stop reset].each do |cmd|
+          h.add_subcmd(cmd) do |svc_name=nil|
+            unless svc_name
+              running = sm.running_services.keys
+              if running.empty?
+                puts "No running services"
+                next
+              end
+              svc_name = h.fuzzyfind(running)
+              next unless svc_name
             end
-            svc_name = h.fuzzyfind(running)
-            next unless svc_name
-          end
 
-          # Check if it's a group or individual service
-          group = sm.find_group(svc_name)
-          if group
-            sm.stop_group(svc_name)
-          else
-            sm.stop(svc_name)
-          end
-        end
-
-        h.add_subcmd(:reset) do |svc_name=nil|
-          unless svc_name
-            running = sm.running_services.keys
-            if running.empty?
-              puts "No running services"
-              next
+            group = sm.find_group(svc_name)
+            if group
+              sm.send(:"#{cmd}_group", svc_name)
+            else
+              sm.send(cmd, svc_name)
             end
-            svc_name = h.fuzzyfind(running)
-            next unless svc_name
-          end
-
-          # Check if it's a group or individual service
-          group = sm.find_group(svc_name)
-          if group
-            sm.reset_group(svc_name)
-          else
-            sm.reset(svc_name)
           end
         end
 
@@ -618,14 +598,7 @@ class Hiiro
           sm.remove_service(svc_name)
         end
 
-        h.add_subcmd(:remove) do |svc_name=nil|
-          unless svc_name
-            puts "Usage: service remove <name>"
-            next
-          end
-
-          sm.remove_service(svc_name)
-        end
+        h.add_subcmd(:remove) { |*args| h.run_subcmd(:rm, *args) }
 
         h.add_subcmd(:config) do
           editor = ENV['EDITOR'] || 'nvim'
