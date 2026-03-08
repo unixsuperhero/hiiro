@@ -1,5 +1,4 @@
 require "test_helper"
-require_relative "../../plugins/tasks"
 
 class TmuxSessionTest < Minitest::Test
   def test_tmux_session_initialization
