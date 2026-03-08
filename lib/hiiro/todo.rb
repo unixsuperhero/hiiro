@@ -68,11 +68,82 @@ class Hiiro
     end
   end
 
+  # Value object representing a collection of tags.
+  # Handles parsing, case-insensitive matching, and serialization.
+  class TodoTags
+    attr_reader :list
+
+    def initialize(tags_string)
+      @list = parse(tags_string)
+    end
+
+    def include?(tag)
+      @list.any? { |t| t.downcase == tag.downcase }
+    end
+
+    def add(tag)
+      return self if include?(tag)
+      TodoTags.from_list(@list + [tag])
+    end
+
+    def remove(tag)
+      TodoTags.from_list(@list.reject { |t| t.downcase == tag.downcase })
+    end
+
+    def empty?
+      @list.empty?
+    end
+
+    def any?
+      @list.any?
+    end
+
+    def to_s
+      @list.join(', ')
+    end
+
+    # Allows implicit conversion to string
+    alias to_str to_s
+
+    # For serialization - returns nil if empty, string otherwise
+    def to_serialized
+      empty? ? nil : to_s
+    end
+
+    def each(&block)
+      @list.each(&block)
+    end
+
+    def any_match?(query)
+      @list.any? { |t| t.downcase.include?(query.downcase) }
+    end
+
+    def ==(other)
+      case other
+      when TodoTags then @list == other.list
+      when String then to_s == other
+      when nil then empty?
+      else false
+      end
+    end
+
+    def self.from_list(list)
+      new(list.join(', '))
+    end
+
+    private
+
+    def parse(tags_string)
+      return [] if tags_string.nil? || tags_string.to_s.empty?
+      tags_string.to_s.split(',').map(&:strip).reject(&:empty?)
+    end
+  end
+
   class TodoItem
-    attr_accessor :id, :text, :tags
+    attr_accessor :id, :text
     attr_accessor :task_name, :subtask_name, :tree, :branch, :session
     attr_accessor :created_at, :updated_at
-    attr_reader :status
+    attr_reader :status, :tags
 
     def initialize(
       id: nil,
@@ -90,7 +161,7 @@ class Hiiro
       @id = id
       @text = text
       @status = TodoStatus.new(status)
-      @tags = tags
+      @tags = TodoTags.new(tags)
       @task_name = task_name
       @subtask_name = subtask_name
       @tree = tree
@@ -104,25 +175,25 @@ class Hiiro
       @status = value.is_a?(TodoStatus) ? value : TodoStatus.new(value)
     end
 
+    def tags=(value)
+      @tags = value.is_a?(TodoTags) ? value : TodoTags.new(value)
+    end
+
+    # Delegate tag operations to TodoTags
     def tags_list
-      return [] if tags.nil? || tags.empty?
-      tags.split(',').map(&:strip)
+      @tags.list
     end
 
     def has_tag?(tag)
-      tags_list.any? { |t| t.downcase == tag.downcase }
+      @tags.include?(tag)
     end
 
     def add_tag(tag)
-      current = tags_list
-      return if current.any? { |t| t.downcase == tag.downcase }
-      current << tag
-      @tags = current.join(', ')
+      @tags = @tags.add(tag)
     end
 
     def remove_tag(tag)
-      current = tags_list.reject { |t| t.downcase == tag.downcase }
-      @tags = current.empty? ? nil : current.join(', ')
+      @tags = @tags.remove(tag)
     end
 
     def has_task_info?
@@ -149,7 +220,7 @@ class Hiiro
         'created_at' => created_at,
         'updated_at' => updated_at
       }
-      h['tags'] = tags if tags && !tags.empty?
+      h['tags'] = tags.to_serialized if tags.any?
       h['task_name'] = task_name if task_name
       h['subtask_name'] = subtask_name if subtask_name
       h['tree'] = tree if tree
@@ -177,7 +248,7 @@ class Hiiro
     def match?(query)
       query = query.downcase
       text.downcase.include?(query) ||
-        tags_list.any? { |t| t.downcase.include?(query) } ||
+        tags.any_match?(query) ||
         (task_name && task_name.downcase.include?(query)) ||
         (subtask_name && subtask_name.downcase.include?(query)) ||
         (tree && tree.downcase.include?(query)) ||
@@ -343,21 +414,15 @@ class Hiiro
       items.select { |item| item.status.completed? }
     end
 
-    # --- List display ---
+    # --- List display (delegated to presenter) ---
 
     def list(items_to_show = nil, show_all: false)
       items_to_show ||= show_all ? all : active
-      return "No todo items found." if items_to_show.empty?
-
-      lines = items_to_show.map { |item| format_item(item) }
-      lines.join("\n")
+      TodoPresenter.list(items_to_show)
     end
 
     def format_item(item)
-      line = "#{item.id} #{item.status.icon} #{item.text}"
-      line += "  [#{item.tags}]" if item.tags && !item.tags.empty?
-      line += "  (#{item.full_task_name})" if item.has_task_info?
-      line
+      TodoPresenter.format_item(item)
     end
 
     private
@@ -378,7 +443,7 @@ class Hiiro
       {
         'text' => item.text,
         'status' => item.status.to_s,
-        'tags' => item.tags
+        'tags' => item.tags.to_serialized
       }
     end
 
@@ -395,6 +460,24 @@ class Hiiro
       FileUtils.mkdir_p(File.dirname(@file_path))
       data = { 'next_id' => @next_id, 'todos' => items.map(&:to_h) }
       File.write(@file_path, YAML.dump(data))
+    end
+  end
+
+  # Presentation logic for todo items.
+  # Separates formatting concerns from TodoManager's data management.
+  class TodoPresenter
+    class << self
+      def list(items)
+        return "No todo items found." if items.empty?
+        items.map { |item| format_item(item) }.join("\n")
+      end
+
+      def format_item(item)
+        line = "#{item.id} #{item.status.icon} #{item.text}"
+        line += "  [#{item.tags}]" if item.tags.any?
+        line += "  (#{item.full_task_name})" if item.has_task_info?
+        line
+      end
     end
   end
 end

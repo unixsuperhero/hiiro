@@ -7,7 +7,7 @@ class TodoItemTest < Minitest::Test
 
     assert_equal "Buy milk", item.text
     assert_equal "not_started", item.status
-    assert_nil item.tags
+    assert item.tags.empty?, "tags should be empty when not provided"
     assert_nil item.id  # ID is assigned by TodoManager, not TodoItem
     refute_nil item.created_at
   end

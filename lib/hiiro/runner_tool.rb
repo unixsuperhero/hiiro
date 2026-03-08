@@ -1,5 +1,7 @@
 require 'yaml'
 require 'fileutils'
+require_relative 'base_commands'
+require_relative 'runner/commands'
 
 class Hiiro
   class RunnerTool
@@ -127,111 +129,14 @@ class Hiiro
       system(editor, config_file)
     end
 
+    # Build a Hiiro command interface for runner operations.
+    #
+    # @param parent_hiiro [Hiiro] parent Hiiro instance
+    # @param rt [RunnerTool] runner tool instance
+    # @param git [Object, nil] optional git instance
+    # @return [Hiiro] configured child Hiiro instance
     def self.build_hiiro(parent_hiiro, rt, git: nil)
-      parent_hiiro.make_child(:run) do |h|
-        h.add_default do |*run_args|
-          change_set = nil
-          tool_type = nil
-          file_type_group = nil
-          variation = nil
-
-          positional = []
-          args_iter = run_args.each
-          loop do
-            arg = args_iter.next
-            case arg
-            when '--variation', '-v'
-              variation = args_iter.next
-            else
-              positional << arg
-            end
-          end
-
-          positional.each do |arg|
-            if KNOWN_CHANGE_SETS.include?(arg)
-              change_set = arg
-            elsif KNOWN_TOOL_TYPES.include?(arg)
-              tool_type = arg
-            else
-              # Treat as file_type_group
-              file_type_group ||= arg
-            end
-          end
-
-          change_set ||= 'dirty'
-
-          rt.run(
-            change_set: change_set,
-            tool_type: tool_type,
-            file_type_group: file_type_group,
-            variation: variation,
-            git: git,
-          )
-        end
-
-        h.add_subcmd(:ls) do
-          configs = rt.tools
-          if configs.empty?
-            puts "No tools configured."
-            puts "Use 'run add' to add one, or edit #{rt.config_file}"
-            next
-          end
-
-          puts "Configured tools:"
-          puts
-          configs.each do |name, cfg|
-            variations = cfg['variations'] ? " (#{cfg['variations'].keys.join(', ')})" : ""
-            puts format("  %-15s  [%s]  %-10s  exts: %s%s",
-              name,
-              cfg['tool_type'] || '?',
-              cfg['file_type_group'] || '?',
-              cfg['file_extensions'] || '*',
-              variations)
-          end
-        end
-
-        h.add_subcmd(:add) do |*add_args|
-          template = {
-            'tool_type' => 'lint',
-            'command' => 'echo [FILENAMES]',
-            'variations' => {},
-            'file_type_group' => '',
-            'file_extensions' => '',
-          }
-
-          require 'tempfile'
-          tmpfile = Tempfile.new(['tool', '.yml'])
-          tmpfile.write(YAML.dump({ 'new_tool' => template }))
-          tmpfile.close
-
-          editor = ENV['EDITOR'] || 'nvim'
-          system(editor, tmpfile.path)
-
-          begin
-            data = YAML.safe_load_file(tmpfile.path, permitted_classes: [Symbol]) || {}
-            data.each do |name, cfg|
-              rt.add_tool({ 'name' => name }.merge(cfg || {}))
-            end
-          rescue => e
-            puts "Error parsing config: #{e.message}"
-          ensure
-            tmpfile.unlink
-          end
-        end
-
-        h.add_subcmd(:rm) do |tool_name=nil|
-          unless tool_name
-            puts "Usage: run rm <name>"
-            next
-          end
-
-          rt.remove_tool(tool_name)
-        end
-
-        h.add_subcmd(:config) do
-          rt.edit_config
-        end
-      end
+      Commands.new(rt, parent_hiiro, git: git).build
     end
 
     private
