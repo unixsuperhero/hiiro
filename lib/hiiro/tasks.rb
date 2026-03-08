@@ -4,8 +4,45 @@ class Hiiro
   module Tasks
     def self.build_hiiro(parent_hiiro, tm)
       task_hiiro = parent_hiiro.make_child do |h|
-        h.add_subcmd(:list) { tm.list }
-        h.add_subcmd(:ls) { tm.list }
+        h.add_subcmd(:list) do
+          items = tm.tasks
+          if items.empty?
+            puts tm.scope == :subtask ? "No subtasks found" : "No tasks found"
+            puts "Use 'h #{tm.scope} start NAME' to create one."
+            next
+          end
+
+          current = tm.current_task
+          puts "#{tm.list_label}:"
+          puts
+
+          items.each do |task|
+            marker = (current && current.name == task.name) ? "*" : " "
+            line = task.display_line(scope: tm.scope, environment: tm.environment)
+            puts "#{marker} #{line}"
+
+            if tm.scope == :task
+              tm.subtasks(task).each do |st|
+                sub_marker = (current && current.name == st.name) ? "*" : " "
+                sub_line = st.display_line(scope: :subtask, environment: tm.environment)
+                puts "#{sub_marker} - #{sub_line}"
+              end
+            end
+          end
+
+          available = tm.available_trees
+          if available.any?
+            puts
+            available.each do |tree|
+              branch_str = tree.branch ? "  [#{tree.branch}]" : tree.detached? ? "  [(detached)]" : ""
+              puts format("  %-25s  (available)%s", tree.name, branch_str)
+            end
+          end
+        end
+
+        h.add_subcmd(:ls) do |*args|
+          h.run_subcmd(:list, *args)
+        end
 
         h.add_subcmd(:start) do |task_name, app_name=nil|
           tm.start_task(task_name, app_name: app_name)
@@ -99,8 +136,23 @@ class Hiiro
           print task.session_name if task.session_name
         end
 
-        h.add_subcmd(:status) { tm.status }
-        h.add_subcmd(:st) { tm.status }
+        h.add_subcmd(:status) do
+          info = tm.status_info
+          unless info
+            puts "Not currently in a task session"
+            next
+          end
+
+          puts "Task: #{info[:name]}"
+          puts "Worktree: #{info[:tree_name]}"
+          puts "Path: #{info[:path] || '(unknown)'}"
+          puts "Session: #{info[:session_name]}"
+          puts "Parent: #{info[:parent_name]}" if info[:parent_name]
+        end
+
+        h.add_subcmd(:st) do |*args|
+          h.run_subcmd(:status, *args)
+        end
 
         h.add_subcmd(:save) { tm.save }
 

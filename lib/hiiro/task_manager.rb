@@ -167,65 +167,32 @@ class Hiiro
       puts "Stopped task '#{task.name}' (worktree available for reuse)"
     end
 
-    def list
-      items = tasks
-      if items.empty?
-        puts scope == :subtask ? "No subtasks found" : "No tasks found"
-        puts "Use 'h #{scope} start NAME' to create one."
-        return
-      end
+    def available_trees
+      assigned_tree_names = environment.all_tasks.map(&:tree_name)
+      environment.all_trees.reject { |tree| assigned_tree_names.include?(tree.name) }
+    end
 
-      current = current_task
+    def list_label
       label = scope == :subtask ? "Subtasks" : "Tasks"
-      if scope == :subtask && current
+      if scope == :subtask && current_task
         parent = current_parent_task
         label = "Subtasks of '#{parent&.name}'" if parent
       end
-
-      puts "#{label}:"
-      puts
-
-      items.each do |task|
-        marker = (current && current.name == task.name) ? "*" : " "
-        line = task.display_line(scope: scope, environment: environment)
-        puts "#{marker} #{line}"
-
-        if scope == :task
-          subs = subtasks(task)
-          subs.each do |st|
-            sub_marker = (current && current.name == st.name) ? "*" : " "
-            sub_line = st.display_line(scope: :subtask, environment: environment)
-            puts "#{sub_marker} - #{sub_line}"
-          end
-        end
-      end
-
-      available = environment.all_trees.reject { |t|
-        environment.all_tasks.any? { |task| task.tree_name == t.name }
-      }
-
-      if available.any?
-        puts
-        available.each do |tree|
-          branch_str = tree.branch ? "  [#{tree.branch}]" : tree.detached? ? "  [(detached)]" : ""
-          puts format("  %-25s  (available)%s", tree.name, branch_str)
-        end
-      end
+      label
     end
 
-    def status
+    def status_info
       task = current_task
-      unless task
-        puts "Not currently in a task session"
-        return
-      end
+      return nil unless task
 
-      puts "Task: #{task.name}"
-      puts "Worktree: #{task.tree_name}"
       tree = environment.find_tree(task.tree_name)
-      puts "Path: #{tree&.path || '(unknown)'}"
-      puts "Session: #{task.session_name}"
-      puts "Parent: #{task.parent_name}" if task.subtask?
+      {
+        name: task.name,
+        tree_name: task.tree_name,
+        path: tree&.path,
+        session_name: task.session_name,
+        parent_name: task.subtask? ? task.parent_name : nil,
+      }
     end
 
     def save
