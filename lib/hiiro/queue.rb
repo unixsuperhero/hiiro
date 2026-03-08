@@ -115,8 +115,7 @@ class Hiiro
       end
 
       # Write a clean prompt file (no frontmatter) for claude
-      raw = File.read(running_md).strip
-      prompt_body = prompt_obj ? prompt_obj.doc.content.strip : strip_frontmatter(raw)
+      prompt_body = prompt_obj.doc.content.strip
       prompt_file = File.join(dirs[:running], "#{name}.prompt")
       File.write(prompt_file, prompt_body + "\n")
 
@@ -213,14 +212,6 @@ class Hiiro
       else
         default_task_info
       end
-    end
-
-    def strip_frontmatter(text)
-      lines = text.lines
-      return text unless lines.first&.strip == '---'
-      end_idx = lines[1..].index { |l| l.strip == '---' }
-      return text unless end_idx
-      lines[(end_idx + 2)..].join.strip
     end
 
     def short_window_name(name)
