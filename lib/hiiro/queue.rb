@@ -340,27 +340,7 @@ class Hiiro
         }
 
         h.add_subcmd(:list) {
-          tasks = q.all_tasks
-          if tasks.empty?
-            puts "No tasks"
-            next
-          end
-          tasks.each do |t|
-            line = "%-10s %s" % [t[:status], t[:name]]
-            meta = q.meta_for(t[:name], t[:status].to_sym)
-            if meta && t[:status] == 'running'
-              started = meta['started_at']
-              if started
-                elapsed = Time.now - Time.parse(started)
-                mins = (elapsed / 60).to_i
-                line += "  (#{mins}m)"
-              end
-              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
-            end
-            preview = q.task_preview(t[:name], t[:status].to_sym)
-            line += "  #{preview}" if preview
-            puts line
-          end
+          h.run_subcmd(:ls)
         }
 
         h.add_subcmd(:status) {
