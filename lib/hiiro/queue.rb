@@ -240,6 +240,18 @@ class Hiiro
       windows.include?(wname)
     end
 
+    def frontmatter_template(task_info)
+      return nil unless task_info
+
+      fm_lines = ["---"]
+      fm_lines << "task_name: #{task_info[:task_name]}" if task_info[:task_name]
+      fm_lines << "tree_name: #{task_info[:tree_name]}" if task_info[:tree_name]
+      fm_lines << "session_name: #{task_info[:session_name]}" if task_info[:session_name]
+      fm_lines << "---"
+      fm_lines << ""
+      fm_lines.join("\n")
+    end
+
     def slugify(text)
       text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')[0, 60]
     end
@@ -421,16 +433,8 @@ class Hiiro
           elsif args.any?
             content = args.join(' ')
           else
-            # Pre-fill with frontmatter template if task_info is available
-            if ti
-              fm_lines = ["---"]
-              fm_lines << "task_name: #{ti[:task_name]}" if ti[:task_name]
-              fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
-              fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
-              fm_lines << "---"
-              fm_lines << ""
-              tmpfile.write(fm_lines.join("\n"))
-            end
+            fm = q.frontmatter_template(ti)
+            tmpfile.write(fm) if fm
 
             tmpfile.close
             editor = ENV['EDITOR'] || 'vim'
@@ -477,16 +481,8 @@ class Hiiro
           path = File.join(q.queue_dirs[:wip], "#{name}.md")
 
           unless File.exist?(path)
-            # Pre-fill with frontmatter if task_info available
-            if ti
-              fm_lines = ["---"]
-              fm_lines << "task_name: #{ti[:task_name]}" if ti[:task_name]
-              fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
-              fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
-              fm_lines << "---"
-              fm_lines << ""
-              File.write(path, fm_lines.join("\n"))
-            end
+            fm = q.frontmatter_template(ti)
+            File.write(path, fm) if fm
           end
 
           system(editor, path)
