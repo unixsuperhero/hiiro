@@ -1,8 +1,10 @@
 require 'yaml'
 require 'fileutils'
+require_relative 'yaml_config'
 
 class Hiiro
   class AppFiles
+    include YamlConfig
     CONFIG_FILE = File.join(Dir.home, '.config', 'hiiro', 'app_files.yml')
 
     attr_reader :config_file
@@ -134,15 +136,5 @@ class Hiiro
     end
 
     private
-
-    def load_config
-      return {} unless File.exist?(config_file)
-      YAML.safe_load_file(config_file, permitted_classes: [Symbol]) || {}
-    end
-
-    def save_config(data)
-      FileUtils.mkdir_p(File.dirname(config_file))
-      File.write(config_file, YAML.dump(data))
-    end
   end
 end

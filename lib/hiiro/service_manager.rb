@@ -2,9 +2,11 @@ require 'yaml'
 require 'fileutils'
 require 'time'
 require 'ostruct'
+require_relative 'yaml_config'
 
 class Hiiro
   class ServiceManager
+    include YamlConfig
     CONFIG_FILE = File.join(Dir.home, '.config', 'hiiro', 'services.yml')
     STATE_DIR = File.join(Dir.home, '.config', 'hiiro', 'services')
     STATE_FILE = File.join(STATE_DIR, 'running.yml')
@@ -886,16 +888,6 @@ class Hiiro
       system('tmux', 'send-keys', '-t', pane_id, "cd #{base_dir} && #{script}", 'Enter')
     end
 
-    def load_config
-      return {} unless File.exist?(config_file)
-      YAML.safe_load_file(config_file, permitted_classes: [Symbol]) || {}
-    end
-
-    def save_config(data)
-      FileUtils.mkdir_p(File.dirname(config_file))
-      File.write(config_file, YAML.dump(data))
-    end
-
     def load_state
       return {} unless File.exist?(state_file)
       YAML.safe_load_file(state_file, permitted_classes: [Symbol]) || {}
@@ -904,10 +896,6 @@ class Hiiro
     def save_state(data)
       FileUtils.mkdir_p(File.dirname(state_file))
       File.write(state_file, YAML.dump(data))
-    end
-
-    def symbolize_keys(hash)
-      hash.each_with_object({}) { |(k, v), h| h[k.to_sym] = v }
     end
 
     def resolve_base_dir(base_dir)
