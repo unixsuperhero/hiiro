@@ -53,15 +53,10 @@ class Hiiro
 
     def task_preview(name, status)
       path = File.join(queue_dirs[status], "#{name}.md")
-      return nil unless File.exist?(path)
+      prompt = Prompt.from_file(path)
+      return nil unless prompt
 
-      lines = File.readlines(path, chomp: true)
-      # Skip frontmatter
-      if lines.first == '---'
-        end_idx = lines[1..].index('---')
-        lines = lines[(end_idx + 2)..] if end_idx
-      end
-      first = lines&.find { |l| !l.strip.empty? }&.strip
+      first = prompt.doc.content.lines.find { |l| !l.strip.empty? }&.strip
       return nil unless first
 
       first.length > 60 ? "| #{first[0, 57]}..." : "| #{first}"
