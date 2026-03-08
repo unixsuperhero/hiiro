@@ -24,14 +24,7 @@ class Hiiro
     end
 
     def find_service(name)
-      configs = services
-      names = configs.keys.map { |k| OpenStruct.new(name: k) }
-      result = Hiiro::Matcher.new(names, :name).by_prefix(name)
-      match = result.resolved || result.first
-      return nil unless match
-
-      svc_name = match.item.name
-      { name: svc_name, **symbolize_keys(configs[svc_name]) }
+      find_by_name(name)
     end
 
     def find_group(name)

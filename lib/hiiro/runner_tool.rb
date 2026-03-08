@@ -21,14 +21,7 @@ class Hiiro
     end
 
     def find_tool(name)
-      configs = tools
-      names = configs.keys.map { |k| OpenStruct.new(name: k) }
-      result = Hiiro::Matcher.new(names, :name).by_prefix(name)
-      match = result.resolved || result.first
-      return nil unless match
-
-      tool_name = match.item.name
-      { name: tool_name, **symbolize_keys(configs[tool_name]) }
+      find_by_name(name)
     end
 
     def find_tools(tool_type: nil, file_type_group: nil)
