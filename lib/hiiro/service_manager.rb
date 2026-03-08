@@ -38,7 +38,11 @@ class Hiiro
       return nil unless match
 
       group_name = match.item.name
-      { name: group_name, **symbolize_keys(configs[group_name]) }
+      group = symbolize_keys(configs[group_name])
+      if group[:services]
+        group[:services] = group[:services].map { |m| symbolize_keys(m) }
+      end
+      { name: group_name, **group }
     end
 
     def prepare_env(svc_name, variation_overrides: {})
@@ -81,8 +85,8 @@ class Hiiro
       last_pane_id = first_pane_id
 
       members.each_with_index do |member, idx|
-        member_name = member['name'] || member[:name]
-        use_overrides = member['use'] || member[:use] || {}
+        member_name = member[:name]
+        use_overrides = member[:use] || {}
 
         svc = find_service(member_name)
         next unless svc
@@ -122,7 +126,7 @@ class Hiiro
       puts "Stopping group '#{group[:name]}'..."
 
       members.each do |member|
-        member_name = member['name'] || member[:name]
+        member_name = member[:name]
         stop(member_name)
       end
       true
@@ -144,7 +148,7 @@ class Hiiro
       puts "Resetting group '#{group[:name]}'..."
 
       members.each do |member|
-        member_name = member['name'] || member[:name]
+        member_name = member[:name]
         reset(member_name)
       end
       true
