@@ -6,30 +6,20 @@ tm = Hiiro::TodoManager.new
 
 Hiiro.run(*ARGV, todo_file: tm.todo_file) do
   add_subcmd(:ls) do |*ls_args|
-    show_all = ls_args.delete('-a') || ls_args.delete('--all')
-    status_filter = nil
-    tag_filter = nil
-    task_filter = nil
-
-    while ls_args.any?
-      arg = ls_args.shift
-      case arg
-      when '-s', '--status'
-        status_filter = ls_args.shift
-      when '-t', '--tag'
-        tag_filter = ls_args.shift
-      when '--task'
-        task_filter = ls_args.shift
-      end
+    opts = Hiiro::Options.parse(ls_args) do
+      flag :all, short: 'a', desc: 'Show all items including done/skip'
+      option :status, short: 's', desc: 'Filter by status (comma-separated)'
+      option :tag, short: 't', desc: 'Filter by tag'
+      option :task, desc: 'Filter by task name'
     end
 
-    items = if status_filter
-      tm.filter_by_status(*status_filter.split(','))
-    elsif tag_filter
-      tm.filter_by_tag(tag_filter)
-    elsif task_filter
-      tm.filter_by_task(task_filter)
-    elsif show_all
+    items = if opts.status
+      tm.filter_by_status(*opts.status.split(','))
+    elsif opts.tag
+      tm.filter_by_tag(opts.tag)
+    elsif opts.task
+      tm.filter_by_task(opts.task)
+    elsif opts.all
       tm.all
     else
       tm.active
@@ -64,26 +54,17 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
       next
     end
 
-    tags = nil
-    text_parts = []
-
-    while add_args.any?
-      arg = add_args.shift
-      case arg
-      when '-t', '--tags'
-        tags = add_args.shift
-      else
-        text_parts << arg
-      end
+    opts = Hiiro::Options.parse(add_args) do
+      option :tags, short: 't', desc: 'Tags for the item'
     end
 
-    text = text_parts.join(' ')
+    text = opts.args.join(' ')
     if text.empty?
       puts "Usage: h todo add <text> [-t tags]"
       exit 1
     end
 
-    item = tm.add(text, tags: tags)
+    item = tm.add(text, tags: opts.tags)
     puts "Added: #{tm.format_item(item)}"
   end
 
@@ -143,67 +124,20 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
     end
   end
 
-  add_subcmd(:start) do |*start_args|
-    id_or_index = start_args.shift
-    if id_or_index.nil?
-      puts "Usage: h todo start <id>"
-      exit 1
-    end
+  { start: 'Started', done: 'Done', skip: 'Skipped', reset: 'Reset' }.each do |cmd, label|
+    add_subcmd(cmd) do |id_or_index=nil|
+      unless id_or_index
+        puts "Usage: h todo #{cmd} <id>"
+        exit 1
+      end
 
-    item = tm.start(id_or_index)
-    if item
-      puts "Started: #{tm.format_item(item)}"
-    else
-      puts "Item not found: #{id_or_index}"
-      exit 1
-    end
-  end
-
-  add_subcmd(:done) do |*done_args|
-    id_or_index = done_args.shift
-    if id_or_index.nil?
-      puts "Usage: h todo done <id>"
-      exit 1
-    end
-
-    item = tm.done(id_or_index)
-    if item
-      puts "Done: #{tm.format_item(item)}"
-    else
-      puts "Item not found: #{id_or_index}"
-      exit 1
-    end
-  end
-
-  add_subcmd(:skip) do |*skip_args|
-    id_or_index = skip_args.shift
-    if id_or_index.nil?
-      puts "Usage: h todo skip <id>"
-      exit 1
-    end
-
-    item = tm.skip(id_or_index)
-    if item
-      puts "Skipped: #{tm.format_item(item)}"
-    else
-      puts "Item not found: #{id_or_index}"
-      exit 1
-    end
-  end
-
-  add_subcmd(:reset) do |*reset_args|
-    id_or_index = reset_args.shift
-    if id_or_index.nil?
-      puts "Usage: h todo reset <id>"
-      exit 1
-    end
-
-    item = tm.reset(id_or_index)
-    if item
-      puts "Reset: #{tm.format_item(item)}"
-    else
-      puts "Item not found: #{id_or_index}"
-      exit 1
+      item = tm.send(cmd, id_or_index)
+      if item
+        puts "#{label}: #{tm.format_item(item)}"
+      else
+        puts "Item not found: #{id_or_index}"
+        exit 1
+      end
     end
   end
 

@@ -315,19 +315,11 @@ class Hiiro
             next
           end
 
-          tags = nil
-          text_parts = []
-          while add_args.any?
-            arg = add_args.shift
-            case arg
-            when '-t', '--tags'
-              tags = add_args.shift
-            else
-              text_parts << arg
-            end
+          opts = Hiiro::Options.parse(add_args) do
+            option :tags, short: 't', desc: 'Tags for the item'
           end
-          text = text_parts.join(' ')
-          item = tm.add(text, tags: tags, task_info: task_info)
+          text = opts.args.join(' ')
+          item = tm.add(text, tags: opts.tags, task_info: task_info)
           puts "Added: #{tm.format_item(item)}"
         end
 
@@ -342,31 +334,15 @@ class Hiiro
 
         h.add_subcmd(:remove) { |*args| h.run_subcmd(:rm, *args) }
 
-        h.add_subcmd(:start) do |id_or_index=nil|
-          unless id_or_index
-            puts "Usage: todo start <id>"
-            next
+        { start: 'Started', done: 'Done', skip: 'Skipped' }.each do |cmd, label|
+          h.add_subcmd(cmd) do |id_or_index=nil|
+            unless id_or_index
+              puts "Usage: todo #{cmd} <id>"
+              next
+            end
+            item = tm.send(cmd, id_or_index)
+            puts item ? "#{label}: #{tm.format_item(item)}" : "Item not found: #{id_or_index}"
           end
-          item = tm.start(id_or_index)
-          puts item ? "Started: #{tm.format_item(item)}" : "Item not found: #{id_or_index}"
-        end
-
-        h.add_subcmd(:done) do |id_or_index=nil|
-          unless id_or_index
-            puts "Usage: todo done <id>"
-            next
-          end
-          item = tm.done(id_or_index)
-          puts item ? "Done: #{tm.format_item(item)}" : "Item not found: #{id_or_index}"
-        end
-
-        h.add_subcmd(:skip) do |id_or_index=nil|
-          unless id_or_index
-            puts "Usage: todo skip <id>"
-            next
-          end
-          item = tm.skip(id_or_index)
-          puts item ? "Skipped: #{tm.format_item(item)}" : "Item not found: #{id_or_index}"
         end
 
         h.add_subcmd(:search) do |*search_args|
