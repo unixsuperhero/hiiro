@@ -89,7 +89,7 @@ class Hiiro
       target_path = File.join(Hiiro::WORK_DIR, subtree_name)
 
       git = Hiiro::Git.new(nil, Hiiro::REPO_PATH)
-      available = find_available_tree
+      available = available_tree
       if available
         puts "Renaming worktree '#{available.name}' to '#{subtree_name}'..."
         FileUtils.mkdir_p(File.dirname(target_path))
@@ -202,7 +202,7 @@ class Hiiro
         return
       end
 
-      windows = capture_tmux_windows(task.session_name)
+      windows = tmux_windows(task.session_name)
       puts "Saved task '#{task.name}' state (#{windows.count} windows)"
     end
 
@@ -213,7 +213,7 @@ class Hiiro
         return
       end
 
-      result = resolve_app(app_name, task)
+      result = resolved_app(app_name, task)
       return unless result
 
       resolved_name, app_path = result
@@ -272,7 +272,7 @@ class Hiiro
         return
       end
 
-      result = resolve_app(app_name, task)
+      result = resolved_app(app_name, task)
       return unless result
 
       _resolved_name, app_path = result
@@ -391,12 +391,12 @@ class Hiiro
       end
     end
 
-    def find_available_tree
+    def available_tree
       assigned_tree_names = environment.all_tasks.map(&:tree_name)
       environment.all_trees.find { |tree| !assigned_tree_names.include?(tree.name) }
     end
 
-    def resolve_app(app_name, task)
+    def resolved_app(app_name, task)
       tree = environment.find_tree(task.tree_name)
       tree_root = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
 
@@ -433,7 +433,7 @@ class Hiiro
       end
     end
 
-    def capture_tmux_windows(session)
+    def tmux_windows(session)
       output = `tmux list-windows -t #{session} -F '\#{window_index}:\#{window_name}:\#{pane_current_path}' 2>/dev/null`
       output.lines.map(&:strip).map { |line|
         idx, name, path = line.split(':')
