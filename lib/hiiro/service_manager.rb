@@ -460,7 +460,12 @@ class Hiiro
           h.run_subcmd(:ls)
         end
 
-        h.add_subcmd(:start) do |svc_name=nil, *extra_args|
+        h.add_subcmd(:start) do |*start_args|
+          opts = Hiiro::Options.parse(start_args) do
+            option(:use, short: :u, desc: 'VAR=variation override', multi: true)
+          end
+
+          svc_name = opts.args.first
           unless svc_name
             all = sm.services.keys
             if all.empty?
@@ -471,16 +476,9 @@ class Hiiro
             next unless svc_name
           end
 
-          # Parse --use flags from extra_args
-          variation_overrides = {}
-          extra_args.each_with_index do |arg, i|
-            if arg == '--use' && extra_args[i + 1]
-              key, val = extra_args[i + 1].split('=', 2)
-              variation_overrides[key] = val if key && val
-            elsif arg.start_with?('--use=')
-              key, val = arg.sub('--use=', '').split('=', 2)
-              variation_overrides[key] = val if key && val
-            end
+          variation_overrides = opts.use.each_with_object({}) do |pair, h|
+            key, val = pair.split('=', 2)
+            h[key] = val if key && val
           end
 
           tmux_info = {
