@@ -56,7 +56,7 @@ class Hiiro
       prompt = Prompt.from_file(path)
       return nil unless prompt
 
-      first = prompt.doc.content.lines.find { |l| !l.strip.empty? }&.strip
+      first = prompt.body.lines.find { |l| !l.strip.empty? }&.strip
       return nil unless first
 
       first.length > 60 ? "| #{first[0, 57]}..." : "| #{first}"
@@ -86,23 +86,8 @@ class Hiiro
 
       prompt_obj = Prompt.from_file(running_md, hiiro: hiiro)
 
-      # Determine target tmux session and working directory from frontmatter
-      target_session = TMUX_SESSION
-      working_dir = Dir.pwd
-
-      if prompt_obj
-        if prompt_obj.task
-          target_session = prompt_obj.task.session_name
-          tree = prompt_obj.task.tree
-          working_dir = tree.path if tree
-        elsif prompt_obj.session
-          target_session = prompt_obj.session.name
-        end
-
-        if prompt_obj.tree
-          working_dir = prompt_obj.tree.path
-        end
-      end
+      target_session = prompt_obj&.target_session || TMUX_SESSION
+      working_dir = prompt_obj&.working_dir || Dir.pwd
 
       # Ensure the target session exists
       unless system('tmux', 'has-session', '-t', target_session, out: File::NULL, err: File::NULL)
@@ -110,9 +95,8 @@ class Hiiro
       end
 
       # Write a clean prompt file (no frontmatter) for claude
-      prompt_body = prompt_obj.doc.content.strip
       prompt_file = File.join(dirs[:running], "#{name}.prompt")
-      File.write(prompt_file, prompt_body + "\n")
+      File.write(prompt_file, prompt_obj.body + "\n")
 
       # Write a launcher script
       script_path = File.join(dirs[:running], "#{name}.sh")
@@ -148,18 +132,14 @@ class Hiiro
       system('tmux', 'new-window', '-d', '-t', target_session, '-n', win_name, '-c', working_dir, script_path)
 
       # Write meta sidecar
-      meta = {
+      meta_data = {
         'tmux_session' => target_session,
         'tmux_window' => win_name,
         'started_at' => Time.now.iso8601,
         'working_dir' => working_dir,
       }
-      if prompt_obj
-        meta['task_name'] = prompt_obj.task_name if prompt_obj.task_name
-        meta['tree_name'] = prompt_obj.tree_name if prompt_obj.tree_name
-        meta['session_name'] = prompt_obj.session_name if prompt_obj.session_name
-      end
-      File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
+      meta_data.merge!(prompt_obj.meta) if prompt_obj
+      File.write(File.join(dirs[:running], "#{name}.meta"), meta_data.to_yaml)
 
       puts "Launched: #{name} [#{target_session}:#{win_name}]"
     end
@@ -605,6 +585,38 @@ class Hiiro
       def tree
         return nil unless tree_name
         hiiro&.environment&.find_tree(tree_name)
+      end
+
+      def target_session
+        if task
+          task.session_name
+        elsif session
+          session.name
+        else
+          nil
+        end
+      end
+
+      def working_dir
+        if tree
+          tree.path
+        elsif task&.tree
+          task.tree.path
+        else
+          nil
+        end
+      end
+
+      def body
+        doc.content.strip
+      end
+
+      def meta
+        h = {}
+        h['task_name'] = task_name if task_name
+        h['tree_name'] = tree_name if tree_name
+        h['session_name'] = session_name if session_name
+        h
       end
     end
   end
