@@ -64,84 +64,57 @@ class Hiiro
     end
 
     def start_group(name, tmux_info: {}, task_info: {})
-      group = find_group(name)
-      unless group
-        puts "Group '#{name}' not found"
-        return false
-      end
-
-      if group.empty?
-        puts "Group '#{group.name}' has no services"
-        return false
-      end
-
-      session = tmux_info[:session] || current_tmux_session
-      unless session
-        puts "tmux is required to start a service group"
-        return false
-      end
-
-      puts "Starting group '#{group.name}'..."
-
-      # Create one window for the group, split panes for each service
-      window_target, first_pane_id = create_tmux_window(session, group.name)
-      last_pane_id = first_pane_id
-
-      group.members.each_with_index do |member, idx|
-        svc = find_service(member.name)
-        next unless svc
-
-        if idx == 0
-          pane_id = first_pane_id
-        else
-          # Split from the last pane so each new pane is distinct
-          pane_id = split_tmux_pane(window_target, last_pane_id)
-          last_pane_id = pane_id
+      with_group(name) do |group|
+        session = tmux_info[:session] || current_tmux_session
+        unless session
+          puts "tmux is required to start a service group"
+          return false
         end
 
-        member_tmux_info = tmux_info.merge(
-          session: session,
-          window: window_target,
-          pane: pane_id,
-        )
+        puts "Starting group '#{group.name}'..."
 
-        start(member.name, tmux_info: member_tmux_info, task_info: task_info, variation_overrides: member.use, skip_window_creation: true)
+        # Create one window for the group, split panes for each service
+        window_target, first_pane_id = create_tmux_window(session, group.name)
+        last_pane_id = first_pane_id
+
+        group.members.each_with_index do |member, idx|
+          svc = find_service(member.name)
+          next unless svc
+
+          if idx == 0
+            pane_id = first_pane_id
+          else
+            # Split from the last pane so each new pane is distinct
+            pane_id = split_tmux_pane(window_target, last_pane_id)
+            last_pane_id = pane_id
+          end
+
+          member_tmux_info = tmux_info.merge(
+            session: session,
+            window: window_target,
+            pane: pane_id,
+          )
+
+          start(member.name, tmux_info: member_tmux_info, task_info: task_info, variation_overrides: member.use, skip_window_creation: true)
+        end
+        true
       end
-      true
     end
 
     def stop_group(name)
-      group = find_group(name)
-      unless group
-        puts "Group '#{name}' not found"
-        return false
+      with_group(name) do |group|
+        puts "Stopping group '#{group.name}'..."
+        group.members.each { |member| stop(member.name) }
+        true
       end
-
-      if group.empty?
-        puts "Group '#{group.name}' has no services"
-        return false
-      end
-
-      puts "Stopping group '#{group.name}'..."
-      group.members.each { |member| stop(member.name) }
-      true
     end
 
     def reset_group(name)
-      group = find_group(name)
-      unless group
-        puts "Group '#{name}' not found"
-        return false
+      with_group(name) do |group|
+        puts "Resetting group '#{group.name}'..."
+        group.members.each { |member| reset(member.name) }
+        true
       end
-
-      if group.empty?
-        puts "Group '#{group.name}' has no services"
-        return false
-      end
-
-      puts "Resetting group '#{group.name}'..."
-      group.members.each { |member| reset(member.name) }
-      true
     end
 
     def running?(name)
@@ -718,6 +691,21 @@ class Hiiro
     end
 
     private
+
+    def with_group(name)
+      group = find_group(name)
+      unless group
+        puts "Group '#{name}' not found"
+        return false
+      end
+
+      if group.empty?
+        puts "Group '#{group.name}' has no services"
+        return false
+      end
+
+      yield group
+    end
 
     # Normalize env file config into an array of hashes,
     # supporting both old single-env format and new env_files array
