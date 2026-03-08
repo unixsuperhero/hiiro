@@ -90,7 +90,20 @@ class Hiiro
           tm.open_app(app_name)
         end
 
-        h.add_subcmd(:apps) { tm.list_apps }
+        h.add_subcmd(:apps) do
+          apps = tm.all_apps
+          if apps.any?
+            puts "Configured apps:"
+            puts
+            apps.each do |app|
+              puts format("  %-20s => %s", app.name, app.relative_path)
+            end
+          else
+            puts "No apps configured."
+            puts "Create #{Hiiro::TaskManager::APPS_FILE} with format:"
+            puts "  app_name: relative/path/from/repo"
+          end
+        end
 
         h.add_subcmd(:cd) do |app_name=nil|
           tm.cd_to_app(app_name)

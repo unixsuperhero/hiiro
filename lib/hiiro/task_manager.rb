@@ -221,19 +221,8 @@ class Hiiro
       puts "Opened '#{resolved_name}' in new window (#{app_path})"
     end
 
-    def list_apps
-      apps = environment.all_apps
-      if apps.any?
-        puts "Configured apps:"
-        puts
-        apps.each do |app|
-          puts format("  %-20s => %s", app.name, app.relative_path)
-        end
-      else
-        puts "No apps configured."
-        puts "Create #{APPS_FILE} with format:"
-        puts "  app_name: relative/path/from/repo"
-      end
+    def all_apps
+      environment.all_apps
     end
 
     def branch(task_name = nil)
@@ -421,8 +410,6 @@ class Hiiro
         nested = File.join(tree_root, app_name, app_name)
         return [app_name, nested] if Dir.exist?(nested)
 
-        puts "ERROR: App '#{app_name}' not found"
-        list_apps
         nil
       when 1
         app = result.first.item
@@ -432,8 +419,6 @@ class Hiiro
         if exact
           [exact.item.name, exact.item.resolve(tree_root)]
         else
-          puts "ERROR: '#{app_name}' matches multiple apps:"
-          result.matches.each { |m| puts "  #{m.item.name}" }
           nil
         end
       end
