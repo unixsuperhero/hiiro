@@ -185,19 +185,32 @@ class Hiiro
       puts "#{label}:"
       puts
 
+      # Collect rows as {prefix, name, tree, branch, session} so we can
+      # compute max column widths before rendering.
+      rows = []
       items.each do |task|
         marker = (current && current.name == task.name) ? "*" : " "
-        line = task.display_line(scope: scope, environment: environment)
-        puts "#{marker} #{line}"
+        rows << { prefix: "#{marker} ", **task.display_data(scope: scope, environment: environment) }
 
         if scope == :task
-          subs = subtasks(task)
-          subs.each do |st|
+          subtasks(task).each do |st|
             sub_marker = (current && current.name == st.name) ? "*" : " "
-            sub_line = st.display_line(scope: :subtask, environment: environment)
-            puts "#{sub_marker} - #{sub_line}"
+            rows << { prefix: "#{sub_marker} - ", **st.display_data(scope: :subtask, environment: environment) }
           end
         end
+      end
+
+      # Column widths: the name column absorbs the variable-length prefix so
+      # that tree/branch/session always start at the same position.
+      name_col   = rows.map { |r| r[:prefix].length + r[:name].length }.max
+      tree_col   = rows.map { |r| r[:tree].length }.max
+      branch_col = rows.map { |r| r[:branch].length }.max
+
+      rows.each do |r|
+        name_pad = name_col - r[:prefix].length
+        print r[:prefix]
+        puts format("%-#{name_pad}s  %-#{tree_col}s  %-#{branch_col}s  %s",
+                    r[:name], r[:tree], r[:branch], r[:session])
       end
 
       available = environment.all_trees.reject { |t|
@@ -206,9 +219,10 @@ class Hiiro
 
       if available.any?
         puts
+        avail_name_col = [available.map { |t| t.name.length }.max, name_col].max
         available.each do |tree|
-          branch_str = tree.branch ? "  [#{tree.branch}]" : tree.detached? ? "  [(detached)]" : ""
-          puts format("  %-25s  (available)%s", tree.name, branch_str)
+          branch_str = tree.branch ? "[#{tree.branch}]" : tree.detached? ? "[(detached)]" : ""
+          puts format("  %-#{avail_name_col}s  (available)  %s", tree.name, branch_str).rstrip
         end
       end
     end
@@ -364,9 +378,15 @@ class Hiiro
 
       mapping = {}
 
-      task_list.each do |task|
+      all_data = task_list.map { |t| [t, t.display_data(scope: scope, environment: environment)] }
+      name_col   = all_data.map { |_, d| d[:name].length }.max || 0
+      tree_col   = all_data.map { |_, d| d[:tree].length }.max || 0
+      branch_col = all_data.map { |_, d| d[:branch].length }.max || 0
+
+      all_data.each do |task, d|
         display_name = scope == :subtask ? task.short_name : task.name
-        line = task.display_line(scope: scope, environment: environment)
+        line = format("%-#{name_col}s  %-#{tree_col}s  %-#{branch_col}s  %s",
+                      d[:name], d[:tree], d[:branch], d[:session])
         mapping[line] = { type: :task, name: display_name }
       end
 
@@ -957,19 +977,16 @@ class Hiiro
       h
     end
 
-    def display_line(scope: :task, environment:)
+    def display_data(scope: :task, environment:)
       display_name = (scope == :subtask) ? short_name : name
       tree = environment.find_tree(tree_name)
       branch = tree&.branch || (tree&.detached? ? '(detached)' : '(none)')
-      session = session_name || '(none)'
-
-      branch_str = "[#{branch}]"
-      session_str = "(#{session})"
-      format("%-25s  %-25s  %-30s  %s",
-             display_name,
-             tree_name || '(none)',
-             branch_str,
-             session_str)
+      {
+        name:    display_name,
+        tree:    tree_name || '(none)',
+        branch:  "[#{branch}]",
+        session: "(#{session_name || '(none)'})"
+      }
     end
   end
 
