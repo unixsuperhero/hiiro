@@ -2,9 +2,13 @@ require 'yaml'
 require 'fileutils'
 require 'time'
 require 'ostruct'
+require_relative 'yaml_config'
+require_relative 'service'
+require_relative 'service_group'
 
 class Hiiro
   class ServiceManager
+    include YamlConfig
     CONFIG_FILE = File.join(Dir.home, '.config', 'hiiro', 'services.yml')
     STATE_DIR = File.join(Dir.home, '.config', 'hiiro', 'services')
     STATE_FILE = File.join(STATE_DIR, 'running.yml')
@@ -22,14 +26,9 @@ class Hiiro
     end
 
     def find_service(name)
-      configs = services
-      names = configs.keys.map { |k| OpenStruct.new(name: k) }
-      result = Hiiro::Matcher.new(names, :name).by_prefix(name)
-      match = result.resolved || result.first
-      return nil unless match
-
-      svc_name = match.item.name
-      { name: svc_name, **symbolize_keys(configs[svc_name]) }
+      result = find_by_name(name)
+      return nil unless result
+      Service.new(**result)
     end
 
     def find_group(name)
@@ -43,14 +42,18 @@ class Hiiro
       return nil unless match
 
       group_name = match.item.name
-      { name: group_name, **symbolize_keys(configs[group_name]) }
+      group = symbolize_keys(configs[group_name])
+      if group[:services]
+        group[:services] = group[:services].map { |m| symbolize_keys(m) }
+      end
+      ServiceGroup.new(name: group_name, **group)
     end
 
     def prepare_env(svc_name, variation_overrides: {})
       svc = find_service(svc_name)
       return unless svc
 
-      base_dir = resolve_base_dir(svc[:base_dir])
+      base_dir = resolve_base_dir(svc.base_dir)
 
       env_file_configs = build_env_file_configs(svc)
       return if env_file_configs.empty?
@@ -61,98 +64,57 @@ class Hiiro
     end
 
     def start_group(name, tmux_info: {}, task_info: {})
-      group = find_group(name)
-      unless group
-        puts "Group '#{name}' not found"
-        return false
-      end
-
-      members = group[:services]
-      unless members && !members.empty?
-        puts "Group '#{group[:name]}' has no services"
-        return false
-      end
-
-      session = tmux_info[:session] || current_tmux_session
-      unless session
-        puts "tmux is required to start a service group"
-        return false
-      end
-
-      puts "Starting group '#{group[:name]}'..."
-
-      # Create one window for the group, split panes for each service
-      window_target, first_pane_id = create_tmux_window(session, group[:name])
-      last_pane_id = first_pane_id
-
-      members.each_with_index do |member, idx|
-        member_name = member['name'] || member[:name]
-        use_overrides = member['use'] || member[:use] || {}
-
-        svc = find_service(member_name)
-        next unless svc
-
-        if idx == 0
-          pane_id = first_pane_id
-        else
-          # Split from the last pane so each new pane is distinct
-          pane_id = split_tmux_pane(window_target, last_pane_id)
-          last_pane_id = pane_id
+      with_group(name) do |group|
+        session = tmux_info[:session] || current_tmux_session
+        unless session
+          puts "tmux is required to start a service group"
+          return false
         end
 
-        member_tmux_info = tmux_info.merge(
-          session: session,
-          window: window_target,
-          pane: pane_id,
-        )
+        puts "Starting group '#{group.name}'..."
 
-        start(member_name, tmux_info: member_tmux_info, task_info: task_info, variation_overrides: use_overrides, skip_window_creation: true)
+        # Create one window for the group, split panes for each service
+        window_target, first_pane_id = create_tmux_window(session, group.name)
+        last_pane_id = first_pane_id
+
+        group.members.each_with_index do |member, idx|
+          svc = find_service(member.name)
+          next unless svc
+
+          if idx == 0
+            pane_id = first_pane_id
+          else
+            # Split from the last pane so each new pane is distinct
+            pane_id = split_tmux_pane(window_target, last_pane_id)
+            last_pane_id = pane_id
+          end
+
+          member_tmux_info = tmux_info.merge(
+            session: session,
+            window: window_target,
+            pane: pane_id,
+          )
+
+          start(member.name, tmux_info: member_tmux_info, task_info: task_info, variation_overrides: member.use, skip_window_creation: true)
+        end
+        true
       end
-      true
     end
 
     def stop_group(name)
-      group = find_group(name)
-      unless group
-        puts "Group '#{name}' not found"
-        return false
+      with_group(name) do |group|
+        puts "Stopping group '#{group.name}'..."
+        group.members.each { |member| stop(member.name) }
+        true
       end
-
-      members = group[:services]
-      unless members && !members.empty?
-        puts "Group '#{group[:name]}' has no services"
-        return false
-      end
-
-      puts "Stopping group '#{group[:name]}'..."
-
-      members.each do |member|
-        member_name = member['name'] || member[:name]
-        stop(member_name)
-      end
-      true
     end
 
     def reset_group(name)
-      group = find_group(name)
-      unless group
-        puts "Group '#{name}' not found"
-        return false
+      with_group(name) do |group|
+        puts "Resetting group '#{group.name}'..."
+        group.members.each { |member| reset(member.name) }
+        true
       end
-
-      members = group[:services]
-      unless members && !members.empty?
-        puts "Group '#{group[:name]}' has no services"
-        return false
-      end
-
-      puts "Resetting group '#{group[:name]}'..."
-
-      members.each do |member|
-        member_name = member['name'] || member[:name]
-        reset(member_name)
-      end
-      true
     end
 
     def running?(name)
@@ -171,7 +133,7 @@ class Hiiro
         return false
       end
 
-      svc_name = svc[:name]
+      svc_name = svc.name
       state = load_state
       unless state.key?(svc_name)
         puts "Service '#{svc_name}' is not in running state"
@@ -209,32 +171,30 @@ class Hiiro
         return false
       end
 
-      svc_name = svc[:name]
+      svc_name = svc.name
+      state = load_state
 
-      if running?(svc_name)
-        info = running_services[svc_name]
+      if state.key?(svc_name)
+        info = state[svc_name]
         puts "Service '#{svc_name}' is already running (pid: #{info['pid']}, pane: #{info['tmux_pane']})"
         return false
       end
 
-      start_cmd = svc[:start]
-      unless start_cmd
+      unless svc.start_command
         puts "No start command configured for '#{svc_name}'"
         return false
       end
 
       # Build separate init/env/start scripts + a launcher that runs them in order
-      init_cmds = Array(svc[:init] || [])
-      start_cmds = Array(start_cmd)
       script = write_launcher_script(
         svc_name,
-        init_cmds: init_cmds,
-        start_cmds: start_cmds,
+        init_cmds: svc.init_commands,
+        start_cmds: Array(svc.start_command),
         env_prep: !skip_env,
         variation_overrides: variation_overrides,
       )
 
-      base_dir = resolve_base_dir(svc[:base_dir])
+      base_dir = resolve_base_dir(svc.base_dir)
       session = tmux_info[:session] || current_tmux_session
 
       if session && !skip_window_creation
@@ -254,9 +214,6 @@ class Hiiro
       else
         system("cd #{base_dir} && #{script} &")
       end
-
-      # Record state
-      state = load_state
       state[svc_name] = {
         'pid' => nil,
         'tmux_session' => session || tmux_info[:session],
@@ -280,18 +237,19 @@ class Hiiro
         return false
       end
 
-      svc_name = svc[:name]
+      svc_name = svc.name
+      state = load_state
+      info = state[svc_name]
 
-      unless running?(svc_name)
+      unless info
         puts "Service '#{svc_name}' is not running"
         return false
       end
 
-      info = running_services[svc_name]
       pane_id = info['tmux_pane']
 
-      if svc[:stop] && !svc[:stop].to_s.strip.empty?
-        stop_cmd = svc[:stop]
+      if svc.stop_command && !svc.stop_command.to_s.strip.empty?
+        stop_cmd = svc.stop_command
         if info['pid']
           stop_cmd = stop_cmd.gsub('$PID', info['pid'].to_s)
         end
@@ -301,12 +259,9 @@ class Hiiro
       end
 
       # Run cleanup commands
-      if svc[:cleanup]
-        svc[:cleanup].each { |cmd| system(cmd) }
-      end
+      svc.cleanup_commands.each { |cmd| system(cmd) }
 
       # Remove from state
-      state = load_state
       state.delete(svc_name)
       save_state(state)
 
@@ -321,13 +276,14 @@ class Hiiro
         return false
       end
 
-      svc_name = svc[:name]
-      unless running?(svc_name)
+      svc_name = svc.name
+      info = load_state[svc_name]
+
+      unless info
         puts "Service '#{svc_name}' is not running"
         return false
       end
 
-      info = running_services[svc_name]
       pane_id = info['tmux_pane']
       session = info['tmux_session']
       window = info['tmux_window']
@@ -349,23 +305,17 @@ class Hiiro
 
     def url(name)
       svc = find_service(name)
-      return nil unless svc
-
-      host = svc[:host] || 'localhost'
-      port = svc[:port]
-      return nil unless port
-
-      "http://#{host}:#{port}"
+      svc&.url
     end
 
     def port(name)
       svc = find_service(name)
-      svc&.[](:port)
+      svc&.port
     end
 
     def host(name)
       svc = find_service(name)
-      svc&.[](:host) || 'localhost'
+      svc&.host
     end
 
     def status(name)
@@ -375,13 +325,12 @@ class Hiiro
         return
       end
 
-      svc_name = svc[:name]
-      puts "Service: #{svc_name}"
-      puts "Base dir: #{svc[:base_dir] || '(none)'}"
-      puts "URL: #{url(svc_name) || '(none)'}"
+      puts "Service: #{svc.name}"
+      puts "Base dir: #{svc.base_dir || '(none)'}"
+      puts "URL: #{svc.url || '(none)'}"
 
-      if running?(svc_name)
-        info = running_services[svc_name]
+      info = load_state[svc.name]
+      if info
         puts "Status: running"
         puts "PID: #{info['pid'] || '(unknown)'}"
         puts "Pane: #{info['tmux_pane'] || '(unknown)'}"
@@ -465,7 +414,12 @@ class Hiiro
           h.run_subcmd(:ls)
         end
 
-        h.add_subcmd(:start) do |svc_name=nil, *extra_args|
+        h.add_subcmd(:start) do |*start_args|
+          opts = Hiiro::Options.parse(start_args) do
+            option(:use, short: :u, desc: 'VAR=variation override', multi: true)
+          end
+
+          svc_name = opts.args.first
           unless svc_name
             all = sm.services.keys
             if all.empty?
@@ -476,16 +430,9 @@ class Hiiro
             next unless svc_name
           end
 
-          # Parse --use flags from extra_args
-          variation_overrides = {}
-          extra_args.each_with_index do |arg, i|
-            if arg == '--use' && extra_args[i + 1]
-              key, val = extra_args[i + 1].split('=', 2)
-              variation_overrides[key] = val if key && val
-            elsif arg.start_with?('--use=')
-              key, val = arg.sub('--use=', '').split('=', 2)
-              variation_overrides[key] = val if key && val
-            end
+          variation_overrides = opts.use.each_with_object({}) do |pair, h|
+            key, val = pair.split('=', 2)
+            h[key] = val if key && val
           end
 
           tmux_info = {
@@ -514,43 +461,24 @@ class Hiiro
           end
         end
 
-        h.add_subcmd(:stop) do |svc_name=nil|
-          unless svc_name
-            running = sm.running_services.keys
-            if running.empty?
-              puts "No running services"
-              next
+        %i[stop reset].each do |cmd|
+          h.add_subcmd(cmd) do |svc_name=nil|
+            unless svc_name
+              running = sm.running_services.keys
+              if running.empty?
+                puts "No running services"
+                next
+              end
+              svc_name = h.fuzzyfind(running)
+              next unless svc_name
             end
-            svc_name = h.fuzzyfind(running)
-            next unless svc_name
-          end
 
-          # Check if it's a group or individual service
-          group = sm.find_group(svc_name)
-          if group
-            sm.stop_group(svc_name)
-          else
-            sm.stop(svc_name)
-          end
-        end
-
-        h.add_subcmd(:reset) do |svc_name=nil|
-          unless svc_name
-            running = sm.running_services.keys
-            if running.empty?
-              puts "No running services"
-              next
+            group = sm.find_group(svc_name)
+            if group
+              sm.send(:"#{cmd}_group", svc_name)
+            else
+              sm.send(cmd, svc_name)
             end
-            svc_name = h.fuzzyfind(running)
-            next unless svc_name
-          end
-
-          # Check if it's a group or individual service
-          group = sm.find_group(svc_name)
-          if group
-            sm.reset_group(svc_name)
-          else
-            sm.reset(svc_name)
           end
         end
 
@@ -670,14 +598,7 @@ class Hiiro
           sm.remove_service(svc_name)
         end
 
-        h.add_subcmd(:remove) do |svc_name=nil|
-          unless svc_name
-            puts "Usage: service remove <name>"
-            next
-          end
-
-          sm.remove_service(svc_name)
-        end
+        h.add_subcmd(:remove) { |*args| h.run_subcmd(:rm, *args) }
 
         h.add_subcmd(:config) do
           editor = ENV['EDITOR'] || 'nvim'
@@ -715,11 +636,11 @@ class Hiiro
 
           configs = sm.send(:build_env_file_configs, svc)
           if configs.empty?
-            puts "No env files configured for '#{svc[:name]}'"
+            puts "No env files configured for '#{svc.name}'"
             next
           end
 
-          puts "Env files for '#{svc[:name]}':"
+          puts "Env files for '#{svc.name}':"
           configs.each do |efc|
             puts
             puts "  #{efc[:env_file] || '(no dest)'}"
@@ -744,13 +665,28 @@ class Hiiro
 
     private
 
+    def with_group(name)
+      group = find_group(name)
+      unless group
+        puts "Group '#{name}' not found"
+        return false
+      end
+
+      if group.empty?
+        puts "Group '#{group.name}' has no services"
+        return false
+      end
+
+      yield group
+    end
+
     # Normalize env file config into an array of hashes,
     # supporting both old single-env format and new env_files array
     def build_env_file_configs(svc)
-      if svc[:env_files]
-        Array(svc[:env_files]).map { |ef| symbolize_keys(ef.is_a?(Hash) ? ef : {}) }
-      elsif svc[:env_file] || svc[:base_env] || svc[:env_vars]
-        [{ env_file: svc[:env_file], base_env: svc[:base_env], env_vars: svc[:env_vars] }]
+      if svc.env_files
+        Array(svc.env_files).map { |ef| symbolize_keys(ef.is_a?(Hash) ? ef : {}) }
+      elsif svc.env_file || svc.base_env || svc.env_vars
+        [{ env_file: svc.env_file, base_env: svc.base_env, env_vars: svc.env_vars }]
       else
         []
       end
@@ -886,16 +822,6 @@ class Hiiro
       system('tmux', 'send-keys', '-t', pane_id, "cd #{base_dir} && #{script}", 'Enter')
     end
 
-    def load_config
-      return {} unless File.exist?(config_file)
-      YAML.safe_load_file(config_file, permitted_classes: [Symbol]) || {}
-    end
-
-    def save_config(data)
-      FileUtils.mkdir_p(File.dirname(config_file))
-      File.write(config_file, YAML.dump(data))
-    end
-
     def load_state
       return {} unless File.exist?(state_file)
       YAML.safe_load_file(state_file, permitted_classes: [Symbol]) || {}
@@ -904,10 +830,6 @@ class Hiiro
     def save_state(data)
       FileUtils.mkdir_p(File.dirname(state_file))
       File.write(state_file, YAML.dump(data))
-    end
-
-    def symbolize_keys(hash)
-      hash.each_with_object({}) { |(k, v), h| h[k.to_sym] = v }
     end
 
     def resolve_base_dir(base_dir)

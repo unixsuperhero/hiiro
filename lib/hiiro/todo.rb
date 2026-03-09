@@ -275,6 +275,92 @@ class Hiiro
       filter_by_status('done', 'skip')
     end
 
+    def self.build_hiiro(parent_hiiro, tm, task_info: nil)
+      parent_hiiro.make_child(:todo) do |h|
+        h.add_subcmd(:ls) do |*ls_args|
+          show_all = ls_args.delete('-a') || ls_args.delete('--all')
+          task_name = task_info&.dig(:task_name)
+
+          items = if show_all
+            tm.all
+          elsif task_name
+            tm.filter_by_task(task_name).select { |i| %w[not_started started].include?(i.status) }
+          else
+            tm.active
+          end
+
+          if items.empty?
+            puts task_name ? "No todo items for task '#{task_name}'." : "No todo items found."
+          else
+            puts tm.list(items)
+          end
+        end
+
+        h.add_subcmd(:list) { |*args| h.run_subcmd(:ls, *args) }
+
+        h.add_subcmd(:add) do |*add_args|
+          if add_args.empty?
+            new_items = tm.edit_items(task_info: task_info)
+            if new_items.empty?
+              puts "No items added."
+              next
+            end
+            tm.add_items(new_items)
+            if new_items.length == 1
+              puts "Added: #{tm.format_item(new_items.first)}"
+            else
+              puts "Added #{new_items.length} items:"
+              new_items.each { |item| puts "  #{tm.format_item(item)}" }
+            end
+            next
+          end
+
+          opts = Hiiro::Options.parse(add_args) do
+            option :tags, short: 't', desc: 'Tags for the item'
+          end
+          text = opts.args.join(' ')
+          item = tm.add(text, tags: opts.tags, task_info: task_info)
+          puts "Added: #{tm.format_item(item)}"
+        end
+
+        h.add_subcmd(:rm) do |id_or_index=nil|
+          unless id_or_index
+            puts "Usage: todo rm <id>"
+            next
+          end
+          item = tm.remove(id_or_index)
+          puts item ? "Removed: #{item.text}" : "Item not found: #{id_or_index}"
+        end
+
+        h.add_subcmd(:remove) { |*args| h.run_subcmd(:rm, *args) }
+
+        { start: 'Started', done: 'Done', skip: 'Skipped' }.each do |cmd, label|
+          h.add_subcmd(cmd) do |id_or_index=nil|
+            unless id_or_index
+              puts "Usage: todo #{cmd} <id>"
+              next
+            end
+            item = tm.send(cmd, id_or_index)
+            puts item ? "#{label}: #{tm.format_item(item)}" : "Item not found: #{id_or_index}"
+          end
+        end
+
+        h.add_subcmd(:search) do |*search_args|
+          query = search_args.join(' ')
+          if query.empty?
+            puts "Usage: todo search <query>"
+            next
+          end
+          items = tm.search(query)
+          if items.empty?
+            puts "No items matching: #{query}"
+          else
+            puts tm.list(items)
+          end
+        end
+      end
+    end
+
     # --- List display ---
 
     def list(items_to_show = nil, show_all: false)

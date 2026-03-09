@@ -1,8 +1,10 @@
 require 'yaml'
 require 'fileutils'
+require_relative 'yaml_config'
 
 class Hiiro
   class RunnerTool
+    include YamlConfig
     CONFIG_FILE = File.join(Dir.home, '.config', 'hiiro', 'tools.yml')
 
     KNOWN_CHANGE_SETS = %w[dirty branch all].freeze
@@ -19,14 +21,7 @@ class Hiiro
     end
 
     def find_tool(name)
-      configs = tools
-      names = configs.keys.map { |k| OpenStruct.new(name: k) }
-      result = Hiiro::Matcher.new(names, :name).by_prefix(name)
-      match = result.resolved || result.first
-      return nil unless match
-
-      tool_name = match.item.name
-      { name: tool_name, **symbolize_keys(configs[tool_name]) }
+      find_by_name(name)
     end
 
     def find_tools(tool_type: nil, file_type_group: nil)
@@ -236,16 +231,6 @@ class Hiiro
 
     private
 
-    def load_config
-      return {} unless File.exist?(config_file)
-      YAML.safe_load_file(config_file, permitted_classes: [Symbol]) || {}
-    end
-
-    def save_config(data)
-      FileUtils.mkdir_p(File.dirname(config_file))
-      File.write(config_file, YAML.dump(data))
-    end
-
     def filter_files_for_tool(files, cfg)
       return files unless files
 
@@ -258,8 +243,5 @@ class Hiiro
       }
     end
 
-    def symbolize_keys(hash)
-      hash.each_with_object({}) { |(k, v), h| h[k.to_sym] = v }
-    end
   end
 end

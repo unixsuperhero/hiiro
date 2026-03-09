@@ -53,15 +53,10 @@ class Hiiro
 
     def task_preview(name, status)
       path = File.join(queue_dirs[status], "#{name}.md")
-      return nil unless File.exist?(path)
+      prompt = Prompt.from_file(path)
+      return nil unless prompt
 
-      lines = File.readlines(path, chomp: true)
-      # Skip frontmatter
-      if lines.first == '---'
-        end_idx = lines[1..].index('---')
-        lines = lines[(end_idx + 2)..] if end_idx
-      end
-      first = lines&.find { |l| !l.strip.empty? }&.strip
+      first = prompt.body.lines.find { |l| !l.strip.empty? }&.strip
       return nil unless first
 
       first.length > 60 ? "| #{first[0, 57]}..." : "| #{first}"
@@ -91,23 +86,8 @@ class Hiiro
 
       prompt_obj = Prompt.from_file(running_md, hiiro: hiiro)
 
-      # Determine target tmux session and working directory from frontmatter
-      target_session = TMUX_SESSION
-      working_dir = Dir.pwd
-
-      if prompt_obj
-        if prompt_obj.task
-          target_session = prompt_obj.task.session_name
-          tree = prompt_obj.task.tree
-          working_dir = tree.path if tree
-        elsif prompt_obj.session
-          target_session = prompt_obj.session.name
-        end
-
-        if prompt_obj.tree
-          working_dir = prompt_obj.tree.path
-        end
-      end
+      target_session = prompt_obj&.target_session || TMUX_SESSION
+      working_dir = prompt_obj&.working_dir || Dir.pwd
 
       # Ensure the target session exists
       unless system('tmux', 'has-session', '-t', target_session, out: File::NULL, err: File::NULL)
@@ -115,10 +95,8 @@ class Hiiro
       end
 
       # Write a clean prompt file (no frontmatter) for claude
-      raw = File.read(running_md).strip
-      prompt_body = prompt_obj ? prompt_obj.doc.content.strip : strip_frontmatter(raw)
       prompt_file = File.join(dirs[:running], "#{name}.prompt")
-      File.write(prompt_file, prompt_body + "\n")
+      File.write(prompt_file, prompt_obj.body + "\n")
 
       # Write a launcher script
       script_path = File.join(dirs[:running], "#{name}.sh")
@@ -154,18 +132,14 @@ class Hiiro
       system('tmux', 'new-window', '-d', '-t', target_session, '-n', win_name, '-c', working_dir, script_path)
 
       # Write meta sidecar
-      meta = {
+      meta_data = {
         'tmux_session' => target_session,
         'tmux_window' => win_name,
         'started_at' => Time.now.iso8601,
         'working_dir' => working_dir,
       }
-      if prompt_obj
-        meta['task_name'] = prompt_obj.task_name if prompt_obj.task_name
-        meta['tree_name'] = prompt_obj.tree_name if prompt_obj.tree_name
-        meta['session_name'] = prompt_obj.session_name if prompt_obj.session_name
-      end
-      File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
+      meta_data.merge!(prompt_obj.meta) if prompt_obj
+      File.write(File.join(dirs[:running], "#{name}.meta"), meta_data.to_yaml)
 
       puts "Launched: #{name} [#{target_session}:#{win_name}]"
     end
@@ -215,14 +189,6 @@ class Hiiro
       end
     end
 
-    def strip_frontmatter(text)
-      lines = text.lines
-      return text unless lines.first&.strip == '---'
-      end_idx = lines[1..].index { |l| l.strip == '---' }
-      return text unless end_idx
-      lines[(end_idx + 2)..].join.strip
-    end
-
     def short_window_name(name)
       base = name[0, 8]
       return base unless existing_window_name?(base)
@@ -238,6 +204,18 @@ class Hiiro
     def existing_window_name?(wname)
       windows = `tmux list-windows -a -F '#\{window_name\}' 2>/dev/null`.lines(chomp: true)
       windows.include?(wname)
+    end
+
+    def frontmatter_template(task_info)
+      return nil unless task_info
+
+      fm_lines = ["---"]
+      fm_lines << "task_name: #{task_info[:task_name]}" if task_info[:task_name]
+      fm_lines << "tree_name: #{task_info[:tree_name]}" if task_info[:tree_name]
+      fm_lines << "session_name: #{task_info[:session_name]}" if task_info[:session_name]
+      fm_lines << "---"
+      fm_lines << ""
+      fm_lines.join("\n")
     end
 
     def slugify(text)
@@ -340,27 +318,7 @@ class Hiiro
         }
 
         h.add_subcmd(:list) {
-          tasks = q.all_tasks
-          if tasks.empty?
-            puts "No tasks"
-            next
-          end
-          tasks.each do |t|
-            line = "%-10s %s" % [t[:status], t[:name]]
-            meta = q.meta_for(t[:name], t[:status].to_sym)
-            if meta && t[:status] == 'running'
-              started = meta['started_at']
-              if started
-                elapsed = Time.now - Time.parse(started)
-                mins = (elapsed / 60).to_i
-                line += "  (#{mins}m)"
-              end
-              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
-            end
-            preview = q.task_preview(t[:name], t[:status].to_sym)
-            line += "  #{preview}" if preview
-            puts line
-          end
+          h.run_subcmd(:ls)
         }
 
         h.add_subcmd(:status) {
@@ -441,16 +399,8 @@ class Hiiro
           elsif args.any?
             content = args.join(' ')
           else
-            # Pre-fill with frontmatter template if task_info is available
-            if ti
-              fm_lines = ["---"]
-              fm_lines << "task_name: #{ti[:task_name]}" if ti[:task_name]
-              fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
-              fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
-              fm_lines << "---"
-              fm_lines << ""
-              tmpfile.write(fm_lines.join("\n"))
-            end
+            fm = q.frontmatter_template(ti)
+            tmpfile.write(fm) if fm
 
             tmpfile.close
             editor = ENV['EDITOR'] || 'vim'
@@ -497,16 +447,8 @@ class Hiiro
           path = File.join(q.queue_dirs[:wip], "#{name}.md")
 
           unless File.exist?(path)
-            # Pre-fill with frontmatter if task_info available
-            if ti
-              fm_lines = ["---"]
-              fm_lines << "task_name: #{ti[:task_name]}" if ti[:task_name]
-              fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
-              fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
-              fm_lines << "---"
-              fm_lines << ""
-              File.write(path, fm_lines.join("\n"))
-            end
+            fm = q.frontmatter_template(ti)
+            File.write(path, fm) if fm
           end
 
           system(editor, path)
@@ -616,14 +558,13 @@ class Hiiro
         new(FrontMatterParser::Parser.parse_file(path), hiiro:)
       end
 
-      attr_reader :hiiro, :doc, :frontmatter, :prompt
+      attr_reader :hiiro, :doc, :frontmatter
       attr_reader :task_name, :tree_name, :session_name
 
       def initialize(doc, hiiro: nil)
         @hiiro = hiiro
         @doc = doc
         @frontmatter = doc.front_matter
-        @prompt = prompt
 
         @task_name = doc.front_matter['task_name']
         @tree_name = doc.front_matter['tree_name']
@@ -643,6 +584,38 @@ class Hiiro
       def tree
         return nil unless tree_name
         hiiro&.environment&.find_tree(tree_name)
+      end
+
+      def target_session
+        if task
+          task.session_name
+        elsif session
+          session.name
+        else
+          nil
+        end
+      end
+
+      def working_dir
+        if tree
+          tree.path
+        elsif task&.tree
+          task.tree.path
+        else
+          nil
+        end
+      end
+
+      def body
+        doc.content.strip
+      end
+
+      def meta
+        h = {}
+        h['task_name'] = task_name if task_name
+        h['tree_name'] = tree_name if tree_name
+        h['session_name'] = session_name if session_name
+        h
       end
     end
   end

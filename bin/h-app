@@ -182,26 +182,7 @@ Hiiro.run(*ARGV) {
     puts "Removed app '#{app_name}' (was: #{removed_path})"
   }
 
-  add_subcmd(:remove) { |app_name=nil|
-    if app_name.nil? || app_name.empty?
-      puts "Usage: h app remove <app_name>"
-      next
-    end
-
-    apps = load_apps
-
-    unless apps.key?(app_name)
-      puts "App '#{app_name}' not found"
-      puts
-      puts "Available apps:"
-      apps.each { |name, path| puts format("  %-20s => %s", name, path) }
-      next
-    end
-
-    removed_path = apps.delete(app_name)
-    save_apps(apps)
-    puts "Removed app '#{app_name}' (was: #{removed_path})"
-  }
+  add_subcmd(:remove) { |*args| run_subcmd(:rm, *args) }
 
   add_subcmd(:service) do |*svc_args|
     sm = Hiiro::ServiceManager.new
