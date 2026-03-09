@@ -963,11 +963,13 @@ class Hiiro
       branch = tree&.branch || (tree&.detached? ? '(detached)' : '(none)')
       session = session_name || '(none)'
 
-      format("%-25s  tree: %-20s  branch: %-20s  session: %s",
+      branch_str = "[#{branch}]"
+      session_str = "(#{session})"
+      format("%-25s  %-25s  %-30s  %s",
              display_name,
              tree_name || '(none)',
-             branch,
-             session)
+             branch_str,
+             session_str)
     end
   end
 
