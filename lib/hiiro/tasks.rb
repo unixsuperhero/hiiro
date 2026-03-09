@@ -185,17 +185,21 @@ class Hiiro
       puts "#{label}:"
       puts
 
+      # Build a session→tty map once so we can show which terminal tab each session
+      # is attached in (e.g. "@s000" for Ghostty tab using ttys000).
+      client_map = TmuxSession.client_map
+
       # Collect rows as {prefix, name, tree, branch, session} so we can
       # compute max column widths before rendering.
       rows = []
       items.each do |task|
         marker = (current && current.name == task.name) ? "*" : " "
-        rows << { prefix: "#{marker} ", **task.display_data(scope: scope, environment: environment) }
+        rows << { prefix: "#{marker} ", **task.display_data(scope: scope, environment: environment, client_map: client_map) }
 
         if scope == :task
           subtasks(task).each do |st|
             sub_marker = (current && current.name == st.name) ? "*" : " "
-            rows << { prefix: "#{sub_marker} - ", **st.display_data(scope: :subtask, environment: environment) }
+            rows << { prefix: "#{sub_marker} - ", **st.display_data(scope: :subtask, environment: environment, client_map: client_map) }
           end
         end
       end
@@ -233,7 +237,9 @@ class Hiiro
           puts
           extra_name_col = [extra_sessions.map { |s| s.name.length }.max, name_col].max
           extra_sessions.sort_by(&:name).each do |session|
-            puts format("  %-#{extra_name_col}s  (tmux session)", session.name)
+            tty = client_map[session.name]
+            suffix = tty ? " @#{tty.sub('ttys', 's')}" : ""
+            puts format("  %-#{extra_name_col}s  (tmux session%s)", session.name, suffix)
           end
         end
       end
@@ -885,6 +891,16 @@ class Hiiro
       output.lines(chomp: true).map { |name| new(name) }
     end
 
+    # Returns { session_name => "ttysXXX" } for sessions with attached clients.
+    # The tty identifies which terminal tab (e.g. Ghostty tab) the client is in.
+    def self.client_map
+      output = `tmux list-clients -F '\#{client_tty}|\#{session_name}' 2>/dev/null`
+      output.lines(chomp: true).each_with_object({}) do |line, map|
+        tty, session = line.split('|', 2)
+        map[session] ||= tty.delete_prefix('/dev/')
+      end
+    end
+
     def initialize(name)
       @name = name
     end
@@ -989,15 +1005,18 @@ class Hiiro
       h
     end
 
-    def display_data(scope: :task, environment:)
+    def display_data(scope: :task, environment:, client_map: {})
       display_name = (scope == :subtask) ? short_name : name
       tree = environment.find_tree(tree_name)
       branch = tree&.branch || (tree&.detached? ? '(detached)' : '(none)')
+      sname = session_name || '(none)'
+      tty = client_map[sname]
+      session_str = tty ? "#{sname} @#{tty.sub('ttys', 's')}" : sname
       {
         name:    display_name,
         tree:    tree_name || '(none)',
         branch:  "[#{branch}]",
-        session: "(#{session_name || '(none)'})"
+        session: "(#{session_str})"
       }
     end
   end
