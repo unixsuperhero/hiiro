@@ -225,6 +225,18 @@ class Hiiro
           puts format("  %-#{avail_name_col}s  (available)  %s", tree.name, branch_str).rstrip
         end
       end
+
+      if scope == :task
+        task_session_names = environment.all_tasks.map(&:session_name)
+        extra_sessions = environment.all_sessions.reject { |s| task_session_names.include?(s.name) }
+        if extra_sessions.any?
+          puts
+          extra_name_col = [extra_sessions.map { |s| s.name.length }.max, name_col].max
+          extra_sessions.sort_by(&:name).each do |session|
+            puts format("  %-#{extra_name_col}s  (tmux session)", session.name)
+          end
+        end
+      end
     end
 
     def status
