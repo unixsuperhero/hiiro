@@ -1127,6 +1127,68 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     puts "Added #{added} PR(s) to tracking."
   end
 
+  add_subcmd(:attach) do |ref = nil|
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+
+    pinned = pinned_manager.load_pinned
+    pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
+
+    unless pr
+      puts "PR ##{pr_number} not in pinned list — run 'h pr update' first"
+      next
+    end
+
+    branch = pr['headRefName']
+    task_name = pr['task']
+
+    unless branch
+      puts "PR ##{pr_number} has no branch info"
+      next
+    end
+
+    # Resolve task session and working directory
+    target_session = nil
+    working_dir = Dir.pwd
+
+    if task_name
+      env = Environment.current rescue nil
+      task = env&.find_task(task_name)
+      if task
+        target_session = task.session_name
+        tree = task.tree
+        working_dir = tree.path if tree
+      end
+    end
+
+    unless target_session && system('tmux', 'has-session', '-t', target_session, out: File::NULL, err: File::NULL)
+      puts "Task '#{task_name || '(none)'}' has no active tmux session"
+      next
+    end
+
+    # Write a launcher: commit WIP if dirty, checkout the PR branch, then drop into shell
+    script_path = "/tmp/h-pr-attach-#{pr_number}.sh"
+    File.write(script_path, <<~SH)
+      #!/usr/bin/env bash
+      cd #{Shellwords.shellescape(working_dir)}
+
+      if [ -n "$(git status --porcelain)" ]; then
+        git add -A
+        git commit -m "WIP"
+        echo ""
+        echo "WIP COMMIT: ALL UNCOMMITTED CHANGES HAVE BEEN COMMITTED BEFORE SWITCHING BRANCHES"
+        echo ""
+      fi
+
+      git checkout #{Shellwords.shellescape(branch)}
+      exec #{Shellwords.shellescape(ENV['SHELL'] || 'zsh')}
+    SH
+    FileUtils.chmod(0755, script_path)
+
+    system('tmux', 'new-window', '-t', target_session, '-c', working_dir, script_path)
+    system('tmux', 'switch-client', '-t', target_session)
+  end
+
   add_subcmd(:track) do
     pr_info = pinned_manager.fetch_current_branch_pr
     unless pr_info
