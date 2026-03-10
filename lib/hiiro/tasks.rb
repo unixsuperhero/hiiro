@@ -716,6 +716,7 @@ class Hiiro
           if task_name.nil?
             task_name = tm.select_task_interactive
             next unless task_name
+            task_name = task_name[:name]
           end
           task = tm.task_by_name(task_name)
           tm.stop_task(task)
