@@ -419,10 +419,7 @@ class Hiiro
 
         h.add_subcmd(:session) {
           work_dir = File.expand_path('~/work')
-          unless system('tmux', 'has-session', '-t', TMUX_SESSION, out: File::NULL, err: File::NULL)
-            system('tmux', 'new-session', '-d', '-s', TMUX_SESSION, '-c', work_dir)
-          end
-          system('tmux', 'switch-client', '-t', TMUX_SESSION)
+          Tmux.open_session(TMUX_SESSION, start_directory: work_dir)
         }
 
         h.add_subcmd(:add) { |*args|
@@ -454,7 +451,9 @@ class Hiiro
 
             tmpfile.close
             editor = ENV['EDITOR'] || 'vim'
-            system(editor, tmpfile.path)
+            editor_args = [editor]
+            editor_args << '+$' if editor.include?('vim')
+            system(*editor_args, tmpfile.path)
             content = File.read(tmpfile.path).strip
             tmpfile.unlink
             if content.empty?
@@ -509,7 +508,9 @@ class Hiiro
             end
           end
 
-          system(editor, path)
+          editor_args = [editor]
+          editor_args << '+$' if editor.include?('vim')
+          system(*editor_args, path)
         }
 
         h.add_subcmd(:ready) { |name = nil|

@@ -125,12 +125,12 @@ class Hiiro
 
     def attach_session(name)
       resolved = find_session(name)&.name || name.to_s.tr('.', '_')
-      run_system('attach-session', '-t', resolved)
+      run_system('attach-session', '-t', "=#{resolved}")
     end
 
     def switch_client(name)
       resolved = find_session(name)&.name || name.to_s.tr('.', '_')
-      run_system('switch-client', '-t', resolved)
+      run_system('switch-client', '-t', "=#{resolved}")
     end
 
     def detach_client(session: nil)
