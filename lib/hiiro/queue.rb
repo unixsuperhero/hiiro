@@ -97,7 +97,7 @@ class Hiiro
 
       if prompt_obj
         if prompt_obj.task
-          target_session = prompt_obj.task.session_name
+          target_session = prompt_obj.session_name
           tree = prompt_obj.task.tree
           working_dir = tree.path if tree
         elsif prompt_obj.session
@@ -618,17 +618,29 @@ class Hiiro
       end
 
       attr_reader :hiiro, :doc, :frontmatter, :prompt
-      attr_reader :task_name, :tree_name, :session_name
 
       def initialize(doc, hiiro: nil)
         @hiiro = hiiro
         @doc = doc
         @frontmatter = doc.front_matter
         @prompt = prompt
+      end
 
-        @task_name = doc.front_matter['task_name']
-        @tree_name = doc.front_matter['tree_name']
-        @session_name = doc.front_matter['session_name']
+      def task_name
+        doc.front_matter['task_name']
+      end
+
+      def tree_name
+        doc.front_matter['tree_name'].tap do |tname|
+          puts tree_name: tname
+          puts task_tree: task&.tree
+          puts task_tree_name: task&.tree_name
+          puts task_tree_path: task&.tree&.path
+        end
+      end
+
+      def session_name
+        doc.front_matter['session_name'] || task&.session_name
       end
 
       def task
