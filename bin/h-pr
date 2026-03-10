@@ -888,6 +888,10 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned_manager.refresh_all_status(pinned, force: force)
     pinned_manager.save_pinned(pinned)
     puts "Done."
+
+    puts
+    run_subcmd(:ls)
+
   end
 
   add_subcmd(:green) do |*green_args|
