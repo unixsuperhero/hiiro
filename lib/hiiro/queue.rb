@@ -40,6 +40,50 @@ class Hiiro
       Dir.glob(File.join(dir, '*.md')).sort.map { |f| File.basename(f, '.md') }
     end
 
+    def tasks_in_sorted(status)
+      dir = queue_dirs[status]
+      Dir.glob(File.join(dir, '*.md')).map { |f|
+        { name: File.basename(f, '.md'), mtime: File.mtime(f) }
+      }.sort_by { |t| -t[:mtime].to_i }
+    end
+
+    def format_mtime(mtime)
+      now = Time.now
+      mtime.year == now.year ? mtime.strftime("%m-%d %H:%M") : mtime.strftime("%Y-%m-%d %H:%M")
+    end
+
+    def list_lines(all: false)
+      lines = []
+      STATUSES.each do |status|
+        tasks = tasks_in_sorted(status.to_sym)
+        next if tasks.empty?
+
+        display = all ? tasks : tasks.first(10)
+        display.each do |t|
+          ts = format_mtime(t[:mtime])
+          line = "%-10s %-12s %s" % [status, ts, t[:name]]
+          meta = meta_for(t[:name], status.to_sym)
+          if meta && status == 'running'
+            started = meta['started_at']
+            if started
+              elapsed = Time.now - Time.parse(started)
+              mins = (elapsed / 60).to_i
+              line += "  (#{mins}m)"
+            end
+            line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
+          end
+          preview = task_preview(t[:name], status.to_sym)
+          line += "  #{preview}" if preview
+          lines << line
+        end
+
+        if !all && tasks.size > 10
+          lines << "  ... and #{tasks.size - 10} more"
+        end
+      end
+      lines
+    end
+
     def all_tasks
       STATUSES.flat_map do |status|
         tasks_in(status.to_sym).map { |name| { name: name, status: status } }
@@ -315,53 +359,29 @@ class Hiiro
           end
         }
 
-        h.add_subcmd(:ls) {
-          tasks = q.all_tasks
-          if tasks.empty?
+        list_cmd = proc { |*args|
+          opts = Hiiro::Options.parse(args) do
+            flag(:all, short: :a, desc: 'Show all tasks without limit; use pager if output exceeds terminal height')
+          end
+          lines = q.list_lines(all: opts.all)
+          if lines.empty?
             puts "No tasks"
             next
           end
-          tasks.each do |t|
-            line = "%-10s %s" % [t[:status], t[:name]]
-            meta = q.meta_for(t[:name], t[:status].to_sym)
-            if meta && t[:status] == 'running'
-              started = meta['started_at']
-              if started
-                elapsed = Time.now - Time.parse(started)
-                mins = (elapsed / 60).to_i
-                line += "  (#{mins}m)"
-              end
-              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
+          if opts.all
+            terminal_lines = ENV['LINES']&.to_i || 24
+            if lines.size > terminal_lines
+              IO.popen(ENV['PAGER'] || 'less', 'w') { |io| io.puts lines }
+            else
+              puts lines
             end
-            preview = q.task_preview(t[:name], t[:status].to_sym)
-            line += "  #{preview}" if preview
-            puts line
+          else
+            puts lines
           end
         }
 
-        h.add_subcmd(:list) {
-          tasks = q.all_tasks
-          if tasks.empty?
-            puts "No tasks"
-            next
-          end
-          tasks.each do |t|
-            line = "%-10s %s" % [t[:status], t[:name]]
-            meta = q.meta_for(t[:name], t[:status].to_sym)
-            if meta && t[:status] == 'running'
-              started = meta['started_at']
-              if started
-                elapsed = Time.now - Time.parse(started)
-                mins = (elapsed / 60).to_i
-                line += "  (#{mins}m)"
-              end
-              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
-            end
-            preview = q.task_preview(t[:name], t[:status].to_sym)
-            line += "  #{preview}" if preview
-            puts line
-          end
-        }
+        h.add_subcmd(:ls, &list_cmd)
+        h.add_subcmd(:list, &list_cmd)
 
         h.add_subcmd(:status) {
           tasks = q.all_tasks
