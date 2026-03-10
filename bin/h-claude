@@ -18,6 +18,8 @@ def start_command(opts)
   escaped_args = opts.args.map(&:shellescape)
   if opts.danger
     escaped_args = ['--dangerously-skip-permissions', *escaped_args]
+  else
+    escaped_args = ['--allow-dangerously-skip-permissions', *escaped_args]
   end
   ['claude', *escaped_args, ";exec #{shell}"].join(' ')
 end

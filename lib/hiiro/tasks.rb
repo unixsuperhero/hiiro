@@ -185,8 +185,6 @@ class Hiiro
       puts "#{label}:"
       puts
 
-      # Build a session→tty map once so we can show which terminal tab each session
-      # is attached in (e.g. "@s000" for Ghostty tab using ttys000).
       client_map = TmuxSession.client_map
 
       # Collect rows as {prefix, name, tree, branch, session} so we can
@@ -194,12 +192,14 @@ class Hiiro
       rows = []
       items.each do |task|
         marker = (current && current.name == task.name) ? "*" : " "
-        rows << { prefix: "#{marker} ", **task.display_data(scope: scope, environment: environment, client_map: client_map) }
+        attach = client_map.key?(task.session_name) ? "@" : " "
+        rows << { prefix: "#{marker}#{attach} ", **task.display_data(scope: scope, environment: environment) }
 
         if scope == :task
           subtasks(task).each do |st|
             sub_marker = (current && current.name == st.name) ? "*" : " "
-            rows << { prefix: "#{sub_marker} - ", **st.display_data(scope: :subtask, environment: environment, client_map: client_map) }
+            sub_attach = client_map.key?(st.session_name) ? "@" : " "
+            rows << { prefix: "#{sub_marker}#{sub_attach} - ", **st.display_data(scope: :subtask, environment: environment) }
           end
         end
       end
@@ -237,9 +237,8 @@ class Hiiro
           puts
           extra_name_col = [extra_sessions.map { |s| s.name.length }.max, name_col].max
           extra_sessions.sort_by(&:name).each do |session|
-            tty = client_map[session.name]
-            suffix = tty ? " @#{tty.sub('ttys', 's')}" : ""
-            puts format("  %-#{extra_name_col}s  (tmux session%s)", session.name, suffix)
+            attach = client_map.key?(session.name) ? "@" : " "
+            puts format(" %s %-#{extra_name_col}s  (tmux session)", attach, session.name)
           end
         end
       end
@@ -1006,18 +1005,16 @@ class Hiiro
       h
     end
 
-    def display_data(scope: :task, environment:, client_map: {})
+    def display_data(scope: :task, environment:)
       display_name = (scope == :subtask) ? short_name : name
       tree = environment.find_tree(tree_name)
       branch = tree&.branch || (tree&.detached? ? '(detached)' : '(none)')
       sname = session_name || '(none)'
-      tty = client_map[sname]
-      session_str = tty ? "#{sname} @#{tty.sub('ttys', 's')}" : sname
       {
         name:    display_name,
         tree:    tree_name || '(none)',
         branch:  "[#{branch}]",
-        session: "(#{session_str})"
+        session: "(#{sname})"
       }
     end
   end
