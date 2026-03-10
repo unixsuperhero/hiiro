@@ -116,7 +116,7 @@ class Hiiro
 
       # Write a clean prompt file (no frontmatter) for claude
       raw = File.read(running_md).strip
-      prompt_body = prompt_obj ? prompt_obj.doc.content.strip : strip_frontmatter(raw)
+      prompt_body = prompt_obj ? strip_frontmatter(prompt_obj.doc.content.strip) : strip_frontmatter(raw)
       prompt_file = File.join(dirs[:running], "#{name}.prompt")
       File.write(prompt_file, prompt_body + "\n")
 
@@ -462,7 +462,7 @@ class Hiiro
             end
           end
 
-          result = q.add_with_frontmatter(content, task_info:)
+          result = q.add_with_frontmatter(content, task_info: ti)
           if result
             puts "Created: #{result[:path]}"
           else
