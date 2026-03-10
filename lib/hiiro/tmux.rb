@@ -199,12 +199,22 @@ class Hiiro
 
     # Pane methods
 
-    def split_window(horizontal: false, target: nil, start_directory: nil)
+    def vsplit_window(**kwargs)
+      split_window(horizontal: false, **kwargs)
+    end
+
+    def hsplit_window(**kwargs)
+      split_window(horizontal: true, **kwargs)
+    end
+
+    def split_window(horizontal: false, target: nil, start_directory: nil, size: nil, command: nil)
       args = ['split-window']
       args << '-h' if horizontal
       args << '-v' unless horizontal
       args += ['-t', target] if target
       args += ['-c', start_directory] if start_directory
+      args += ['-l', size] if size
+      args << command if command
       run_system(*args)
     end
 
@@ -216,8 +226,11 @@ class Hiiro
       run_system('select-pane', '-t', target)
     end
 
-    def swap_current_pane(dst=0)
-      run_system('swap-pane', '-t', dst&.to_s)
+    def swap_current_pane(dst=0, keep_active: false)
+      args = ['swap-pane']
+      args << '-d' if keep_active
+      args += ['-t', dst&.to_s]
+      run_system(*args)
     end
 
     def swap_pane(src, dst)

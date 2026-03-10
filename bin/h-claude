@@ -25,56 +25,31 @@ end
 Hiiro.run(*ARGV, plugins: [Pins]) {
   add_subcmd(:split) { |*args|
     opts = opts.parse(args)
-    direction = opts.horizontal ? '-v' : '-h'
 
     size = opts.size || '40'
     size += '%' if opts.percent
 
-    system('tmux', 'split-window', direction, '-l', size, start_command(opts))
+    tmux_client.split_window(horizontal: !opts.horizontal, size: size, command: start_command(opts))
   }
 
   add_subcmd(:vsplit) { |*args|
-    cmd = %w[
-      tmux split-window -h
-    ]
-
     opts = opts.parse(args)
 
-    if opts.size
-      size = opts.size
-      size += '%' if opts.percent
+    size = opts.size
+    size += '%' if size && opts.percent
 
-      cmd << '-l'
-      cmd << size
-    end
-
-    system(*cmd, start_command(opts))
-
-    if opts.left
-      system('tmux', 'swap-pane', '-d', '-t', '0')
-    end
+    tmux_client.vsplit_window(size: size, command: start_command(opts))
+    tmux_client.swap_current_pane(0, keep_active: true) if opts.left
   }
 
   add_subcmd(:hsplit) { |*args|
-    cmd = %w[
-      tmux split-window -v
-    ]
-
     opts = opts.parse(args)
 
-    if opts.size
-      size = opts.size
-      size += '%' if opts.percent
+    size = opts.size
+    size += '%' if size && opts.percent
 
-      cmd << '-l'
-      cmd << size
-    end
-
-    system(*cmd, start_command(opts))
-
-    unless opts.bottom
-      system('tmux', 'swap-pane', '-d', '-t', '0')
-    end
+    tmux_client.hsplit_window(size: size, command: start_command(opts))
+    tmux_client.swap_current_pane(0, keep_active: true) unless opts.bottom
   }
 
   add_subcmd(:env) { |*args|
