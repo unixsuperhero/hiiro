@@ -199,11 +199,13 @@ class Hiiro
 
     # Pane methods
 
-    def vsplit_window(**kwargs)
+    def hsplit_window(**kwargs)
+      # tmux's horizontal/vertical is the opposite of vim's
       split_window(horizontal: false, **kwargs)
     end
 
-    def hsplit_window(**kwargs)
+    def vsplit_window(**kwargs)
+      # tmux's horizontal/vertical is the opposite of vim's
       split_window(horizontal: true, **kwargs)
     end
 
