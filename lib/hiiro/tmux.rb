@@ -216,6 +216,10 @@ class Hiiro
       run_system('select-pane', '-t', target)
     end
 
+    def swap_current_pane(dst=0)
+      run_system('swap-pane', '-t', dst&.to_s)
+    end
+
     def swap_pane(src, dst)
       run_system('swap-pane', '-s', src, '-t', dst)
     end
