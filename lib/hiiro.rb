@@ -154,6 +154,10 @@ class Hiiro
     ENV['EDITOR'] || editors.first
   end
 
+  def vim?
+    editor.to_s.match?(/vim/i)
+  end
+
   def edit_files(*files)
     if editor.match?(/vim/i)
       system(editor, '-O', *files)
