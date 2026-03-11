@@ -195,7 +195,17 @@ class PinnedPRManager
 
   def load_pinned
     ensure_file
-    YAML.load_file(PINNED_FILE) || []
+    prs = YAML.load_file(PINNED_FILE) || []
+    if prs.any? { |p| !p['slot'] }
+      next_slot = prs.map { |p| p['slot'].to_i }.max.to_i
+      prs.each do |p|
+        next if p['slot']
+        next_slot += 1
+        p['slot'] = next_slot
+      end
+      save_pinned(prs)
+    end
+    prs
   end
 
   def save_pinned(prs)
@@ -215,6 +225,7 @@ class PinnedPRManager
       existing.merge!(pr_info)
       existing['updated_at'] = Time.now.iso8601
     else
+      pr_info['slot'] = (pinned.map { |p| p['slot'].to_i }.max.to_i) + 1
       pr_info['pinned_at'] = Time.now.iso8601
       pinned << pr_info
     end
@@ -485,7 +496,7 @@ class PinnedPRManager
   end
 
   def display_pinned(pr, idx = nil)
-    num = idx ? "#{(idx + 1).to_s.rjust(3)}." : ""
+    num = idx ? "#{(pr['slot'] || idx + 1).to_s.rjust(3)}." : ""
 
     check_emoji = if pr['checks']
       c = pr['checks']
@@ -634,7 +645,11 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     if ref.to_s =~ /^\d+$/ && ref.to_i > 0
-      idx = ref.to_i - 1
+      slot = ref.to_i
+      by_slot = pinned.find { |p| p['slot'].to_i == slot }
+      return by_slot['number'].to_s if by_slot
+      # Fall back to 1-based index for unslotted data
+      idx = slot - 1
       return pinned[idx]['number'].to_s if idx < pinned.length
     end
 
@@ -688,15 +703,23 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   }
 
-  add_subcmd(:link) { |*args|
-    stdout = `gh pr view`
+  add_subcmd(:link) { |ref=nil|
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
 
-    number = stdout[/number:\s*(\d+)/, 1]
+    pinned = pinned_manager.load_pinned
+    pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
 
-    if number
-      print ['https://github.com/instacart/carrot/pull/', number].join
+    if pr && pr['url']
+      print pr['url']
     else
-      puts stdout
+      output = `gh pr view #{pr_number} --json url 2>/dev/null`
+      info = JSON.parse(output) rescue nil
+      if info&.dig('url')
+        print info['url']
+      else
+        STDERR.puts "Could not find URL for PR ##{pr_number}"
+      end
     end
   }
 
