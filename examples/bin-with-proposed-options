@@ -1,0 +1,32 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run do
+  add_option(:group, short: :g, desc: 'group name')
+  add_option(:group, short: :g, key: :group2, desc: 'group name')
+  add_flag(:verbose, short: :v, desc: 'verbose output')
+
+  add_subcmd(
+    :subcmd_name,
+    :alias_name,
+    args: [:position1_arg_name, :second_arg],
+    opts: [:group, :verbose],
+  ) do
+    # ...
+  end
+
+  add_subcmd(
+    :subcmd_name,
+    :alias_name,
+    args: [:position1_arg_name, :second_arg],
+    opts: [:group2, :verbose],  # key is to differentiate between 2 options or
+                                # flags with the same long-name but different
+                                # description or other settings
+                                #
+                                # for example, one might be a flag, the other an
+                                # option
+  ) do
+    # ...
+  end
+end
