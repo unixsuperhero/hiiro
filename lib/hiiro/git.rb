@@ -150,7 +150,7 @@ class Hiiro
       else
         run_system('-C', path, 'sparse-checkout', 'init')
       end
-      run_system('-C', path, 'sparse-checkout', 'set', *dirs)
+      run_system('-C', path, 'sparse-checkout', 'set', '--skip-checks', *dirs)
     end
 
     # Remote convenience methods
