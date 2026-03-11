@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run(tasks: true) do
+  env = hiiro.environment
+
+  add_subcmd(:fix) do |db,*tables|
+    task = env.task
+    path = task&.path
+    matches = Dir.glob(File.join(path, ['.pgsync-', db, '*.y*ml'].join))
+    match = matches.first
+
+    if matches == 0
+      puts 'No matching db found'
+      exit 1
+    end
+
+    if matches > 1
+      match = fuzzyfind(matches)
+    end
+
+    lines = File.readlines(match, chomp: true)
+
+    binding.pry
+  rescue => e
+    binding.pry
+  end
+end

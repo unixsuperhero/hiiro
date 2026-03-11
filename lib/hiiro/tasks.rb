@@ -988,6 +988,10 @@ class Hiiro
       tree&.branch
     end
 
+    def path
+      tree&.path
+    end
+
     def ==(other)
       other.is_a?(Task) && name == other.name
     end
