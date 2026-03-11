@@ -675,7 +675,16 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    pinned_manager.pin(pr_info)
+    context = {}
+    env = Environment.current rescue nil
+    if env
+      task = env.task
+      context['task']         = task.name      if task
+      context['worktree']     = task.tree_name if task&.tree_name
+      context['tmux_session'] = env.session&.name
+    end
+
+    pinned_manager.pin(pr_info.merge(context))
     puts "Now tracking ##{pr_info['number']}: #{pr_info['title']}"
   end
 
@@ -1024,6 +1033,156 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     else
       puts "PR ##{pr_number} was not tracked"
     end
+  end
+
+  # === PR State ===
+
+  add_subcmd(:ready) do |ref = nil|
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+    system('gh', 'pr', 'ready', pr_number.to_s)
+  end
+
+  add_subcmd(:'to-draft') do |ref = nil|
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+    system('gh', 'pr', 'ready', '--draft', pr_number.to_s)
+  end
+
+  # === PR Actions ===
+
+  add_subcmd(:diff) do |ref = nil|
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+    system('gh', 'pr', 'diff', pr_number.to_s)
+  end
+
+  add_subcmd(:checkout) do |ref = nil|
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+    system('gh', 'pr', 'checkout', pr_number.to_s)
+  end
+
+  add_subcmd(:merge) do |ref = nil, *merge_args|
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+    system('gh', 'pr', 'merge', pr_number.to_s, *merge_args)
+  end
+
+  add_subcmd(:comment) do |ref = nil|
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+
+    tmpfile = Tempfile.new(['pr-comment-', '.md'])
+    tmpfile.close
+    edit_files(tmpfile.path)
+
+    body = File.read(tmpfile.path).strip
+    tmpfile.unlink
+
+    if body.empty?
+      puts "Aborted: empty comment"
+      next
+    end
+
+    system('gh', 'pr', 'comment', pr_number.to_s, '--body', body)
+  end
+
+  # === Comment Templates ===
+
+  TEMPLATES_DIR = File.join(Dir.home, '.config', 'hiiro', 'pr_templates')
+
+  add_subcmd(:templates) do
+    FileUtils.mkdir_p(TEMPLATES_DIR)
+    files = Dir.glob(File.join(TEMPLATES_DIR, '*.md')).sort
+
+    if files.empty?
+      puts "No templates found. Use 'h pr new-template <name>' to create one."
+      next
+    end
+
+    puts "Comment templates:"
+    puts
+    files.each do |f|
+      name = File.basename(f, '.md')
+      first_line = File.readlines(f).first&.strip || ''
+      puts "  #{name.ljust(20)}  #{first_line}"
+    end
+  end
+
+  add_subcmd(:'new-template') do |name = nil|
+    FileUtils.mkdir_p(TEMPLATES_DIR)
+
+    unless name
+      STDERR.puts "Usage: h pr new-template <name>"
+      next
+    end
+
+    path = File.join(TEMPLATES_DIR, "#{name}.md")
+
+    if File.exist?(path)
+      puts "Template '#{name}' already exists, opening for edit..."
+    end
+
+    edit_files(path)
+    puts "Template saved: #{path}"
+  end
+
+  add_subcmd(:'from-template') do |ref = nil|
+    FileUtils.mkdir_p(TEMPLATES_DIR)
+    files = Dir.glob(File.join(TEMPLATES_DIR, '*.md')).sort
+
+    if files.empty?
+      STDERR.puts "No templates found. Use 'h pr new-template <name>' to create one."
+      next
+    end
+
+    template_map = files.each_with_object({}) do |f, h|
+      name = File.basename(f, '.md')
+      first_line = File.readlines(f).first&.strip || ''
+      h["#{name.ljust(20)}  #{first_line}"] = f
+    end
+
+    template_path = fuzzyfind_from_map(template_map)
+    next unless template_path
+
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+
+    body = File.read(template_path).strip
+    system('gh', 'pr', 'comment', pr_number.to_s, '--body', body)
+  end
+
+  # === PR List by Context ===
+
+  add_subcmd(:'for-task') do |task_name = nil|
+    tracked = pinned_manager.load_pinned
+
+    if tracked.empty?
+      puts "No tracked PRs"
+      next
+    end
+
+    task_name ||= begin
+      env = Environment.current rescue nil
+      env&.task&.name
+    end
+
+    unless task_name
+      STDERR.puts "Not in a task context. Pass a task name: h pr for-task <name>"
+      next
+    end
+
+    matches = tracked.select { |pr| pr['task'] == task_name }
+
+    if matches.empty?
+      puts "No tracked PRs for task '#{task_name}'"
+      next
+    end
+
+    puts "PRs for task '#{task_name}':"
+    puts
+    matches.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
   end
 
 end
