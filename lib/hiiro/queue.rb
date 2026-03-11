@@ -458,6 +458,11 @@ class Hiiro
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
 
+          if opts.session && ENV['TMUX']
+            session_name = `tmux display-message -p '#S'`.strip
+            ti = (ti || {}).merge(session_name: session_name)
+          end
+
           tmpfile = Tempfile.new(['hq-', '.md'])
           prompt_file = tmpfile.path
           if args.empty? && !$stdin.tty?
@@ -477,7 +482,11 @@ class Hiiro
             end
 
             tmpfile.close
-            h.edit_files(tmpfile.path)
+            if h.vim?
+              system(h.editor, '+$', tmpfile.path)
+            else
+              system(h.editor, tmpfile.path)
+            end
             content = File.read(tmpfile.path).strip
             tmpfile.unlink
             if content.empty?
