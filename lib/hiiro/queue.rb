@@ -323,11 +323,18 @@ class Hiiro
         h.add_subcmd(:watch) {
           q.queue_dirs
           current_version = Gem.loaded_specs['hiiro']&.version&.to_s
+          puts current_version:;
           puts "Watching #{File.join(DIR, 'pending')} ..."
           puts "Press Ctrl-C to stop"
+          loops = 0
           loop do
+            loops += 1
             if current_version
               latest = Gem::Specification.find_by_name('hiiro')&.version&.to_s rescue nil
+              if loops % 50 == 0
+                puts current_version:, latest:;
+              end
+
               if latest && latest != current_version
                 puts "New hiiro version detected (#{latest}), restarting..."
                 exec('h', 'queue', 'watch')
