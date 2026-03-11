@@ -143,6 +143,10 @@ class Hiiro
       run_system('worktree', 'repair')
     end
 
+    def disable_sparse_checkout(path)
+      run_system('-C', path, 'sparse-checkout', 'disable')
+    end
+
     def sparse_checkout(path, dirs, cone: true)
       if cone
         run_system('-C', path, 'sparse-checkout', 'init', '--cone')

@@ -79,6 +79,14 @@ class Hiiro
       existing = task_by_name(name)
       if existing
         puts "Task '#{existing.name}' already exists. Switching..."
+        tree_path = existing.tree&.path
+        if tree_path
+          if sparse_groups.any?
+            apply_sparse_checkout(tree_path, sparse_groups)
+          else
+            Hiiro::Git.new(nil, tree_path).disable_sparse_checkout(tree_path)
+          end
+        end
         switch_to_task(existing, app_name: app_name)
         return
       end
