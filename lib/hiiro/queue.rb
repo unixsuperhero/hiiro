@@ -458,9 +458,9 @@ class Hiiro
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
 
-          if opts.session && ENV['TMUX']
-            session_name = `tmux display-message -p '#S'`.strip
-            ti = (ti || {}).merge(session_name: session_name)
+          if opts.session
+            session_name = h.tmux_client.current_session&.name
+            ti = (ti || {}).merge(session_name: session_name) if session_name
           end
 
           tmpfile = Tempfile.new(['hq-', '.md'])
