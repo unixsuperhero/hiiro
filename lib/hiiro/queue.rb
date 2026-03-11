@@ -146,6 +146,7 @@ class Hiiro
           working_dir = tree.path if tree
         elsif prompt_obj.session
           target_session = prompt_obj.session.name
+          working_dir = prompt_obj.session.path || working_dir
         end
 
         if prompt_obj.tree
@@ -668,12 +669,7 @@ class Hiiro
       end
 
       def tree_name
-        doc.front_matter['tree_name'].tap do |tname|
-          puts tree_name: tname
-          puts task_tree: task&.tree
-          puts task_tree_name: task&.tree_name
-          puts task_tree_path: task&.tree&.path
-        end
+        doc.front_matter['tree_name']
       end
 
       def session_name
