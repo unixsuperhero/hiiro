@@ -508,9 +508,16 @@ class Hiiro
           opts = Hiiro::Options.parse(args) do
             option(:task, short: :t, desc: 'Task name')
             flag(:choose, short: :T, desc: 'Choose task interactively')
+            flag(:session, short: :s, desc: 'Use current tmux session')
           end
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
+
+          if opts.session
+            session_name = h.tmux_client.current_session&.name
+            ti = (ti || {}).merge(session_name: session_name) if session_name
+          end
+
           name = args.first
 
           if name.nil?
