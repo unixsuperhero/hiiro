@@ -3,27 +3,58 @@
 require 'hiiro'
 
 Hiiro.run(tasks: true) do
-  env = hiiro.environment
+  env = environment
 
   add_subcmd(:fix) do |db,*tables|
     task = env.task
     path = task&.path
-    matches = Dir.glob(File.join(path, ['.pgsync-', db, '*.y*ml'].join))
+
+    matches =
+      if db.nil?
+        Dir.glob(File.join(path, ['.pgsync-', '*.y*ml'].join))
+      else
+        Dir.glob(File.join(path, ['.pgsync-', db, '*.y*ml'].join))
+      end
     match = matches.first
 
-    if matches == 0
+    puts "match: #{match}"
+
+    puts "matches: #{matches.join("\n")}"
+    puts
+
+    if matches.count == 0
       puts 'No matching db found'
       exit 1
     end
 
-    if matches > 1
+    if matches.count > 1
       match = fuzzyfind(matches)
     end
 
-    lines = File.readlines(match, chomp: true)
+    puts "match: #{match}"
 
-    binding.pry
-  rescue => e
-    binding.pry
+    lines = File.readlines(match, chomp: true)
+    pieces = lines.slice_when {|l| l.match?(/\bgroups:/) }.to_a
+
+    unless pieces.count == 2
+      puts 'ERROR: no groups defined in yaml file'
+      exit 1
+    end
+
+    if tables.count == 0
+      puts 'ERROR: must provide a list of tables'
+      exit 1
+    end
+
+    pieces[0] << '  tempsync:'
+    table_lines = tables.map do |tbl|
+      "    #{tbl.strip}:"
+    end
+
+    File.write(match, [*pieces[0], *table_lines, *pieces[1]].join("\n"))
+
+    db_name = match.sub(/.*pgsync-/, '').sub(/[.].*/, '')
+    puts 'Run this command in your shell:'
+    puts "  PGSYNC_FROM_STAGING=1 pgsync tempsync --db #{db_name} --truncate --debug"
   end
 end
