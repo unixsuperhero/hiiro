@@ -146,6 +146,7 @@ class Hiiro
     def sparse_checkout(path, dirs, cone: true)
       if cone
         run_system('-C', path, 'sparse-checkout', 'init', '--cone')
+        dirs = dirs.map { |d| d.sub(%r{\A/}, '') }
       else
         run_system('-C', path, 'sparse-checkout', 'init')
       end
