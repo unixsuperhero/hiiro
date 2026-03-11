@@ -185,7 +185,7 @@ class Hiiro
       puts "#{label}:"
       puts
 
-      client_map = TmuxSession.client_map
+      client_map = Hiiro::Tmux::Session.client_map
 
       # Collect rows as {prefix, name, tree, branch, session} so we can
       # compute max column widths before rendering.
@@ -876,43 +876,6 @@ class Hiiro
     end
   end
 
-  class TmuxSession
-    attr_reader :name
-
-    def self.current
-      name = Hiiro::Tmux::Session.current&.name
-      return nil unless name
-      new(name)
-    end
-
-    def self.all
-      output = `tmux list-sessions -F '#S' 2>/dev/null`
-      output.lines(chomp: true).map { |name| new(name) }
-    end
-
-    # Returns { session_name => "ttysXXX" } for sessions with attached clients.
-    # The tty identifies which terminal tab (e.g. Ghostty tab) the client is in.
-    def self.client_map
-      output = `tmux list-clients -F '\#{client_tty}|\#{session_name}' 2>/dev/null`
-      output.lines(chomp: true).each_with_object({}) do |line, map|
-        tty, session = line.split('|', 2)
-        map[session] ||= tty.delete_prefix('/dev/')
-      end
-    end
-
-    def initialize(name)
-      @name = name
-    end
-
-    def ==(other)
-      other.is_a?(TmuxSession) && name == other.name
-    end
-
-    def to_s
-      name
-    end
-  end
-
   class Tree
     attr_reader :path, :head, :branch
 
@@ -1060,7 +1023,7 @@ class Hiiro
     end
 
     def all_sessions
-      @all_sessions ||= TmuxSession.all
+      @all_sessions ||= Hiiro::Tmux::Session.all
     end
 
     def all_trees
@@ -1099,7 +1062,7 @@ class Hiiro
     end
 
     def session
-      @session ||= TmuxSession.current
+      @session ||= Hiiro::Tmux::Session.current
     end
 
     def tree

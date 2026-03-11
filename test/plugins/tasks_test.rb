@@ -1,80 +1,87 @@
 require "test_helper"
-require_relative "../../plugins/tasks"
+
+Session = Hiiro::Tmux::Session
 
 class TmuxSessionTest < Minitest::Test
+  FORMAT_LINE = ->(id, name, path = '/home/user') {
+    "#{id}|#{name}|1|0|0|0|#{path}"
+  }
+
   def test_tmux_session_initialization
-    session = TmuxSession.new("my-session")
+    session = Session.from_format_line(FORMAT_LINE.call('$1', 'my-session'))
 
     assert_equal "my-session", session.name
   end
 
   def test_tmux_session_to_s
-    session = TmuxSession.new("dev")
+    session = Session.from_format_line(FORMAT_LINE.call('$1', 'dev'))
 
     assert_equal "dev", session.to_s
   end
 
   def test_tmux_session_equality
-    session1 = TmuxSession.new("test")
-    session2 = TmuxSession.new("test")
-    session3 = TmuxSession.new("other")
+    session1 = Session.from_format_line(FORMAT_LINE.call('$1', 'test'))
+    session2 = Session.from_format_line(FORMAT_LINE.call('$2', 'test'))
+    session3 = Session.from_format_line(FORMAT_LINE.call('$3', 'other'))
 
     assert_equal session1, session2
     refute_equal session1, session3
   end
 
   def test_tmux_session_equality_with_non_session
-    session = TmuxSession.new("test")
+    session = Session.from_format_line(FORMAT_LINE.call('$1', 'test'))
 
     refute_equal session, "test"
     refute_equal session, nil
   end
 
+  def test_tmux_session_path
+    session = Session.from_format_line(FORMAT_LINE.call('$1', 'hiiro', '/Users/josh/proj/hiiro'))
+
+    assert_equal '/Users/josh/proj/hiiro', session.path
+  end
+
   def test_current_returns_nil_when_not_in_tmux
-    original_tmux = ENV['TMUX']
-    ENV.delete('TMUX')
+    Session.stub(:`, "") do
+      result = Session.current
 
-    result = TmuxSession.current
-
-    assert_nil result
-  ensure
-    ENV['TMUX'] = original_tmux if original_tmux
+      assert_nil result
+    end
   end
 
   def test_current_returns_session_when_in_tmux
-    original_tmux = ENV['TMUX']
-    ENV['TMUX'] = '/tmp/tmux-1000/default,12345,0'
+    stub_line = FORMAT_LINE.call('$1', 'my-session', '/home/user/work')
 
-    # Stub the backtick call
-    TmuxSession.stub(:`, "my-session\n") do
-      result = TmuxSession.current
+    Session.stub(:`, stub_line) do
+      result = Session.current
 
-      assert_instance_of TmuxSession, result
+      assert_instance_of Session, result
       assert_equal "my-session", result.name
-    end
-  ensure
-    if original_tmux
-      ENV['TMUX'] = original_tmux
-    else
-      ENV.delete('TMUX')
+      assert_equal "/home/user/work", result.path
     end
   end
 
   def test_all_returns_array_of_sessions
-    TmuxSession.stub(:`, "session1\nsession2\nwork\n") do
-      sessions = TmuxSession.all
+    stub_output = [
+      FORMAT_LINE.call('$1', 'session1', '/home/user/s1'),
+      FORMAT_LINE.call('$2', 'session2', '/home/user/s2'),
+      FORMAT_LINE.call('$3', 'work',     '/home/user/work'),
+    ].join("\n")
+
+    Session.stub(:`, stub_output) do
+      sessions = Session.all
 
       assert_equal 3, sessions.count
-      assert sessions.all? { |s| s.is_a?(TmuxSession) }
+      assert sessions.all? { |s| s.is_a?(Session) }
       assert_equal "session1", sessions[0].name
       assert_equal "session2", sessions[1].name
-      assert_equal "work", sessions[2].name
+      assert_equal "work",     sessions[2].name
     end
   end
 
   def test_all_returns_empty_array_when_no_sessions
-    TmuxSession.stub(:`, "") do
-      sessions = TmuxSession.all
+    Session.stub(:`, "") do
+      sessions = Session.all
 
       assert_equal [], sessions
     end
@@ -376,7 +383,11 @@ class EnvironmentTest < Minitest::Test
   def test_session_matcher_with_stubbed_sessions
     env = Environment.new
 
-    TmuxSession.stub(:all, [TmuxSession.new("work"), TmuxSession.new("personal")]) do
+    stub_sessions = [
+      Session.from_format_line("$1|work|1|0|0|0|/home/user/work"),
+      Session.from_format_line("$2|personal|1|0|0|0|/home/user/personal"),
+    ]
+    Session.stub(:all, stub_sessions) do
       # Force reload
       env.instance_variable_set(:@all_sessions, nil)
       matcher = env.session_matcher
