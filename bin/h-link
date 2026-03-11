@@ -332,7 +332,7 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
 
   add_subcmd(:editall) do |*editall_args|
     links_before = lm.load_links
-    system(ENV['EDITOR'] || 'vim', lm.links_file)
+    edit_files(lm.links_file)
 
     begin
       links_after = lm.load_links

@@ -227,8 +227,7 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
   end
 
   add_subcmd(:editall) do |*args|
-    editor = ENV['EDITOR'] || 'safe_nvim' || 'nvim'
-    system(editor, tm.todo_file)
+    edit_files(tm.todo_file)
   end
 
   add_subcmd(:help) do |*args|

@@ -646,8 +646,7 @@ class Hiiro
           tmpfile.write(YAML.dump({ 'new_service' => template }))
           tmpfile.close
 
-          editor = ENV['EDITOR'] || 'nvim'
-          system(editor, tmpfile.path)
+          h.edit_files(tmpfile.path)
 
           begin
             data = YAML.safe_load_file(tmpfile.path, permitted_classes: [Symbol]) || {}
@@ -680,8 +679,7 @@ class Hiiro
         end
 
         h.add_subcmd(:config) do
-          editor = ENV['EDITOR'] || 'nvim'
-          system(editor, sm.config_file)
+          h.edit_files(sm.config_file)
         end
 
         h.add_subcmd(:groups) do

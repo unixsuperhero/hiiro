@@ -58,7 +58,7 @@ class Hiiro
       }
 
       hiiro.add_subcmd(:edit, **values) { |*args|
-        system(ENV['EDITOR'] || 'nvim', hiiro.bin)
+        hiiro.edit_files(hiiro.bin)
       }
 
       if hiiro.tasks_enabled?

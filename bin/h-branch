@@ -119,7 +119,7 @@ end
 Hiiro.run(*ARGV) do
   manager = BranchManager.new(self)
 
-  add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
+  add_subcmd(:edit) { edit_files(__FILE__) }
   add_subcmd(:save) { manager.save }
   add_subcmd(:current) { print `git branch --show-current` }
   add_subcmd(:info) { manager.current }

@@ -723,7 +723,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   }
 
-  add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
+  add_subcmd(:edit) { edit_files(__FILE__) }
   add_subcmd(:save) { |pr_number=nil| manager.save(pr_number) }
   add_subcmd(:current) { manager.current }
   add_subcmd(:open) { |pr_number=nil|
@@ -1132,7 +1132,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     tmpfile.write(lines.join("\n"))
     tmpfile.close
 
-    system(ENV['EDITOR'] || 'nvim', tmpfile.path)
+    edit_files(tmpfile.path)
 
     to_add = YAML.safe_load_file(tmpfile.path) || []
     tmpfile.unlink

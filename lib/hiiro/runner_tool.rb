@@ -122,11 +122,6 @@ class Hiiro
       true
     end
 
-    def edit_config
-      editor = ENV['EDITOR'] || 'nvim'
-      system(editor, config_file)
-    end
-
     def self.build_hiiro(parent_hiiro, rt, git: nil)
       parent_hiiro.make_child(:run) do |h|
         h.add_default do |*run_args|
@@ -204,8 +199,7 @@ class Hiiro
           tmpfile.write(YAML.dump({ 'new_tool' => template }))
           tmpfile.close
 
-          editor = ENV['EDITOR'] || 'nvim'
-          system(editor, tmpfile.path)
+          h.edit_files(tmpfile.path)
 
           begin
             data = YAML.safe_load_file(tmpfile.path, permitted_classes: [Symbol]) || {}
@@ -229,7 +223,7 @@ class Hiiro
         end
 
         h.add_subcmd(:config) do
-          rt.edit_config
+          h.edit_files(rt.config_file)
         end
       end
     end

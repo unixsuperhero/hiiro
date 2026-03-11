@@ -3,7 +3,7 @@
 require "hiiro"
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
-  add_subcmd(:edit) { system(ENV['EDITOR'] || 'nvim', __FILE__) }
+  add_subcmd(:edit) { edit_files(__FILE__) }
 
   add_subcmd(:select, :sk) { |*select_args|
     # Pass all args to git log, with sensible defaults

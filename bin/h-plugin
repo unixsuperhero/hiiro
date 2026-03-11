@@ -21,7 +21,7 @@ Hiiro.run(*ARGV, plugins: [Pins], dir: BASE_DIR) do
 
   add_subcmd(:edit) { |*edit_args|
     if edit_args.none?
-      system(ENV['EDITOR'] || 'safe_nvim', __FILE__)
+      edit_files(__FILE__)
     else
       pm = Hiiro::Matcher.new(plugin_files) { |f| File.basename(f) }
       plugins = edit_args.flat_map { |arg| pm.by_prefix(arg).matches.map(&:item) }.uniq
@@ -29,7 +29,7 @@ Hiiro.run(*ARGV, plugins: [Pins], dir: BASE_DIR) do
       if plugins.none?
         puts "No matching plugins found for: #{edit_args.map(&:inspect).join(' ')}"
       else
-        system(ENV['EDITOR'] || 'safe_nvim', *plugins)
+        edit_files(*plugins)
       end
     end
   }

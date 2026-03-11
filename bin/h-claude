@@ -66,8 +66,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
     else
       tmpfile = Tempfile.new(['claude-inline-', '.md'])
       tmpfile.close
-      editor = ENV['EDITOR'] || 'vim'
-      system(editor, tmpfile.path)
+      edit_files(tmpfile.path)
       prompt = File.read(tmpfile.path).strip
       tmpfile.unlink
       if prompt.empty?
@@ -80,7 +79,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
   }
 
   add_subcmd(:loop) { |*args|
-    editor = ENV['EDITOR'] || 'vim'
     separator = "-" * 72
     history = []
 
@@ -104,7 +102,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
       end
 
       tmpfile.close
-      system(editor, tmpfile.path)
+      edit_files(tmpfile.path)
       content = File.read(tmpfile.path).strip
       tmpfile.unlink
 

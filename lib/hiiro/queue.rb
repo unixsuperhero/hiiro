@@ -477,10 +477,7 @@ class Hiiro
             end
 
             tmpfile.close
-            editor = ENV['EDITOR'] || 'vim'
-            editor_args = [editor]
-            editor_args << '+$' if editor.include?('vim')
-            system(*editor_args, tmpfile.path)
+            h.edit_files(tmpfile.path)
             content = File.read(tmpfile.path).strip
             tmpfile.unlink
             if content.empty?
@@ -499,7 +496,6 @@ class Hiiro
 
         h.add_subcmd(:wip) { |*args|
           q.queue_dirs
-          editor = ENV['EDITOR'] || 'vim'
           opts = Hiiro::Options.parse(args) do
             option(:task, short: :t, desc: 'Task name')
             flag(:choose, short: :T, desc: 'Choose task interactively')
@@ -535,9 +531,7 @@ class Hiiro
             end
           end
 
-          editor_args = [editor]
-          editor_args << '+$' if editor.include?('vim')
-          system(*editor_args, path)
+          h.edit_files(path)
         }
 
         h.add_subcmd(:ready) { |name = nil|

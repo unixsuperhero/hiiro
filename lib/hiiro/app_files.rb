@@ -123,12 +123,7 @@ class Hiiro
             end
           end
 
-          editor = ENV['EDITOR'] || 'nvim'
-          if editor.match?(/vim/i)
-            system(editor, '-O', *resolved)
-          else
-            system(editor, *resolved)
-          end
+          h.edit_files(*resolved)
         end
       end
     end

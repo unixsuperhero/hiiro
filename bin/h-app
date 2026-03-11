@@ -45,8 +45,7 @@ end
 
 Hiiro.run(*ARGV) {
   add_subcmd(:config) {
-    editor = ENV['EDITOR'] || 'nvim'
-    system(editor, APPS_FILE)
+    edit_files(APPS_FILE)
   }
 
   add_subcmd(:cd) { |app_name=nil|

@@ -722,7 +722,7 @@ class Hiiro
         end
 
         h.add_subcmd(:edit) do
-          system(ENV['EDITOR'] || 'nvim', __FILE__)
+          h.edit_files(__FILE__)
         end
 
         h.add_subcmd(:todo) do |*todo_args|

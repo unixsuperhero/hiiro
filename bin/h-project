@@ -117,8 +117,6 @@ Hiiro.run(*ARGV) do
   # === EDIT CONFIG FILE ===
   add_subcmd(:edit) { |*edit_args|
     projects_file = File.join(Dir.home, '.config/hiiro', 'projects.yml')
-    editor = ENV['EDITOR'] || 'vim'
-
     # Create config dir if needed
     config_dir = File.dirname(projects_file)
     Dir.mkdir(config_dir) unless Dir.exist?(config_dir)
@@ -128,7 +126,7 @@ Hiiro.run(*ARGV) do
       File.write(projects_file, "# Project aliases\n# project_name: /path/to/project\n")
     end
 
-    exec(editor, projects_file)
+    edit_files(projects_file)
   }
 
   # === SELECT PROJECT ===

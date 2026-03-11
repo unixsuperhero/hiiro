@@ -157,7 +157,7 @@ Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
     tmpfile.write(orphan_names.to_yaml)
     tmpfile.close
 
-    system(ENV['EDITOR'] || 'nvim', tmpfile.path)
+    edit_files(tmpfile.path)
 
     to_kill = YAML.safe_load_file(tmpfile.path) || []
     tmpfile.unlink
