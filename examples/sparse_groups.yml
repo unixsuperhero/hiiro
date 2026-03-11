@@ -1,0 +1,97 @@
+# Example sparse_groups.yml
+# Place at ~/.config/hiiro/sparse_groups.yml
+#
+# Sparse checkout groups let you limit which directories are checked out in a
+# worktree. This keeps worktrees small and fast when you only need a subset of
+# a large monorepo.
+#
+# Each key is a group name. Each value is a list of directory paths (relative
+# to the repo root) that will be included in the sparse checkout.
+#
+# Usage with h task start:
+#   h task start my-task --sparse ruby
+#   h task start my-task --sparse ruby --sparse frontend
+#   h task start my-task -s ruby -s shared
+
+# =============================================================================
+# Single-service groups - check out only what one service needs
+# =============================================================================
+
+ruby:
+  - apps/api
+  - lib
+  - config
+  - db
+
+frontend:
+  - apps/web
+  - apps/mobile
+  - packages/design-system
+  - packages/shared-types
+
+graphql:
+  - services/graphql
+  - packages/shared-types
+
+workers:
+  - apps/api
+  - workers
+  - lib
+  - config
+
+# =============================================================================
+# Shared/common groups - infrastructure or tooling used by multiple services
+# =============================================================================
+
+shared:
+  - lib
+  - config
+  - scripts
+  - .github
+
+infra:
+  - terraform
+  - k8s
+  - scripts/deploy
+
+# =============================================================================
+# Compound groups - combine multiple service directories into one group.
+# Use with a single --sparse flag when you know you'll touch both sides.
+# =============================================================================
+
+# Full-stack: Ruby API + GraphQL + Web frontend (no mobile, no workers)
+fullstack:
+  - apps/api
+  - services/graphql
+  - apps/web
+  - packages/design-system
+  - packages/shared-types
+  - lib
+  - config
+  - db
+
+# Backend only: API + workers + shared lib
+backend:
+  - apps/api
+  - workers
+  - lib
+  - config
+  - db
+
+# =============================================================================
+# QUICK REFERENCE
+# =============================================================================
+#
+# Create a new task with a sparse checkout:
+#   h task start my-feature --sparse ruby
+#   h task start my-feature -s ruby -s shared
+#   h task start my-feature --sparse fullstack
+#
+# --sparse can be repeated to combine multiple groups:
+#   h task start my-feature --sparse ruby --sparse infra
+#   -> checks out: apps/api + lib + config + db + terraform + k8s + scripts/deploy
+#
+# Without --sparse, a full checkout is performed (default git behavior).
+#
+# Directories listed in a group are passed directly to git sparse-checkout.
+# All listed paths are relative to the repo root.
