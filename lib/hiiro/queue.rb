@@ -7,7 +7,7 @@ require 'tempfile'
 
 class Hiiro
   class Queue
-    DIR = File.join(Dir.home, '.config/hiiro/queue')
+    DIR = Hiiro::Config.data_path('queue')
     TMUX_SESSION = 'hq'
     STATUSES = %w[wip pending running done failed].freeze
 
@@ -289,6 +289,18 @@ class Hiiro
       text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')[0, 60]
     end
 
+    # Returns [dest_path, unique_name] — appends -2, -3, etc. if a file
+    # with the same base_name already exists in dest_dir.
+    def unique_dest_path(dest_dir, base_name)
+      name = base_name
+      counter = 1
+      while File.exist?(File.join(dest_dir, "#{name}.md"))
+        counter += 1
+        name = "#{base_name}-#{counter}"
+      end
+      [File.join(dest_dir, "#{name}.md"), name]
+    end
+
     def add_with_frontmatter(content, task_info: nil)
       queue_dirs # ensure dirs exist
 
@@ -311,14 +323,7 @@ class Hiiro
         name += '-' + task_info[:task_name] if task_info&.key?(:task_name)
       end
 
-      base_name = name
-      counter = 1
-      while File.exist?(File.join(DIR, 'pending', "#{name}.md"))
-        counter += 1
-        name = "#{base_name}-#{counter}"
-      end
-
-      path = File.join(DIR, 'pending', "#{name}.md")
+      path, name = unique_dest_path(queue_dirs[:pending], name)
       File.write(path, content + "\n")
       { name: name, path: path }
     end
@@ -329,9 +334,17 @@ class Hiiro
       parent_hiiro.make_child do |h|
         h.add_subcmd(:watch) {
           q.queue_dirs
+          current_version = Gem.loaded_specs['hiiro']&.version&.to_s
           puts "Watching #{File.join(DIR, 'pending')} ..."
           puts "Press Ctrl-C to stop"
           loop do
+            if current_version
+              latest = Gem::Specification.find_by_name('hiiro')&.version&.to_s rescue nil
+              if latest && latest != current_version
+                puts "New hiiro version detected (#{latest}), restarting..."
+                exec('h', 'queue', 'watch')
+              end
+            end
             q.tasks_in(:pending).each { |name| q.launch_task(name) }
             sleep 2
           end
@@ -571,9 +584,13 @@ class Hiiro
             next
           end
 
-          dst = File.join(q.queue_dirs[:pending], "#{name}.md")
+          dst, dest_name = q.unique_dest_path(q.queue_dirs[:pending], name)
+          if dest_name != name
+            FileUtils.mv(src, File.join(q.queue_dirs[:wip], "#{dest_name}.md"))
+            src = File.join(q.queue_dirs[:wip], "#{dest_name}.md")
+          end
           FileUtils.mv(src, dst)
-          puts "Moved to pending: #{name}"
+          puts "Moved to pending: #{dest_name}"
         }
 
         h.add_subcmd(:kill) { |name = nil|
@@ -623,10 +640,11 @@ class Hiiro
 
           dirs = q.queue_dirs
           src_dir = dirs[found[:status].to_sym]
-          FileUtils.mv(File.join(src_dir, "#{name}.md"), File.join(dirs[:pending], "#{name}.md"))
+          dst, dest_name = q.unique_dest_path(dirs[:pending], name)
+          FileUtils.mv(File.join(src_dir, "#{name}.md"), dst)
           meta_path = File.join(src_dir, "#{name}.meta")
           FileUtils.rm_f(meta_path) if File.exist?(meta_path)
-          puts "Moved to pending: #{name}"
+          puts "Moved to pending: #{dest_name}"
         }
 
         h.add_subcmd(:clean) {
@@ -644,6 +662,31 @@ class Hiiro
         h.add_subcmd(:dir) {
           q.queue_dirs
           puts DIR
+        }
+
+        h.add_subcmd(:migrate) {
+          old_dir = File.join(Dir.home, '.config/hiiro/queue')
+          new_dir = DIR
+
+          unless Dir.exist?(old_dir)
+            puts "Nothing to migrate: #{old_dir} does not exist"
+            next
+          end
+
+          if old_dir == new_dir
+            puts "Source and destination are the same: #{old_dir}"
+            next
+          end
+
+          if Dir.exist?(new_dir) && Dir.glob(File.join(new_dir, '**', '*')).any?
+            puts "Destination already has files: #{new_dir}"
+            puts "Remove it manually if you want to migrate from #{old_dir}"
+            next
+          end
+
+          FileUtils.mkdir_p(File.dirname(new_dir))
+          FileUtils.mv(old_dir, new_dir)
+          puts "Migrated: #{old_dir} -> #{new_dir}"
         }
       end
     end
