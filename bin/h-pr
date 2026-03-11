@@ -9,168 +9,6 @@ require "tempfile"
 
 Hiiro.load_env
 
-class PRManager
-  attr_reader :hiiro
-
-  def initialize(hiiro)
-    @hiiro = hiiro
-  end
-
-  def save(pr_number = nil)
-    pr_info = fetch_pr_info(pr_number)
-    unless pr_info
-      puts "ERROR: Could not find PR"
-      puts "Make sure you have the gh CLI installed and authenticated."
-      return false
-    end
-
-    entry = build_entry(pr_info)
-    unless entry[:task]
-      puts "WARNING: Not in a task session, saving without task info"
-    end
-
-    data = load_data
-    data['prs'] ||= []
-
-    # Check if this PR is already recorded for this task
-    existing = data['prs'].find do |p|
-      p['number'] == pr_info['number'] && p['task'] == entry[:task]
-    end
-
-    if existing
-      # Update existing entry
-      existing.merge!(entry.transform_keys(&:to_s))
-      existing['updated_at'] = Time.now.iso8601
-      puts "Updated PR ##{pr_info['number']} for task '#{entry[:task]}'"
-    else
-      # Add new entry
-      data['prs'] << entry.transform_keys(&:to_s).merge('created_at' => Time.now.iso8601)
-      puts "Saved PR ##{pr_info['number']} for task '#{entry[:task]}'"
-    end
-
-    save_data(data)
-    show_entry(entry)
-    true
-  end
-
-  def current
-    pr_info = fetch_pr_info
-    unless pr_info
-      puts "No PR found for current branch."
-      puts "Create one with 'gh pr create' or specify a PR number."
-      return false
-    end
-
-    entry = build_entry(pr_info)
-    puts "Current PR info:"
-    puts
-    show_entry(entry)
-  end
-
-  def open(pr_number = nil)
-    if pr_number
-      system('gh', 'pr', 'view', pr_number.to_s, '--web')
-    else
-      system('gh', 'pr', 'view', '--web')
-    end
-  end
-
-  def view(pr_number = nil)
-    if pr_number
-      system('gh', 'pr', 'view', pr_number.to_s)
-    else
-      system('gh', 'pr', 'view')
-    end
-  end
-
-  private
-
-  def fetch_pr_info(pr_number = nil)
-    cmd = if pr_number
-      ['gh', 'pr', 'view', pr_number.to_s, '--json', 'number,title,url,headRefName,state']
-    else
-      ['gh', 'pr', 'view', '--json', 'number,title,url,headRefName,state']
-    end
-
-    output = `#{cmd.join(' ')} 2>/dev/null`
-    return nil if output.empty?
-
-    JSON.parse(output)
-  rescue JSON::ParserError
-    nil
-  end
-
-  def build_entry(pr_info)
-    current_task = Environment.current.task
-    tmux_info = capture_tmux_info
-
-    {
-      number: pr_info['number'],
-      title: pr_info['title'],
-      url: pr_info['url'],
-      branch: pr_info['headRefName'],
-      state: pr_info['state'],
-      worktree: current_task&.tree_name,
-      task: current_task&.name,
-      tmux: tmux_info
-    }
-  end
-
-  def capture_tmux_info
-    return nil unless ENV['TMUX']
-
-    {
-      'session' => `tmux display-message -p '#S'`.strip,
-      'window' => `tmux display-message -p '#W'`.strip,
-      'pane' => ENV['TMUX_PANE']
-    }
-  end
-
-  def format_entry(entry, num)
-    lines = []
-    lines << "#{num}. PR ##{entry['number']}: #{entry['title']}"
-    lines << "   Branch: #{entry['branch']}"
-    lines << "   State: #{entry['state']}"
-    lines << "   Task: #{entry['task'] || '(none)'}"
-    lines << "   Worktree: #{entry['worktree'] || '(none)'}"
-    if entry['tmux']
-      lines << "   Tmux: #{entry['tmux']['session']}/#{entry['tmux']['window']}"
-    end
-    lines << "   Created: #{entry['created_at']}"
-    lines << "   URL: #{entry['url']}"
-    lines.join("\n")
-  end
-
-  def show_entry(entry)
-    puts "  PR: ##{entry[:number]}"
-    puts "  Title: #{entry[:title]}"
-    puts "  Branch: #{entry[:branch]}"
-    puts "  State: #{entry[:state]}"
-    puts "  URL: #{entry[:url]}"
-    puts "  Task: #{entry[:task] || '(none)'}"
-    puts "  Worktree: #{entry[:worktree] || '(none)'}"
-    if entry[:tmux]
-      puts "  Tmux session: #{entry[:tmux]['session']}"
-      puts "  Tmux window: #{entry[:tmux]['window']}"
-      puts "  Tmux pane: #{entry[:tmux]['pane']}"
-    end
-  end
-
-  def data_file
-    File.join(Dir.home, '.config', 'hiiro', 'prs.yml')
-  end
-
-  def load_data
-    return {} unless File.exist?(data_file)
-    YAML.safe_load_file(data_file) || {}
-  end
-
-  def save_data(data)
-    FileUtils.mkdir_p(File.dirname(data_file))
-    File.write(data_file, YAML.dump(data))
-  end
-end
-
 class PinnedPRManager
   PINNED_FILE = File.join(Dir.home, '.config/hiiro/pinned_prs.yml')
 
@@ -618,7 +456,6 @@ class PinnedPRManager
 end
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
-  manager = PRManager.new(self)
   pinned_manager = PinnedPRManager.new
 
   resolve_pr = ->(ref) {
@@ -724,8 +561,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:edit) { edit_files(__FILE__) }
-  add_subcmd(:save) { |pr_number=nil| manager.save(pr_number) }
-  add_subcmd(:current) { manager.current }
   add_subcmd(:open) { |pr_number=nil|
     pr_number = resolve_pr.call(pr_number)
     manager.open(pr_number) if pr_number
