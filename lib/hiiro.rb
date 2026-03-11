@@ -158,9 +158,13 @@ class Hiiro
     editor.to_s.match?(/vim/i)
   end
 
-  def edit_files(*files)
+  def edit_files(*files, max_splits: 3)
     if editor.match?(/vim/i)
-      system(editor, '-O', *files)
+      if files.count > max_splits.to_i
+        system(editor, '-O' + max_splits.to_i.to_s, *files)
+      else
+        system(editor, '-O', *files)
+      end
     else
       system(editor, *files)
     end
