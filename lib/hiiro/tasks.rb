@@ -75,7 +75,7 @@ class Hiiro
 
     # --- Actions ---
 
-    def start_task(name, app_name: nil)
+    def start_task(name, app_name: nil, sparse_groups: [])
       existing = task_by_name(name)
       if existing
         puts "Task '#{existing.name}' already exists. Switching..."
@@ -105,6 +105,8 @@ class Hiiro
           return
         end
       end
+
+      apply_sparse_checkout(target_path, sparse_groups) if sparse_groups.any?
 
       session_name = task_name
       task = Task.new(name: task_name, tree: subtree_name, session: session_name)
@@ -508,6 +510,16 @@ class Hiiro
       end
     end
 
+    def apply_sparse_checkout(path, group_names)
+      dirs = SparseGroups.dirs_for_groups(group_names)
+      if dirs.empty?
+        puts "WARNING: No directories found for sparse groups: #{group_names.join(', ')}"
+        return
+      end
+      puts "Applying sparse checkout (groups: #{group_names.join(', ')})..."
+      Hiiro::Git.new(nil, path).sparse_checkout(path, dirs)
+    end
+
     def send_cd(path)
       pane = ENV['TMUX_PANE']
       if pane
@@ -607,14 +619,33 @@ class Hiiro
     end
   end
 
+  class SparseGroups
+    FILE = File.join(Dir.home, '.config', 'hiiro', 'sparse_groups.yml')
+
+    def self.load(file: FILE)
+      return {} unless File.exist?(file)
+      YAML.safe_load_file(file) || {}
+    end
+
+    def self.dirs_for_groups(group_names, file: FILE)
+      groups = load(file: file)
+      group_names.flat_map { |name| Array(groups[name]) }.uniq
+    end
+  end
+
   module Tasks
     def self.build_hiiro(parent_hiiro, tm)
       task_hiiro = parent_hiiro.make_child do |h|
         h.add_subcmd(:list) { tm.list }
         h.add_subcmd(:ls) { tm.list }
 
-        h.add_subcmd(:start) do |task_name, app_name=nil|
-          tm.start_task(task_name, app_name: app_name)
+        h.add_subcmd(:start) do |*raw_args|
+          opts = Hiiro::Options.parse(raw_args) do
+            option(:sparse, short: :s, desc: 'Sparse checkout group (may be repeated)', multi: true)
+          end
+          task_name = opts.args[0]
+          app_name  = opts.args[1]
+          tm.start_task(task_name, app_name: app_name, sparse_groups: opts.sparse)
         end
 
         h.add_subcmd(:switch) do |task_name=nil, app_name=nil|

@@ -143,6 +143,15 @@ class Hiiro
       run_system('worktree', 'repair')
     end
 
+    def sparse_checkout(path, dirs, cone: true)
+      if cone
+        run_system('-C', path, 'sparse-checkout', 'init', '--cone')
+      else
+        run_system('-C', path, 'sparse-checkout', 'init')
+      end
+      run_system('-C', path, 'sparse-checkout', 'set', *dirs)
+    end
+
     # Remote convenience methods
 
     def remotes
