@@ -322,7 +322,7 @@ class Hiiro
       parent_hiiro.make_child do |h|
         h.add_subcmd(:watch) {
           q.queue_dirs
-          current_version = Gem.loaded_specs['hiiro']&.version&.to_s
+          current_version = `gem which hiiro`.sub(/.*hiiro-/, '').sub(/\/.*/, '')
           puts current_version:;
           puts "Watching #{File.join(DIR, 'pending')} ..."
           puts "Press Ctrl-C to stop"
@@ -330,8 +330,8 @@ class Hiiro
           loop do
             loops += 1
             if current_version
-              latest = Gem::Specification.find_by_name('hiiro')&.version&.to_s rescue nil
-              if loops % 50 == 0
+              latest = `gem which hiiro`.sub(/.*hiiro-/, '').sub(/\/.*/, '') rescue nil
+              if loops % 20 == 0
                 puts current_version:, latest:;
               end
 
