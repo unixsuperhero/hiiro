@@ -447,6 +447,7 @@ class Hiiro
           opts = Hiiro::Options.parse(args) do
             option(:task, short: :t, desc: 'Task name')
             flag(:choose, short: :T, desc: 'Choose task interactively')
+            flag(:session, short: :s, desc: 'Use current tmux session')
           end
 
           if opts.help?
