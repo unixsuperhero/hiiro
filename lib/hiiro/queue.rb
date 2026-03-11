@@ -238,7 +238,7 @@ class Hiiro
 
       mapping = tasks.each_with_object({}) do |task, h|
         line = format("%-25s  tree: %-20s", task.name, task.tree_name || '(none)')
-        h[line] = task.name
+        h[line] = task
       end
 
       hiiro.fuzzyfind_from_map(mapping)
@@ -246,7 +246,7 @@ class Hiiro
 
     def resolve_task_info(opts, hiiro, default_task_info)
       task_name = if opts.choose
-        select_task(hiiro)
+        select_task(hiiro)&.name
       elsif opts.task
         opts.task
       else

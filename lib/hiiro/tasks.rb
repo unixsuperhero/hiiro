@@ -401,10 +401,9 @@ class Hiiro
       branch_col = all_data.map { |_, d| d[:branch].length }.max || 0
 
       all_data.each do |task, d|
-        display_name = scope == :subtask ? task.short_name : task.name
         line = format("%-#{name_col}s  %-#{tree_col}s  %-#{branch_col}s  %s",
                       d[:name], d[:tree], d[:branch], d[:session])
-        mapping[line] = { type: :task, name: display_name }
+        mapping[line] = task
       end
 
       # Add non-task tmux sessions (exclude sessions that belong to tasks)
@@ -413,7 +412,7 @@ class Hiiro
         extra_sessions = environment.all_sessions.reject { |s| task_session_names.include?(s.name) }
         extra_sessions.sort_by(&:name).each do |session|
           line = format("%-25s  (tmux session)", session.name)
-          mapping[line] = { type: :session, name: session.name }
+          mapping[line] = session
         end
       end
 
@@ -623,16 +622,14 @@ class Hiiro
             selected = tm.select_task_interactive
             next unless selected
 
-            if selected.is_a?(Hash)
-              if selected[:type] == :session
-                h.start_tmux_session(selected[:name])
-                puts "Switched to session '#{selected[:name]}'"
-                next
-              else
-                task_name = selected[:name]
-              end
-            else
-              task_name = selected
+            case selected
+            when Hiiro::Tmux::Session
+              h.start_tmux_session(selected.name)
+              puts "Switched to session '#{selected.name}'"
+              next
+            when Hiiro::Task
+              tm.switch_to_task(selected, app_name: app_name)
+              next
             end
           end
 
@@ -713,9 +710,9 @@ class Hiiro
 
         h.add_subcmd(:stop) do |task_name=nil|
           if task_name.nil?
-            task_name = tm.select_task_interactive
-            next unless task_name
-            task_name = task_name[:name]
+            selected = tm.select_task_interactive
+            next unless selected
+            task_name = selected.name
           end
           task = tm.task_by_name(task_name)
           tm.stop_task(task)
