@@ -1,10 +1,15 @@
 class Hiiro
   class Config
     BASE_DIR = File.join(Dir.home, '.config/hiiro')
+    DATA_DIR = File.join(Dir.home, '.local/share/hiiro')
 
     class << self
       def path(relpath='')
         File.join(BASE_DIR, relpath)
+      end
+
+      def data_path(relpath='')
+        File.join(DATA_DIR, relpath)
       end
 
       def plugin_files
