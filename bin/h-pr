@@ -462,7 +462,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     if ref.nil?
       pinned = pinned_manager.load_pinned
       if pinned.empty?
-        STDERR.puts "No pinned PRs. Use a PR number or 'h pr pin' to track PRs."
+        STDERR.puts "No tracked PRs. Use a PR number or 'h pr track' to track PRs."
         return nil
       end
       lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
@@ -563,11 +563,11 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   add_subcmd(:edit) { edit_files(__FILE__) }
   add_subcmd(:open) { |pr_number=nil|
     pr_number = resolve_pr.call(pr_number)
-    manager.open(pr_number) if pr_number
+    system('gh', 'pr', 'view', pr_number.to_s, '--web') if pr_number
   }
   add_subcmd(:view) { |pr_number=nil|
     pr_number = resolve_pr.call(pr_number)
-    manager.view(pr_number) if pr_number
+    system('gh', 'pr', 'view', pr_number.to_s) if pr_number
   }
 
   add_subcmd(:select) do |*args|
@@ -624,107 +624,59 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   end
 
-  # === PR Pinning ===
+  # === PR Tracking ===
 
-  add_subcmd(:pin) do |ref = nil, *pin_args|
+  add_subcmd(:track) do |ref = nil|
     pr_info = nil
 
     case ref
-    when '-', nil
-      if ref == '-'
-        # Pin current branch's PR
-        pr_info = pinned_manager.fetch_current_branch_pr
-        unless pr_info
-          puts "No PR found for current branch"
-          next
-        end
-      else
-        # Select from my PRs
-        my_prs = pinned_manager.fetch_my_prs
-        if my_prs.empty?
-          puts "No open PRs found"
-          next
-        end
+    when nil
+      # Select from my open PRs
+      my_prs = pinned_manager.fetch_my_prs
+      if my_prs.empty?
+        puts "No open PRs found"
+        next
+      end
 
-        lines = my_prs.each_with_object({}) do |pr, h|
-          display = "##{pr['number']} [#{pr['headRefName']}] #{pr['title']}"
-          h[display] = pr
-        end
+      lines = my_prs.each_with_object({}) do |pr, h|
+        display = "##{pr['number']} [#{pr['headRefName']}] #{pr['title']}"
+        h[display] = pr
+      end
 
-        pr_info = fuzzyfind_from_map(lines)
-        unless pr_info
-          puts "No PR selected"
-          next
-        end
+      pr_info = fuzzyfind_from_map(lines)
+      unless pr_info
+        puts "No PR selected"
+        next
+      end
+    when '-'
+      # Track current branch's PR
+      pr_info = pinned_manager.fetch_current_branch_pr
+      unless pr_info
+        puts "No PR found for current branch"
+        next
       end
     when /^\d+$/
-      # Pin by PR number
+      # Track by PR number
       pr_info = pinned_manager.fetch_pr_info(ref)
       unless pr_info
         puts "PR ##{ref} not found"
         next
       end
     else
-      puts "Usage: h pr pin [-|PR_NUMBER]"
-      puts "  -       Pin current branch's PR"
-      puts "  <num>   Pin PR by number"
+      puts "Usage: h pr track [-|PR_NUMBER]"
+      puts "  -       Track current branch's PR"
+      puts "  <num>   Track PR by number"
       puts "  (none)  Select from your open PRs"
       next
     end
 
+    if pinned_manager.pinned?(pr_info['number'])
+      puts "Already tracking ##{pr_info['number']}"
+      next
+    end
+
     pinned_manager.pin(pr_info)
-    puts "Pinned PR ##{pr_info['number']}: #{pr_info['title']}"
-  end
-
-  add_subcmd(:unpin) do |ref = nil, *unpin_args|
-    pinned = pinned_manager.load_pinned
-
-    if pinned.empty?
-      puts "No pinned PRs"
-      next
-    end
-
-    pr_number = nil
-
-    if ref.nil?
-      # Select from pinned PRs
-      lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx)] = pr['number'].to_s
-      end
-
-      pr_number = fuzzyfind_from_map(lines)
-      unless pr_number
-        puts "No PR selected"
-        next
-      end
-    elsif ref =~ /^\d+$/
-      pr_number = ref
-    else
-      puts "Usage: h pr unpin [PR_NUMBER]"
-      next
-    end
-
-    if pinned_manager.unpin(pr_number)
-      puts "Unpinned PR ##{pr_number}"
-    else
-      puts "PR ##{pr_number} was not pinned"
-    end
-  end
-
-  add_subcmd(:pinned) do |*args|
-    pinned = pinned_manager.load_pinned
-
-    if pinned.empty?
-      puts "No pinned PRs"
-      next
-    end
-
-    puts "Pinned PRs:"
-    puts
-
-    pinned.each_with_index do |pr, idx|
-      puts pinned_manager.display_pinned(pr, idx)
-    end
+    puts "Now tracking ##{pr_info['number']}: #{pr_info['title']}"
   end
 
   add_subcmd(:ls) do |*ls_args|
@@ -733,7 +685,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
 
     if pinned.empty?
-      puts "No pinned PRs"
+      puts "No tracked PRs"
       next
     end
 
@@ -757,19 +709,13 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
 
     if pinned.empty?
-      puts "No pinned PRs"
+      puts "No tracked PRs"
       next
     end
 
-    compact = status_args.include?('-c') || status_args.include?('--compact')
-
     pinned.each_with_index do |pr, idx|
-      if compact
-        puts pinned_manager.display_pinned(pr, idx)
-      else
-        puts pinned_manager.display_detailed(pr, idx)
-        puts
-      end
+      puts pinned_manager.display_detailed(pr, idx)
+      puts
     end
 
     last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
@@ -781,7 +727,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
 
     if pinned.empty?
-      puts "No pinned PRs to update"
+      puts "No tracked PRs to update"
       next
     end
 
@@ -849,11 +795,10 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:prune) do |*args|
-    # Alias to auto-unpin
     pinned = pinned_manager.load_pinned
 
     if pinned.empty?
-      puts "No pinned PRs"
+      puts "No tracked PRs"
       next
     end
 
@@ -1047,60 +992,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     system('tmux', 'switch-client', '-t', target_session)
   end
 
-  add_subcmd(:track) do
-    pr_info = pinned_manager.fetch_current_branch_pr
-    unless pr_info
-      puts "No PR for current branch"
-      next
-    end
-
-    if pinned_manager.pinned?(pr_info['number'])
-      puts "Already tracking ##{pr_info['number']}"
-      next
-    end
-
-    full_info = pinned_manager.fetch_pr_info(pr_info['number'])
-    pinned_manager.pin(full_info)
-    puts "Now tracking ##{pr_info['number']}: #{pr_info['title']}"
-  end
-
-  add_subcmd(:ignore) do |ref = nil|
-    # Alias to unpin
-    pinned = pinned_manager.load_pinned
-
-    if pinned.empty?
-      puts "No tracked PRs"
-      next
-    end
-
-    pr_number = nil
-
-    if ref.nil?
-      lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx)] = pr['number'].to_s
-      end
-
-      pr_number = fuzzyfind_from_map(lines)
-      unless pr_number
-        puts "No PR selected"
-        next
-      end
-    elsif ref =~ /^\d+$/
-      pr_number = ref
-    else
-      puts "Usage: h pr ignore [PR_NUMBER]"
-      next
-    end
-
-    if pinned_manager.unpin(pr_number)
-      puts "Stopped tracking PR ##{pr_number}"
-    else
-      puts "PR ##{pr_number} was not tracked"
-    end
-  end
-
   add_subcmd(:rm) do |ref = nil|
-    # Alias to ignore/unpin
     pinned = pinned_manager.load_pinned
 
     if pinned.empty?
@@ -1134,57 +1026,4 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   end
 
-  add_subcmd(:'suggest-unpin') do |*args|
-    pinned = pinned_manager.load_pinned
-
-    if pinned.empty?
-      puts "No pinned PRs"
-      next
-    end
-
-    merged = pinned.select { |pr| pr['state'] == 'MERGED' }
-    closed = pinned.select { |pr| pr['state'] == 'CLOSED' }
-
-    if merged.empty? && closed.empty?
-      puts "No merged or closed PRs to unpin"
-      next
-    end
-
-    puts "PRs that can be unpinned:"
-    puts
-
-    (merged + closed).each_with_index do |pr, idx|
-      puts pinned_manager.display_pinned(pr, idx)
-    end
-
-    puts
-    puts "Run 'h pr auto-unpin' to unpin all merged/closed PRs"
-  end
-
-  add_subcmd(:'auto-unpin') do |*args|
-    pinned = pinned_manager.load_pinned
-
-    if pinned.empty?
-      puts "No pinned PRs"
-      next
-    end
-
-    merged_or_closed = pinned.select { |pr| pr['state'] == 'MERGED' || pr['state'] == 'CLOSED' }
-
-    if merged_or_closed.empty?
-      puts "No merged or closed PRs to unpin"
-      next
-    end
-
-    puts "Unpinning #{merged_or_closed.length} merged/closed PR(s):"
-    puts
-
-    merged_or_closed.each do |pr|
-      puts "  ##{pr['number']}: #{pr['title']} [#{pr['state']}]"
-      pinned_manager.unpin(pr['number'])
-    end
-
-    puts
-    puts "Done. #{pinned_manager.load_pinned.length} PR(s) still pinned."
-  end
 end
