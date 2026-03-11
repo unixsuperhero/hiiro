@@ -132,7 +132,7 @@ class Hiiro
       puts "Started task '#{task_name}' in worktree '#{subtree_name}'"
     end
 
-    def switch_to_task(task, app_name: nil)
+    def switch_to_task(task, app_name: nil, force: false)
       unless task
         puts "Task not found"
         return
@@ -145,6 +145,11 @@ class Hiiro
       session_exists = system('tmux', 'has-session', '-t', session_name, err: File::NULL)
 
       if session_exists
+        session = environment.find_session(session_name)
+        if session&.attached? && !force
+          puts "Session '#{session_name}' is already attached. Use -f to switch anyway."
+          exit 1
+        end
         hiiro.start_tmux_session(session_name)
       else
         base_dir = tree_path
@@ -656,18 +661,28 @@ class Hiiro
           tm.start_task(task_name, app_name: app_name, sparse_groups: opts.sparse)
         end
 
-        h.add_subcmd(:switch) do |task_name=nil, app_name=nil|
+        h.add_subcmd(:switch) do |*raw_args|
+          opts = Hiiro::Options.parse(raw_args) do
+            option(:force, short: :f, type: :flag, desc: 'Switch even if session is already attached')
+          end
+          task_name = opts.args[0]
+          app_name  = opts.args[1]
+
           if task_name.nil?
             selected = tm.select_task_interactive
             next unless selected
 
             case selected
             when Hiiro::Tmux::Session
+              if selected.attached? && !opts.force
+                puts "Session '#{selected.name}' is already attached. Use -f to switch anyway."
+                exit 1
+              end
               h.start_tmux_session(selected.name)
               puts "Switched to session '#{selected.name}'"
               next
             when Hiiro::Task
-              tm.switch_to_task(selected, app_name: app_name)
+              tm.switch_to_task(selected, app_name: app_name, force: opts.force)
               next
             end
           end
@@ -678,13 +693,17 @@ class Hiiro
           unless task
             session = tm.environment.find_session(task_name)
             if session
+              if session.attached? && !opts.force
+                puts "Session '#{session.name}' is already attached. Use -f to switch anyway."
+                exit 1
+              end
               h.start_tmux_session(session.name)
               puts "Switched to session '#{session.name}'"
               next
             end
           end
 
-          tm.switch_to_task(task, app_name: app_name)
+          tm.switch_to_task(task, app_name: app_name, force: opts.force)
         end
 
         h.add_subcmd(:app) do |app_name=nil|
