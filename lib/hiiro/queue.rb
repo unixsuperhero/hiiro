@@ -448,6 +448,12 @@ class Hiiro
             option(:task, short: :t, desc: 'Task name')
             flag(:choose, short: :T, desc: 'Choose task interactively')
           end
+
+          if opts.help?
+            puts opts.help_text
+            exit 1
+          end
+
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
 
