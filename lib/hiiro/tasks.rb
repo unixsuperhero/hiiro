@@ -880,9 +880,8 @@ class Hiiro
     attr_reader :name
 
     def self.current
-      return nil unless ENV['TMUX']
-
-      name = `tmux display-message -p '#S'`.chomp
+      name = Hiiro::Tmux::Session.current&.name
+      return nil unless name
       new(name)
     end
 

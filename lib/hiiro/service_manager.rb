@@ -489,7 +489,7 @@ class Hiiro
           end
 
           tmux_info = {
-            session: ENV['TMUX'] ? `tmux display-message -p '#S'`.chomp : nil,
+            session: h.tmux_client.current_session&.name,
           }
 
           task_info = {}
@@ -864,8 +864,7 @@ class Hiiro
     end
 
     def current_tmux_session
-      return nil unless ENV['TMUX']
-      `tmux display-message -p '#S'`.chomp
+      Hiiro::Tmux::Session.current&.name
     end
 
     def create_tmux_window(session, name)
