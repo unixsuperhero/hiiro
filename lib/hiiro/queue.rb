@@ -289,18 +289,6 @@ class Hiiro
       text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')[0, 60]
     end
 
-    # Returns [dest_path, unique_name] — appends -2, -3, etc. if a file
-    # with the same base_name already exists in dest_dir.
-    def unique_dest_path(dest_dir, base_name)
-      name = base_name
-      counter = 1
-      while File.exist?(File.join(dest_dir, "#{name}.md"))
-        counter += 1
-        name = "#{base_name}-#{counter}"
-      end
-      [File.join(dest_dir, "#{name}.md"), name]
-    end
-
     def add_with_frontmatter(content, task_info: nil)
       queue_dirs # ensure dirs exist
 
@@ -323,7 +311,7 @@ class Hiiro
         name += '-' + task_info[:task_name] if task_info&.key?(:task_name)
       end
 
-      path, name = unique_dest_path(queue_dirs[:pending], name)
+      path, name = Hiiro::Paths.unique_path(queue_dirs[:pending], name)
       File.write(path, content + "\n")
       { name: name, path: path }
     end
@@ -584,7 +572,7 @@ class Hiiro
             next
           end
 
-          dst, dest_name = q.unique_dest_path(q.queue_dirs[:pending], name)
+          dst, dest_name = Hiiro::Paths.unique_path(q.queue_dirs[:pending], name)
           if dest_name != name
             FileUtils.mv(src, File.join(q.queue_dirs[:wip], "#{dest_name}.md"))
             src = File.join(q.queue_dirs[:wip], "#{dest_name}.md")
@@ -640,7 +628,7 @@ class Hiiro
 
           dirs = q.queue_dirs
           src_dir = dirs[found[:status].to_sym]
-          dst, dest_name = q.unique_dest_path(dirs[:pending], name)
+          dst, dest_name = Hiiro::Paths.unique_path(dirs[:pending], name)
           FileUtils.mv(File.join(src_dir, "#{name}.md"), dst)
           meta_path = File.join(src_dir, "#{name}.meta")
           FileUtils.rm_f(meta_path) if File.exist?(meta_path)

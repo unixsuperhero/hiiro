@@ -25,6 +25,18 @@ class Hiiro
         .map { |link| Symlink.new(link, hiiro) }
     end
 
+    # Returns [full_path, unique_name] — appends -2, -3, etc. if a file
+    # with the same base_name already exists in dir.
+    def self.unique_path(dir, base_name, ext: '.md')
+      name = base_name
+      counter = 1
+      while File.exist?(File.join(dir, "#{name}#{ext}"))
+        counter += 1
+        name = "#{base_name}-#{counter}"
+      end
+      [File.join(dir, "#{name}#{ext}"), name]
+    end
+
     class Symlink < SimpleDelegator
       attr_reader :hiiro
 
