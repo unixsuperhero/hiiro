@@ -355,17 +355,19 @@ class Hiiro
 
     max_name   = sorted.map { |r| r.subcommand_name.length }.max || 0
     max_type   = sorted.map { |r| r.type.to_s.length }.max || 0
-    max_params = sorted.map { |r| r.params_string.to_s.length }.max || 0
 
-    sorted.each do |r|
+    params_with_opts = sorted.map do |r|
+      parts = [r.params_string, (r.respond_to?(:opts_hint) ? r.opts_hint : nil)]
+      parts.compact.reject(&:empty?).join('  ')
+    end
+    max_params = params_with_opts.map(&:length).max || 0
+
+    sorted.each_with_index do |r, i|
       name       = r.subcommand_name.ljust(max_name)
       type       = "(#{r.type})".ljust(max_type + 2)
-      params     = r.params_string
-      params_col = params ? params.ljust(max_params) : ''.ljust(max_params)
+      params_col = params_with_opts[i].ljust(max_params)
       location   = shorten_location(r.location, vars)
-      hint       = r.respond_to?(:opts_hint) ? r.opts_hint : nil
-      hint_col   = hint && !hint.empty? ? "  #{hint}" : ""
-      puts "  #{name}  #{params_col}  #{type}  #{location}#{hint_col}"
+      puts "  #{name}  #{params_col}  #{type}  #{location}"
     end
   end
 
