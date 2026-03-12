@@ -41,6 +41,14 @@ class Hiiro
       lines.join("\n")
     end
 
+    def hint
+      @definitions
+        .reject { |k, _| k == :help }
+        .map { |_, d| d.flag? ? d.long_form : "#{d.long_form} <val>" }
+        .map { |s| "[#{s}]" }
+        .join(' ')
+    end
+
     def flag(name, long: nil, short: nil, default: false, desc: nil)
       defn = Definition.new(name, long: long, short: short, type: :flag, default: default, desc: desc)
       @definitions[name.to_sym] = defn
@@ -155,8 +163,9 @@ class Hiiro
       end
 
       def parse_long_option(arg, args)
-        flag_part = arg.include?('=') ? arg.split('=', 2)[0] : arg
-        value     = arg.include?('=') ? arg.split('=', 2)[1] : nil
+        parts     = arg.split('=', 2)
+        flag_part = parts[0]
+        value     = parts[1]
 
         defn = @definitions.values.find { |d| d.long_form == flag_part }
         return unless defn

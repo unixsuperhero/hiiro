@@ -656,12 +656,7 @@ class Hiiro
       end
 
       def opts_hint
-        return nil unless subcmd_opts
-        subcmd_opts.definitions
-          .reject { |k, _| k == :help }
-          .map { |_, d| d.flag? ? d.long_form : "#{d.long_form} <val>" }
-          .map { |s| "[#{s}]" }
-          .join(' ')
+        subcmd_opts&.hint
       end
     end
   end
