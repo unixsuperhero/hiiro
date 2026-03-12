@@ -4,7 +4,7 @@ require 'hiiro'
 
 Hiiro.run do
   add_option(:group, short: :g, desc: 'group name')
-  add_option(:group, short: :g, key: :group2, desc: 'group name')
+  add_option(:group2, short: :g, long: :group, desc: 'group name')
   add_flag(:verbose, short: :v, desc: 'verbose output')
 
   add_subcmd(
