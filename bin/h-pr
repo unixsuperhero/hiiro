@@ -692,6 +692,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     pinned_manager.pin(pr_info.merge(context))
     puts "Now tracking ##{pr_info['number']}: #{pr_info['title']}"
+    puts
+    run_subcmd(:update)
   end
 
   add_subcmd(:ls) do |*ls_args|
