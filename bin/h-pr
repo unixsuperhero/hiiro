@@ -636,30 +636,27 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pr_info = nil
 
     case ref
-    when nil
-      # Select from my open PRs
-      my_prs = pinned_manager.fetch_my_prs
-      if my_prs.empty?
-        puts "No open PRs found"
-        next
-      end
-
-      lines = my_prs.each_with_object({}) do |pr, h|
-        display = "##{pr['number']} [#{pr['headRefName']}] #{pr['title']}"
-        h[display] = pr
-      end
-
-      pr_info = fuzzyfind_from_map(lines)
-      unless pr_info
-        puts "No PR selected"
-        next
-      end
-    when '-'
-      # Track current branch's PR
+    when nil, '-'
+      # Try current branch's PR first, fall back to fuzzy select
       pr_info = pinned_manager.fetch_current_branch_pr
+
       unless pr_info
-        puts "No PR found for current branch"
-        next
+        my_prs = pinned_manager.fetch_my_prs
+        if my_prs.empty?
+          puts "No open PRs found"
+          next
+        end
+
+        lines = my_prs.each_with_object({}) do |pr, h|
+          display = "##{pr['number']} [#{pr['headRefName']}] #{pr['title']}"
+          h[display] = pr
+        end
+
+        pr_info = fuzzyfind_from_map(lines)
+        unless pr_info
+          puts "No PR selected"
+          next
+        end
       end
     when /^\d+$/
       # Track by PR number
