@@ -568,6 +568,13 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:edit) { edit_files(__FILE__) }
   add_subcmd(:open) { |pr_number=nil|
+    if pr_number.nil?
+      current = pinned_manager.fetch_current_branch_pr
+      if current
+        system('gh', 'pr', 'view', current['number'].to_s, '--web')
+        next
+      end
+    end
     pr_number = resolve_pr.call(pr_number)
     system('gh', 'pr', 'view', pr_number.to_s, '--web') if pr_number
   }
