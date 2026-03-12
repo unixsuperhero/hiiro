@@ -1,0 +1,158 @@
+#!/usr/bin/env ruby
+
+require 'pry'
+require 'json'
+require 'digest'
+require 'optparse'
+require 'shellwords'
+
+options = {
+  notify_approvals: true,
+  notify_status: true,
+  notify_publishing: true,
+  mark_ready: false
+}
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: h-watchprs [options]"
+
+  opts.on("-a", "--no-notify-approvals", "Disable notifications for new approvals") do
+    options[:notify_approvals] = false
+  end
+
+  opts.on("-s", "--no-notify-status", "Disable notifications for status changes") do
+    options[:notify_status] = false
+  end
+
+  opts.on("-u", "--no-notify-publishing", "Disable notifications when publishing PR as ready") do
+    options[:notify_publishing] = false
+  end
+
+  opts.on("-r", "--mark-ready", "Enable marking PR as ready when passing") do
+    options[:mark_ready] = true
+  end
+
+  opts.on("-h", "--help", "Prints this help") do
+    puts opts
+    exit
+  end
+end.parse!
+
+SLEEP_TIME = ENV.fetch('sleep_for', 60)
+
+prs = {}
+approvals = {}
+first_run = true
+
+last_prs = {}
+last_json_md5 = nil
+
+loop do
+  stdout = `gh pr status`
+
+  md5 = Digest::MD5.hexdigest(stdout)
+
+  if stdout.match?(/something went wrong/i)
+    sleep SLEEP_TIME
+    next
+  end
+
+  collecting = false
+  current_pr = nil
+  new_statuses = {}
+  new_approvals = {}
+  pr_titles = {}
+  stdout.lines(chomp: true).map do |line|
+    collecting = true if line.match?(/created by you/i)
+    next unless collecting
+
+    if num = line[/[#]\d+/]
+      current_pr = num.sub(?#, '')
+      # Extract PR title: everything after #123 and before [branch-name]
+      if match = line.match(/#\d+\s+(.+?)\s+\[/)
+        pr_titles[current_pr] = match[1].strip
+      end
+      next
+    end
+
+    if current_pr && line.match?(/checks (pending|passing|failing)/i)
+      new_status = line[/pending|passing|failing/]
+
+      old_approval_count = approvals.fetch(current_pr, 0)
+
+      if line.match?(/✓ (\d\d*) Approved/)
+        partial = line[/✓ (\d\d*) Approved/]
+        approval_count = partial[/\d\d*/]
+        new_approvals[current_pr] = approval_count
+      end
+
+      approvals[current_pr]
+      new_statuses[current_pr] = new_status
+      current_pr = nil
+    end
+
+    break if line.match?(/^\s*$/)
+  end
+
+  status_changed = new_statuses.any?{ |pr,new_status| prs[pr] != new_status }
+  approvals_changed = new_approvals.any?{|pr,new_approval_count| approvals[pr] != new_approval_count }
+  puts(
+    prs:,
+    status_changed:,
+    approvals_changed:,
+  )
+
+  if status_changed || approvals_changed
+    puts
+  end
+
+  new_approvals.each do |current_pr, new_approval|
+    old_approval = approvals[current_pr]
+    title = pr_titles[current_pr]
+    if old_approval.nil? || old_approval != new_approval
+      if options[:notify_approvals]
+        if old_approval
+          system('pr_approved', current_pr, title, new_approval, old_approval)
+        else
+          system('pr_approved', current_pr, title, new_approval)
+        end
+      end
+      puts format('%7s (approvals: %s): https://github.com/instacart/carrot/pull/%s', current_pr, new_approval, current_pr)
+    end
+  end
+
+  new_statuses.each do |current_pr, new_status|
+    old_status = prs[current_pr]
+    title = pr_titles[current_pr]
+    puts format('%7s (status: %s => %s): https://github.com/instacart/carrot/pull/%s', current_pr, old_status, new_status, current_pr)
+    if prs.key?(current_pr) && old_status != new_status
+      if options[:notify_status]
+        case new_status
+        when /passing/
+          system('pr_passing', current_pr, title, old_status)
+        when /failing/
+          system('pr_failing', current_pr, title, old_status)
+        when /pending/
+          system('pr_pending', current_pr, title, old_status)
+        end
+      end
+
+      if new_status[/passing/]
+        if options[:mark_ready]
+          if options[:notify_publishing]
+            system('pr_publishing', current_pr, title)
+          end
+          system('gh', 'pr', 'ready', current_pr)
+        end
+        system('gh', 'pr', 'view', '-w', current_pr)
+      end
+
+      puts format('%7s (%s): https://github.com/instacart/carrot/pull/%s', current_pr, new_status, current_pr)
+    end
+  end
+
+  prs = new_statuses
+  approvals = new_approvals
+
+  sleep SLEEP_TIME
+end
