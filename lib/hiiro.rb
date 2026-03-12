@@ -237,6 +237,36 @@ class Hiiro
   end
   alias add_subcmd add_subcommand
 
+  def options
+    @options ||= Hiiro::Options.setup {}
+  end
+
+  def add_option(name, **kwargs)
+    options.option(name, **kwargs)
+  end
+
+  def add_flag(name, **kwargs)
+    options.flag(name, **kwargs)
+  end
+
+  def add_cmd(*names, args: [], opts: [], &block)
+    cmd_opts = options.select(opts)
+
+    wrapper = lambda do |*raw_args|
+      @opts = cmd_opts.parse(raw_args)
+      instance_eval(&block)
+    end
+
+    names.each do |name|
+      runners.add_subcommand(
+        name, wrapper,
+        subcmd_args: args,
+        subcmd_opts: cmd_opts,
+        **global_values
+      )
+    end
+  end
+
   def run_subcommand(name, *args)
     runners.run_subcommand(name, *args)
   end
@@ -300,6 +330,13 @@ class Hiiro
       puts
     end
 
+    global = @options
+    if global && global.definitions.any? { |k, _| k != :help }
+      puts "Options:"
+      puts global.help_text
+      puts
+    end
+
     if options
       puts "Options:"
       puts options.help_text
@@ -326,7 +363,9 @@ class Hiiro
       params     = r.params_string
       params_col = params ? params.ljust(max_params) : ''.ljust(max_params)
       location   = shorten_location(r.location, vars)
-      puts "  #{name}  #{params_col}  #{type}  #{location}"
+      hint       = r.respond_to?(:opts_hint) ? r.opts_hint : nil
+      hint_col   = hint && !hint.empty? ? "  #{hint}" : ""
+      puts "  #{name}  #{params_col}  #{type}  #{location}#{hint_col}"
     end
   end
 
@@ -459,8 +498,13 @@ class Hiiro
       Dir.glob(pattern).map { |path| Bin.new(bin_name, path) }
     end
 
-    def add_subcommand(name, handler, opts: nil, **values)
-      @subcommands[name] = Subcommand.new(bin_name, name, handler, values, opts: opts)
+    def add_subcommand(name, handler, opts: nil, subcmd_args: [], subcmd_opts: nil, **values)
+      @subcommands[name] = Subcommand.new(
+        bin_name, name, handler, values,
+        opts: opts,
+        subcmd_args: subcmd_args,
+        subcmd_opts: subcmd_opts
+      )
     end
 
     def run_subcommand(name, *args)
@@ -545,15 +589,17 @@ class Hiiro
     end
 
     class Subcommand
-      attr_reader :bin_name, :name, :handler, :values, :opts
+      attr_reader :bin_name, :name, :handler, :values, :opts, :subcmd_args, :subcmd_opts
       alias subcommand_name name
 
-      def initialize(bin_name, name, handler, values={}, opts: nil)
+      def initialize(bin_name, name, handler, values={}, opts: nil, subcmd_args: [], subcmd_opts: nil)
         @bin_name = bin_name
         @name = name.to_s
         @handler = handler
         @values = values || {}
         @opts = opts
+        @subcmd_args = subcmd_args || []
+        @subcmd_opts = subcmd_opts
       end
 
       def run(*args)
@@ -586,6 +632,10 @@ class Hiiro
       end
 
       def params_string
+        if subcmd_args.any?
+          return subcmd_args.map { |a| "<#{a}>" }.join(' ')
+        end
+
         return nil unless handler.respond_to?(:parameters)
 
         params = handler.parameters
@@ -603,6 +653,15 @@ class Hiiro
           when :block then "[&#{name}]" if name
           end
         }.compact.join(' ')
+      end
+
+      def opts_hint
+        return nil unless subcmd_opts
+        subcmd_opts.definitions
+          .reject { |k, _| k == :help }
+          .map { |_, d| d.flag? ? d.long_form : "#{d.long_form} <val>" }
+          .map { |s| "[#{s}]" }
+          .join(' ')
       end
     end
   end

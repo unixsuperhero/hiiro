@@ -41,16 +41,25 @@ class Hiiro
       lines.join("\n")
     end
 
-    def flag(name, short: nil, default: false, desc: nil)
-      defn = Definition.new(name, short: short, type: :flag, default: default, desc: desc)
+    def flag(name, long: nil, short: nil, default: false, desc: nil)
+      defn = Definition.new(name, long: long, short: short, type: :flag, default: default, desc: desc)
       @definitions[name.to_sym] = defn
       self
     end
 
-    def option(name, short: nil, type: :string, default: nil, desc: nil, multi: false)
-      defn = Definition.new(name, short: short, type: type, default: default, desc: desc, multi: multi)
+    def option(name, long: nil, short: nil, type: :string, default: nil, desc: nil, multi: false)
+      defn = Definition.new(name, long: long, short: short, type: type, default: default, desc: desc, multi: multi)
       @definitions[name.to_sym] = defn
       self
+    end
+
+    def select(names)
+      subset = self.class.setup {}
+      names.each do |name|
+        defn = @definitions[name.to_sym]
+        subset.definitions[name.to_sym] = defn if defn
+      end
+      subset
     end
 
     def parse(args)
@@ -146,19 +155,14 @@ class Hiiro
       end
 
       def parse_long_option(arg, args)
-        if arg.include?('=')
-          opt, value = arg.split('=', 2)
-          name = opt.sub(/^--/, '').tr('-', '_').to_sym
-        else
-          name = arg.sub(/^--/, '').tr('-', '_').to_sym
-          value = nil
-        end
+        flag_part = arg.include?('=') ? arg.split('=', 2)[0] : arg
+        value     = arg.include?('=') ? arg.split('=', 2)[1] : nil
 
-        defn = @definitions[name]
+        defn = @definitions.values.find { |d| d.long_form == flag_part }
         return unless defn
 
         if defn.flag?
-          @values[name] = !defn.default
+          @values[defn.name] = !defn.default
         else
           value ||= args.shift
           store_value(defn, value)
@@ -194,11 +198,12 @@ class Hiiro
     end
 
     class Definition
-      attr_reader :name, :short, :type, :default, :desc, :multi
+      attr_reader :name, :short, :long, :type, :default, :desc, :multi
 
-      def initialize(name, short: nil, type: :string, default: nil, desc: nil, multi: false)
+      def initialize(name, short: nil, long: nil, type: :string, default: nil, desc: nil, multi: false)
         @name = name.to_sym
         @short = short&.to_s
+        @long = long&.to_sym
         @type = type
         @default = default
         @desc = desc
@@ -210,7 +215,7 @@ class Hiiro
       end
 
       def long_form
-        "--#{name.to_s.tr('_', '-')}"
+        "--#{(@long || @name).to_s.tr('_', '-')}"
       end
 
       def short_form
