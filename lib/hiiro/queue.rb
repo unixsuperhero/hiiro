@@ -292,7 +292,7 @@ class Hiiro
     def add_with_frontmatter(content, task_info: nil)
       queue_dirs # ensure dirs exist
 
-      if task_info
+      if task_info && !content.start_with?("---")
         fm = {}
         fm['task_name'] = task_info[:task_name] if task_info[:task_name]
         fm['tree_name'] = task_info[:tree_name] if task_info[:tree_name]
