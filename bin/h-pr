@@ -7,10 +7,8 @@ require "yaml"
 require "json"
 require "tempfile"
 
-Hiiro.load_env
-
 class PinnedPRManager
-  PINNED_FILE = File.join(Dir.home, '.config/hiiro/pinned_prs.yml')
+  PINNED_FILE = Hiiro::Config.path('pinned_prs.yml')
 
   def self.repo_from_url(url)
     return nil unless url
@@ -1197,4 +1195,15 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     matches.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
   end
 
+  add_subcmd(:config) do |*args|
+    make_child do
+      add_subcmd(:path) do
+        puts PinnedPRManager::PINNED_FILE
+      end
+
+      add_subcmd(:vim) do
+        editor PinnedPRManager::PINNED_FILE
+      end
+    end.run
+  end
 end
