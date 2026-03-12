@@ -334,27 +334,28 @@ class PinnedPRManager
   def display_pinned(pr, idx = nil)
     num = idx ? "#{(pr['slot'] || idx + 1).to_s.rjust(3)}." : ""
 
-    check_emoji = if pr['checks']
-      c = pr['checks']
-      has_failed  = c['failed'].to_i > 0
-      has_pending = c['pending'].to_i > 0
-      if has_failed && has_pending
-        "⏳❌"
-      elsif has_failed
-        "❌"
-      elsif has_pending
-        "⏳"
+    check_emoji =
+      if pr['checks']
+        c = pr['checks']
+        has_failed  = c['failed'].to_i > 0
+        has_pending = c['pending'].to_i > 0
+        if has_failed && has_pending
+          "⏳❌"
+        elsif has_failed
+          "❌"
+        elsif has_pending
+          "⏳"
+        else
+          "✅"
+        end
       else
-        "✅"
+        ""
       end
-    else
-      ""
-    end
 
     state_label = case pr['state']
     when 'MERGED' then 'M'
     when 'CLOSED' then 'X'
-    else pr['is_draft'] ? 'D' : 'O'
+    else pr['is_draft'] ? 'd' : 'o'
     end
 
     bracket = [state_label, check_emoji].reject(&:empty?).join(' ')
@@ -367,21 +368,15 @@ class PinnedPRManager
       ""
     end
 
-    reviews_str =
-      if pr['reviews']
-        r = pr['reviews']
-        parts = []
-        parts << "#{r['approved']} approved" if r['approved'].to_i > 0
-        parts << "#{r['changes_requested']} changes" if r['changes_requested'].to_i > 0
-        parts.empty? ? "" : " | #{parts.join(', ')}"
-      else
-        ""
-      end
+    r = pr['reviews'] || {}
+    as = r['approved'].to_i
+    crs = r['changes_requested'].to_i
+    reviews_str = format '%da/%dcr', as, crs
 
     repo = pr_repo(pr)
     repo_label = (repo && repo != 'instacart/carrot') ? " [#{repo}]" : ""
 
-    "#{num} #{state_icon} ##{pr['number']}#{repo_label} #{pr['title']}#{checks_str}#{reviews_str}".strip
+    "#{num} #{state_icon} #{reviews_str} ##{pr['number']}#{repo_label} #{pr['title']}#{checks_str}".strip
   end
 
   def display_detailed(pr, idx = nil)
@@ -1202,7 +1197,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       end
 
       add_subcmd(:vim) do
-        editor PinnedPRManager::PINNED_FILE
+        edit_files PinnedPRManager::PINNED_FILE
       end
     end.run
   end
