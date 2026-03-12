@@ -364,7 +364,7 @@ class Hiiro
           end
         }
 
-        list_cmd = proc { |*args|
+        h.add_subcmd(:ls, :list) { |*args|
           opts = Hiiro::Options.parse(args) do
             flag(:all, short: :a, desc: 'Show all tasks without limit; use pager if output exceeds terminal height')
           end
@@ -384,9 +384,6 @@ class Hiiro
             puts lines
           end
         }
-
-        h.add_subcmd(:ls, &list_cmd)
-        h.add_subcmd(:list, &list_cmd)
 
         h.add_subcmd(:status) {
           tasks = q.all_tasks
@@ -482,7 +479,7 @@ class Hiiro
               fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
               fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
               fm_lines << "---"
-              fm_lines << ""
+              fm_lines << "\n"
               tmpfile.write(fm_lines.join("\n"))
             end
 
