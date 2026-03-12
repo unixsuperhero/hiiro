@@ -528,6 +528,12 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   add_subcmd(:watch, watch: true, &watch_block)
   add_subcmd(:fwatch, watch: true, fail_fast: true, &watch_block)
 
+  add_flag(:verbose, short: :v, desc: 'verbose output')
+  add_cmd(:tst, args: [:a], opts: [:verbose]) do |*x|
+    puts x: x
+    puts 'test'
+  end
+
   add_subcmd(:number) { |*args|
     stdout = `gh pr view`
 
