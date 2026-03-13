@@ -366,8 +366,8 @@ class PinnedPRManager
     as = r['approved'].to_i
     crs = r['changes_requested'].to_i
 
-    as_str  = as  > 0 ? "\e[1;92m#{as}\e[0m"  : '-'
-    crs_str = crs > 0 ? "\e[1;33m#{crs}\e[0m" : '-'
+    as_str  = as  > 0 ? "\e[30;102m#{as}\e[0m"  : '-'
+    crs_str = crs > 0 ? "\e[30;103m#{crs}\e[0m" : '-'
     reviews_str = "#{as_str}a/#{crs_str}cr"
 
     repo = pr_repo(pr)
