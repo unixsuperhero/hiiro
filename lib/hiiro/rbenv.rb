@@ -55,6 +55,7 @@ class Hiiro
       # Run a command in every installed version. Yields (version, success) if a block given.
       def run_in_all(*cmd)
         versions.each do |ver|
+          puts "VERSION: #{ver}"
           success = run(*cmd, version: ver)
           yield ver, success if block_given?
         end
