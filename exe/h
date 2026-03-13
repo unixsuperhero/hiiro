@@ -6,7 +6,7 @@ require "fileutils"
 def update_hiiro(version=nil)
   ver = version || Hiiro::Rbenv.current_version
   puts
-  puts "INSTALLING RUBY VERSION #{ver}"
+  puts "INSTALLING hiiro for RUBY #{ver}"
 
   Hiiro::Rbenv.install_gem('hiiro', version: ver)
   Hiiro::Rbenv.run('h', 'setup', version: ver)
