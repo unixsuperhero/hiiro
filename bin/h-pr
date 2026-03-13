@@ -368,7 +368,8 @@ class PinnedPRManager
 
     as_str  = as  > 0 ? "\e[30;102m#{as}\e[0m"  : '-'
     crs_str = crs > 0 ? "\e[30;103m#{crs}\e[0m" : '-'
-    reviews_str = "#{as_str}a/#{crs_str}cr"
+    conflict_str = pr['mergeable'] == 'CONFLICTING' ? " \e[30;101m[conflicts]\e[0m" : ""
+    reviews_str = "#{as_str}a/#{crs_str}cr#{conflict_str}"
 
     repo = pr_repo(pr)
     repo_label = (repo && repo != 'instacart/carrot') ? " [#{repo}]" : ""
