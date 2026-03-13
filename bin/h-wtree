@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'hiiro'
+require 'shellwords'
 
 Hiiro.run(*ARGV) do
   add_subcmd(:ls)  { |*args| system('git', 'worktree', 'list', *args) }
@@ -32,6 +33,21 @@ Hiiro.run(*ARGV) do
 
     if selected
       print selected
+    end
+  end
+
+  add_subcmd(:size) do |*args|
+    output = `git worktree list`.strip
+
+    if output.empty?
+      STDERR.puts "No worktrees found"
+      next
+    end
+
+    output.split("\n").each do |line|
+      path, *rest = line.split
+      size = `du -sh #{Shellwords.escape(path)} 2>/dev/null`.split.first || "?"
+      puts "#{size}\t#{path} #{rest.join(' ')}"
     end
   end
 
