@@ -78,6 +78,19 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
     IO.popen(['claude', '-p'], 'w') { |io| io.write(prompt) }
   }
 
+  add_default {
+    tmpfile = Tempfile.new(['claude-', '.md'])
+    tmpfile.close
+    edit_files(tmpfile.path)
+    prompt = File.read(tmpfile.path).strip
+    tmpfile.unlink
+    if prompt.empty?
+      puts "Aborted (empty file)"
+      next
+    end
+    IO.popen(['claude', '-p'], 'w') { |io| io.write(prompt) }
+  }
+
   add_subcmd(:loop) { |*args|
     separator = "-" * 72
     history = []

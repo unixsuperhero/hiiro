@@ -341,7 +341,7 @@ class PinnedPRManager
     { 'approved' => approved, 'changes_requested' => changes_requested, 'commented' => commented, 'reviewers' => latest_by_author }
   end
 
-  def display_pinned(pr, idx = nil, widths: {})
+  def display_pinned(pr, idx = nil, widths: {}, oneline: false)
     slot_w  = widths[:slot]  || 1
     succ_w  = widths[:succ]  || 1
     total_w = widths[:total] || 1
@@ -407,7 +407,11 @@ class PinnedPRManager
     line3 = pr['url'] ? "#{indent}#{pr['url']}" : nil
     line4 = tags_str ? "#{indent}#{tags_str}" : nil
 
-    [line1, line2, line3, line4].compact.join("\n")
+    if oneline
+      "#{line1} #{repo_label}#{pr['title']}"
+    else
+      [line1, line2, line3, line4].compact.join("\n")
+    end
   end
 
   def filter_active?(opts)
@@ -759,6 +763,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   add_subcmd(:ls) do |*ls_args|
     opts = Hiiro::Options.parse(ls_args) {
       flag(:update, short: 'u', desc: 'update status before listing')
+      flag(:oneline, short: '1', desc: 'one line per PR')
       instance_eval(&FILTER_OPTS)
     }
 
@@ -793,7 +798,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       as_w    = results.map { |pr| [pr.dig('reviews', 'approved').to_i.to_s.length, 1].max }.max
       crs_w   = results.map { |pr| [pr.dig('reviews', 'changes_requested').to_i.to_s.length, 1].max }.max
       widths  = { slot: slot_w, succ: succ_w, total: total_w, as: as_w, crs: crs_w }
-      results.each_with_index { |pr, idx| puts pinned_manager.display_pinned(pr, idx, widths: widths) }
+      results.each_with_index { |pr, idx| puts pinned_manager.display_pinned(pr, idx, widths: widths, oneline: opts.oneline) }
       last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
       puts "---"
       puts "Last updated: #{last_checked || 'never'}"
