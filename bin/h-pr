@@ -392,7 +392,7 @@ class PinnedPRManager
 
   def filter_active?(opts)
     FILTER_PREDICATES.keys.any? { |f| opts.respond_to?(f) && opts.send(f) } ||
-      (opts.respond_to?(:tag) && opts.tag)
+      (opts.respond_to?(:tag) && Array(opts.tag).any?)
   end
 
   def apply_filters(prs, opts, forced: [])
@@ -401,10 +401,10 @@ class PinnedPRManager
 
     results = active.empty? ? prs : prs.select { |pr| active.any? { |f| FILTER_PREDICATES[f]&.call(pr) } }
 
-    # Tag is an AND post-filter — narrows whatever the flag filters returned
-    if opts.respond_to?(:tag) && opts.tag
-      tag = opts.tag.to_s
-      results = results.select { |pr| Array(pr['tags']).include?(tag) }
+    # Tags are an AND post-filter; multiple tags are OR'd among themselves
+    tag_filter = Array(opts.respond_to?(:tag) ? opts.tag : nil).map(&:to_s).reject(&:empty?)
+    unless tag_filter.empty?
+      results = results.select { |pr| (Array(pr['tags']) & tag_filter).any? }
     end
 
     results
@@ -488,7 +488,7 @@ FILTER_OPTS = Proc.new {
   flag(:merged,    short: 'm', desc: 'filter: merged PRs')
   flag(:active,    short: 'o', desc: 'filter: open (non-merged) PRs')
   flag(:numbers,   short: 'n', desc: 'output PR numbers only (no #)')
-  option(:tag,     short: 't', desc: 'filter by tag (AND with other filters)')
+  option(:tag,     short: 't', desc: 'filter by tag (OR when multiple; AND with flag filters)', multi: true)
 }
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
@@ -1332,26 +1332,94 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   # === Tags ===
 
-  add_subcmd(:tag) do |ref = nil, *tag_names|
-    if ref.nil? || tag_names.empty?
-      puts "Usage: h pr tag <ref> <tag> [tag2 ...]"
-      next
+  add_subcmd(:tag) do |*raw_args|
+    opts = Hiiro::Options.parse(raw_args) do
+      flag(:edit, short: 'e', desc: 'open YAML editor to bulk-tag multiple PRs')
     end
 
-    pr_number = resolve_pr.call(ref)
-    next unless pr_number
+    if opts.edit
+      pinned = pinned_manager.load_pinned
 
-    pinned = pinned_manager.load_pinned
-    pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
-    unless pr
-      puts "PR ##{pr_number} not in tracked list"
-      next
+      if pinned.empty?
+        puts "No tracked PRs to tag"
+        next
+      end
+
+      pr_lines = pinned.map do |pr|
+        branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
+        "- #{pr['number']}  # #{branch} #{pr['title']}"
+      end
+
+      yaml_content = <<~YAML
+        # Select PRs to tag and list the tags to apply.
+        # All listed PRs will receive all listed tags.
+        # Lines starting with # are comments and are ignored.
+
+        prs:
+        #{pr_lines.join("\n")}
+
+        tags:
+        -
+      YAML
+
+      tmpfile = Tempfile.new(['pr-tag-', '.yml'])
+      tmpfile.write(yaml_content)
+      tmpfile.close
+      edit_files(tmpfile.path)
+
+      parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
+      tmpfile.unlink
+
+      unless parsed.is_a?(Hash)
+        puts "Aborted: could not parse YAML"
+        next
+      end
+
+      selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
+      new_tags         = Array(parsed['tags']).map(&:to_s).reject(&:empty?)
+
+      if selected_numbers.empty? || new_tags.empty?
+        puts "Aborted: need at least one PR and one tag"
+        next
+      end
+
+      pinned = pinned_manager.load_pinned
+      updated = 0
+      selected_numbers.each do |num|
+        pr = pinned.find { |p| p['number'].to_s == num }
+        next unless pr
+        pr['tags'] = (Array(pr['tags']) + new_tags).uniq
+        updated += 1
+        puts "Tagged ##{num} with: #{new_tags.join(', ')}"
+      end
+
+      pinned_manager.save_pinned(pinned)
+      puts "Updated #{updated} PR(s)."
+    else
+      ref       = opts.args[0]
+      tag_names = opts.args[1..]
+
+      if ref.nil? || tag_names.empty?
+        puts "Usage: h pr tag <ref> <tag> [tag2 ...]"
+        puts "       h pr tag -e  (bulk edit mode)"
+        next
+      end
+
+      pr_number = resolve_pr.call(ref)
+      next unless pr_number
+
+      pinned = pinned_manager.load_pinned
+      pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
+      unless pr
+        puts "PR ##{pr_number} not in tracked list"
+        next
+      end
+
+      pr['tags'] = (Array(pr['tags']) + tag_names).uniq
+      pinned_manager.save_pinned(pinned)
+      puts "Tagged ##{pr_number} with: #{tag_names.join(', ')}"
+      puts "  Tags now: #{pr['tags'].join(', ')}"
     end
-
-    pr['tags'] = (Array(pr['tags']) + tag_names).uniq
-    pinned_manager.save_pinned(pinned)
-    puts "Tagged ##{pr_number} with: #{tag_names.join(', ')}"
-    puts "  Tags now: #{pr['tags'].join(', ')}"
   end
 
   add_subcmd(:untag) do |ref = nil, *tag_names|

@@ -182,11 +182,21 @@ class Hiiro
       puts "Stopped task '#{task.name}' (worktree available for reuse)"
     end
 
-    def list
+    def list(tags_filter: [])
+      tag_store = Hiiro::Tags.new(:task)
       items = tasks
+
+      if tags_filter.any?
+        items = items.select { |t| (tag_store.get(t.name) & tags_filter).any? }
+      end
+
       if items.empty?
-        puts scope == :subtask ? "No subtasks found" : "No tasks found"
-        puts "Use 'h #{scope} start NAME' to create one."
+        if tags_filter.any?
+          puts "No #{scope == :subtask ? 'subtasks' : 'tasks'} match tags: #{tags_filter.join(', ')}"
+        else
+          puts scope == :subtask ? "No subtasks found" : "No tasks found"
+          puts "Use 'h #{scope} start NAME' to create one."
+        end
         return
       end
 
@@ -227,9 +237,11 @@ class Hiiro
 
       rows.each do |r|
         name_pad = name_col - r[:prefix].length
+        tags     = tag_store.get(r[:name])
+        tag_str  = tags.any? ? "  " + Hiiro::Tags.badges(tags) : ""
         print r[:prefix]
         puts format("%-#{name_pad}s  %-#{tree_col}s  %-#{branch_col}s  %s",
-                    r[:name], r[:tree], r[:branch], r[:session])
+                    r[:name], r[:tree], r[:branch], r[:session]) + tag_str
       end
 
       available = environment.all_trees.reject { |t|
@@ -649,8 +661,76 @@ class Hiiro
   module Tasks
     def self.build_hiiro(parent_hiiro, tm)
       task_hiiro = parent_hiiro.make_child do |h|
-        h.add_subcmd(:list) { tm.list }
-        h.add_subcmd(:ls) { tm.list }
+        h.add_subcmd(:list) do |*args|
+          opts = Hiiro::Options.parse(args) { option(:tag, short: 't', desc: 'filter by tag (OR when multiple)', multi: true) }
+          tm.list(tags_filter: Array(opts.tag).reject(&:empty?))
+        end
+        h.add_subcmd(:ls) do |*args|
+          opts = Hiiro::Options.parse(args) { option(:tag, short: 't', desc: 'filter by tag (OR when multiple)', multi: true) }
+          tm.list(tags_filter: Array(opts.tag).reject(&:empty?))
+        end
+
+        h.add_subcmd(:tag) do |*raw_args|
+          tag_store = Hiiro::Tags.new(:task)
+          opts      = Hiiro::Options.parse(raw_args) { flag(:edit, short: 'e', desc: 'open YAML editor to bulk-tag tasks') }
+
+          if opts.edit
+            task_names = tm.tasks.map(&:name)
+            task_lines = task_names.map { |n| "- #{n}" }
+            yaml_content = "# Select tasks to tag.\n\ntasks:\n#{task_lines.join("\n")}\n\ntags:\n-\n"
+            require 'tempfile'
+            tmpfile = Tempfile.new(['task-tag-', '.yml'])
+            tmpfile.write(yaml_content)
+            tmpfile.close
+            h.edit_files(tmpfile.path)
+            parsed   = YAML.safe_load(File.read(tmpfile.path)) rescue nil
+            tmpfile.unlink
+            selected = Array(parsed&.dig('tasks')).map(&:to_s).reject(&:empty?)
+            new_tags = Array(parsed&.dig('tags')).map(&:to_s).reject(&:empty?)
+            if selected.empty? || new_tags.empty?
+              puts "Aborted: need at least one task and one tag"
+              next
+            end
+            selected.each { |n| tag_store.add(n, *new_tags); puts "Tagged #{n} with: #{new_tags.join(', ')}" }
+          else
+            task_name = opts.args[0] || tm.current_task&.name
+            tag_names = opts.args[1..]
+            if task_name.nil? || tag_names.empty?
+              puts "Usage: h task tag [task_name] <tag> [tag2 ...]"
+              next
+            end
+            result = tag_store.add(task_name, *tag_names)
+            puts "Tagged #{task_name} with: #{tag_names.join(', ')}"
+            puts "  Tags now: #{result.join(', ')}"
+          end
+        end
+
+        h.add_subcmd(:untag) do |*raw_args|
+          tag_store = Hiiro::Tags.new(:task)
+          task_name = raw_args[0] || tm.current_task&.name
+          tag_names = raw_args[1..]
+          if task_name.nil?
+            puts "Usage: h task untag [task_name] [tag ...]"
+            next
+          end
+          tag_store.remove(task_name, *tag_names)
+          puts tag_names.empty? ? "Cleared all tags from #{task_name}" : "Removed #{tag_names.join(', ')} from #{task_name}"
+        end
+
+        h.add_subcmd(:tags) do
+          tag_store = Hiiro::Tags.new(:task)
+          all       = tag_store.all
+          if all.empty?
+            puts "No tagged tasks."
+            next
+          end
+          by_tag = Hash.new { |h2, k| h2[k] = [] }
+          all.each { |task, tags| tags.each { |t| by_tag[t] << task } }
+          by_tag.sort.each do |tag, tasks|
+            puts "#{Hiiro::Tags.badges([tag])} (#{tasks.length})"
+            tasks.each { |t| puts "  #{t}" }
+          end
+        end
 
         h.add_subcmd(:start) do |*raw_args|
           opts = Hiiro::Options.parse(raw_args) do

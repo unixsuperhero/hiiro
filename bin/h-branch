@@ -116,13 +116,129 @@ class BranchManager
   end
 end
 
+BRANCH_TAG_OPTS = Proc.new {
+  option(:tag, short: 't', desc: 'filter by tag (OR when multiple)', multi: true)
+}
+
 Hiiro.run(*ARGV) do
-  manager = BranchManager.new(self)
+  manager   = BranchManager.new(self)
+  tag_store = Hiiro::Tags.new(:branch)
 
   add_subcmd(:edit) { edit_files(__FILE__) }
   add_subcmd(:save) { manager.save }
   add_subcmd(:current) { print `git branch --show-current` }
   add_subcmd(:info) { manager.current }
+
+  add_subcmd(:ls) do |*ls_args|
+    opts     = Hiiro::Options.parse(ls_args, &BRANCH_TAG_OPTS)
+    branches = git.branches(sort_by: 'authordate', ignore_case: true)
+    current  = git.branch
+    tags_all = tag_store.all  # { branch_name => [tags] }
+
+    tag_filter = Array(opts.tag).reject(&:empty?)
+    if tag_filter.any?
+      branches = branches.select { |b| (Array(tags_all[b]) & tag_filter).any? }
+    end
+
+    if branches.empty?
+      puts tag_filter.any? ? "No branches match tags: #{tag_filter.join(', ')}" : "No branches found."
+      next
+    end
+
+    branches.each do |b|
+      marker   = b == current ? "* " : "  "
+      tags     = Array(tags_all[b])
+      tag_str  = tags.any? ? "  " + Hiiro::Tags.badges(tags) : ""
+      puts "#{marker}#{b}#{tag_str}"
+    end
+  end
+
+  add_subcmd(:tag) do |*raw_args|
+    opts     = Hiiro::Options.parse(raw_args) { flag(:edit, short: 'e', desc: 'open YAML editor to bulk-tag branches') }
+    branches = git.branches(sort_by: 'authordate', ignore_case: true)
+
+    if opts.edit
+      branch_lines = branches.map { |b| "- #{b}" }
+      yaml_content = <<~YAML
+        # Select branches to tag and list the tags to apply.
+        # All listed branches will receive all listed tags.
+
+        branches:
+        #{branch_lines.join("\n")}
+
+        tags:
+        -
+      YAML
+
+      require 'tempfile'
+      tmpfile = Tempfile.new(['branch-tag-', '.yml'])
+      tmpfile.write(yaml_content)
+      tmpfile.close
+      edit_files(tmpfile.path)
+
+      parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
+      tmpfile.unlink
+
+      unless parsed.is_a?(Hash)
+        puts "Aborted: could not parse YAML"
+        next
+      end
+
+      selected = Array(parsed['branches']).map(&:to_s).reject(&:empty?)
+      new_tags = Array(parsed['tags']).map(&:to_s).reject(&:empty?)
+
+      if selected.empty? || new_tags.empty?
+        puts "Aborted: need at least one branch and one tag"
+        next
+      end
+
+      selected.each do |b|
+        tag_store.add(b, *new_tags)
+        puts "Tagged #{b} with: #{new_tags.join(', ')}"
+      end
+    else
+      branch   = opts.args[0] || git.branch
+      tag_names = opts.args[1..]
+
+      if tag_names.empty?
+        puts "Usage: h branch tag [branch] <tag> [tag2 ...]"
+        puts "       h branch tag -e  (bulk edit mode)"
+        next
+      end
+
+      result = tag_store.add(branch, *tag_names)
+      puts "Tagged #{branch} with: #{tag_names.join(', ')}"
+      puts "  Tags now: #{result.join(', ')}"
+    end
+  end
+
+  add_subcmd(:untag) do |*raw_args|
+    branch    = raw_args[0] || git.branch
+    tag_names = raw_args[1..]
+
+    tag_store.remove(branch, *tag_names)
+    if tag_names.empty?
+      puts "Cleared all tags from #{branch}"
+    else
+      puts "Removed #{tag_names.join(', ')} from #{branch}"
+    end
+  end
+
+  add_subcmd(:tags) do
+    all = tag_store.all
+    if all.empty?
+      puts "No tagged branches."
+      next
+    end
+
+    by_tag = Hash.new { |h, k| h[k] = [] }
+    all.each { |branch, tags| tags.each { |t| by_tag[t] << branch } }
+
+    by_tag.sort.each do |tag, brs|
+      puts "#{Hiiro::Tags.badges([tag])} (#{brs.length})"
+      brs.each { |b| puts "  #{b}" }
+    end
+  end
 
   add_subcmd(:select) do |*select_args|
     branches = git.branches(sort_by: 'authordate', ignore_case: true)
