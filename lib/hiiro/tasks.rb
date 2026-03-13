@@ -535,6 +535,8 @@ class Hiiro
       end
     end
 
+    public
+
     def apply_sparse_checkout(path, group_names)
       dirs = SparseGroups.dirs_for_groups(group_names)
       if dirs.empty?
