@@ -1071,6 +1071,81 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     system('gh', 'pr', 'merge', pr_number.to_s, *merge_args)
   end
 
+  add_subcmd(:fix) do |*fix_args|
+    opts = Hiiro::Options.parse(fix_args) do
+      flag(:red, short: :r, desc: 'Fix all PRs with failing checks')
+      flag(:run, short: :R, desc: 'Launch queue tasks immediately after queuing')
+    end
+
+    pinned = pinned_manager.load_pinned
+
+    prs_to_fix = if opts.red
+      failing = pinned.select { |pr| (c = pr['checks']) && c['failed'].to_i > 0 }
+      if failing.empty?
+        puts "No PRs with failing checks"
+        next
+      end
+      failing
+    elsif opts.args.empty?
+      # Default: fuzzy-select from failing PRs, fall back to all tracked
+      failing = pinned.select { |pr| (c = pr['checks']) && c['failed'].to_i > 0 }
+      candidates = failing.empty? ? pinned : failing
+      if candidates.empty?
+        puts "No tracked PRs"
+        next
+      end
+      lines = candidates.each_with_index.each_with_object({}) do |(pr, idx), h|
+        h[pinned_manager.display_pinned(pr, idx)] = pr
+      end
+      selected = fuzzyfind_from_map(lines)
+      next unless selected
+      [selected]
+    else
+      # Resolve each positional arg as a PR ref
+      opts.args.map { |ref|
+        pr_num = resolve_pr.call(ref)
+        next nil unless pr_num
+        pinned.find { |p| p['number'].to_s == pr_num.to_s }
+      }.compact
+    end
+
+    if prs_to_fix.empty?
+      puts "No PRs to fix"
+      next
+    end
+
+    q = Hiiro::Queue.current(self)
+    queued_names = []
+
+    prs_to_fix.each do |pr|
+      task_info = {
+        task_name:    pr['task'],
+        tree_name:    pr['worktree'],
+        session_name: pr['tmux_session'],
+      }.compact
+      task_info = nil if task_info.empty?
+
+      result = q.add_with_frontmatter("/pr:fix #{pr['number']}", task_info: task_info)
+      if result
+        puts "Queued fix for ##{pr['number']}: #{pr['title']}"
+        queued_names << result[:name]
+      else
+        STDERR.puts "Failed to queue fix for ##{pr['number']}"
+      end
+    end
+
+    unless queued_names.empty?
+      puts
+      puts "Queued #{queued_names.length} fix task(s)."
+      if opts.run
+        puts "Launching..."
+        queued_names.each { |name| q.launch_task(name) }
+      else
+        puts "Run 'h queue run' to start."
+      end
+    end
+  end
+
   add_subcmd(:comment) do |ref = nil|
     pr_number = resolve_pr.call(ref)
     next unless pr_number
