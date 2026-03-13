@@ -16,7 +16,7 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
   add_flag(:all, short: :a, desc: 'Show the version of hiiro for all versions of ruby installed')
 
   add_cmd(:version, opts: %i[all]) { |*args|
-    if get_flag(:all)
+    if @opts.all
       Hiiro::Rbenv.run_in_all('h', 'version') do |ver, _|
         # version output printed by the subprocess
       end
