@@ -295,7 +295,7 @@ class PinnedPRManager
     drafts:    ->(pr) { pr['is_draft'] == true },
     pending:   ->(pr) { (c = pr['checks']) && c['pending'].to_i > 0 && c['failed'].to_i == 0 },
     merged:    ->(pr) { pr['state'] == 'MERGED' },
-    open:      ->(pr) { pr['state'] != 'MERGED' && pr['state'] != 'CLOSED' },
+    active:    ->(pr) { pr['state'] != 'MERGED' && pr['state'] != 'CLOSED' },
   }.freeze
 
   def summarize_checks(rollup)
@@ -728,6 +728,11 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       flag(:update, short: 'u', desc: 'update status before listing')
       instance_eval(&FILTER_OPTS)
     }
+
+    if opts.help
+      puts opts.help_text
+      exit 1
+    end
 
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
