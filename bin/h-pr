@@ -399,14 +399,15 @@ class PinnedPRManager
     repo_label = (repo && repo != 'instacart/carrot') ? "[#{repo}] " : ""
 
     tags = Array(pr['tags'])
-    tags_str = tags.any? ? tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') + " " : ""
+    tags_str = tags.any? ? tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') : nil
 
-    branch_str = pr['headRefName'] ? " [#{pr['headRefName']}]" : ""
-    line1 = "#{num} ##{pr['number']}#{branch_str} #{state_icon} #{reviews_str}"
-    line2 = "#{indent}#{repo_label}#{tags_str}#{pr['title']}"
+    branch_str = pr['headRefName'] ? " #{pr['headRefName']}" : ""
+    line1 = "#{num} ##{pr['number']} #{state_icon} #{reviews_str}#{branch_str}"
+    line2 = "#{indent}#{repo_label}#{pr['title']}"
     line3 = pr['url'] ? "#{indent}#{pr['url']}" : nil
+    line4 = tags_str ? "#{indent}#{tags_str}" : nil
 
-    [line1, line2, line3].compact.join("\n")
+    [line1, line2, line3, line4].compact.join("\n")
   end
 
   def filter_active?(opts)
