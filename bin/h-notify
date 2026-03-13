@@ -13,6 +13,25 @@ TYPE_PRESETS = {
 
 LOG_FILE = Hiiro::Config.data_path('notify_log.yml')
 
+TMUX_CONF       = File.join(Dir.home, '.tmux.conf')
+NOTIFY_CONF     = File.join(Dir.home, '.config', 'tmux', 'h-notify.tmux.conf')
+CLAUDE_SETTINGS = File.join(Dir.home, '.claude', 'settings.json')
+
+NOTIFY_TMUX_HOOKS = %w[after-kill-pane window-unlinked session-closed].freeze
+
+NOTIFY_TMUX_CONF_CONTENT = <<~'CONF'
+  # --- Notify hooks (clean up notifications when panes/windows/sessions close) ---
+  set-hook -g after-kill-pane  "run-shell -b 'h notify remove_pane \#{hook_pane_id}'"
+  set-hook -g window-unlinked  "run-shell -b 'h notify remove_window \#{hook_window_id}'"
+  set-hook -g session-closed   "run-shell -b 'h notify remove_session \#{hook_session_name}'"
+
+  # --- Notify keybinding (prefix + N to open notification menu) ---
+  bind-key N run-shell "h notify menu"
+CONF
+
+CLAUDE_NOTIFICATION_CMD = %q(MSG=$(cat | jq -r '.message // "Needs input"'); h alert -t 'Claude Code' -m "$MSG" -s k -c "echo switchc -t '$TMUX_PANE' | pbcopy"; h notify push -t info "$MSG")
+CLAUDE_STOP_CMD         = %q(h alert -t 'Claude Code' -m 'Work completed' -s b -c "echo switchc -t '$TMUX_PANE' | pbcopy"; h notify push -t success 'Work completed')
+
 def read_log
   return {} unless File.exist?(LOG_FILE)
   YAML.safe_load(File.read(LOG_FILE)) || {}
@@ -24,6 +43,16 @@ def write_log(data)
   FileUtils.mkdir_p(File.dirname(LOG_FILE))
   data.reject! { |_, entries| entries.nil? || entries.empty? }
   File.write(LOG_FILE, data.to_yaml)
+end
+
+def current_pane
+  # Prefer $TMUX_PANE env var — it's reliably set even in hook subprocesses
+  env_id = ENV['TMUX_PANE'].to_s
+  if !env_id.empty?
+    Hiiro::Tmux::Panes.fetch(all: true).find_by_id(env_id)
+  else
+    Hiiro::Tmux::Pane.current
+  end
 end
 
 def pane_exists?(pane_id)
@@ -44,7 +73,7 @@ Hiiro.run(*ARGV, tasks: true) do
       next
     end
 
-    pane    = Hiiro::Tmux::Pane.current
+    pane    = current_pane
     session = pane&.session_name || Hiiro::Tmux::Session.current&.name
 
     unless pane && session
@@ -64,7 +93,7 @@ Hiiro.run(*ARGV, tasks: true) do
 
     data = read_log
     data[session] ||= []
-    # One entry per pane — replace existing entry for this pane, newest first
+    # One entry per pane — replace existing, newest first
     data[session].reject! { |e| e['pane_id'] == pane.id }
     data[session].unshift(entry)
     write_log(data)
@@ -167,7 +196,7 @@ Hiiro.run(*ARGV, tasks: true) do
     tmux_client.display_message('Notifications cleared')
   end
 
-  # Called by tmux hook: after-kill-pane / pane-died
+  # Called by tmux hook: after-kill-pane
   add_subcmd(:remove_pane) do |pane_id = nil|
     next unless pane_id
     data = read_log
@@ -175,7 +204,7 @@ Hiiro.run(*ARGV, tasks: true) do
     write_log(data)
   end
 
-  # Called by tmux hook: window-closed
+  # Called by tmux hook: window-unlinked
   add_subcmd(:remove_window) do |window_id = nil|
     next unless window_id
     data = read_log
@@ -191,78 +220,134 @@ Hiiro.run(*ARGV, tasks: true) do
     write_log(data)
   end
 
-  add_subcmd(:setup) do
-    conf_dir    = File.join(Dir.home, '.config', 'tmux')
-    conf_file   = File.join(conf_dir, 'h-notify.tmux.conf')
-    tmux_conf   = File.join(Dir.home, '.tmux.conf')
-    source_line = "source-file #{conf_file}"
+  # --- h notify tmux ---
 
-    FileUtils.mkdir_p(conf_dir)
-
-    notify_conf = <<~'CONF'
-      # --- Notify hooks (clean up notifications when panes/windows/sessions close) ---
-      set-hook -g after-kill-pane  "run-shell -b 'h notify remove_pane \#{hook_pane_id}'"
-      set-hook -g window-unlinked  "run-shell -b 'h notify remove_window \#{hook_window_id}'"
-      set-hook -g session-closed   "run-shell -b 'h notify remove_session \#{hook_session_name}'"
-
-      # --- Notify keybinding (prefix + N to open notification menu) ---
-      bind-key N run-shell "h notify menu"
-    CONF
-
-    File.write(conf_file, notify_conf)
-    puts "Wrote #{conf_file}"
-
-    if File.exist?(tmux_conf)
-      existing = File.read(tmux_conf)
-      if existing.include?(source_line)
-        puts "#{tmux_conf} already sources #{conf_file}"
-      else
-        File.open(tmux_conf, 'a') { |f| f.puts; f.puts source_line }
-        puts "Added '#{source_line}' to #{tmux_conf}"
+  add_subcmd(:tmux) do
+    make_child {
+      add_subcmd(:setup) do
+        FileUtils.mkdir_p(File.dirname(NOTIFY_CONF))
+        File.write(NOTIFY_CONF, NOTIFY_TMUX_CONF_CONTENT)
+        puts "Wrote #{NOTIFY_CONF}"
       end
-    else
-      File.write(tmux_conf, source_line + "\n")
-      puts "Created #{tmux_conf} with source line"
-    end
 
-    puts
-    puts "Reload tmux config:"
-    puts "  tmux source-file ~/.tmux.conf"
-    puts
-    puts "─────────────────────────────────────────────────"
-    puts "Claude Code hook setup"
-    puts "─────────────────────────────────────────────────"
-    puts
-    puts "Run this to auto-update ~/.claude/settings.json:"
-    puts "  h notify update_hooks"
-    puts
-    puts "Or manually update hooks to:"
-    puts
-    puts '  Notification: h alert ... ; h notify push -t info "$MSG"'
-    puts '  Stop:         h alert ... ; h notify push -t success "Work completed"'
+      add_subcmd(:add_hooks) do
+        source_line = "source-file #{NOTIFY_CONF}"
+
+        if File.exist?(TMUX_CONF)
+          existing = File.read(TMUX_CONF)
+          if existing.include?(source_line)
+            puts "#{TMUX_CONF} already sources #{NOTIFY_CONF}"
+          else
+            File.open(TMUX_CONF, 'a') { |f| f.puts; f.puts source_line }
+            puts "Added '#{source_line}' to #{TMUX_CONF}"
+          end
+        else
+          File.write(TMUX_CONF, source_line + "\n")
+          puts "Created #{TMUX_CONF} with source line"
+        end
+
+        system('tmux', 'source-file', TMUX_CONF)
+        puts "Reloaded #{TMUX_CONF}"
+      end
+
+      add_subcmd(:reset_hooks) do
+        NOTIFY_TMUX_HOOKS.each do |hook|
+          system('tmux', 'set-hook', '-gu', hook)
+          puts "Unset tmux hook: #{hook}"
+        end
+      end
+
+      add_subcmd(:load_hooks) do
+        system('tmux', 'source-file', TMUX_CONF)
+        puts "Sourced #{TMUX_CONF}"
+      end
+    }.run
   end
 
-  add_subcmd(:update_hooks) do
-    settings_file = File.join(Dir.home, '.claude', 'settings.json')
+  # --- h notify claude ---
 
-    unless File.exist?(settings_file)
-      puts "#{settings_file} not found"
-      next
+  add_subcmd(:claude) do
+    require 'json'
+
+    read_claude_settings = lambda do
+      return {} unless File.exist?(CLAUDE_SETTINGS)
+      JSON.parse(File.read(CLAUDE_SETTINGS))
+    rescue JSON::ParserError
+      {}
     end
 
-    require 'json'
-    settings = JSON.parse(File.read(settings_file))
-    settings['hooks'] ||= {}
+    write_claude_settings = lambda do |settings|
+      File.write(CLAUDE_SETTINGS, JSON.pretty_generate(settings))
+    end
 
-    notification_cmd = %q(MSG=$(cat | jq -r '.message // "Needs input"'); h alert -t 'Claude Code' -m "$MSG" -s k -c "echo switchc -t '$TMUX_PANE' | pbcopy"; h notify push -t info "$MSG")
-    stop_cmd         = %q(h alert -t 'Claude Code' -m 'Work completed' -s b -c "echo switchc -t '$TMUX_PANE' | pbcopy"; h notify push -t success 'Work completed')
+    make_child {
+      add_subcmd(:setup) do
+        settings = read_claude_settings.call
+        settings['hooks'] ||= {}
+        settings['hooks']['Notification'] = [{ 'hooks' => [{ 'type' => 'command', 'command' => CLAUDE_NOTIFICATION_CMD }] }]
+        settings['hooks']['Stop']         = [{ 'hooks' => [{ 'type' => 'command', 'command' => CLAUDE_STOP_CMD }] }]
+        write_claude_settings.call(settings)
+        puts "Updated #{CLAUDE_SETTINGS}"
+        puts "  Notification -> h alert + h notify push -t info"
+        puts "  Stop         -> h alert + h notify push -t success"
+      end
 
-    settings['hooks']['Notification'] = [{ 'hooks' => [{ 'type' => 'command', 'command' => notification_cmd }] }]
-    settings['hooks']['Stop']         = [{ 'hooks' => [{ 'type' => 'command', 'command' => stop_cmd }] }]
+      add_subcmd(:add_hooks) do
+        settings = read_claude_settings.call
+        unless File.exist?(CLAUDE_SETTINGS)
+          puts "#{CLAUDE_SETTINGS} not found"
+          next
+        end
 
-    File.write(settings_file, JSON.pretty_generate(settings))
-    puts "Updated #{settings_file}"
-    puts "  Notification -> h alert + h notify push -t info"
-    puts "  Stop         -> h alert + h notify push -t success"
+        settings['hooks'] ||= {}
+
+        # Inject h notify push into existing commands if not already present,
+        # otherwise write fresh hooks
+        %w[Notification Stop].each do |event|
+          existing_hooks = settings.dig('hooks', event, 0, 'hooks') || []
+          if existing_hooks.any? { |h| h['command']&.include?('h notify push') }
+            puts "#{event} hook already includes h notify push — skipping"
+            next
+          end
+
+          cmd = event == 'Notification' ? CLAUDE_NOTIFICATION_CMD : CLAUDE_STOP_CMD
+          settings['hooks'][event] = [{ 'hooks' => [{ 'type' => 'command', 'command' => cmd }] }]
+          puts "Set #{event} hook -> h alert + h notify push"
+        end
+
+        write_claude_settings.call(settings)
+      end
+
+      add_subcmd(:reset_hooks) do
+        unless File.exist?(CLAUDE_SETTINGS)
+          puts "#{CLAUDE_SETTINGS} not found"
+          next
+        end
+
+        settings = read_claude_settings.call
+        settings['hooks'] ||= {}
+
+        %w[Notification Stop].each do |event|
+          hooks = settings.dig('hooks', event, 0, 'hooks') || []
+          hooks.each do |h|
+            next unless h['command']&.include?('h notify push')
+            # Strip the h notify push portion from the command
+            h['command'] = h['command']
+              .split(';')
+              .reject { |part| part.strip.start_with?('h notify push') }
+              .join(';')
+              .strip
+          end
+          puts "Stripped h notify push from #{event} hook"
+        end
+
+        write_claude_settings.call(settings)
+      end
+
+      add_subcmd(:load_hooks) do
+        puts "Claude Code settings are loaded automatically on startup."
+        puts "Restart claude to pick up changes to #{CLAUDE_SETTINGS}"
+      end
+    }.run
   end
 end
