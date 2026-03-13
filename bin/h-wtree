@@ -14,6 +14,23 @@ Hiiro.run(*ARGV) do
   add_subcmd(:repair)  { |*args| system('git', 'worktree', 'repair', *args) }
   add_subcmd(:unlock)  { |*args| system('git', 'worktree', 'unlock', *args) }
 
+  add_subcmd(:switch) do |path|
+    if path.nil?
+      lines = `git worktree list`.strip.split("\n")
+      if lines.empty?
+        STDERR.puts "No worktrees found"
+        next
+      end
+      map = lines.each_with_object({}) { |line, h| h[line] = line.split.first }
+      path = fuzzyfind_from_map(map)
+      next unless path
+    end
+
+    path = File.expand_path(path)
+    session_name = File.basename(path)
+    Hiiro::Tmux.open_session(session_name, start_directory: path)
+  end
+
   add_subcmd(:select) do |*args|
     # Get worktree list
     output = `git worktree list`.strip
