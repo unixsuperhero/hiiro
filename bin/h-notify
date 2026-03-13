@@ -2,6 +2,7 @@
 
 require "hiiro"
 require "fileutils"
+require "yaml"
 
 TYPE_PRESETS = {
   'success' => { prefix: '[OK]',   sound: 'Glass', title: 'Success' },
@@ -10,100 +11,117 @@ TYPE_PRESETS = {
   'warning' => { prefix: '[WARN]', sound: 'Purr',  title: 'Warning' },
 }
 
-NOTIFY_DIR = File.join(Dir.home, '.config', 'hiiro', 'notify')
-FileUtils.mkdir_p(NOTIFY_DIR)
+LOG_FILE = Hiiro::Config.data_path('notify_log.yml')
 
-def session_name
-  `tmux display-message -p '\#{session_name}'`.strip
+def read_log
+  return {} unless File.exist?(LOG_FILE)
+  YAML.safe_load(File.read(LOG_FILE)) || {}
+rescue
+  {}
 end
 
-def notify_file(session = nil)
-  session ||= session_name
-  File.join(NOTIFY_DIR, "#{session}.log")
-end
-
-def read_notifications(session = nil)
-  file = notify_file(session)
-  return [] unless File.exist?(file)
-  File.readlines(file, chomp: true).reject(&:empty?)
-end
-
-def write_notifications(entries, session = nil)
-  file = notify_file(session)
-  if entries.empty?
-    File.delete(file) if File.exist?(file)
-  else
-    File.write(file, entries.join("\n") + "\n")
-  end
+def write_log(data)
+  FileUtils.mkdir_p(File.dirname(LOG_FILE))
+  data.reject! { |_, entries| entries.nil? || entries.empty? }
+  File.write(LOG_FILE, data.to_yaml)
 end
 
 def pane_exists?(pane_id)
-  panes = `tmux list-panes -a -F '\#{pane_id}' 2>/dev/null`.strip.split("\n")
-  panes.include?(pane_id)
+  Hiiro::Tmux::Panes.fetch(all: true).find_by_id(pane_id)
 end
 
-Hiiro.run(*ARGV) do
+Hiiro.run(*ARGV, tasks: true) do
   @opts = Hiiro::Options.parse(args) do
     option(:type, short: 't', desc: 'Notification type (success, error, info, warning)', default: 'info')
   end
 
   @preset = TYPE_PRESETS[@opts.type] || TYPE_PRESETS['info']
 
-  add_subcmd(:push) do |*push_args|
-    message = push_args.join(' ')
+  add_subcmd(:push) do
+    message = @opts.args.join(' ')
     if message.empty?
       puts "Usage: h notify push [-t TYPE] \"message\""
       next
     end
 
-    pane_id = `tmux display-message -p '\#{pane_id}'`.strip
-    window_id = `tmux display-message -p '\#{window_id}'`.strip
-    session = session_name
-    pane_cmd = `tmux display-message -p '\#{pane_current_command}'`.strip
-    timestamp = Time.now.to_i.to_s
+    pane    = Hiiro::Tmux::Pane.current
+    session = pane&.session_name || Hiiro::Tmux::Session.current&.name
 
-    entry = [pane_id, window_id, session, timestamp, pane_cmd, message].join('|')
+    unless pane && session
+      $stderr.puts "h notify push: not in a tmux session"
+      next
+    end
 
-    entries = read_notifications(session)
-    entries.unshift(entry)
-    write_notifications(entries, session)
+    entry = {
+      'pane_id'   => pane.id,
+      'window_id' => pane.window_id,
+      'session'   => session,
+      'timestamp' => Time.now.to_i,
+      'pane_cmd'  => pane.command,
+      'message'   => message,
+      'type'      => @opts.type,
+    }
 
-    # Show tmux display-message with type prefix
-    system('tmux', 'display-message', "#{@preset[:prefix]} #{message}")
+    data = read_log
+    data[session] ||= []
+    # One entry per pane — replace existing entry for this pane, newest first
+    data[session].reject! { |e| e['pane_id'] == pane.id }
+    data[session].unshift(entry)
+    write_log(data)
 
-    # Also send terminal-notifier
+    tmux_client.display_message("#{@preset[:prefix]} #{message}")
     system('terminal-notifier',
       '-title', @preset[:title],
       '-message', message,
       '-sound', @preset[:sound])
   end
 
+  add_subcmd(:ls) do
+    ls_opts = Hiiro::Options.parse(@opts.args) do
+      flag(:all, short: 'a', desc: 'Show all sessions')
+    end
+
+    data     = read_log
+    sessions = ls_opts.all ? data.keys : [Hiiro::Tmux::Session.current&.name].compact
+
+    any = false
+    sessions.each do |sess|
+      entries = data[sess] || []
+      next if entries.empty?
+
+      puts "=== #{sess} ===" if ls_opts.all
+      entries.each_with_index do |e, i|
+        time_str = Time.at(e['timestamp']).strftime('%H:%M:%S')
+        prefix   = TYPE_PRESETS[e['type']]&.dig(:prefix) || '[INFO]'
+        puts "%3d) %s [%s] %s: %s (%s)" % [i, prefix, e['pane_id'], e['pane_cmd'], e['message'], time_str]
+      end
+      any = true
+    end
+
+    puts "No notifications." unless any
+  end
+
   add_subcmd(:menu) do
-    session = session_name
-    entries = read_notifications(session)
+    session = Hiiro::Tmux::Session.current&.name
+    data    = read_log
+    entries = data[session] || []
 
     if entries.empty?
-      system('tmux', 'display-message', 'No notifications')
+      tmux_client.display_message('No notifications')
       next
     end
 
-    # Build display-menu arguments
     menu_args = ['-T', 'Notifications']
 
-    entries.first(10).each_with_index do |line, idx|
-      parts = line.split('|')
-      pane_id = parts[0]
-      cmd = parts[4]
-      msg = parts[5..].join('|')
-      msg = msg[0..46] + '...' if msg.length > 50
-
-      label = "#{idx}: [#{pane_id}] #{cmd}: #{msg}"
+    entries.first(10).each_with_index do |e, idx|
+      msg    = e['message']
+      msg    = msg[0..46] + '...' if msg.length > 50
+      prefix = TYPE_PRESETS[e['type']]&.dig(:prefix) || '[INFO]'
+      label  = "#{idx}: #{prefix} [#{e['pane_id']}] #{e['pane_cmd']}: #{msg}"
       menu_args.push(label, idx.to_s, "run-shell 'h notify jump #{idx}'")
     end
 
-    # Separator and clear option
     menu_args.push('', '', 'Clear all', 'c', "run-shell 'h notify clear'")
-
     system('tmux', 'display-menu', *menu_args)
   end
 
@@ -113,39 +131,139 @@ Hiiro.run(*ARGV) do
       next
     end
 
-    index = index_str.to_i
-    session = session_name
-    entries = read_notifications(session)
+    index   = index_str.to_i
+    session = Hiiro::Tmux::Session.current&.name
+    data    = read_log
+    entries = data[session] || []
 
     if index >= entries.length
-      system('tmux', 'display-message', 'Notification not found')
+      tmux_client.display_message('Notification not found')
       next
     end
 
     entry = entries[index]
-    parts = entry.split('|')
-    target_pane = parts[0]
-    target_window = parts[1]
 
-    unless pane_exists?(target_pane)
-      system('tmux', 'display-message', "Pane #{target_pane} no longer exists")
+    unless pane_exists?(entry['pane_id'])
+      tmux_client.display_message("Pane #{entry['pane_id']} no longer exists")
       entries.delete_at(index)
-      write_notifications(entries, session)
+      data[session] = entries
+      write_log(data)
       next
     end
 
-    system('tmux', 'select-window', '-t', target_window)
-    system('tmux', 'select-pane', '-t', target_pane)
+    tmux_client.select_window(entry['window_id'])
+    tmux_client.select_pane(entry['pane_id'])
 
-    # Remove the notification
     entries.delete_at(index)
-    write_notifications(entries, session)
+    data[session] = entries
+    write_log(data)
   end
 
   add_subcmd(:clear) do
-    session = session_name
-    file = notify_file(session)
-    File.delete(file) if File.exist?(file)
-    system('tmux', 'display-message', 'Notifications cleared')
+    session = Hiiro::Tmux::Session.current&.name
+    data    = read_log
+    data.delete(session)
+    write_log(data)
+    tmux_client.display_message('Notifications cleared')
+  end
+
+  # Called by tmux hook: after-kill-pane / pane-died
+  add_subcmd(:remove_pane) do |pane_id = nil|
+    next unless pane_id
+    data = read_log
+    data.each_value { |entries| entries.reject! { |e| e['pane_id'] == pane_id } }
+    write_log(data)
+  end
+
+  # Called by tmux hook: window-closed
+  add_subcmd(:remove_window) do |window_id = nil|
+    next unless window_id
+    data = read_log
+    data.each_value { |entries| entries.reject! { |e| e['window_id'] == window_id } }
+    write_log(data)
+  end
+
+  # Called by tmux hook: session-closed
+  add_subcmd(:remove_session) do |sess = nil|
+    next unless sess
+    data = read_log
+    data.delete(sess)
+    write_log(data)
+  end
+
+  add_subcmd(:setup) do
+    conf_dir    = File.join(Dir.home, '.config', 'tmux')
+    conf_file   = File.join(conf_dir, 'h-notify.tmux.conf')
+    tmux_conf   = File.join(Dir.home, '.tmux.conf')
+    source_line = "source-file #{conf_file}"
+
+    FileUtils.mkdir_p(conf_dir)
+
+    notify_conf = <<~'CONF'
+      # --- Notify hooks (clean up notifications when panes/windows/sessions close) ---
+      set-hook -g after-kill-pane  "run-shell -b 'h notify remove_pane \#{hook_pane_id}'"
+      set-hook -g pane-died        "run-shell -b 'h notify remove_pane \#{pane_id}'"
+      set-hook -g window-closed    "run-shell -b 'h notify remove_window \#{hook_window_id}'"
+      set-hook -g session-closed   "run-shell -b 'h notify remove_session \#{hook_session_name}'"
+
+      # --- Notify keybinding (prefix + N to open notification menu) ---
+      bind-key N run-shell "h notify menu"
+    CONF
+
+    File.write(conf_file, notify_conf)
+    puts "Wrote #{conf_file}"
+
+    if File.exist?(tmux_conf)
+      existing = File.read(tmux_conf)
+      if existing.include?(source_line)
+        puts "#{tmux_conf} already sources #{conf_file}"
+      else
+        File.open(tmux_conf, 'a') { |f| f.puts; f.puts source_line }
+        puts "Added '#{source_line}' to #{tmux_conf}"
+      end
+    else
+      File.write(tmux_conf, source_line + "\n")
+      puts "Created #{tmux_conf} with source line"
+    end
+
+    puts
+    puts "Reload tmux config:"
+    puts "  tmux source-file ~/.tmux.conf"
+    puts
+    puts "─────────────────────────────────────────────────"
+    puts "Claude Code hook setup"
+    puts "─────────────────────────────────────────────────"
+    puts
+    puts "Run this to auto-update ~/.claude/settings.json:"
+    puts "  h notify update_hooks"
+    puts
+    puts "Or manually update hooks to:"
+    puts
+    puts '  Notification: h alert ... ; h notify push -t info "$MSG"'
+    puts '  Stop:         h alert ... ; h notify push -t success "Work completed"'
+  end
+
+  add_subcmd(:update_hooks) do
+    settings_file = File.join(Dir.home, '.claude', 'settings.json')
+
+    unless File.exist?(settings_file)
+      puts "#{settings_file} not found"
+      next
+    end
+
+    require 'json'
+    settings = JSON.parse(File.read(settings_file))
+    settings['hooks'] ||= {}
+
+    notification_cmd = %q(MSG=$(cat | jq -r '.message // "Needs input"'); h alert -t 'Claude Code' -m "$MSG" -s k -c "echo switchc -t '$TMUX_PANE' | pbcopy"; h notify push -t info "$MSG")
+    stop_cmd         = %q(h alert -t 'Claude Code' -m 'Work completed' -s b -c "echo switchc -t '$TMUX_PANE' | pbcopy"; h notify push -t success 'Work completed')
+
+    settings['hooks']['Notification'] = [{ 'hooks' => [{ 'type' => 'command', 'command' => notification_cmd }] }]
+    settings['hooks']['Stop']         = [{ 'hooks' => [{ 'type' => 'command', 'command' => stop_cmd }] }]
+
+    File.write(settings_file, JSON.pretty_generate(settings))
+    puts "Updated #{settings_file}"
+    puts "  Notification -> h alert + h notify push -t info"
+    puts "  Stop         -> h alert + h notify push -t success"
   end
 end
