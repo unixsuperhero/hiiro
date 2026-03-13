@@ -202,8 +202,6 @@ Hiiro.run(*ARGV, tasks: true) do
     notify_conf = <<~'CONF'
       # --- Notify hooks (clean up notifications when panes/windows/sessions close) ---
       set-hook -g after-kill-pane  "run-shell -b 'h notify remove_pane \#{hook_pane_id}'"
-      set-hook -g pane-died        "run-shell -b 'h notify remove_pane \#{pane_id}'"
-      set-hook -g pane-exited      "run-shell -b 'h notify remove_pane \#{pane_id}'"
       set-hook -g window-unlinked  "run-shell -b 'h notify remove_window \#{hook_window_id}'"
       set-hook -g session-closed   "run-shell -b 'h notify remove_session \#{hook_session_name}'"
 
