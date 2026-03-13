@@ -4,29 +4,25 @@ require "hiiro"
 require "fileutils"
 
 def update_hiiro(version=nil)
-  ENV['RBENV_VERSION'] = version.to_s if version
+  ver = version || Hiiro::Rbenv.current_version
   puts
-  puts "INSTALLING RUBY VERSION #{version}"
-  env = version ? { 'RBENV_VERSION' => version.to_s } : {}
+  puts "INSTALLING RUBY VERSION #{ver}"
 
-  gems = Hiiro::Shell.capture_output('rbenv', 'exec', 'gem', 'list', 'hiiro', **env)
-
-  if gems.strip.empty?
-    system(env, 'rbenv', 'exec', 'gem', 'install', 'hiiro')
-  else
-    system(env, 'rbenv', 'exec', 'gem', 'update', 'hiiro')
-  end
-
-  system(env, 'rbenv', 'exec', 'h', 'setup')
-end
-
-def rbenv_versions
-  versions = `rbenv versions --bare`.lines(chomp: true)
+  Hiiro::Rbenv.install_gem('hiiro', version: ver)
+  Hiiro::Rbenv.run('h', 'setup', version: ver)
 end
 
 Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
-  add_subcmd(:version) { |*args|
-    puts Hiiro::VERSION
+  add_flag(:all, short: :a, desc: 'Show the version of hiiro for all versions of ruby installed')
+
+  add_cmd(:version, opts: %i[all]) { |*args|
+    if get_flag(:all)
+      Hiiro::Rbenv.run_in_all('h', 'version') do |ver, _|
+        # version output printed by the subprocess
+      end
+    else
+      puts Hiiro::VERSION
+    end
   }
 
   add_subcmd(:ping) { |*args|
@@ -39,7 +35,7 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
     }.parse!(ARGV)
 
     if opts.all
-      rbenv_versions.each do |ver|
+      Hiiro::Rbenv.versions.each do |ver|
         update_hiiro(ver)
       end
     else
