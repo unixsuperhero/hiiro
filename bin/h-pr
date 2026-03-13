@@ -474,7 +474,7 @@ FILTER_OPTS = Proc.new {
   flag(:drafts,    short: 'd', desc: 'filter: draft PRs')
   flag(:pending,   short: 'p', desc: 'filter: pending checks')
   flag(:merged,    short: 'm', desc: 'filter: merged PRs')
-  flag(:open,      short: 'o', desc: 'filter: open (non-merged) PRs')
+  flag(:active,      short: 'o', desc: 'filter: open (non-merged) PRs')
   flag(:numbers,   short: 'n', desc: 'output PR numbers only (no #)')
 }
 
