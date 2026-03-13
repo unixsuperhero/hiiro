@@ -401,7 +401,8 @@ class PinnedPRManager
     tags = Array(pr['tags'])
     tags_str = tags.any? ? tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') + " " : ""
 
-    line1 = "#{num} ##{pr['number']} #{state_icon} #{reviews_str}"
+    branch_str = pr['headRefName'] ? " [#{pr['headRefName']}]" : ""
+    line1 = "#{num} ##{pr['number']}#{branch_str} #{state_icon} #{reviews_str}"
     line2 = "#{indent}#{repo_label}#{tags_str}#{pr['title']}"
     line3 = pr['url'] ? "#{indent}#{pr['url']}" : nil
 
