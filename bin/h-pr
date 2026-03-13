@@ -288,6 +288,16 @@ class PinnedPRManager
 
   FAILED_CONCLUSIONS = %w[FAILURE ERROR TIMED_OUT STALE STARTUP_FAILURE ACTION_REQUIRED].freeze
 
+  FILTER_PREDICATES = {
+    red:       ->(pr) { (c = pr['checks']) && c['failed'].to_i > 0 },
+    green:     ->(pr) { (c = pr['checks']) && c['failed'].to_i == 0 && c['pending'].to_i == 0 && c['success'].to_i > 0 },
+    conflicts: ->(pr) { pr['mergeable'] == 'CONFLICTING' },
+    drafts:    ->(pr) { pr['is_draft'] == true },
+    pending:   ->(pr) { (c = pr['checks']) && c['pending'].to_i > 0 && c['failed'].to_i == 0 },
+    merged:    ->(pr) { pr['state'] == 'MERGED' },
+    open:      ->(pr) { pr['state'] != 'MERGED' && pr['state'] != 'CLOSED' },
+  }.freeze
+
   def summarize_checks(rollup)
     return nil unless rollup
 
@@ -368,13 +378,24 @@ class PinnedPRManager
 
     as_str  = as  > 0 ? "\e[30;102m#{as}\e[0m"  : '-'
     crs_str = crs > 0 ? "\e[30;103m#{crs}\e[0m" : '-'
-    conflict_str = pr['mergeable'] == 'CONFLICTING' ? " \e[30;101m[conflicts]\e[0m" : ""
+    conflict_str = pr['mergeable'] == 'CONFLICTING' ? " \e[30;101mC\e[0m" : ""
     reviews_str = "#{as_str}a/#{crs_str}cr#{conflict_str}"
 
     repo = pr_repo(pr)
     repo_label = (repo && repo != 'instacart/carrot') ? " [#{repo}]" : ""
 
     "#{num} #{state_icon} #{reviews_str} ##{pr['number']}#{repo_label} #{pr['title']}".strip
+  end
+
+  def filter_active?(opts)
+    FILTER_PREDICATES.keys.any? { |f| opts.respond_to?(f) && opts.send(f) }
+  end
+
+  def apply_filters(prs, opts, forced: [])
+    active = FILTER_PREDICATES.keys.select { |f| opts.respond_to?(f) && opts.send(f) }
+    active = (active + forced).uniq
+    return prs if active.empty?
+    prs.select { |pr| active.any? { |f| FILTER_PREDICATES[f]&.call(pr) } }
   end
 
   def display_detailed(pr, idx = nil)
@@ -445,6 +466,17 @@ class PinnedPRManager
     lines.join("\n")
   end
 end
+
+FILTER_OPTS = Proc.new {
+  flag(:red,       short: 'r', desc: 'filter: failing checks')
+  flag(:green,     short: 'g', desc: 'filter: passing checks')
+  flag(:conflicts, short: 'c', desc: 'filter: merge conflicts')
+  flag(:drafts,    short: 'd', desc: 'filter: draft PRs')
+  flag(:pending,   short: 'p', desc: 'filter: pending checks')
+  flag(:merged,    short: 'm', desc: 'filter: merged PRs')
+  flag(:open,      short: 'o', desc: 'filter: open (non-merged) PRs')
+  flag(:numbers,   short: 'n', desc: 'output PR numbers only (no #)')
+}
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
   pinned_manager = PinnedPRManager.new
@@ -692,47 +724,62 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:ls) do |*ls_args|
-    update = ls_args.include?('-u') || ls_args.include?('--update')
+    opts = Hiiro::Options.parse(ls_args) {
+      flag(:update, short: 'u', desc: 'update status before listing')
+      instance_eval(&FILTER_OPTS)
+    }
 
     pinned = pinned_manager.load_pinned
+    next puts "No tracked PRs" if pinned.empty?
 
-    if pinned.empty?
-      puts "No tracked PRs"
-      next
-    end
-
-    if update
+    if opts.update
       puts "Updating status for #{pinned.length} PR(s)..."
       pinned_manager.refresh_all_status(pinned, force: true)
       pinned_manager.save_pinned(pinned)
       puts
     end
 
-    pinned.each_with_index do |pr, idx|
-      puts pinned_manager.display_pinned(pr, idx)
-    end
+    results = pinned_manager.apply_filters(pinned, opts)
 
-    last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
-    puts "---"
-    puts "Last updated: #{last_checked || 'never'}"
-  end
-
-  add_subcmd(:status) do |*status_args|
-    pinned = pinned_manager.load_pinned
-
-    if pinned.empty?
-      puts "No tracked PRs"
+    if results.empty?
+      puts pinned_manager.filter_active?(opts) ? "No PRs match filters." : "No tracked PRs."
       next
     end
 
-    pinned.each_with_index do |pr, idx|
-      puts pinned_manager.display_detailed(pr, idx)
-      puts
+    if opts.numbers
+      results.each { |pr| puts pr['number'] }
+    else
+      results.each_with_index { |pr, idx| puts pinned_manager.display_pinned(pr, idx) }
+      last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
+      puts "---"
+      puts "Last updated: #{last_checked || 'never'}"
+    end
+  end
+
+  add_subcmd(:status) do |*status_args|
+    opts = Hiiro::Options.parse(status_args, &FILTER_OPTS)
+
+    pinned = pinned_manager.load_pinned
+    next puts "No tracked PRs" if pinned.empty?
+
+    results = pinned_manager.apply_filters(pinned, opts)
+
+    if results.empty?
+      puts pinned_manager.filter_active?(opts) ? "No PRs match filters." : "No tracked PRs."
+      next
     end
 
-    last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
-    puts "---"
-    puts "Last updated: #{last_checked || 'never'}"
+    if opts.numbers
+      results.each { |pr| puts pr['number'] }
+    else
+      results.each_with_index do |pr, idx|
+        puts pinned_manager.display_detailed(pr, idx)
+        puts
+      end
+      last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
+      puts "---"
+      puts "Last updated: #{last_checked || 'never'}"
+    end
   end
 
   add_subcmd(:update) do |*update_args|
@@ -756,54 +803,54 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:green) do |*green_args|
+    opts = Hiiro::Options.parse(green_args, &FILTER_OPTS)
     pinned = pinned_manager.load_pinned
+    results = pinned_manager.apply_filters(pinned, opts, forced: [:green])
 
-    filtered = pinned.select { |pr|
-      c = pr['checks']
-      c && c['failed'] == 0 && c['pending'] == 0 && c['success'] > 0
-    }
-
-    if filtered.empty?
-      puts "No PRs with passing checks"
+    if results.empty?
+      puts "No PRs match."
       next
     end
 
-    puts "PRs with passing checks:"
-    puts
-    filtered.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+    if opts.numbers
+      results.each { |pr| puts pr['number'] }
+    else
+      results.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+    end
   end
 
   add_subcmd(:red) do |*red_args|
+    opts = Hiiro::Options.parse(red_args, &FILTER_OPTS)
     pinned = pinned_manager.load_pinned
+    results = pinned_manager.apply_filters(pinned, opts, forced: [:red])
 
-    filtered = pinned.select { |pr|
-      c = pr['checks']
-      c && c['failed'] > 0
-    }
-
-    if filtered.empty?
-      puts "No PRs with failing checks"
+    if results.empty?
+      puts "No PRs match."
       next
     end
 
-    puts "PRs with failing checks:"
-    puts
-    filtered.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+    if opts.numbers
+      results.each { |pr| puts pr['number'] }
+    else
+      results.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+    end
   end
 
   add_subcmd(:old) do |*old_args|
+    opts = Hiiro::Options.parse(old_args, &FILTER_OPTS)
     pinned = pinned_manager.load_pinned
+    results = pinned_manager.apply_filters(pinned, opts, forced: [:merged])
 
-    filtered = pinned.select { |pr| pr['state'] == 'MERGED' }
-
-    if filtered.empty?
-      puts "No merged PRs"
+    if results.empty?
+      puts "No PRs match."
       next
     end
 
-    puts "Merged PRs:"
-    puts
-    filtered.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+    if opts.numbers
+      results.each { |pr| puts pr['number'] }
+    else
+      results.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+    end
   end
 
   add_subcmd(:prune) do |*args|
@@ -834,18 +881,20 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:draft) do |*draft_args|
+    opts = Hiiro::Options.parse(draft_args, &FILTER_OPTS)
     pinned = pinned_manager.load_pinned
+    results = pinned_manager.apply_filters(pinned, opts, forced: [:drafts])
 
-    filtered = pinned.select { |pr| pr['is_draft'] == true }
-
-    if filtered.empty?
-      puts "No draft PRs"
+    if results.empty?
+      puts "No PRs match."
       next
     end
 
-    puts "Draft PRs:"
-    puts
-    filtered.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+    if opts.numbers
+      results.each { |pr| puts pr['number'] }
+    else
+      results.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+    end
   end
 
   add_subcmd(:assigned) do
@@ -1261,6 +1310,159 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     puts "PRs for task '#{task_name}':"
     puts
     matches.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+  end
+
+  # === Multi-PR action commands (mCMD) ===
+  # Each accepts composable filter flags and applies the action to all matching PRs.
+  # Without filters, falls back to fuzzy-select.
+
+  resolve_multi = ->(pinned, opts) {
+    if pinned_manager.filter_active?(opts)
+      results = pinned_manager.apply_filters(pinned, opts)
+      if results.empty?
+        puts "No PRs match filters."
+        return nil
+      end
+      results
+    else
+      lines = pinned.each_with_index.each_with_object({}) { |(pr, i), h| h[pinned_manager.display_pinned(pr, i)] = pr }
+      sel = fuzzyfind_from_map(lines)
+      sel ? [sel] : nil
+    end
+  }
+
+  add_subcmd(:mfix) do |*args|
+    opts = Hiiro::Options.parse(args) {
+      instance_eval(&FILTER_OPTS)
+      flag(:run, short: 'R', desc: 'launch tasks immediately after queuing')
+    }
+    pinned = pinned_manager.load_pinned
+    next puts "No tracked PRs" if pinned.empty?
+
+    prs = resolve_multi.call(pinned, opts)
+    next unless prs
+
+    q = Hiiro::Queue.current(self)
+    queued_names = []
+
+    prs.each do |pr|
+      task_info = { task_name: pr['task'], tree_name: pr['worktree'], session_name: pr['tmux_session'] }.compact
+      task_info = nil if task_info.empty?
+      result = q.add_with_frontmatter("/pr:fix #{pr['number']}", task_info: task_info)
+      if result
+        puts "Queued fix for ##{pr['number']}: #{pr['title']}"
+        queued_names << result[:name]
+      else
+        STDERR.puts "Failed to queue fix for ##{pr['number']}"
+      end
+    end
+
+    if queued_names.any?
+      puts
+      puts "Queued #{queued_names.length} fix task(s)."
+      if opts.run
+        puts "Launching..."
+        queued_names.each { |name| q.launch_task(name) }
+      else
+        puts "Run 'h queue run' to start."
+      end
+    end
+  end
+
+  add_subcmd(:mopen) do |*args|
+    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
+    pinned = pinned_manager.load_pinned
+    next puts "No tracked PRs" if pinned.empty?
+
+    prs = resolve_multi.call(pinned, opts)
+    next unless prs
+
+    prs.each { |pr| system('gh', 'pr', 'view', pr['number'].to_s, '--web') }
+  end
+
+  add_subcmd(:mmerge) do |*args|
+    opts = Hiiro::Options.parse(args) {
+      instance_eval(&FILTER_OPTS)
+      option(:strategy, short: 's', desc: 'merge strategy (merge, squash, rebase)')
+    }
+    pinned = pinned_manager.load_pinned
+    next puts "No tracked PRs" if pinned.empty?
+
+    prs = resolve_multi.call(pinned, opts)
+    next unless prs
+
+    merge_args = opts.strategy ? ["--#{opts.strategy}"] : []
+    prs.each do |pr|
+      puts "Merging ##{pr['number']}: #{pr['title']}"
+      system('gh', 'pr', 'merge', pr['number'].to_s, *merge_args)
+    end
+  end
+
+  add_subcmd(:mready) do |*args|
+    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
+    pinned = pinned_manager.load_pinned
+    next puts "No tracked PRs" if pinned.empty?
+
+    prs = resolve_multi.call(pinned, opts)
+    next unless prs
+
+    prs.each do |pr|
+      puts "Marking ##{pr['number']} as ready: #{pr['title']}"
+      system('gh', 'pr', 'ready', pr['number'].to_s)
+    end
+  end
+
+  add_subcmd(:'mto-draft') do |*args|
+    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
+    pinned = pinned_manager.load_pinned
+    next puts "No tracked PRs" if pinned.empty?
+
+    prs = resolve_multi.call(pinned, opts)
+    next unless prs
+
+    prs.each do |pr|
+      puts "Converting ##{pr['number']} to draft: #{pr['title']}"
+      system('gh', 'pr', 'ready', '--draft', pr['number'].to_s)
+    end
+  end
+
+  add_subcmd(:mrm) do |*args|
+    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
+    pinned = pinned_manager.load_pinned
+    next puts "No tracked PRs" if pinned.empty?
+
+    prs = resolve_multi.call(pinned, opts)
+    next unless prs
+
+    prs.each do |pr|
+      pinned_manager.unpin(pr['number'])
+      puts "Removed ##{pr['number']}: #{pr['title']}"
+    end
+  end
+
+  add_subcmd(:mcomment) do |*args|
+    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
+    pinned = pinned_manager.load_pinned
+    next puts "No tracked PRs" if pinned.empty?
+
+    prs = resolve_multi.call(pinned, opts)
+    next unless prs
+
+    tmpfile = Tempfile.new(['pr-comment-', '.md'])
+    tmpfile.close
+    edit_files(tmpfile.path)
+    body = File.read(tmpfile.path).strip
+    tmpfile.unlink
+
+    if body.empty?
+      puts "Aborted: empty comment"
+      next
+    end
+
+    prs.each do |pr|
+      puts "Commenting on ##{pr['number']}: #{pr['title']}"
+      system('gh', 'pr', 'comment', pr['number'].to_s, '--body', body)
+    end
   end
 
   add_subcmd(:config) do |*args|
