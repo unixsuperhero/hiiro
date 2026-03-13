@@ -384,18 +384,30 @@ class PinnedPRManager
     repo = pr_repo(pr)
     repo_label = (repo && repo != 'instacart/carrot') ? " [#{repo}]" : ""
 
-    "#{num} #{state_icon} #{reviews_str} ##{pr['number']}#{repo_label} #{pr['title']}".strip
+    tags = Array(pr['tags'])
+    tags_str = tags.any? ? " " + tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') : ""
+
+    "#{num} #{state_icon} #{reviews_str} ##{pr['number']}#{repo_label}#{tags_str} #{pr['title']}".strip
   end
 
   def filter_active?(opts)
-    FILTER_PREDICATES.keys.any? { |f| opts.respond_to?(f) && opts.send(f) }
+    FILTER_PREDICATES.keys.any? { |f| opts.respond_to?(f) && opts.send(f) } ||
+      (opts.respond_to?(:tag) && opts.tag)
   end
 
   def apply_filters(prs, opts, forced: [])
     active = FILTER_PREDICATES.keys.select { |f| opts.respond_to?(f) && opts.send(f) }
     active = (active + forced).uniq
-    return prs if active.empty?
-    prs.select { |pr| active.any? { |f| FILTER_PREDICATES[f]&.call(pr) } }
+
+    results = active.empty? ? prs : prs.select { |pr| active.any? { |f| FILTER_PREDICATES[f]&.call(pr) } }
+
+    # Tag is an AND post-filter — narrows whatever the flag filters returned
+    if opts.respond_to?(:tag) && opts.tag
+      tag = opts.tag.to_s
+      results = results.select { |pr| Array(pr['tags']).include?(tag) }
+    end
+
+    results
   end
 
   def display_detailed(pr, idx = nil)
@@ -474,8 +486,9 @@ FILTER_OPTS = Proc.new {
   flag(:drafts,    short: 'd', desc: 'filter: draft PRs')
   flag(:pending,   short: 'p', desc: 'filter: pending checks')
   flag(:merged,    short: 'm', desc: 'filter: merged PRs')
-  flag(:active,      short: 'o', desc: 'filter: open (non-merged) PRs')
+  flag(:active,    short: 'o', desc: 'filter: open (non-merged) PRs')
   flag(:numbers,   short: 'n', desc: 'output PR numbers only (no #)')
+  option(:tag,     short: 't', desc: 'filter by tag (AND with other filters)')
 }
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
@@ -1315,6 +1328,77 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     puts "PRs for task '#{task_name}':"
     puts
     matches.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
+  end
+
+  # === Tags ===
+
+  add_subcmd(:tag) do |ref = nil, *tag_names|
+    if ref.nil? || tag_names.empty?
+      puts "Usage: h pr tag <ref> <tag> [tag2 ...]"
+      next
+    end
+
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+
+    pinned = pinned_manager.load_pinned
+    pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
+    unless pr
+      puts "PR ##{pr_number} not in tracked list"
+      next
+    end
+
+    pr['tags'] = (Array(pr['tags']) + tag_names).uniq
+    pinned_manager.save_pinned(pinned)
+    puts "Tagged ##{pr_number} with: #{tag_names.join(', ')}"
+    puts "  Tags now: #{pr['tags'].join(', ')}"
+  end
+
+  add_subcmd(:untag) do |ref = nil, *tag_names|
+    if ref.nil?
+      puts "Usage: h pr untag <ref> [tag ...]  (omit tags to clear all)"
+      next
+    end
+
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+
+    pinned = pinned_manager.load_pinned
+    pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
+    unless pr
+      puts "PR ##{pr_number} not in tracked list"
+      next
+    end
+
+    if tag_names.empty?
+      pr.delete('tags')
+      puts "Cleared all tags from ##{pr_number}"
+    else
+      pr['tags'] = Array(pr['tags']) - tag_names
+      pr.delete('tags') if pr['tags'].empty?
+      puts "Removed tag(s) #{tag_names.join(', ')} from ##{pr_number}"
+    end
+
+    pinned_manager.save_pinned(pinned)
+  end
+
+  add_subcmd(:tags) do
+    pinned = pinned_manager.load_pinned
+    by_tag = Hash.new { |h, k| h[k] = [] }
+
+    pinned.each do |pr|
+      Array(pr['tags']).each { |t| by_tag[t] << pr }
+    end
+
+    if by_tag.empty?
+      puts "No tagged PRs."
+      next
+    end
+
+    by_tag.sort.each do |tag, prs|
+      puts "\e[30;104m#{tag}\e[0m (#{prs.length})"
+      prs.each { |pr| puts "  ##{pr['number']} #{pr['title']}" }
+    end
   end
 
   # === Multi-PR action commands (mCMD) ===
