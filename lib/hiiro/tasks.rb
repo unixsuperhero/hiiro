@@ -732,6 +732,63 @@ class Hiiro
           end
         end
 
+        h.add_subcmd(:sparse) do |*args|
+          opts = Hiiro::Options.parse(args) do
+            flag(:list,    short: 'l', desc: 'list available sparse groups and their directories')
+            flag(:disable, short: 'd', desc: 'disable sparse checkout on the current task worktree')
+          end
+
+          if opts.list
+            groups = Hiiro::SparseGroups.load
+            if groups.empty?
+              puts "No sparse groups configured."
+              puts "  Config: #{Hiiro::SparseGroups::FILE}"
+              next
+            end
+            puts "Sparse groups:"
+            groups.each do |name, dirs|
+              puts "  #{name}"
+              Array(dirs).each { |d| puts "    #{d}" }
+            end
+            next
+          end
+
+          task = tm.current_task
+          unless task
+            puts "Not in a task session"
+            next
+          end
+
+          tree = tm.environment.find_tree(task.tree_name)
+          path = tree&.path
+          unless path
+            puts "Could not find worktree path for task '#{task.name}'"
+            next
+          end
+
+          if opts.disable
+            Hiiro::Git.new(nil, path).disable_sparse_checkout(path)
+            puts "Disabled sparse checkout for '#{task.name}'"
+            next
+          end
+
+          group_names = opts.args
+          if group_names.empty?
+            current = `git -C #{Shellwords.shellescape(path)} sparse-checkout list 2>/dev/null`.strip
+            if current.empty?
+              puts "No sparse checkout active for '#{task.name}'."
+              puts "  Usage: h task sparse <group>  (e.g. h task sparse default)"
+              puts "  Groups: h task sparse -l"
+            else
+              puts "Sparse checkout for '#{task.name}':"
+              current.split("\n").each { |d| puts "  #{d}" }
+            end
+            next
+          end
+
+          tm.apply_sparse_checkout(path, group_names)
+        end
+
         h.add_subcmd(:start) do |*raw_args|
           opts = Hiiro::Options.parse(raw_args) do
             option(:sparse, short: :s, desc: 'Sparse checkout group (may be repeated)', multi: true)
