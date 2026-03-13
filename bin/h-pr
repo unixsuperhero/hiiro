@@ -341,8 +341,16 @@ class PinnedPRManager
     { 'approved' => approved, 'changes_requested' => changes_requested, 'commented' => commented, 'reviewers' => latest_by_author }
   end
 
-  def display_pinned(pr, idx = nil)
-    num = idx ? "#{(pr['slot'] || idx + 1).to_s.rjust(3)}." : ""
+  def display_pinned(pr, idx = nil, widths: {})
+    slot_w  = widths[:slot]  || 1
+    succ_w  = widths[:succ]  || 1
+    total_w = widths[:total] || 1
+    as_w    = widths[:as]    || 1
+    crs_w   = widths[:crs]   || 1
+
+    slot_num = (pr['slot'] || (idx ? idx + 1 : 1)).to_s
+    num    = "#{slot_num.rjust(slot_w)}."
+    indent = " " * (slot_w + 2)
 
     check_emoji, checks_count_str =
       if pr['checks']
@@ -352,13 +360,15 @@ class PinnedPRManager
         emoji = if has_failed && has_pending
           "⏳❌"
         elsif has_failed
-          "❌"
+          "　❌"
         elsif has_pending
-          "⏳"
+          "⏳　"
         else
-          "✅"
+          "　✅"
         end
-        [emoji, "#{c['success']}/#{c['total']}"]
+        succ  = c['success'].to_i.to_s.rjust(succ_w)
+        total = c['total'].to_i.to_s.rjust(total_w)
+        [emoji, "#{succ}/#{total}"]
       else
         ["", nil]
       end
@@ -373,21 +383,29 @@ class PinnedPRManager
     state_icon = "[#{bracket_parts.join(' ')}]"
 
     r = pr['reviews'] || {}
-    as = r['approved'].to_i
+    as  = r['approved'].to_i
     crs = r['changes_requested'].to_i
 
-    as_str  = as  > 0 ? "\e[30;102m#{as}\e[0m"  : '-'
-    crs_str = crs > 0 ? "\e[30;103m#{crs}\e[0m" : '-'
+    as_val  = as  > 0 ? as.to_s  : '-'
+    crs_val = crs > 0 ? crs.to_s : '-'
+    as_colored  = as  > 0 ? "\e[30;102m#{as_val}\e[0m"  : as_val
+    crs_colored = crs > 0 ? "\e[30;103m#{crs_val}\e[0m" : crs_val
+    as_pad  = " " * [as_w  - as_val.length,  0].max
+    crs_pad = " " * [crs_w - crs_val.length, 0].max
     conflict_str = pr['mergeable'] == 'CONFLICTING' ? " \e[30;101mC\e[0m" : ""
-    reviews_str = "#{as_str}a/#{crs_str}cr#{conflict_str}"
+    reviews_str = "#{as_pad}#{as_colored}a/#{crs_pad}#{crs_colored}cr#{conflict_str}"
 
     repo = pr_repo(pr)
-    repo_label = (repo && repo != 'instacart/carrot') ? " [#{repo}]" : ""
+    repo_label = (repo && repo != 'instacart/carrot') ? "[#{repo}] " : ""
 
     tags = Array(pr['tags'])
-    tags_str = tags.any? ? " " + tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') : ""
+    tags_str = tags.any? ? tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') + " " : ""
 
-    "#{num} #{state_icon} #{reviews_str} ##{pr['number']}#{repo_label}#{tags_str} #{pr['title']}".strip
+    line1 = "#{num} ##{pr['number']} #{state_icon} #{reviews_str}"
+    line2 = "#{indent}#{repo_label}#{tags_str}#{pr['title']}"
+    line3 = pr['url'] ? "#{indent}#{pr['url']}" : nil
+
+    [line1, line2, line3].compact.join("\n")
   end
 
   def filter_active?(opts)
@@ -767,7 +785,13 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     if opts.numbers
       results.each { |pr| puts pr['number'] }
     else
-      results.each_with_index { |pr, idx| puts pinned_manager.display_pinned(pr, idx) }
+      slot_w  = results.map { |pr| (pr['slot'] || 1).to_s.length }.max
+      succ_w  = results.filter_map { |pr| pr.dig('checks', 'success')&.to_i&.to_s&.length }.max || 1
+      total_w = results.filter_map { |pr| pr.dig('checks', 'total')&.to_i&.to_s&.length }.max || 1
+      as_w    = results.map { |pr| [pr.dig('reviews', 'approved').to_i.to_s.length, 1].max }.max
+      crs_w   = results.map { |pr| [pr.dig('reviews', 'changes_requested').to_i.to_s.length, 1].max }.max
+      widths  = { slot: slot_w, succ: succ_w, total: total_w, as: as_w, crs: crs_w }
+      results.each_with_index { |pr, idx| puts pinned_manager.display_pinned(pr, idx, widths: widths) }
       last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
       puts "---"
       puts "Last updated: #{last_checked || 'never'}"
