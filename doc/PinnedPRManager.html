@@ -1,0 +1,2218 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>class PinnedPRManager - RDoc Documentation</title>
+
+
+  <meta
+    name="keywords"
+    content="ruby,class,PinnedPRManager"
+  >
+
+    <meta
+      name="description"
+      content="Documentation for the PinnedPRManager class"
+    >
+
+
+
+
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="class PinnedPRManager - RDoc Documentation">
+
+
+
+    <meta
+      property="og:description"
+      content="Documentation for PinnedPRManager class - API reference and code examples"
+    >
+
+
+
+
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="class PinnedPRManager - RDoc Documentation">
+
+
+
+    <meta
+      name="twitter:description"
+      content="Documentation for PinnedPRManager class - API reference and code examples"
+    >
+
+
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script
+  src="./js/theme-toggle.js?v=7.2.0"
+></script>
+
+<script
+  src="./js/search_navigation.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_data.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_ranker.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_controller.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/c_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/bash_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/aliki.js?v=7.2.0"
+  defer
+></script>
+
+<link
+  href="./css/rdoc.css?v=7.2.0"
+  rel="stylesheet"
+>
+
+
+
+
+<body role="document" class="class has-toc">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <!-- Chevron (right arrow) - used for expand/collapse -->
+  <symbol
+    id="icon-chevron"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </symbol>
+
+  <!-- File/Document - Pages section -->
+  <symbol
+    id="icon-file"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path
+      d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+    ></path>
+
+    <polyline points="14 2 14 8 20 8"></polyline>
+  </symbol>
+
+  <!-- Layers/Stack - Classes and Modules section -->
+  <symbol
+    id="icon-layers"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+    <polyline points="2 17 12 22 22 17"></polyline>
+    <polyline points="2 12 12 17 22 12"></polyline>
+  </symbol>
+
+  <!-- Curly braces with C - Class Methods section -->
+  <symbol
+    id="icon-class-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      C
+    </text>
+  </symbol>
+
+  <!-- Curly braces with I - Instance Methods section -->
+  <symbol
+    id="icon-instance-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      I
+    </text>
+  </symbol>
+
+  <!-- Double chevrons up - Ancestors section -->
+  <symbol
+    id="icon-ancestors"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="17 11 12 6 7 11"></polyline>
+    <polyline points="17 18 12 13 7 18"></polyline>
+  </symbol>
+
+  <!-- User with plus - Included Modules section -->
+  <symbol
+    id="icon-includes"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+
+    <line
+      x1="20"
+      y1="8"
+      x2="20"
+      y2="14"
+    ></line>
+
+    <line
+      x1="23"
+      y1="11"
+      x2="17"
+      y2="11"
+    ></line>
+  </symbol>
+
+  <!-- User with check - Extended Modules section -->
+  <symbol
+    id="icon-extends"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+    <polyline points="17 11 19 13 23 9"></polyline>
+  </symbol>
+
+  <!-- List - Sections section -->
+  <symbol
+    id="icon-list"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <line
+      x1="8"
+      y1="6"
+      x2="21"
+      y2="6"
+    ></line>
+
+    <line
+      x1="8"
+      y1="12"
+      x2="21"
+      y2="12"
+    ></line>
+
+    <line
+      x1="8"
+      y1="18"
+      x2="21"
+      y2="18"
+    ></line>
+
+    <line
+      x1="3"
+      y1="6"
+      x2="3.01"
+      y2="6"
+    ></line>
+
+    <line
+      x1="3"
+      y1="12"
+      x2="3.01"
+      y2="12"
+    ></line>
+
+    <line
+      x1="3"
+      y1="18"
+      x2="3.01"
+      y2="18"
+    ></line>
+  </symbol>
+</svg>
+
+<header class="top-navbar">
+  <a href="./index.html" class="navbar-brand">
+    RDoc Documentation
+  </a>
+
+  <!-- Desktop search bar -->
+  <div class="navbar-search navbar-search-desktop" role="search">
+    <form action="#" method="get" accept-charset="utf-8">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results-desktop"
+             type="text" name="search" placeholder="Search (/) for a class, method..."
+             spellcheck="false" autocomplete="off"
+             title="Type to search, Up and Down to navigate, Enter to load">
+      <ul id="search-results-desktop" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="initially-hidden search-results"></ul>
+    </form>
+  </div>
+
+  <!-- Mobile search icon button -->
+  <button id="search-toggle" class="navbar-search-mobile" aria-label="Open search" type="button">
+    <span aria-hidden="true">🔍</span>
+  </button>
+
+  <!-- Theme toggle button -->
+  <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" type="button">
+    <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+  </button>
+</header>
+
+<!-- Search Modal (Mobile) -->
+<div id="search-modal" class="search-modal" hidden aria-modal="true" role="dialog" aria-label="Search">
+  <div class="search-modal-backdrop"></div>
+  <div class="search-modal-content">
+    <div class="search-modal-header">
+      <form class="search-modal-form" action="#" method="get" accept-charset="utf-8">
+        <span class="search-modal-icon" aria-hidden="true">🔍</span>
+        <input id="search-field-mobile" role="combobox" aria-label="Search"
+               aria-autocomplete="list" aria-controls="search-results-mobile"
+               type="text" name="search" placeholder="Search documentation"
+               spellcheck="false" autocomplete="off">
+        <button type="button" class="search-modal-close" aria-label="Close search" id="search-modal-close">
+          <span aria-hidden="true">esc</span>
+        </button>
+      </form>
+    </div>
+    <div class="search-modal-body">
+      <ul id="search-results-mobile" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="search-results search-modal-results initially-hidden"></ul>
+      <div class="search-modal-empty">
+        <p>No recent searches</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
+  <span aria-hidden="true">&#9776;</span>
+</div>
+
+
+<nav id="navigation" role="navigation" hidden>
+  
+
+
+
+
+  <div id="fileindex-section" class="nav-section">
+    <details class="nav-section-collapsible" >
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg>
+            <use href="#icon-file"></use>
+          </svg>
+        </span>
+
+        <span class="nav-section-title">Pages</span>
+
+        <span class="nav-section-chevron">
+          <svg>
+            <use href="#icon-chevron"></use>
+          </svg>
+        </span>
+      </summary>
+
+      <ul class="nav-list">
+
+
+
+
+
+
+            <li>
+              <a href="./CLAUDE_md.html">
+                CLAUDE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Gemfile.html">
+                Gemfile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Gemfile_lock.html">
+                Gemfile.lock
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./LICENSE.html">
+                LICENSE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./README_md.html">
+                README
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Rakefile.html">
+                Rakefile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./TODO_md.html">
+                TODO
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./demo_sh.html">
+                demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  docs
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./docs/README_md.html">
+                      README
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/docker-testing-guide_md.html">
+                      docker-testing-guide
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-buffer_md.html">
+                      h-buffer
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-pane_md.html">
+                      h-pane
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-plugin_md.html">
+                      h-plugin
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-session_md.html">
+                      h-session
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-window_md.html">
+                      h-window
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="./h-tmux-plugins_tmux.html">
+                h-tmux-plugins.tmux
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./notes.html">
+                notes
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./obsidian_slides_md.html">
+                obsidian_slides
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./record-demo_sh.html">
+                record-demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  script
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./script/compare.html">
+                      compare
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/install.html">
+                      install
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/sync.html">
+                      sync
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/test.html">
+                      test
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/update.html">
+                      update
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="./slides_md.html">
+                slides
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  tmp
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./tmp/gql-error_message_json.html">
+                      gql-error_message.json
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./tmp/sync_sh.html">
+                      sync.sh
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./tmp/yaml_files.html">
+                      yaml_files
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  
+
+  
+<div id="parent-class-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-ancestors"></use></svg>
+      </span>
+      <span class="nav-section-title">Ancestors</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+    <ul><li><a href="Object.html">Object</a><ul><li>BasicObject</li></ul></li></ul>
+  </details>
+</div>
+
+
+  
+
+  
+
+  
+  <div class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg><use href="#icon-class-methods"></use></svg>
+        </span>
+        <span class="nav-section-title">Class Methods</span>
+        <span class="nav-section-chevron">
+          <svg><use href="#icon-chevron"></use></svg>
+        </span>
+      </summary>
+      <ul class="nav-list" role="directory">
+
+        <li ><a href="#method-c-new">new</a></li>
+
+        <li ><a href="#method-c-repo_from_url">repo_from_url</a></li>
+
+      </ul>
+    </details>
+  </div>
+
+
+
+  <div class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg><use href="#icon-instance-methods"></use></svg>
+        </span>
+        <span class="nav-section-title">Instance Methods</span>
+        <span class="nav-section-chevron">
+          <svg><use href="#icon-chevron"></use></svg>
+        </span>
+      </summary>
+      <ul class="nav-list" role="directory">
+
+        <li ><a href="#method-i-apply_filters">apply_filters</a></li>
+
+        <li ><a href="#method-i-batch_fetch_pr_info">batch_fetch_pr_info</a></li>
+
+        <li ><a href="#method-i-display_detailed">display_detailed</a></li>
+
+        <li ><a href="#method-i-display_pinned">display_pinned</a></li>
+
+        <li ><a href="#method-i-ensure_file">ensure_file</a></li>
+
+        <li ><a href="#method-i-fetch_assigned_prs">fetch_assigned_prs</a></li>
+
+        <li ><a href="#method-i-fetch_current_branch_pr">fetch_current_branch_pr</a></li>
+
+        <li ><a href="#method-i-fetch_my_and_assigned_prs">fetch_my_and_assigned_prs</a></li>
+
+        <li ><a href="#method-i-fetch_my_prs">fetch_my_prs</a></li>
+
+        <li ><a href="#method-i-fetch_pr_info">fetch_pr_info</a></li>
+
+        <li ><a href="#method-i-filter_active-3F">filter_active?</a></li>
+
+        <li ><a href="#method-i-load_pinned">load_pinned</a></li>
+
+        <li ><a href="#method-i-needs_refresh-3F">needs_refresh?</a></li>
+
+        <li ><a href="#method-i-pin">pin</a></li>
+
+        <li ><a href="#method-i-pinned-3F">pinned?</a></li>
+
+        <li ><a href="#method-i-pr_repo">pr_repo</a></li>
+
+        <li ><a href="#method-i-refresh_all_status">refresh_all_status</a></li>
+
+        <li ><a href="#method-i-refresh_status">refresh_status</a></li>
+
+        <li ><a href="#method-i-save_pinned">save_pinned</a></li>
+
+        <li ><a href="#method-i-summarize_checks">summarize_checks</a></li>
+
+        <li ><a href="#method-i-summarize_reviews">summarize_reviews</a></li>
+
+        <li ><a href="#method-i-unpin">unpin</a></li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  <div id="classindex-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-layers"></use></svg>
+      </span>
+      <span class="nav-section-title">Classes and Modules</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+
+    <ul class="link-list nav-list"><li><code><a href="./App.html">App</a></code></li><li><code><a href="./BranchManager.html">BranchManager</a></code></li><li><code><a href="./Directory.html">Directory</a></code></li><li><code><a href="./Environment.html">Environment</a></code></li><li><details><summary><code><a href="./Hiiro.html">Hiiro</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/AnyStruct.html">AnyStruct</a></code></li><li><code><a href="./Hiiro/App.html">App</a></code></li><li><code><a href="./Hiiro/AppFiles.html">AppFiles</a></code></li><li><code><a href="./Hiiro/Args.html">Args</a></code></li><li><code><a href="./Hiiro/Bins.html">Bins</a></code></li><li><code><a href="./Hiiro/Config.html">Config</a></code></li><li><code><a href="./Hiiro/Environment.html">Environment</a></code></li><li><code><a href="./Hiiro/Fuzzyfind.html">Fuzzyfind</a></code></li><li><details><summary><code><a href="./Hiiro/Git.html">Git</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Git/Branch.html">Branch</a></code></li><li><code><a href="./Hiiro/Git/Branches.html">Branches</a></code></li><li><code><a href="./Hiiro/Git/Pr.html">Pr</a></code></li><li><code><a href="./Hiiro/Git/Remote.html">Remote</a></code></li><li><code><a href="./Hiiro/Git/Worktree.html">Worktree</a></code></li><li><code><a href="./Hiiro/Git/Worktrees.html">Worktrees</a></code></li></ul></details></li><li><code><a href="./Hiiro/Glob.html">Glob</a></code></li><li><details><summary><code><a href="./Hiiro/Matcher.html">Matcher</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Matcher/Item.html">Item</a></code></li><li><code><a href="./Hiiro/Matcher/PathResult.html">PathResult</a></code></li><li><code><a href="./Hiiro/Matcher/Result.html">Result</a></code></li></ul></details></li><li><code><a href="./Hiiro/Notification.html">Notification</a></code></li><li><details><summary><code><a href="./Hiiro/Options.html">Options</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Options/Args.html">Args</a></code></li><li><code><a href="./Hiiro/Options/Definition.html">Definition</a></code></li></ul></details></li><li><details><summary><code><a href="./Hiiro/Paths.html">Paths</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Paths/Symlink.html">Symlink</a></code></li></ul></details></li><li><code><a href="./Hiiro/Matcher.html">PrefixMatcher</a></code></li><li><details><summary><code><a href="./Hiiro/Queue.html">Queue</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Queue/Prompt.html">Prompt</a></code></li></ul></details></li><li><code><a href="./Hiiro/Rbenv.html">Rbenv</a></code></li><li><code><a href="./Hiiro/RunnerTool.html">RunnerTool</a></code></li><li><details><summary><code><a href="./Hiiro/Runners.html">Runners</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Runners/Bin.html">Bin</a></code></li><li><code><a href="./Hiiro/Runners/Subcommand.html">Subcommand</a></code></li></ul></details></li><li><code><a href="./Hiiro/ServiceManager.html">ServiceManager</a></code></li><li><code><a href="./Hiiro/Shell.html">Shell</a></code></li><li><code><a href="./Hiiro/SparseGroups.html">SparseGroups</a></code></li><li><code><a href="./Hiiro/Tags.html">Tags</a></code></li><li><code><a href="./Hiiro/Task.html">Task</a></code></li><li><details><summary><code><a href="./Hiiro/TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="./Hiiro/Tasks.html">Tasks</a></code></li><li><details><summary><code><a href="./Hiiro/Tmux.html">Tmux</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Tmux/Buffer.html">Buffer</a></code></li><li><code><a href="./Hiiro/Tmux/Buffers.html">Buffers</a></code></li><li><code><a href="./Hiiro/Tmux/Pane.html">Pane</a></code></li><li><code><a href="./Hiiro/Tmux/Panes.html">Panes</a></code></li><li><code><a href="./Hiiro/Tmux/Session.html">Session</a></code></li><li><code><a href="./Hiiro/Tmux/Sessions.html">Sessions</a></code></li><li><code><a href="./Hiiro/Tmux/Window.html">Window</a></code></li><li><code><a href="./Hiiro/Tmux/Windows.html">Windows</a></code></li></ul></details></li><li><code><a href="./Hiiro/TodoItem.html">TodoItem</a></code></li><li><code><a href="./Hiiro/TodoManager.html">TodoManager</a></code></li><li><code><a href="./Hiiro/Tree.html">Tree</a></code></li></ul></details></li><li><details><summary><code><a href="./LinkManager.html">LinkManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./LinkManager/Link.html">Link</a></code></li></ul></details></li><li><code><a href="./Notify.html">Notify</a></code></li><li><code><a href="./Object.html">Object</a></code></li><li><code><a href="./PinnedPRManager.html">PinnedPRManager</a></code></li><li><details><summary><code><a href="./Pins.html">Pins</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Pins/Pin.html">Pin</a></code></li></ul></details></li><li><code><a href="./Project.html">Project</a></code></li><li><code><a href="./String.html">String</a></code></li><li><code><a href="./Task.html">Task</a></code></li><li><details><summary><code><a href="./TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="./Tasks.html">Tasks</a></code></li><li><code><a href="./TmuxSession.html">TmuxSession</a></code></li><li><code><a href="./Tree.html">Tree</a></code></li></ul>
+  </details>
+</div>
+
+</nav>
+
+<main role="main" aria-labelledby="class-pinnedprmanager">
+  
+  
+
+  <span id="class-PinnedPRManager" class="legacy-anchor"></span>
+  <h1 id="class-pinnedprmanager" class="anchor-link class">
+    class PinnedPRManager
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+
+  <span id="5Buntitled-5D" class="legacy-anchor"></span>
+  <section class="documentation-section anchor-link">
+
+
+
+
+
+    <section class="constants-list">
+      <header>
+        <h3 id="untitled-constants"><a href="#untitled-constants">Constants</a></h3>
+      </header>
+      <dl>
+
+        <dt id="FAILED_CONCLUSIONS">FAILED_CONCLUSIONS</dt>
+
+        <dd>
+
+          
+        </dd>
+
+
+        <dt id="FILTER_PREDICATES">FILTER_PREDICATES</dt>
+
+        <dd>
+
+          
+        </dd>
+
+
+        <dt id="PINNED_FILE">PINNED_FILE</dt>
+
+        <dd>
+
+          
+        </dd>
+
+
+      </dl>
+    </section>
+
+
+
+
+
+
+
+
+     <section id="public-class-untitled-method-details" class="method-section anchor-link">
+       <header>
+         <h3 id="public-class-untitled-methods"><a href="#public-class-untitled-methods">Public Class Methods</a></h3>
+       </header>
+
+
+      <div id="method-c-new" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-new" title="Link to this method">
+                <span class="method-name">new</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="new-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 22</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>
+  <span class="ruby-identifier">ensure_file</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-repo_from_url" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-repo_from_url" title="Link to this method">
+                <span class="method-name">repo_from_url</span>
+                <span class="method-args">(url)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="repo_from_url-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 13</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">repo_from_url</span>(<span class="ruby-identifier">url</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">url</span>
+  <span class="ruby-identifier">url</span>.<span class="ruby-identifier">match</span>(<span class="ruby-regexp">%r{github\.com/([^/]+/[^/]+)/pull/}</span>)&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-value">1</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+    </section>
+
+
+
+
+
+
+
+     <section id="public-instance-untitled-method-details" class="method-section anchor-link">
+       <header>
+         <h3 id="public-instance-untitled-methods"><a href="#public-instance-untitled-methods">Public Instance Methods</a></h3>
+       </header>
+
+
+      <div id="method-i-apply_filters" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-apply_filters" title="Link to this method">
+                <span class="method-name">apply_filters</span>
+                <span class="method-args">(prs, opts, forced: [])</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="apply_filters-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 422</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">apply_filters</span>(<span class="ruby-identifier">prs</span>, <span class="ruby-identifier">opts</span>, <span class="ruby-value">forced:</span> [])
+  <span class="ruby-identifier">active</span> = <span class="ruby-constant">FILTER_PREDICATES</span>.<span class="ruby-identifier">keys</span>.<span class="ruby-identifier">select</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">f</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">f</span>) }
+  <span class="ruby-identifier">active</span> = (<span class="ruby-identifier">active</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">forced</span>).<span class="ruby-identifier">uniq</span>
+
+  <span class="ruby-identifier">results</span> = <span class="ruby-identifier">active</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">prs</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">select</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">active</span>.<span class="ruby-identifier">any?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-constant">FILTER_PREDICATES</span>[<span class="ruby-identifier">f</span>]&amp;.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">pr</span>) } }
+
+  <span class="ruby-comment"># Tags are an AND post-filter; multiple tags are OR&#39;d among themselves</span>
+  <span class="ruby-identifier">tag_filter</span> = <span class="ruby-constant">Array</span>(<span class="ruby-identifier">opts</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:tag</span>) <span class="ruby-operator">?</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">tag</span> <span class="ruby-operator">:</span> <span class="ruby-keyword">nil</span>).<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:to_s</span>).<span class="ruby-identifier">reject</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:empty?</span>)
+  <span class="ruby-keyword">unless</span> <span class="ruby-identifier">tag_filter</span>.<span class="ruby-identifier">empty?</span>
+    <span class="ruby-identifier">results</span> = <span class="ruby-identifier">results</span>.<span class="ruby-identifier">select</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> (<span class="ruby-constant">Array</span>(<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;tags&#39;</span>]) <span class="ruby-operator">&amp;</span> <span class="ruby-identifier">tag_filter</span>).<span class="ruby-identifier">any?</span> }
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">results</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-batch_fetch_pr_info" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-batch_fetch_pr_info" title="Link to this method">
+                <span class="method-name">batch_fetch_pr_info</span>
+                <span class="method-args">(prs)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="batch_fetch_pr_info-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 146</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">batch_fetch_pr_info</span>(<span class="ruby-identifier">prs</span>)
+  <span class="ruby-keyword">return</span> {} <span class="ruby-keyword">if</span> <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">empty?</span>
+
+  <span class="ruby-identifier">by_repo</span> = <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">group_by</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">pr_repo</span>(<span class="ruby-identifier">pr</span>) <span class="ruby-operator">||</span> <span class="ruby-string">&#39;instacart/carrot&#39;</span> }
+
+  <span class="ruby-identifier">result</span> = {}
+  <span class="ruby-identifier">by_repo</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">repo_path</span>, <span class="ruby-identifier">repo_prs</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">owner</span>, <span class="ruby-identifier">name</span> = <span class="ruby-identifier">repo_path</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>, <span class="ruby-value">2</span>)
+    <span class="ruby-identifier">pr_numbers</span> = <span class="ruby-identifier">repo_prs</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;number&#39;</span>] }
+    <span class="ruby-identifier">result</span>.<span class="ruby-identifier">merge!</span>(<span class="ruby-identifier">fetch_batch_for_repo</span>(<span class="ruby-identifier">owner</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">pr_numbers</span>))
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          <p>Accepts an array of PR records (each with ‘number’ and optionally ‘repo’/‘url’), groups them by repo, and fetches in batches per repo via GraphQL.</p>
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-display_detailed" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-display_detailed" title="Link to this method">
+                <span class="method-name">display_detailed</span>
+                <span class="method-args">(pr, idx = nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="display_detailed-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 437</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">display_detailed</span>(<span class="ruby-identifier">pr</span>, <span class="ruby-identifier">idx</span> = <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">lines</span> = []
+  <span class="ruby-identifier">num</span> = <span class="ruby-identifier">idx</span> <span class="ruby-operator">?</span> <span class="ruby-node">&quot;#{idx + 1}.&quot;</span> <span class="ruby-operator">:</span> <span class="ruby-string">&quot;&quot;</span>
+
+  <span class="ruby-identifier">state_str</span> = <span class="ruby-keyword">case</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;state&#39;</span>]
+  <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;MERGED&#39;</span> <span class="ruby-keyword">then</span> <span class="ruby-string">&#39;MERGED&#39;</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;CLOSED&#39;</span> <span class="ruby-keyword">then</span> <span class="ruby-string">&#39;CLOSED&#39;</span>
+  <span class="ruby-keyword">else</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;is_draft&#39;</span>] <span class="ruby-operator">?</span> <span class="ruby-string">&#39;DRAFT&#39;</span> <span class="ruby-operator">:</span> <span class="ruby-string">&#39;OPEN&#39;</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">repo</span> = <span class="ruby-identifier">pr_repo</span>(<span class="ruby-identifier">pr</span>)
+  <span class="ruby-identifier">repo_label</span> = (<span class="ruby-identifier">repo</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">repo</span> <span class="ruby-operator">!=</span> <span class="ruby-string">&#39;instacart/carrot&#39;</span>) <span class="ruby-operator">?</span> <span class="ruby-node">&quot; [#{repo}]&quot;</span> <span class="ruby-operator">:</span> <span class="ruby-string">&quot;&quot;</span>
+
+  <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;#{num} ##{pr[&#39;number&#39;]}#{repo_label} - #{pr[&#39;title&#39;]}&quot;</span>
+  <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;   State: #{state_str}&quot;</span>
+  <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;   Branch: #{pr[&#39;headRefName&#39;]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;headRefName&#39;</span>]
+  <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;   URL: #{pr[&#39;url&#39;]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;url&#39;</span>]
+
+  <span class="ruby-comment"># Checks</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;checks&#39;</span>]
+    <span class="ruby-identifier">c</span> = <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;checks&#39;</span>]
+    <span class="ruby-identifier">check_status</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;failed&#39;</span>] <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+      <span class="ruby-node">&quot;FAILING (#{c[&#39;success&#39;]}/#{c[&#39;total&#39;]} passed, #{c[&#39;failed&#39;]} failed)&quot;</span>
+    <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;pending&#39;</span>] <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+      <span class="ruby-node">&quot;PENDING (#{c[&#39;success&#39;]}/#{c[&#39;total&#39;]} passed, #{c[&#39;pending&#39;]} pending)&quot;</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-node">&quot;PASSING (#{c[&#39;success&#39;]}/#{c[&#39;total&#39;]})&quot;</span>
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;   Checks: #{check_status}&quot;</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&quot;   Checks: (none)&quot;</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-comment"># Reviews</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;reviews&#39;</span>]
+    <span class="ruby-identifier">r</span> = <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;reviews&#39;</span>]
+    <span class="ruby-identifier">review_parts</span> = []
+    <span class="ruby-identifier">review_parts</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;#{r[&#39;approved&#39;]} approved&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">r</span>[<span class="ruby-string">&#39;approved&#39;</span>] <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+    <span class="ruby-identifier">review_parts</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;#{r[&#39;changes_requested&#39;]} requesting changes&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">r</span>[<span class="ruby-string">&#39;changes_requested&#39;</span>] <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+    <span class="ruby-identifier">review_parts</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;#{r[&#39;commented&#39;]} commented&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">r</span>[<span class="ruby-string">&#39;commented&#39;</span>] <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">review_parts</span>.<span class="ruby-identifier">any?</span>
+      <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;   Reviews: #{review_parts.join(&#39;, &#39;)}&quot;</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">r</span>[<span class="ruby-string">&#39;reviewers&#39;</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">r</span>[<span class="ruby-string">&#39;reviewers&#39;</span>].<span class="ruby-identifier">empty?</span>
+        <span class="ruby-identifier">r</span>[<span class="ruby-string">&#39;reviewers&#39;</span>].<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">author</span>, <span class="ruby-identifier">state</span><span class="ruby-operator">|</span>
+          <span class="ruby-identifier">icon</span> = <span class="ruby-keyword">case</span> <span class="ruby-identifier">state</span>
+          <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;APPROVED&#39;</span> <span class="ruby-keyword">then</span> <span class="ruby-string">&#39;+&#39;</span>
+          <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;CHANGES_REQUESTED&#39;</span> <span class="ruby-keyword">then</span> <span class="ruby-string">&#39;-&#39;</span>
+          <span class="ruby-keyword">else</span> <span class="ruby-string">&#39;?&#39;</span>
+          <span class="ruby-keyword">end</span>
+          <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;      #{icon} #{author}: #{state.downcase.gsub(&#39;_&#39;, &#39; &#39;)}&quot;</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&quot;   Reviews: (none)&quot;</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&quot;   Reviews: (not fetched)&quot;</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-comment"># Mergeable</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;mergeable&#39;</span>]
+    <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;   Mergeable: #{pr[&#39;mergeable&#39;]}&quot;</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">join</span>(<span class="ruby-string">&quot;\n&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-display_pinned" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-display_pinned" title="Link to this method">
+                <span class="method-name">display_pinned</span>
+                <span class="method-args">(pr, idx = nil, widths: {}, oneline: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="display_pinned-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 344</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">display_pinned</span>(<span class="ruby-identifier">pr</span>, <span class="ruby-identifier">idx</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-value">widths:</span> {}, <span class="ruby-value">oneline:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-identifier">slot_w</span>  = <span class="ruby-identifier">widths</span>[<span class="ruby-value">:slot</span>]  <span class="ruby-operator">||</span> <span class="ruby-value">1</span>
+  <span class="ruby-identifier">succ_w</span>  = <span class="ruby-identifier">widths</span>[<span class="ruby-value">:succ</span>]  <span class="ruby-operator">||</span> <span class="ruby-value">1</span>
+  <span class="ruby-identifier">total_w</span> = <span class="ruby-identifier">widths</span>[<span class="ruby-value">:total</span>] <span class="ruby-operator">||</span> <span class="ruby-value">1</span>
+  <span class="ruby-identifier">as_w</span>    = <span class="ruby-identifier">widths</span>[<span class="ruby-value">:as</span>]    <span class="ruby-operator">||</span> <span class="ruby-value">1</span>
+  <span class="ruby-identifier">crs_w</span>   = <span class="ruby-identifier">widths</span>[<span class="ruby-value">:crs</span>]   <span class="ruby-operator">||</span> <span class="ruby-value">1</span>
+
+  <span class="ruby-identifier">slot_num</span> = (<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;slot&#39;</span>] <span class="ruby-operator">||</span> (<span class="ruby-identifier">idx</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">idx</span> <span class="ruby-operator">+</span> <span class="ruby-value">1</span> <span class="ruby-operator">:</span> <span class="ruby-value">1</span>)).<span class="ruby-identifier">to_s</span>
+  <span class="ruby-identifier">num</span>    = <span class="ruby-node">&quot;#{slot_num.rjust(slot_w)}.&quot;</span>
+  <span class="ruby-identifier">indent</span> = <span class="ruby-string">&quot; &quot;</span> <span class="ruby-operator">*</span> (<span class="ruby-identifier">slot_w</span> <span class="ruby-operator">+</span> <span class="ruby-value">2</span>)
+
+  <span class="ruby-identifier">check_emoji</span>, <span class="ruby-identifier">checks_count_str</span> =
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;checks&#39;</span>]
+      <span class="ruby-identifier">c</span> = <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;checks&#39;</span>]
+      <span class="ruby-identifier">has_failed</span>  = <span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;failed&#39;</span>].<span class="ruby-identifier">to_i</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+      <span class="ruby-identifier">has_pending</span> = <span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;pending&#39;</span>].<span class="ruby-identifier">to_i</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>
+      <span class="ruby-identifier">emoji</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">has_failed</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">has_pending</span>
+        <span class="ruby-string">&quot;⏳❌&quot;</span>
+      <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">has_failed</span>
+        <span class="ruby-string">&quot;　❌&quot;</span>
+      <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">has_pending</span>
+        <span class="ruby-string">&quot;⏳　&quot;</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-string">&quot;　✅&quot;</span>
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-identifier">succ</span>  = <span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;success&#39;</span>].<span class="ruby-identifier">to_i</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">rjust</span>(<span class="ruby-identifier">succ_w</span>)
+      <span class="ruby-identifier">total</span> = <span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;total&#39;</span>].<span class="ruby-identifier">to_i</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">rjust</span>(<span class="ruby-identifier">total_w</span>)
+      [<span class="ruby-identifier">emoji</span>, <span class="ruby-node">&quot;#{succ}/#{total}&quot;</span>]
+    <span class="ruby-keyword">else</span>
+      [<span class="ruby-string">&quot;&quot;</span>, <span class="ruby-keyword">nil</span>]
+    <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">state_label</span> = <span class="ruby-keyword">case</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;state&#39;</span>]
+  <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;MERGED&#39;</span> <span class="ruby-keyword">then</span> <span class="ruby-string">&#39;M&#39;</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;CLOSED&#39;</span> <span class="ruby-keyword">then</span> <span class="ruby-string">&#39;X&#39;</span>
+  <span class="ruby-keyword">else</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;is_draft&#39;</span>] <span class="ruby-operator">?</span> <span class="ruby-string">&#39;d&#39;</span> <span class="ruby-operator">:</span> <span class="ruby-string">&#39;o&#39;</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">bracket_parts</span> = [<span class="ruby-identifier">state_label</span>, <span class="ruby-identifier">check_emoji</span>, <span class="ruby-identifier">checks_count_str</span>].<span class="ruby-identifier">reject</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-identifier">p</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">p</span>.<span class="ruby-identifier">empty?</span> }
+  <span class="ruby-identifier">state_icon</span> = <span class="ruby-node">&quot;[#{bracket_parts.join(&#39; &#39;)}]&quot;</span>
+
+  <span class="ruby-identifier">r</span> = <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;reviews&#39;</span>] <span class="ruby-operator">||</span> {}
+  <span class="ruby-identifier">as</span>  = <span class="ruby-identifier">r</span>[<span class="ruby-string">&#39;approved&#39;</span>].<span class="ruby-identifier">to_i</span>
+  <span class="ruby-identifier">crs</span> = <span class="ruby-identifier">r</span>[<span class="ruby-string">&#39;changes_requested&#39;</span>].<span class="ruby-identifier">to_i</span>
+
+  <span class="ruby-identifier">as_val</span>  = <span class="ruby-identifier">as</span>  <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">as</span>.<span class="ruby-identifier">to_s</span>  <span class="ruby-operator">:</span> <span class="ruby-string">&#39;-&#39;</span>
+  <span class="ruby-identifier">crs_val</span> = <span class="ruby-identifier">crs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">crs</span>.<span class="ruby-identifier">to_s</span> <span class="ruby-operator">:</span> <span class="ruby-string">&#39;-&#39;</span>
+  <span class="ruby-identifier">as_colored</span>  = <span class="ruby-identifier">as</span>  <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">?</span> <span class="ruby-node">&quot;\e[30;102m#{as_val}\e[0m&quot;</span>  <span class="ruby-operator">:</span> <span class="ruby-identifier">as_val</span>
+  <span class="ruby-identifier">crs_colored</span> = <span class="ruby-identifier">crs</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">?</span> <span class="ruby-node">&quot;\e[30;103m#{crs_val}\e[0m&quot;</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">crs_val</span>
+  <span class="ruby-identifier">as_pad</span>  = <span class="ruby-string">&quot; &quot;</span> <span class="ruby-operator">*</span> [<span class="ruby-identifier">as_w</span>  <span class="ruby-operator">-</span> <span class="ruby-identifier">as_val</span>.<span class="ruby-identifier">length</span>,  <span class="ruby-value">0</span>].<span class="ruby-identifier">max</span>
+  <span class="ruby-identifier">crs_pad</span> = <span class="ruby-string">&quot; &quot;</span> <span class="ruby-operator">*</span> [<span class="ruby-identifier">crs_w</span> <span class="ruby-operator">-</span> <span class="ruby-identifier">crs_val</span>.<span class="ruby-identifier">length</span>, <span class="ruby-value">0</span>].<span class="ruby-identifier">max</span>
+  <span class="ruby-identifier">conflict_str</span> = <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;mergeable&#39;</span>] <span class="ruby-operator">==</span> <span class="ruby-string">&#39;CONFLICTING&#39;</span> <span class="ruby-operator">?</span> <span class="ruby-string">&quot; \e[30;101mC\e[0m&quot;</span> <span class="ruby-operator">:</span> <span class="ruby-string">&quot;&quot;</span>
+  <span class="ruby-identifier">reviews_str</span> = <span class="ruby-node">&quot;#{as_pad}#{as_colored}a/#{crs_pad}#{crs_colored}cr#{conflict_str}&quot;</span>
+
+  <span class="ruby-identifier">repo</span> = <span class="ruby-identifier">pr_repo</span>(<span class="ruby-identifier">pr</span>)
+  <span class="ruby-identifier">repo_label</span> = (<span class="ruby-identifier">repo</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">repo</span> <span class="ruby-operator">!=</span> <span class="ruby-string">&#39;instacart/carrot&#39;</span>) <span class="ruby-operator">?</span> <span class="ruby-node">&quot;[#{repo}] &quot;</span> <span class="ruby-operator">:</span> <span class="ruby-string">&quot;&quot;</span>
+
+  <span class="ruby-identifier">tags</span> = <span class="ruby-constant">Array</span>(<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;tags&#39;</span>])
+  <span class="ruby-identifier">tags_str</span> = <span class="ruby-identifier">tags</span>.<span class="ruby-identifier">any?</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">tags</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">t</span><span class="ruby-operator">|</span> <span class="ruby-node">&quot;\e[30;104m#{t}\e[0m&quot;</span> }.<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39; &#39;</span>) <span class="ruby-operator">:</span> <span class="ruby-keyword">nil</span>
+
+  <span class="ruby-identifier">branch_str</span> = <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;headRefName&#39;</span>] <span class="ruby-operator">?</span> <span class="ruby-node">&quot; #{pr[&#39;headRefName&#39;]}&quot;</span> <span class="ruby-operator">:</span> <span class="ruby-string">&quot;&quot;</span>
+  <span class="ruby-identifier">line1</span> = <span class="ruby-node">&quot;#{num} ##{pr[&#39;number&#39;]} #{state_icon} #{reviews_str}#{branch_str}&quot;</span>
+  <span class="ruby-identifier">line2</span> = <span class="ruby-node">&quot;#{indent}#{repo_label}#{pr[&#39;title&#39;]}&quot;</span>
+  <span class="ruby-identifier">line3</span> = <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;url&#39;</span>] <span class="ruby-operator">?</span> <span class="ruby-node">&quot;#{indent}#{pr[&#39;url&#39;]}&quot;</span> <span class="ruby-operator">:</span> <span class="ruby-keyword">nil</span>
+  <span class="ruby-identifier">line4</span> = <span class="ruby-identifier">tags_str</span> <span class="ruby-operator">?</span> <span class="ruby-node">&quot;#{indent}#{tags_str}&quot;</span> <span class="ruby-operator">:</span> <span class="ruby-keyword">nil</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">oneline</span>
+    <span class="ruby-node">&quot;#{line1} #{repo_label}#{pr[&#39;title&#39;]}&quot;</span>
+  <span class="ruby-keyword">else</span>
+    [<span class="ruby-identifier">line1</span>, <span class="ruby-identifier">line2</span>, <span class="ruby-identifier">line3</span>, <span class="ruby-identifier">line4</span>].<span class="ruby-identifier">compact</span>.<span class="ruby-identifier">join</span>(<span class="ruby-string">&quot;\n&quot;</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-ensure_file" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-ensure_file" title="Link to this method">
+                <span class="method-name">ensure_file</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="ensure_file-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 26</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ensure_file</span>
+  <span class="ruby-identifier">dir</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">dirname</span>(<span class="ruby-constant">PINNED_FILE</span>)
+  <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkdir_p</span>(<span class="ruby-identifier">dir</span>) <span class="ruby-keyword">unless</span> <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">dir</span>)
+  <span class="ruby-constant">File</span>.<span class="ruby-identifier">write</span>(<span class="ruby-constant">PINNED_FILE</span>, [].<span class="ruby-identifier">to_yaml</span>) <span class="ruby-keyword">unless</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-constant">PINNED_FILE</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-fetch_assigned_prs" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-fetch_assigned_prs" title="Link to this method">
+                <span class="method-name">fetch_assigned_prs</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="fetch_assigned_prs-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 114</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fetch_assigned_prs</span>
+  <span class="ruby-identifier">output</span> = <span class="ruby-string">`gh pr list --assignee @me --state open --json number,title,headRefName,url 2&gt;/dev/null`</span>.<span class="ruby-identifier">strip</span>
+  <span class="ruby-keyword">return</span> [] <span class="ruby-keyword">if</span> <span class="ruby-identifier">output</span>.<span class="ruby-identifier">empty?</span>
+  <span class="ruby-identifier">prs</span> = <span class="ruby-constant">JSON</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">output</span>) <span class="ruby-keyword">rescue</span> []
+  <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;repo&#39;</span>] <span class="ruby-operator">||=</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">repo_from_url</span>(<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;url&#39;</span>]) }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-fetch_current_branch_pr" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-fetch_current_branch_pr" title="Link to this method">
+                <span class="method-name">fetch_current_branch_pr</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="fetch_current_branch_pr-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 96</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fetch_current_branch_pr</span>
+  <span class="ruby-identifier">fields</span> = <span class="ruby-string">&#39;number,title,url,headRefName,state&#39;</span>
+  <span class="ruby-identifier">output</span> = <span class="ruby-node">`gh pr view --json #{fields} 2&gt;/dev/null`</span>.<span class="ruby-identifier">strip</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">output</span>.<span class="ruby-identifier">empty?</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">JSON</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">output</span>)
+  <span class="ruby-identifier">result</span>[<span class="ruby-string">&#39;repo&#39;</span>] <span class="ruby-operator">||=</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">repo_from_url</span>(<span class="ruby-identifier">result</span>[<span class="ruby-string">&#39;url&#39;</span>])
+  <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">rescue</span> <span class="ruby-constant">JSON</span><span class="ruby-operator">::</span><span class="ruby-constant">ParserError</span>
+  <span class="ruby-keyword">nil</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-fetch_my_and_assigned_prs" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-fetch_my_and_assigned_prs" title="Link to this method">
+                <span class="method-name">fetch_my_and_assigned_prs</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="fetch_my_and_assigned_prs-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 121</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fetch_my_and_assigned_prs</span>
+  <span class="ruby-identifier">authored_prs</span> = <span class="ruby-identifier">fetch_my_prs</span>
+  <span class="ruby-identifier">assigned_prs</span> = <span class="ruby-identifier">fetch_assigned_prs</span>
+
+  <span class="ruby-identifier">authored_numbers</span> = <span class="ruby-identifier">authored_prs</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;number&#39;</span>] }.<span class="ruby-identifier">to_set</span>
+  <span class="ruby-identifier">assigned_prs</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;assigned&#39;</span>] = <span class="ruby-keyword">true</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">authored_numbers</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;number&#39;</span>]) }
+  <span class="ruby-identifier">authored_prs</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;authored&#39;</span>] = <span class="ruby-keyword">true</span> }
+
+  (<span class="ruby-identifier">authored_prs</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">assigned_prs</span>).<span class="ruby-identifier">uniq</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;number&#39;</span>] }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-fetch_my_prs" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-fetch_my_prs" title="Link to this method">
+                <span class="method-name">fetch_my_prs</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="fetch_my_prs-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 107</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fetch_my_prs</span>
+  <span class="ruby-identifier">output</span> = <span class="ruby-string">`gh pr list --author @me --state open --json number,title,headRefName,url 2&gt;/dev/null`</span>.<span class="ruby-identifier">strip</span>
+  <span class="ruby-keyword">return</span> [] <span class="ruby-keyword">if</span> <span class="ruby-identifier">output</span>.<span class="ruby-identifier">empty?</span>
+  <span class="ruby-identifier">prs</span> = <span class="ruby-constant">JSON</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">output</span>) <span class="ruby-keyword">rescue</span> []
+  <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;repo&#39;</span>] <span class="ruby-operator">||=</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">repo_from_url</span>(<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;url&#39;</span>]) }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-fetch_pr_info" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-fetch_pr_info" title="Link to this method">
+                <span class="method-name">fetch_pr_info</span>
+                <span class="method-args">(pr_number, repo: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="fetch_pr_info-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 84</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fetch_pr_info</span>(<span class="ruby-identifier">pr_number</span>, <span class="ruby-value">repo:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">fields</span> = <span class="ruby-string">&#39;number,title,url,headRefName,state,statusCheckRollup,reviewDecision,reviews,isDraft,mergeable&#39;</span>
+  <span class="ruby-identifier">repo_flag</span> = <span class="ruby-identifier">repo</span> <span class="ruby-operator">?</span> <span class="ruby-node">&quot; --repo #{repo}&quot;</span> <span class="ruby-operator">:</span> <span class="ruby-string">&quot;&quot;</span>
+  <span class="ruby-identifier">output</span> = <span class="ruby-node">`gh pr view #{pr_number}#{repo_flag} --json #{fields} 2&gt;/dev/null`</span>.<span class="ruby-identifier">strip</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">output</span>.<span class="ruby-identifier">empty?</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">JSON</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">output</span>)
+  <span class="ruby-identifier">result</span>[<span class="ruby-string">&#39;repo&#39;</span>] <span class="ruby-operator">||=</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">repo_from_url</span>(<span class="ruby-identifier">result</span>[<span class="ruby-string">&#39;url&#39;</span>])
+  <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">rescue</span> <span class="ruby-constant">JSON</span><span class="ruby-operator">::</span><span class="ruby-constant">ParserError</span>
+  <span class="ruby-keyword">nil</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-filter_active-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-filter_active-3F" title="Link to this method">
+                <span class="method-name">filter_active?</span>
+                <span class="method-args">(opts)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="filter_active-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 417</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">filter_active?</span>(<span class="ruby-identifier">opts</span>)
+  <span class="ruby-constant">FILTER_PREDICATES</span>.<span class="ruby-identifier">keys</span>.<span class="ruby-identifier">any?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">f</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">f</span>) } <span class="ruby-operator">||</span>
+    (<span class="ruby-identifier">opts</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:tag</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">Array</span>(<span class="ruby-identifier">opts</span>.<span class="ruby-identifier">tag</span>).<span class="ruby-identifier">any?</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-load_pinned" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-load_pinned" title="Link to this method">
+                <span class="method-name">load_pinned</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="load_pinned-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 32</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">load_pinned</span>
+  <span class="ruby-identifier">ensure_file</span>
+  <span class="ruby-identifier">prs</span> = <span class="ruby-constant">YAML</span>.<span class="ruby-identifier">load_file</span>(<span class="ruby-constant">PINNED_FILE</span>) <span class="ruby-operator">||</span> []
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">any?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-operator">!</span><span class="ruby-identifier">p</span>[<span class="ruby-string">&#39;slot&#39;</span>] }
+    <span class="ruby-identifier">next_slot</span> = <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-identifier">p</span>[<span class="ruby-string">&#39;slot&#39;</span>].<span class="ruby-identifier">to_i</span> }.<span class="ruby-identifier">max</span>.<span class="ruby-identifier">to_i</span>
+    <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span>
+      <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">p</span>[<span class="ruby-string">&#39;slot&#39;</span>]
+      <span class="ruby-identifier">next_slot</span> <span class="ruby-operator">+=</span> <span class="ruby-value">1</span>
+      <span class="ruby-identifier">p</span>[<span class="ruby-string">&#39;slot&#39;</span>] = <span class="ruby-identifier">next_slot</span>
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">save_pinned</span>(<span class="ruby-identifier">prs</span>)
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">prs</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-needs_refresh-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-needs_refresh-3F" title="Link to this method">
+                <span class="method-name">needs_refresh?</span>
+                <span class="method-args">(pr, force: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="needs_refresh-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 132</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">needs_refresh?</span>(<span class="ruby-identifier">pr</span>, <span class="ruby-value">force:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">true</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">force</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">true</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;last_checked&#39;</span>]
+
+  <span class="ruby-identifier">last_check_time</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;last_checked&#39;</span>]) <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">nil</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">true</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">last_check_time</span>
+
+  <span class="ruby-comment"># Refresh if last check was more than 2 minutes ago</span>
+  (<span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span> <span class="ruby-operator">-</span> <span class="ruby-identifier">last_check_time</span>) <span class="ruby-operator">&gt;</span> <span class="ruby-value">120</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-pin" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-pin" title="Link to this method">
+                <span class="method-name">pin</span>
+                <span class="method-args">(pr_info)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="pin-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 52</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pin</span>(<span class="ruby-identifier">pr_info</span>)
+  <span class="ruby-identifier">pr_info</span>[<span class="ruby-string">&#39;repo&#39;</span>] <span class="ruby-operator">||=</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">repo_from_url</span>(<span class="ruby-identifier">pr_info</span>[<span class="ruby-string">&#39;url&#39;</span>])
+
+  <span class="ruby-identifier">pinned</span> = <span class="ruby-identifier">load_pinned</span>
+  <span class="ruby-identifier">existing</span> = <span class="ruby-identifier">pinned</span>.<span class="ruby-identifier">find</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">p</span>[<span class="ruby-string">&#39;number&#39;</span>] <span class="ruby-operator">==</span> <span class="ruby-identifier">pr_info</span>[<span class="ruby-string">&#39;number&#39;</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">pr_repo</span>(<span class="ruby-identifier">p</span>) <span class="ruby-operator">==</span> <span class="ruby-identifier">pr_repo</span>(<span class="ruby-identifier">pr_info</span>)
+  }
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">existing</span>
+    <span class="ruby-identifier">existing</span>.<span class="ruby-identifier">merge!</span>(<span class="ruby-identifier">pr_info</span>)
+    <span class="ruby-identifier">existing</span>[<span class="ruby-string">&#39;updated_at&#39;</span>] = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>.<span class="ruby-identifier">iso8601</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">pr_info</span>[<span class="ruby-string">&#39;slot&#39;</span>] = (<span class="ruby-identifier">pinned</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-identifier">p</span>[<span class="ruby-string">&#39;slot&#39;</span>].<span class="ruby-identifier">to_i</span> }.<span class="ruby-identifier">max</span>.<span class="ruby-identifier">to_i</span>) <span class="ruby-operator">+</span> <span class="ruby-value">1</span>
+    <span class="ruby-identifier">pr_info</span>[<span class="ruby-string">&#39;pinned_at&#39;</span>] = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>.<span class="ruby-identifier">iso8601</span>
+    <span class="ruby-identifier">pinned</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">pr_info</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">save_pinned</span>(<span class="ruby-identifier">pinned</span>)
+  <span class="ruby-identifier">pr_info</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-pinned-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-pinned-3F" title="Link to this method">
+                <span class="method-name">pinned?</span>
+                <span class="method-args">(pr_number)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="pinned-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 80</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pinned?</span>(<span class="ruby-identifier">pr_number</span>)
+  <span class="ruby-identifier">load_pinned</span>.<span class="ruby-identifier">any?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-identifier">p</span>[<span class="ruby-string">&#39;number&#39;</span>].<span class="ruby-identifier">to_s</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">pr_number</span>.<span class="ruby-identifier">to_s</span> }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-pr_repo" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-pr_repo" title="Link to this method">
+                <span class="method-name">pr_repo</span>
+                <span class="method-args">(pr)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="pr_repo-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 18</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pr_repo</span>(<span class="ruby-identifier">pr</span>)
+  <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;repo&#39;</span>] <span class="ruby-operator">||</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">repo_from_url</span>(<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;url&#39;</span>])
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-refresh_all_status" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-refresh_all_status" title="Link to this method">
+                <span class="method-name">refresh_all_status</span>
+                <span class="method-args">(prs, force: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="refresh_all_status-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 244</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">refresh_all_status</span>(<span class="ruby-identifier">prs</span>, <span class="ruby-value">force:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-identifier">prs_to_refresh</span> = <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">select</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span> <span class="ruby-identifier">needs_refresh?</span>(<span class="ruby-identifier">pr</span>, <span class="ruby-value">force:</span> <span class="ruby-identifier">force</span>) }
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">prs_to_refresh</span>.<span class="ruby-identifier">empty?</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;All PRs recently checked (within last 2 minutes). Use -U to force update.&quot;</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">force</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">prs</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-comment"># infos is keyed by [number, repo] to avoid collisions across repos</span>
+  <span class="ruby-identifier">infos</span> = <span class="ruby-identifier">batch_fetch_pr_info</span>(<span class="ruby-identifier">prs_to_refresh</span>)
+
+  <span class="ruby-identifier">prs_to_refresh</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">pr</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">info</span> = <span class="ruby-identifier">infos</span>[[<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;number&#39;</span>], <span class="ruby-identifier">pr_repo</span>(<span class="ruby-identifier">pr</span>) <span class="ruby-operator">||</span> <span class="ruby-string">&#39;instacart/carrot&#39;</span>]]
+    <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">info</span>
+
+    <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;state&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;state&#39;</span>]
+    <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;title&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;title&#39;</span>]
+    <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;checks&#39;</span>] = <span class="ruby-identifier">summarize_checks</span>(<span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;statusCheckRollup&#39;</span>])
+    <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;reviews&#39;</span>] = <span class="ruby-identifier">summarize_reviews</span>(<span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;reviews&#39;</span>])
+    <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;review_decision&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;reviewDecision&#39;</span>]
+    <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;is_draft&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;isDraft&#39;</span>]
+    <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;mergeable&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;mergeable&#39;</span>]
+    <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;last_checked&#39;</span>] = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>.<span class="ruby-identifier">iso8601</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">prs</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-refresh_status" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-refresh_status" title="Link to this method">
+                <span class="method-name">refresh_status</span>
+                <span class="method-args">(pr, force: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="refresh_status-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 272</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">refresh_status</span>(<span class="ruby-identifier">pr</span>, <span class="ruby-value">force:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">pr</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">needs_refresh?</span>(<span class="ruby-identifier">pr</span>, <span class="ruby-value">force:</span> <span class="ruby-identifier">force</span>)
+
+  <span class="ruby-identifier">info</span> = <span class="ruby-identifier">fetch_pr_info</span>(<span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;number&#39;</span>], <span class="ruby-value">repo:</span> <span class="ruby-identifier">pr_repo</span>(<span class="ruby-identifier">pr</span>))
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">pr</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">info</span>
+
+  <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;state&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;state&#39;</span>]
+  <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;title&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;title&#39;</span>]
+  <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;checks&#39;</span>] = <span class="ruby-identifier">summarize_checks</span>(<span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;statusCheckRollup&#39;</span>])
+  <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;reviews&#39;</span>] = <span class="ruby-identifier">summarize_reviews</span>(<span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;reviews&#39;</span>])
+  <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;review_decision&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;reviewDecision&#39;</span>]
+  <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;is_draft&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;isDraft&#39;</span>]
+  <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;mergeable&#39;</span>] = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;mergeable&#39;</span>]
+  <span class="ruby-identifier">pr</span>[<span class="ruby-string">&#39;last_checked&#39;</span>] = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>.<span class="ruby-identifier">iso8601</span>
+  <span class="ruby-identifier">pr</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-save_pinned" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-save_pinned" title="Link to this method">
+                <span class="method-name">save_pinned</span>
+                <span class="method-args">(prs)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="save_pinned-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 47</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">save_pinned</span>(<span class="ruby-identifier">prs</span>)
+  <span class="ruby-identifier">ensure_file</span>
+  <span class="ruby-constant">File</span>.<span class="ruby-identifier">write</span>(<span class="ruby-constant">PINNED_FILE</span>, <span class="ruby-identifier">prs</span>.<span class="ruby-identifier">to_yaml</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-summarize_checks" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-summarize_checks" title="Link to this method">
+                <span class="method-name">summarize_checks</span>
+                <span class="method-args">(rollup)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="summarize_checks-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 301</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">summarize_checks</span>(<span class="ruby-identifier">rollup</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">rollup</span>
+
+  <span class="ruby-identifier">contexts</span> = <span class="ruby-identifier">rollup</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Array</span>) <span class="ruby-operator">?</span> <span class="ruby-identifier">rollup</span> <span class="ruby-operator">:</span> []
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">contexts</span>.<span class="ruby-identifier">empty?</span>
+
+  <span class="ruby-identifier">total</span> = <span class="ruby-identifier">contexts</span>.<span class="ruby-identifier">length</span>
+  <span class="ruby-identifier">success</span> = <span class="ruby-identifier">contexts</span>.<span class="ruby-identifier">count</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">c</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;conclusion&#39;</span>] <span class="ruby-operator">==</span> <span class="ruby-string">&#39;SUCCESS&#39;</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;state&#39;</span>] <span class="ruby-operator">==</span> <span class="ruby-string">&#39;SUCCESS&#39;</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">pending</span> = <span class="ruby-identifier">contexts</span>.<span class="ruby-identifier">count</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">c</span><span class="ruby-operator">|</span>
+    <span class="ruby-node">%w[QUEUED IN_PROGRESS PENDING REQUESTED WAITING]</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;status&#39;</span>]) <span class="ruby-operator">||</span>
+      <span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;state&#39;</span>] <span class="ruby-operator">==</span> <span class="ruby-string">&#39;PENDING&#39;</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">failed</span> = <span class="ruby-identifier">contexts</span>.<span class="ruby-identifier">count</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">c</span><span class="ruby-operator">|</span>
+    <span class="ruby-constant">FAILED_CONCLUSIONS</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;conclusion&#39;</span>]) <span class="ruby-operator">||</span>
+      <span class="ruby-node">%w[FAILURE ERROR]</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">c</span>[<span class="ruby-string">&#39;state&#39;</span>])
+  <span class="ruby-keyword">end</span>
+
+  { <span class="ruby-string">&#39;total&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">total</span>, <span class="ruby-string">&#39;success&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">success</span>, <span class="ruby-string">&#39;pending&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">pending</span>, <span class="ruby-string">&#39;failed&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">failed</span> }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-summarize_reviews" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-summarize_reviews" title="Link to this method">
+                <span class="method-name">summarize_reviews</span>
+                <span class="method-args">(reviews)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="summarize_reviews-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 323</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">summarize_reviews</span>(<span class="ruby-identifier">reviews</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">reviews</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Array</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">reviews</span>.<span class="ruby-identifier">empty?</span>
+
+  <span class="ruby-comment"># Get the latest review state per author</span>
+  <span class="ruby-identifier">latest_by_author</span> = {}
+  <span class="ruby-identifier">reviews</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">review</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">author</span> = <span class="ruby-identifier">review</span>[<span class="ruby-string">&#39;author&#39;</span>][<span class="ruby-string">&#39;login&#39;</span>] <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">nil</span>
+    <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">author</span>
+    <span class="ruby-comment"># Only track if it&#39;s a meaningful state</span>
+    <span class="ruby-identifier">state</span> = <span class="ruby-identifier">review</span>[<span class="ruby-string">&#39;state&#39;</span>]
+    <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-node">%w[APPROVED CHANGES_REQUESTED COMMENTED]</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">state</span>)
+    <span class="ruby-identifier">latest_by_author</span>[<span class="ruby-identifier">author</span>] = <span class="ruby-identifier">state</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">approved</span> = <span class="ruby-identifier">latest_by_author</span>.<span class="ruby-identifier">values</span>.<span class="ruby-identifier">count</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span> <span class="ruby-identifier">s</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;APPROVED&#39;</span> }
+  <span class="ruby-identifier">changes_requested</span> = <span class="ruby-identifier">latest_by_author</span>.<span class="ruby-identifier">values</span>.<span class="ruby-identifier">count</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span> <span class="ruby-identifier">s</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;CHANGES_REQUESTED&#39;</span> }
+  <span class="ruby-identifier">commented</span> = <span class="ruby-identifier">latest_by_author</span>.<span class="ruby-identifier">values</span>.<span class="ruby-identifier">count</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span> <span class="ruby-identifier">s</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;COMMENTED&#39;</span> }
+
+  { <span class="ruby-string">&#39;approved&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">approved</span>, <span class="ruby-string">&#39;changes_requested&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">changes_requested</span>, <span class="ruby-string">&#39;commented&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">commented</span>, <span class="ruby-string">&#39;reviewers&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">latest_by_author</span> }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-unpin" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-unpin" title="Link to this method">
+                <span class="method-name">unpin</span>
+                <span class="method-args">(pr_number)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="unpin-source">
+            <pre class="ruby"><span class="ruby-comment"># File bin/h-pr, line 73</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">unpin</span>(<span class="ruby-identifier">pr_number</span>)
+  <span class="ruby-identifier">pinned</span> = <span class="ruby-identifier">load_pinned</span>
+  <span class="ruby-identifier">removed</span> = <span class="ruby-identifier">pinned</span>.<span class="ruby-identifier">reject!</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-identifier">p</span>[<span class="ruby-string">&#39;number&#39;</span>].<span class="ruby-identifier">to_s</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">pr_number</span>.<span class="ruby-identifier">to_s</span> }
+  <span class="ruby-identifier">save_pinned</span>(<span class="ruby-identifier">pinned</span>)
+  <span class="ruby-identifier">removed</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+    </section>
+
+
+
+
+  </section>
+
+</main>
+
+<aside class="table-of-contents" role="complementary" aria-label="Table of Contents">
+  <div class="toc-sticky">
+    <h3 class="toc-heading">On This Page</h3>
+    <nav class="toc-nav" id="toc-nav" aria-label="Page sections">
+      <!-- Generated by JavaScript based on page headings -->
+    </nav>
+  </div>
+</aside>
+
+
+<footer class="site-footer">
+  
+
+  <div class="footer-bottom">
+    <p>
+      Generated by <a href="https://ruby.github.io/rdoc/">RDoc 7.2.0</a>
+      using the Aliki theme by <a href="http://st0012.dev">Stan Lo</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+

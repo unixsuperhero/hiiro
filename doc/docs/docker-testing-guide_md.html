@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>docker-testing-guide - RDoc Documentation</title>
+
+
+  <meta name="keywords" content="ruby,documentation,docker-testing-guide">
+  <meta
+    name="description"
+    content="docker-testing-guide: Hiiro Docker Testing Guide Manual testing instructions for verifying hiiro functionality in a Docker container. bin` contains `h-todo`, `h-branch`, e"
+  >
+
+
+
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="docker-testing-guide - RDoc Documentation">
+
+
+
+    <meta property="og:description" content="Hiiro Docker Testing Guide Manual testing instructions for verifying hiiro functionality in a Docker container. bin` contains `h-todo`, `h-branch`, e">
+
+
+
+
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="docker-testing-guide - RDoc Documentation">
+
+
+
+    <meta name="twitter:description" content="Hiiro Docker Testing Guide Manual testing instructions for verifying hiiro functionality in a Docker container. bin` contains `h-todo`, `h-branch`, e">
+
+
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "../";
+  var index_rel_prefix = "../";
+</script>
+
+<script
+  src="../js/theme-toggle.js?v=7.2.0"
+></script>
+
+<script
+  src="../js/search_navigation.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/search_data.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/search_ranker.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/search_controller.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/c_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/bash_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/aliki.js?v=7.2.0"
+  defer
+></script>
+
+<link
+  href="../css/rdoc.css?v=7.2.0"
+  rel="stylesheet"
+>
+
+
+
+
+<body role="document" class="file has-toc">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <!-- Chevron (right arrow) - used for expand/collapse -->
+  <symbol
+    id="icon-chevron"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </symbol>
+
+  <!-- File/Document - Pages section -->
+  <symbol
+    id="icon-file"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path
+      d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+    ></path>
+
+    <polyline points="14 2 14 8 20 8"></polyline>
+  </symbol>
+
+  <!-- Layers/Stack - Classes and Modules section -->
+  <symbol
+    id="icon-layers"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+    <polyline points="2 17 12 22 22 17"></polyline>
+    <polyline points="2 12 12 17 22 12"></polyline>
+  </symbol>
+
+  <!-- Curly braces with C - Class Methods section -->
+  <symbol
+    id="icon-class-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      C
+    </text>
+  </symbol>
+
+  <!-- Curly braces with I - Instance Methods section -->
+  <symbol
+    id="icon-instance-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      I
+    </text>
+  </symbol>
+
+  <!-- Double chevrons up - Ancestors section -->
+  <symbol
+    id="icon-ancestors"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="17 11 12 6 7 11"></polyline>
+    <polyline points="17 18 12 13 7 18"></polyline>
+  </symbol>
+
+  <!-- User with plus - Included Modules section -->
+  <symbol
+    id="icon-includes"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+
+    <line
+      x1="20"
+      y1="8"
+      x2="20"
+      y2="14"
+    ></line>
+
+    <line
+      x1="23"
+      y1="11"
+      x2="17"
+      y2="11"
+    ></line>
+  </symbol>
+
+  <!-- User with check - Extended Modules section -->
+  <symbol
+    id="icon-extends"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+    <polyline points="17 11 19 13 23 9"></polyline>
+  </symbol>
+
+  <!-- List - Sections section -->
+  <symbol
+    id="icon-list"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <line
+      x1="8"
+      y1="6"
+      x2="21"
+      y2="6"
+    ></line>
+
+    <line
+      x1="8"
+      y1="12"
+      x2="21"
+      y2="12"
+    ></line>
+
+    <line
+      x1="8"
+      y1="18"
+      x2="21"
+      y2="18"
+    ></line>
+
+    <line
+      x1="3"
+      y1="6"
+      x2="3.01"
+      y2="6"
+    ></line>
+
+    <line
+      x1="3"
+      y1="12"
+      x2="3.01"
+      y2="12"
+    ></line>
+
+    <line
+      x1="3"
+      y1="18"
+      x2="3.01"
+      y2="18"
+    ></line>
+  </symbol>
+</svg>
+
+<header class="top-navbar">
+  <a href="../index.html" class="navbar-brand">
+    RDoc Documentation
+  </a>
+
+  <!-- Desktop search bar -->
+  <div class="navbar-search navbar-search-desktop" role="search">
+    <form action="#" method="get" accept-charset="utf-8">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results-desktop"
+             type="text" name="search" placeholder="Search (/) for a class, method..."
+             spellcheck="false" autocomplete="off"
+             title="Type to search, Up and Down to navigate, Enter to load">
+      <ul id="search-results-desktop" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="initially-hidden search-results"></ul>
+    </form>
+  </div>
+
+  <!-- Mobile search icon button -->
+  <button id="search-toggle" class="navbar-search-mobile" aria-label="Open search" type="button">
+    <span aria-hidden="true">🔍</span>
+  </button>
+
+  <!-- Theme toggle button -->
+  <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" type="button">
+    <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+  </button>
+</header>
+
+<!-- Search Modal (Mobile) -->
+<div id="search-modal" class="search-modal" hidden aria-modal="true" role="dialog" aria-label="Search">
+  <div class="search-modal-backdrop"></div>
+  <div class="search-modal-content">
+    <div class="search-modal-header">
+      <form class="search-modal-form" action="#" method="get" accept-charset="utf-8">
+        <span class="search-modal-icon" aria-hidden="true">🔍</span>
+        <input id="search-field-mobile" role="combobox" aria-label="Search"
+               aria-autocomplete="list" aria-controls="search-results-mobile"
+               type="text" name="search" placeholder="Search documentation"
+               spellcheck="false" autocomplete="off">
+        <button type="button" class="search-modal-close" aria-label="Close search" id="search-modal-close">
+          <span aria-hidden="true">esc</span>
+        </button>
+      </form>
+    </div>
+    <div class="search-modal-body">
+      <ul id="search-results-mobile" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="search-results search-modal-results initially-hidden"></ul>
+      <div class="search-modal-empty">
+        <p>No recent searches</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
+  <span aria-hidden="true">&#9776;</span>
+</div>
+
+
+<nav id="navigation" role="navigation" hidden>
+  
+
+
+
+
+
+
+  <div id="fileindex-section" class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg>
+            <use href="#icon-file"></use>
+          </svg>
+        </span>
+
+        <span class="nav-section-title">Pages</span>
+
+        <span class="nav-section-chevron">
+          <svg>
+            <use href="#icon-chevron"></use>
+          </svg>
+        </span>
+      </summary>
+
+      <ul class="nav-list">
+
+
+
+
+
+
+            <li>
+              <a href="../CLAUDE_md.html">
+                CLAUDE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../Gemfile.html">
+                Gemfile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../Gemfile_lock.html">
+                Gemfile.lock
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../LICENSE.html">
+                LICENSE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../README_md.html">
+                README
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../Rakefile.html">
+                Rakefile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../TODO_md.html">
+                TODO
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../demo_sh.html">
+                demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details  open>
+              <summary>
+                
+                  docs
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="../docs/README_md.html">
+                      README
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/docker-testing-guide_md.html">
+                      docker-testing-guide
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-buffer_md.html">
+                      h-buffer
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-pane_md.html">
+                      h-pane
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-plugin_md.html">
+                      h-plugin
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-session_md.html">
+                      h-session
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-window_md.html">
+                      h-window
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="../h-tmux-plugins_tmux.html">
+                h-tmux-plugins.tmux
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../notes.html">
+                notes
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../obsidian_slides_md.html">
+                obsidian_slides
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../record-demo_sh.html">
+                record-demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  script
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="../script/compare.html">
+                      compare
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/install.html">
+                      install
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/sync.html">
+                      sync
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/test.html">
+                      test
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/update.html">
+                      update
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="../slides_md.html">
+                slides
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  tmp
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="../tmp/gql-error_message_json.html">
+                      gql-error_message.json
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../tmp/sync_sh.html">
+                      sync.sh
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../tmp/yaml_files.html">
+                      yaml_files
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  <div id="classindex-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-layers"></use></svg>
+      </span>
+      <span class="nav-section-title">Classes and Modules</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+
+    <ul class="link-list nav-list"><li><code><a href="../App.html">App</a></code></li><li><code><a href="../BranchManager.html">BranchManager</a></code></li><li><code><a href="../Directory.html">Directory</a></code></li><li><code><a href="../Environment.html">Environment</a></code></li><li><details><summary><code><a href="../Hiiro.html">Hiiro</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/AnyStruct.html">AnyStruct</a></code></li><li><code><a href="../Hiiro/App.html">App</a></code></li><li><code><a href="../Hiiro/AppFiles.html">AppFiles</a></code></li><li><code><a href="../Hiiro/Args.html">Args</a></code></li><li><code><a href="../Hiiro/Bins.html">Bins</a></code></li><li><code><a href="../Hiiro/Config.html">Config</a></code></li><li><code><a href="../Hiiro/Environment.html">Environment</a></code></li><li><code><a href="../Hiiro/Fuzzyfind.html">Fuzzyfind</a></code></li><li><details><summary><code><a href="../Hiiro/Git.html">Git</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Git/Branch.html">Branch</a></code></li><li><code><a href="../Hiiro/Git/Branches.html">Branches</a></code></li><li><code><a href="../Hiiro/Git/Pr.html">Pr</a></code></li><li><code><a href="../Hiiro/Git/Remote.html">Remote</a></code></li><li><code><a href="../Hiiro/Git/Worktree.html">Worktree</a></code></li><li><code><a href="../Hiiro/Git/Worktrees.html">Worktrees</a></code></li></ul></details></li><li><code><a href="../Hiiro/Glob.html">Glob</a></code></li><li><details><summary><code><a href="../Hiiro/Matcher.html">Matcher</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Matcher/Item.html">Item</a></code></li><li><code><a href="../Hiiro/Matcher/PathResult.html">PathResult</a></code></li><li><code><a href="../Hiiro/Matcher/Result.html">Result</a></code></li></ul></details></li><li><code><a href="../Hiiro/Notification.html">Notification</a></code></li><li><details><summary><code><a href="../Hiiro/Options.html">Options</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Options/Args.html">Args</a></code></li><li><code><a href="../Hiiro/Options/Definition.html">Definition</a></code></li></ul></details></li><li><details><summary><code><a href="../Hiiro/Paths.html">Paths</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Paths/Symlink.html">Symlink</a></code></li></ul></details></li><li><code><a href="../Hiiro/Matcher.html">PrefixMatcher</a></code></li><li><details><summary><code><a href="../Hiiro/Queue.html">Queue</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Queue/Prompt.html">Prompt</a></code></li></ul></details></li><li><code><a href="../Hiiro/Rbenv.html">Rbenv</a></code></li><li><code><a href="../Hiiro/RunnerTool.html">RunnerTool</a></code></li><li><details><summary><code><a href="../Hiiro/Runners.html">Runners</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Runners/Bin.html">Bin</a></code></li><li><code><a href="../Hiiro/Runners/Subcommand.html">Subcommand</a></code></li></ul></details></li><li><code><a href="../Hiiro/ServiceManager.html">ServiceManager</a></code></li><li><code><a href="../Hiiro/Shell.html">Shell</a></code></li><li><code><a href="../Hiiro/SparseGroups.html">SparseGroups</a></code></li><li><code><a href="../Hiiro/Tags.html">Tags</a></code></li><li><code><a href="../Hiiro/Task.html">Task</a></code></li><li><details><summary><code><a href="../Hiiro/TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="../Hiiro/Tasks.html">Tasks</a></code></li><li><details><summary><code><a href="../Hiiro/Tmux.html">Tmux</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Tmux/Buffer.html">Buffer</a></code></li><li><code><a href="../Hiiro/Tmux/Buffers.html">Buffers</a></code></li><li><code><a href="../Hiiro/Tmux/Pane.html">Pane</a></code></li><li><code><a href="../Hiiro/Tmux/Panes.html">Panes</a></code></li><li><code><a href="../Hiiro/Tmux/Session.html">Session</a></code></li><li><code><a href="../Hiiro/Tmux/Sessions.html">Sessions</a></code></li><li><code><a href="../Hiiro/Tmux/Window.html">Window</a></code></li><li><code><a href="../Hiiro/Tmux/Windows.html">Windows</a></code></li></ul></details></li><li><code><a href="../Hiiro/TodoItem.html">TodoItem</a></code></li><li><code><a href="../Hiiro/TodoManager.html">TodoManager</a></code></li><li><code><a href="../Hiiro/Tree.html">Tree</a></code></li></ul></details></li><li><details><summary><code><a href="../LinkManager.html">LinkManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../LinkManager/Link.html">Link</a></code></li></ul></details></li><li><code><a href="../Notify.html">Notify</a></code></li><li><code><a href="../Object.html">Object</a></code></li><li><code><a href="../PinnedPRManager.html">PinnedPRManager</a></code></li><li><details><summary><code><a href="../Pins.html">Pins</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Pins/Pin.html">Pin</a></code></li></ul></details></li><li><code><a href="../Project.html">Project</a></code></li><li><code><a href="../String.html">String</a></code></li><li><code><a href="../Task.html">Task</a></code></li><li><details><summary><code><a href="../TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="../Tasks.html">Tasks</a></code></li><li><code><a href="../TmuxSession.html">TmuxSession</a></code></li><li><code><a href="../Tree.html">Tree</a></code></li></ul>
+  </details>
+</div>
+
+</nav>
+
+<main role="main" aria-label="Page docs/docker-testing-guide.md">
+
+<span id="label-Hiiro+Docker+Testing+Guide" class="legacy-anchor"></span>
+<h1 id="hiiro-docker-testing-guide"><a href="#hiiro-docker-testing-guide"><a href="../Hiiro.html"><code>Hiiro</code></a> Docker Testing Guide</a></h1>
+
+<p>Manual testing instructions for verifying hiiro functionality in a Docker container.</p>
+
+<span id="label-Prerequisites" class="legacy-anchor"></span>
+<h2 id="prerequisites"><a href="#prerequisites">Prerequisites</a></h2>
+
+<p>Your Docker container should have: - Ruby with RubyGems - Bare repo at <code>~/work/.bare</code> - <code>sk</code> or <code>fzf</code> installed - <code>gh</code> CLI - <code>tmux</code> (available but tests run outside tmux) - No <code>terminal-notifier</code> (macOS-only)</p>
+<hr>
+
+<span id="label-Phase+1-3A+Initial+Setup" class="legacy-anchor"></span>
+<h2 id="phase-1-initial-setup"><a href="#phase-1-initial-setup">Phase 1: Initial Setup</a></h2>
+
+<pre class="bash"># Create config directories
+mkdir -p ~/.config/hiiro/{pins,tasks,sounds}
+mkdir -p ~/proj
+mkdir -p ~/bin
+
+# Install hiiro gem
+gem install hiiro
+
+# Run setup (copies subcommand bins to ~/bin, plugins to ~/.config/hiiro/plugins)
+h setup
+
+# Add ~/bin to PATH (for the subcommand bins)
+export PATH=&quot;$HOME/bin:$PATH&quot;
+
+# Verify installation
+which h
+h version</pre>
+
+<p><strong>Expected:</strong> - <code>h</code> is available (installed by gem) - <code>h version</code> prints version string - <code>~/bin</code> contains <code>h-todo</code>, <code>h-branch</code>, etc.</p>
+<hr>
+
+<span id="label-Phase+2-3A+Core+Health+Checks" class="legacy-anchor"></span>
+<h2 id="phase-2-core-health-checks"><a href="#phase-2-core-health-checks">Phase 2: Core Health Checks</a></h2>
+
+<span id="label-Test+2.1-3A+Version" class="legacy-anchor"></span>
+<h3 id="test-21-version"><a href="#test-21-version">Test 2.1: Version</a></h3>
+
+<pre class="bash">h version</pre>
+
+<p><strong>Expected:</strong> Prints version string (e.g., <code>0.1.0</code>)</p>
+
+<span id="label-Test+2.2-3A+Ping" class="legacy-anchor"></span>
+<h3 id="test-22-ping"><a href="#test-22-ping">Test 2.2: Ping</a></h3>
+
+<pre class="bash">h ping</pre>
+
+<p><strong>Expected:</strong> <code>pong</code></p>
+
+<span id="label-Test+2.3-3A+List+subcommands" class="legacy-anchor"></span>
+<h3 id="test-23-list-subcommands"><a href="#test-23-list-subcommands">Test 2.3: List subcommands</a></h3>
+
+<pre class="bash">h</pre>
+
+<p><strong>Expected:</strong> Lists available subcommands (app, branch, buffer, claude, commit, etc.)</p>
+<hr>
+
+<span id="label-Phase+3-3A+Todo+Management+-28h-todo-29" class="legacy-anchor"></span>
+<h2 id="phase-3-todo-management-h-todo"><a href="#phase-3-todo-management-h-todo">Phase 3: Todo Management (h-todo)</a></h2>
+
+<span id="label-Test+3.1-3A+Check+todo+path" class="legacy-anchor"></span>
+<h3 id="test-31-check-todo-path"><a href="#test-31-check-todo-path">Test 3.1: Check todo path</a></h3>
+
+<pre class="bash">h todo path</pre>
+
+<p><strong>Expected:</strong> <code>~/.config/hiiro/todo.yml</code> (or full path)</p>
+
+<span id="label-Test+3.2-3A+Add+items" class="legacy-anchor"></span>
+<h3 id="test-32-add-items"><a href="#test-32-add-items">Test 3.2: Add items</a></h3>
+
+<pre class="bash">h todo add &quot;First task&quot;
+h todo add &quot;Second task&quot; -t urgent
+h todo add &quot;Third task with multiple tags&quot; -t &quot;bug,frontend&quot;</pre>
+
+<p><strong>Expected:</strong> Items added (confirmation message for each)</p>
+
+<span id="label-Test+3.3-3A+List+items" class="legacy-anchor"></span>
+<h3 id="test-33-list-items"><a href="#test-33-list-items">Test 3.3: List items</a></h3>
+
+<pre class="bash">h todo ls</pre>
+
+<p><strong>Expected:</strong> Shows 3 items with IDs, text, and tags. Items are <code>not_started</code>.</p>
+
+<span id="label-Test+3.4-3A+Start+an+item" class="legacy-anchor"></span>
+<h3 id="test-34-start-an-item"><a href="#test-34-start-an-item">Test 3.4: Start an item</a></h3>
+
+<pre class="bash">h todo start 1
+h todo ls</pre>
+
+<p><strong>Expected:</strong> First item now shows <code>started</code> status</p>
+
+<span id="label-Test+3.5-3A+Complete+an+item" class="legacy-anchor"></span>
+<h3 id="test-35-complete-an-item"><a href="#test-35-complete-an-item">Test 3.5: Complete an item</a></h3>
+
+<pre class="bash">h todo done 2
+h todo ls</pre>
+
+<p><strong>Expected:</strong> Second item shows <code>done</code> status, may be hidden from default list</p>
+
+<span id="label-Test+3.6-3A+List+all+items+-28including+done-29" class="legacy-anchor"></span>
+<h3 id="test-36-list-all-items-including-done"><a href="#test-36-list-all-items-including-done">Test 3.6: List all items (including done)</a></h3>
+
+<pre class="bash">h todo ls -a</pre>
+
+<p><strong>Expected:</strong> Shows all 3 items including completed ones</p>
+
+<span id="label-Test+3.7-3A+Skip+an+item" class="legacy-anchor"></span>
+<h3 id="test-37-skip-an-item"><a href="#test-37-skip-an-item">Test 3.7: Skip an item</a></h3>
+
+<pre class="bash">h todo skip 3
+h todo ls -a</pre>
+
+<p><strong>Expected:</strong> Third item shows <code>skipped</code> status</p>
+
+<span id="label-Test+3.8-3A+Reset+an+item" class="legacy-anchor"></span>
+<h3 id="test-38-reset-an-item"><a href="#test-38-reset-an-item">Test 3.8: Reset an item</a></h3>
+
+<pre class="bash">h todo reset 3
+h todo ls</pre>
+
+<p><strong>Expected:</strong> Third item back to <code>not_started</code></p>
+
+<span id="label-Test+3.9-3A+Search+items" class="legacy-anchor"></span>
+<h3 id="test-39-search-items"><a href="#test-39-search-items">Test 3.9: Search items</a></h3>
+
+<pre class="bash">h todo search &quot;urgent&quot;</pre>
+
+<p><strong>Expected:</strong> Shows item with urgent tag</p>
+
+<span id="label-Test+3.10-3A+Change+item+text" class="legacy-anchor"></span>
+<h3 id="test-310-change-item-text"><a href="#test-310-change-item-text">Test 3.10: Change item text</a></h3>
+
+<pre class="bash">h todo change 1 --text &quot;Updated first task&quot;
+h todo ls</pre>
+
+<p><strong>Expected:</strong> Item 1 shows updated text</p>
+
+<span id="label-Test+3.11-3A+Remove+item" class="legacy-anchor"></span>
+<h3 id="test-311-remove-item"><a href="#test-311-remove-item">Test 3.11: Remove item</a></h3>
+
+<pre class="bash">h todo rm 3
+h todo ls -a</pre>
+
+<p><strong>Expected:</strong> Only 2 items remain</p>
+<hr>
+
+<span id="label-Phase+4-3A+Pin+Management" class="legacy-anchor"></span>
+<h2 id="phase-4-pin-management"><a href="#phase-4-pin-management">Phase 4: Pin Management</a></h2>
+
+<span id="label-Test+4.1-3A+Set+pins" class="legacy-anchor"></span>
+<h3 id="test-41-set-pins"><a href="#test-41-set-pins">Test 4.1: Set pins</a></h3>
+
+<pre class="bash">h pin set mykey &quot;my value&quot;
+h pin set another &quot;second value&quot;</pre>
+
+<p><strong>Expected:</strong> <a href="../Pins.html"><code>Pins</code></a> saved (silent or confirmation)</p>
+
+<span id="label-Test+4.2-3A+List+pins" class="legacy-anchor"></span>
+<h3 id="test-42-list-pins"><a href="#test-42-list-pins">Test 4.2: List pins</a></h3>
+
+<pre class="bash">h pin</pre>
+
+<p><strong>Expected:</strong> Shows both pins with names and values</p>
+
+<span id="label-Test+4.3-3A+Get+a+pin" class="legacy-anchor"></span>
+<h3 id="test-43-get-a-pin"><a href="#test-43-get-a-pin">Test 4.3: Get a pin</a></h3>
+
+<pre class="bash">h pin get mykey</pre>
+
+<p><strong>Expected:</strong> <code>my value</code></p>
+
+<span id="label-Test+4.4-3A+Get+pin+by+prefix" class="legacy-anchor"></span>
+<h3 id="test-44-get-pin-by-prefix"><a href="#test-44-get-pin-by-prefix">Test 4.4: Get pin by prefix</a></h3>
+
+<pre class="bash">h pin my</pre>
+
+<p><strong>Expected:</strong> <code>my value</code> (prefix matches <code>mykey</code>)</p>
+
+<span id="label-Test+4.5-3A+Remove+a+pin" class="legacy-anchor"></span>
+<h3 id="test-45-remove-a-pin"><a href="#test-45-remove-a-pin">Test 4.5: Remove a pin</a></h3>
+
+<pre class="bash">h pin rm another
+h pin</pre>
+
+<p><strong>Expected:</strong> Only <code>mykey</code> remains</p>
+<hr>
+
+<span id="label-Phase+5-3A+Link+Management+-28h-link-29" class="legacy-anchor"></span>
+<h2 id="phase-5-link-management-h-link"><a href="#phase-5-link-management-h-link">Phase 5: Link Management (h-link)</a></h2>
+
+<span id="label-Test+5.1-3A+Check+links+path" class="legacy-anchor"></span>
+<h3 id="test-51-check-links-path"><a href="#test-51-check-links-path">Test 5.1: Check links path</a></h3>
+
+<pre class="bash">h link path</pre>
+
+<p><strong>Expected:</strong> <code>~/.config/hiiro/links.yml</code> (or full path)</p>
+
+<span id="label-Test+5.2-3A+Add+links" class="legacy-anchor"></span>
+<h3 id="test-52-add-links"><a href="#test-52-add-links">Test 5.2: Add links</a></h3>
+
+<pre class="bash">h link add &quot;https://github.com&quot; &quot;GitHub homepage&quot;
+h link add &quot;https://ruby-lang.org&quot; &quot;Ruby official site&quot;</pre>
+
+<p><strong>Expected:</strong> Links added with auto-generated IDs</p>
+
+<span id="label-Test+5.3-3A+List+links" class="legacy-anchor"></span>
+<h3 id="test-53-list-links"><a href="#test-53-list-links">Test 5.3: List links</a></h3>
+
+<pre class="bash">h link ls</pre>
+
+<p><strong>Expected:</strong> Shows both links with numbers/IDs, URLs, and descriptions</p>
+
+<span id="label-Test+5.4-3A+Search+links" class="legacy-anchor"></span>
+<h3 id="test-54-search-links"><a href="#test-54-search-links">Test 5.4: Search links</a></h3>
+
+<pre class="bash">h link search github</pre>
+
+<p><strong>Expected:</strong> Shows GitHub link</p>
+
+<span id="label-Test+5.5-3A+Add+link+with+description" class="legacy-anchor"></span>
+<h3 id="test-55-add-link-with-description"><a href="#test-55-add-link-with-description">Test 5.5: Add link with description</a></h3>
+
+<pre class="bash">h link add &quot;https://docs.ruby-lang.org/en/3.2/&quot; &quot;Ruby 3.2 docs&quot;</pre>
+
+<p><strong>Expected:</strong> Link added</p>
+<hr>
+
+<span id="label-Phase+6-3A+Plugin+Management+-28h-plugin-29" class="legacy-anchor"></span>
+<h2 id="phase-6-plugin-management-h-plugin"><a href="#phase-6-plugin-management-h-plugin">Phase 6: Plugin Management (h-plugin)</a></h2>
+
+<span id="label-Test+6.1-3A+Plugin+path" class="legacy-anchor"></span>
+<h3 id="test-61-plugin-path"><a href="#test-61-plugin-path">Test 6.1: Plugin path</a></h3>
+
+<pre class="bash">h plugin path</pre>
+
+<p><strong>Expected:</strong> <code>~/.config/hiiro/plugins</code> (or full path)</p>
+
+<span id="label-Test+6.2-3A+List+plugins" class="legacy-anchor"></span>
+<h3 id="test-62-list-plugins"><a href="#test-62-list-plugins">Test 6.2: List plugins</a></h3>
+
+<pre class="bash">h plugin ls</pre>
+
+<p><strong>Expected:</strong> Lists plugin files (<a href="../plugins/pins_rb.html">pins.rb</a>, <a href="../lib/hiiro/tasks_rb.html">tasks.rb</a>, <a href="../plugins/project_rb.html">project.rb</a>, <a href="../plugins/notify_rb.html">notify.rb</a>)</p>
+
+<span id="label-Test+6.3-3A+Search+plugin+code" class="legacy-anchor"></span>
+<h3 id="test-63-search-plugin-code"><a href="#test-63-search-plugin-code">Test 6.3: Search plugin code</a></h3>
+
+<pre class="bash">h plugin rg &quot;def self.load&quot;</pre>
+
+<p><strong>Expected:</strong> Shows matches in plugin files for the load method pattern</p>
+
+<span id="label-Test+6.4-3A+Search+with+context" class="legacy-anchor"></span>
+<h3 id="test-64-search-with-context"><a href="#test-64-search-with-context">Test 6.4: Search with context</a></h3>
+
+<pre class="bash">h plugin rg &quot;add_subcmd&quot;</pre>
+
+<p><strong>Expected:</strong> Shows all subcommand registrations across plugins</p>
+<hr>
+
+<span id="label-Phase+7-3A+Worktree+Management+-28h-wtree-29" class="legacy-anchor"></span>
+<h2 id="phase-7-worktree-management-h-wtree"><a href="#phase-7-worktree-management-h-wtree">Phase 7: Worktree Management (h-wtree)</a></h2>
+
+<span id="label-Test+7.1-3A+List+worktrees" class="legacy-anchor"></span>
+<h3 id="test-71-list-worktrees"><a href="#test-71-list-worktrees">Test 7.1: List worktrees</a></h3>
+
+<pre class="bash">h wtree ls</pre>
+
+<p><strong>Expected:</strong> Shows bare repo and any existing worktrees</p>
+
+<span id="label-Test+7.2-3A+Create+worktree" class="legacy-anchor"></span>
+<h3 id="test-72-create-worktree"><a href="#test-72-create-worktree">Test 7.2: Create worktree</a></h3>
+
+<pre class="bash">cd ~/work/.bare
+h wtree add ../test-worktree -b test-branch</pre>
+
+<p><strong>Expected:</strong> Creates worktree at <code>~/work/test-worktree</code> with branch <code>test-branch</code></p>
+
+<span id="label-Test+7.3-3A+List+again" class="legacy-anchor"></span>
+<h3 id="test-73-list-again"><a href="#test-73-list-again">Test 7.3: List again</a></h3>
+
+<pre class="bash">h wtree ls</pre>
+
+<p><strong>Expected:</strong> Now shows 2 entries (bare + test-worktree)</p>
+
+<span id="label-Test+7.4-3A+Verify+worktree" class="legacy-anchor"></span>
+<h3 id="test-74-verify-worktree"><a href="#test-74-verify-worktree">Test 7.4: Verify worktree</a></h3>
+
+<pre class="bash">cd ~/work/test-worktree
+git branch</pre>
+
+<p><strong>Expected:</strong> Shows <code>test-branch</code> as current branch</p>
+<hr>
+
+<span id="label-Phase+8-3A+Branch+Operations+-28h-branch-29" class="legacy-anchor"></span>
+<h2 id="phase-8-branch-operations-h-branch"><a href="#phase-8-branch-operations-h-branch">Phase 8: Branch Operations (h-branch)</a></h2>
+
+<span id="label-Test+8.1-3A+Current+branch" class="legacy-anchor"></span>
+<h3 id="test-81-current-branch"><a href="#test-81-current-branch">Test 8.1: Current branch</a></h3>
+
+<pre class="bash">cd ~/work/test-worktree
+h branch current</pre>
+
+<p><strong>Expected:</strong> <code>test-branch</code></p>
+
+<span id="label-Test+8.2-3A+Create+duplicate+branch" class="legacy-anchor"></span>
+<h3 id="test-82-create-duplicate-branch"><a href="#test-82-create-duplicate-branch">Test 8.2: Create duplicate branch</a></h3>
+
+<pre class="bash">h branch duplicate feature-x test-branch
+h branch current</pre>
+
+<p><strong>Expected:</strong> Shows <code>test-branch</code> (duplicate creates branch but doesn’t switch)</p>
+
+<span id="label-Test+8.3-3A+Fork+point" class="legacy-anchor"></span>
+<h3 id="test-83-fork-point"><a href="#test-83-fork-point">Test 8.3: Fork point</a></h3>
+
+<pre class="bash">h branch forkpoint main</pre>
+
+<p><strong>Expected:</strong> Shows commit SHA (fork point from main)</p>
+
+<span id="label-Test+8.4-3A+Commits+ahead" class="legacy-anchor"></span>
+<h3 id="test-84-commits-ahead"><a href="#test-84-commits-ahead">Test 8.4: Commits ahead</a></h3>
+
+<pre class="bash"># Make a commit first
+echo &quot;test&quot; &gt; test.txt
+git add test.txt
+git commit -m &quot;Test commit&quot;
+
+h branch ahead main</pre>
+
+<p><strong>Expected:</strong> Shows commits ahead of main (e.g., <code>1 commit(s) ahead</code>)</p>
+
+<span id="label-Test+8.5-3A+Changed+files" class="legacy-anchor"></span>
+<h3 id="test-85-changed-files"><a href="#test-85-changed-files">Test 8.5: Changed files</a></h3>
+
+<pre class="bash">h branch changed main</pre>
+
+<p><strong>Expected:</strong> Shows <code>test.txt</code></p>
+
+<span id="label-Test+8.6-3A+Log+since+fork" class="legacy-anchor"></span>
+<h3 id="test-86-log-since-fork"><a href="#test-86-log-since-fork">Test 8.6: Log since fork</a></h3>
+
+<pre class="bash">h branch log main</pre>
+
+<p><strong>Expected:</strong> Shows the “Test commit” entry</p>
+<hr>
+
+<span id="label-Phase+9-3A+Git+SHA+Operations+-28h-sha-29" class="legacy-anchor"></span>
+<h2 id="phase-9-git-sha-operations-h-sha"><a href="#phase-9-git-sha-operations-h-sha">Phase 9: Git SHA Operations (h-sha)</a></h2>
+
+<span id="label-Test+9.1-3A+List+commits" class="legacy-anchor"></span>
+<h3 id="test-91-list-commits"><a href="#test-91-list-commits">Test 9.1: List commits</a></h3>
+
+<pre class="bash">cd ~/work/test-worktree
+h sha ls</pre>
+
+<p><strong>Expected:</strong> Shows recent commits in oneline format</p>
+
+<span id="label-Test+9.2-3A+Show+specific+commit" class="legacy-anchor"></span>
+<h3 id="test-92-show-specific-commit"><a href="#test-92-show-specific-commit">Test 9.2: Show specific commit</a></h3>
+
+<pre class="bash">h sha show HEAD</pre>
+
+<p><strong>Expected:</strong> Shows full commit details for HEAD</p>
+<hr>
+
+<span id="label-Phase+10-3A+Project+Management+-28h-project-29" class="legacy-anchor"></span>
+<h2 id="phase-10-project-management-h-project"><a href="#phase-10-project-management-h-project">Phase 10: <a href="../Project.html"><code>Project</code></a> Management (h-project)</a></h2>
+
+<span id="label-Test+10.1-3A+Create+test+projects" class="legacy-anchor"></span>
+<h3 id="test-101-create-test-projects"><a href="#test-101-create-test-projects">Test 10.1: Create test projects</a></h3>
+
+<pre class="bash">mkdir -p ~/proj/myproject
+mkdir -p ~/proj/another-project</pre>
+
+<span id="label-Test+10.2-3A+List+projects" class="legacy-anchor"></span>
+<h3 id="test-102-list-projects"><a href="#test-102-list-projects">Test 10.2: List projects</a></h3>
+
+<pre class="bash">h project ls</pre>
+
+<p><strong>Expected:</strong> Shows <code>myproject</code> and <code>another-project</code></p>
+
+<span id="label-Test+10.3-3A+Show+config" class="legacy-anchor"></span>
+<h3 id="test-103-show-config"><a href="#test-103-show-config">Test 10.3: Show config</a></h3>
+
+<pre class="bash">h project config</pre>
+
+<p><strong>Expected:</strong> Shows projects.yml contents (may be empty or not exist yet)</p>
+
+<span id="label-Test+10.4-3A+Help" class="legacy-anchor"></span>
+<h3 id="test-104-help"><a href="#test-104-help">Test 10.4: Help</a></h3>
+
+<pre class="bash">h project help</pre>
+
+<p><strong>Expected:</strong> Shows usage information</p>
+<hr>
+
+<span id="label-Phase+11-3A+App+Management+-28h-app-29" class="legacy-anchor"></span>
+<h2 id="phase-11-app-management-h-app"><a href="#phase-11-app-management-h-app">Phase 11: <a href="../App.html"><code>App</code></a> Management (h-app)</a></h2>
+
+<span id="label-Test+11.1-3A+Add+apps" class="legacy-anchor"></span>
+<h3 id="test-111-add-apps"><a href="#test-111-add-apps">Test 11.1: Add apps</a></h3>
+
+<pre class="bash">h app add frontend &quot;apps/frontend&quot;
+h app add backend &quot;apps/backend&quot;</pre>
+
+<p><strong>Expected:</strong> Apps saved to apps.yml</p>
+
+<span id="label-Test+11.2-3A+List+apps" class="legacy-anchor"></span>
+<h3 id="test-112-list-apps"><a href="#test-112-list-apps">Test 11.2: List apps</a></h3>
+
+<pre class="bash">h app ls</pre>
+
+<p><strong>Expected:</strong> Shows frontend and backend with paths</p>
+
+<span id="label-Test+11.3-3A+Get+path" class="legacy-anchor"></span>
+<h3 id="test-113-get-path"><a href="#test-113-get-path">Test 11.3: Get path</a></h3>
+
+<pre class="bash">h app path frontend</pre>
+
+<p><strong>Expected:</strong> <code>apps/frontend</code> (or error about git/task context)</p>
+
+<span id="label-Test+11.4-3A+Remove+app" class="legacy-anchor"></span>
+<h3 id="test-114-remove-app"><a href="#test-114-remove-app">Test 11.4: Remove app</a></h3>
+
+<pre class="bash">h app rm backend
+h app ls</pre>
+
+<p><strong>Expected:</strong> Only frontend remains</p>
+<hr>
+
+<span id="label-Phase+12-3A+Abbreviated+Commands" class="legacy-anchor"></span>
+<h2 id="phase-12-abbreviated-commands"><a href="#phase-12-abbreviated-commands">Phase 12: Abbreviated Commands</a></h2>
+
+<span id="label-Test+12.1-3A+Abbreviation+matching" class="legacy-anchor"></span>
+<h3 id="test-121-abbreviation-matching"><a href="#test-121-abbreviation-matching">Test 12.1: Abbreviation matching</a></h3>
+
+<pre class="bash">h ver</pre>
+
+<p><strong>Expected:</strong> Same as <code>h version</code></p>
+
+<span id="label-Test+12.2-3A+Branch+abbreviation" class="legacy-anchor"></span>
+<h3 id="test-122-branch-abbreviation"><a href="#test-122-branch-abbreviation">Test 12.2: Branch abbreviation</a></h3>
+
+<pre class="bash">h br cu</pre>
+
+<p><strong>Expected:</strong> Same as <code>h branch current</code></p>
+
+<span id="label-Test+12.3-3A+Todo+abbreviation" class="legacy-anchor"></span>
+<h3 id="test-123-todo-abbreviation"><a href="#test-123-todo-abbreviation">Test 12.3: Todo abbreviation</a></h3>
+
+<pre class="bash">h to ls</pre>
+
+<p><strong>Expected:</strong> Same as <code>h todo ls</code></p>
+<hr>
+
+<span id="label-Phase+13-3A+Error+Handling" class="legacy-anchor"></span>
+<h2 id="phase-13-error-handling"><a href="#phase-13-error-handling">Phase 13: Error Handling</a></h2>
+
+<span id="label-Test+13.1-3A+Invalid+subcommand" class="legacy-anchor"></span>
+<h3 id="test-131-invalid-subcommand"><a href="#test-131-invalid-subcommand">Test 13.1: Invalid subcommand</a></h3>
+
+<pre class="bash">h nonexistent</pre>
+
+<p><strong>Expected:</strong> Error message or help with available commands</p>
+
+<span id="label-Test+13.2-3A+Ambiguous+abbreviation" class="legacy-anchor"></span>
+<h3 id="test-132-ambiguous-abbreviation"><a href="#test-132-ambiguous-abbreviation">Test 13.2: Ambiguous abbreviation</a></h3>
+
+<pre class="bash">h p</pre>
+
+<p><strong>Expected:</strong> Shows ambiguous matches (pr, project, plugin, pane, etc.)</p>
+
+<span id="label-Test+13.3-3A+Missing+arguments" class="legacy-anchor"></span>
+<h3 id="test-133-missing-arguments"><a href="#test-133-missing-arguments">Test 13.3: Missing arguments</a></h3>
+
+<pre class="bash">h todo start</pre>
+
+<p><strong>Expected:</strong> Error or usage message requesting ID</p>
+<hr>
+
+<span id="label-Phase+14-3A+Cleanup+Verification" class="legacy-anchor"></span>
+<h2 id="phase-14-cleanup-verification"><a href="#phase-14-cleanup-verification">Phase 14: Cleanup Verification</a></h2>
+
+<span id="label-Test+14.1-3A+Verify+config+files+created" class="legacy-anchor"></span>
+<h3 id="test-141-verify-config-files-created"><a href="#test-141-verify-config-files-created">Test 14.1: Verify config files created</a></h3>
+
+<pre class="bash">ls ~/.config/hiiro/
+ls ~/.config/hiiro/pins/
+cat ~/.config/hiiro/todo.yml
+cat ~/.config/hiiro/links.yml
+cat ~/.config/hiiro/apps.yml</pre>
+
+<p><strong>Expected:</strong> All config files exist with data from tests</p>
+<hr>
+
+<span id="label-Commands+NOT+Tested+-28require+interactive+tools+or+unavailable+deps-29" class="legacy-anchor"></span>
+<h2 id="commands-not-tested-require-interactive-tools-or-unavailable-deps"><a href="#commands-not-tested-require-interactive-tools-or-unavailable-deps">Commands NOT Tested (require interactive tools or unavailable deps)</a></h2>
+
+<table role="table">
+<thead>
+<tr>
+<th>Command</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>h alert</code></td>
+<td>Requires terminal-notifier</td>
+</tr>
+<tr>
+<td><code>h buffer *</code></td>
+<td>Requires active tmux</td>
+</tr>
+<tr>
+<td><code>h claude *</code></td>
+<td>Requires tmux + claude CLI</td>
+</tr>
+<tr>
+<td><code>h commit select</code></td>
+<td>Requires sk/fzf interactive</td>
+</tr>
+<tr>
+<td><code>h config *</code></td>
+<td>Opens editor</td>
+</tr>
+<tr>
+<td><code>h pane *</code></td>
+<td>Requires active tmux</td>
+</tr>
+<tr>
+<td><code>h session *</code></td>
+<td>Requires active tmux</td>
+</tr>
+<tr>
+<td><code>h window *</code></td>
+<td>Requires active tmux</td>
+</tr>
+<tr>
+<td><code>h pr check/watch</code></td>
+<td>Requires gh auth + real PR</td>
+</tr>
+<tr>
+<td>Interactive select/copy</td>
+<td>Requires sk/fzf</td>
+</tr>
+<tr>
+<td><code>h task *</code></td>
+<td>Requires tmux session</td>
+</tr>
+</tbody>
+</table>
+<hr>
+
+<span id="label-Health+Score+Assessment" class="legacy-anchor"></span>
+<h2 id="health-score-assessment"><a href="#health-score-assessment">Health Score Assessment</a></h2>
+
+<p>After running all tests, score based on:</p>
+
+<table role="table">
+<thead>
+<tr>
+<th>Category</th>
+<th>Weight</th>
+<th>Tests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core (version, ping, setup)</td>
+<td>15%</td>
+<td>3 tests</td>
+</tr>
+<tr>
+<td>Todo CRUD</td>
+<td>20%</td>
+<td>11 tests</td>
+</tr>
+<tr>
+<td>Pin management</td>
+<td>10%</td>
+<td>5 tests</td>
+</tr>
+<tr>
+<td>Link management</td>
+<td>10%</td>
+<td>5 tests</td>
+</tr>
+<tr>
+<td>Plugin ops</td>
+<td>10%</td>
+<td>4 tests</td>
+</tr>
+<tr>
+<td>Git worktree</td>
+<td>10%</td>
+<td>4 tests</td>
+</tr>
+<tr>
+<td>Branch ops</td>
+<td>10%</td>
+<td>6 tests</td>
+</tr>
+<tr>
+<td>SHA ops</td>
+<td>5%</td>
+<td>2 tests</td>
+</tr>
+<tr>
+<td>Project/App</td>
+<td>5%</td>
+<td>6 tests</td>
+</tr>
+<tr>
+<td>Abbreviations</td>
+<td>5%</td>
+<td>3 tests</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>Scoring:</strong> - 90-100%: Excellent health - 75-89%: Good health, minor issues - 50-74%: Needs attention - &lt;50%: Critical issues</p>
+
+</main>
+
+<aside class="table-of-contents" role="complementary" aria-label="Table of Contents">
+  <div class="toc-sticky">
+    <h3 class="toc-heading">On This Page</h3>
+    <nav class="toc-nav" id="toc-nav" aria-label="Page sections">
+      <!-- Generated by JavaScript based on page headings -->
+    </nav>
+  </div>
+</aside>
+
+
+<footer class="site-footer">
+  
+
+  <div class="footer-bottom">
+    <p>
+      Generated by <a href="https://ruby.github.io/rdoc/">RDoc 7.2.0</a>
+      using the Aliki theme by <a href="http://st0012.dev">Stan Lo</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+

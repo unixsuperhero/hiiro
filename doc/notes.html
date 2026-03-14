@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>notes - RDoc Documentation</title>
+
+
+  <meta name="keywords" content="ruby,documentation,notes">
+  <meta
+    name="description"
+    content="notes: tasks. task."
+  >
+
+
+
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="notes - RDoc Documentation">
+
+
+
+    <meta property="og:description" content="tasks. task.">
+
+
+
+
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="notes - RDoc Documentation">
+
+
+
+    <meta name="twitter:description" content="tasks. task.">
+
+
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script
+  src="./js/theme-toggle.js?v=7.2.0"
+></script>
+
+<script
+  src="./js/search_navigation.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_data.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_ranker.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_controller.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/c_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/bash_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/aliki.js?v=7.2.0"
+  defer
+></script>
+
+<link
+  href="./css/rdoc.css?v=7.2.0"
+  rel="stylesheet"
+>
+
+
+
+
+<body role="document" class="file has-toc">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <!-- Chevron (right arrow) - used for expand/collapse -->
+  <symbol
+    id="icon-chevron"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </symbol>
+
+  <!-- File/Document - Pages section -->
+  <symbol
+    id="icon-file"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path
+      d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+    ></path>
+
+    <polyline points="14 2 14 8 20 8"></polyline>
+  </symbol>
+
+  <!-- Layers/Stack - Classes and Modules section -->
+  <symbol
+    id="icon-layers"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+    <polyline points="2 17 12 22 22 17"></polyline>
+    <polyline points="2 12 12 17 22 12"></polyline>
+  </symbol>
+
+  <!-- Curly braces with C - Class Methods section -->
+  <symbol
+    id="icon-class-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      C
+    </text>
+  </symbol>
+
+  <!-- Curly braces with I - Instance Methods section -->
+  <symbol
+    id="icon-instance-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      I
+    </text>
+  </symbol>
+
+  <!-- Double chevrons up - Ancestors section -->
+  <symbol
+    id="icon-ancestors"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="17 11 12 6 7 11"></polyline>
+    <polyline points="17 18 12 13 7 18"></polyline>
+  </symbol>
+
+  <!-- User with plus - Included Modules section -->
+  <symbol
+    id="icon-includes"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+
+    <line
+      x1="20"
+      y1="8"
+      x2="20"
+      y2="14"
+    ></line>
+
+    <line
+      x1="23"
+      y1="11"
+      x2="17"
+      y2="11"
+    ></line>
+  </symbol>
+
+  <!-- User with check - Extended Modules section -->
+  <symbol
+    id="icon-extends"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+    <polyline points="17 11 19 13 23 9"></polyline>
+  </symbol>
+
+  <!-- List - Sections section -->
+  <symbol
+    id="icon-list"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <line
+      x1="8"
+      y1="6"
+      x2="21"
+      y2="6"
+    ></line>
+
+    <line
+      x1="8"
+      y1="12"
+      x2="21"
+      y2="12"
+    ></line>
+
+    <line
+      x1="8"
+      y1="18"
+      x2="21"
+      y2="18"
+    ></line>
+
+    <line
+      x1="3"
+      y1="6"
+      x2="3.01"
+      y2="6"
+    ></line>
+
+    <line
+      x1="3"
+      y1="12"
+      x2="3.01"
+      y2="12"
+    ></line>
+
+    <line
+      x1="3"
+      y1="18"
+      x2="3.01"
+      y2="18"
+    ></line>
+  </symbol>
+</svg>
+
+<header class="top-navbar">
+  <a href="./index.html" class="navbar-brand">
+    RDoc Documentation
+  </a>
+
+  <!-- Desktop search bar -->
+  <div class="navbar-search navbar-search-desktop" role="search">
+    <form action="#" method="get" accept-charset="utf-8">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results-desktop"
+             type="text" name="search" placeholder="Search (/) for a class, method..."
+             spellcheck="false" autocomplete="off"
+             title="Type to search, Up and Down to navigate, Enter to load">
+      <ul id="search-results-desktop" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="initially-hidden search-results"></ul>
+    </form>
+  </div>
+
+  <!-- Mobile search icon button -->
+  <button id="search-toggle" class="navbar-search-mobile" aria-label="Open search" type="button">
+    <span aria-hidden="true">🔍</span>
+  </button>
+
+  <!-- Theme toggle button -->
+  <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" type="button">
+    <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+  </button>
+</header>
+
+<!-- Search Modal (Mobile) -->
+<div id="search-modal" class="search-modal" hidden aria-modal="true" role="dialog" aria-label="Search">
+  <div class="search-modal-backdrop"></div>
+  <div class="search-modal-content">
+    <div class="search-modal-header">
+      <form class="search-modal-form" action="#" method="get" accept-charset="utf-8">
+        <span class="search-modal-icon" aria-hidden="true">🔍</span>
+        <input id="search-field-mobile" role="combobox" aria-label="Search"
+               aria-autocomplete="list" aria-controls="search-results-mobile"
+               type="text" name="search" placeholder="Search documentation"
+               spellcheck="false" autocomplete="off">
+        <button type="button" class="search-modal-close" aria-label="Close search" id="search-modal-close">
+          <span aria-hidden="true">esc</span>
+        </button>
+      </form>
+    </div>
+    <div class="search-modal-body">
+      <ul id="search-results-mobile" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="search-results search-modal-results initially-hidden"></ul>
+      <div class="search-modal-empty">
+        <p>No recent searches</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
+  <span aria-hidden="true">&#9776;</span>
+</div>
+
+
+<nav id="navigation" role="navigation" hidden>
+  
+
+
+
+
+
+
+  <div id="fileindex-section" class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg>
+            <use href="#icon-file"></use>
+          </svg>
+        </span>
+
+        <span class="nav-section-title">Pages</span>
+
+        <span class="nav-section-chevron">
+          <svg>
+            <use href="#icon-chevron"></use>
+          </svg>
+        </span>
+      </summary>
+
+      <ul class="nav-list">
+
+
+
+
+
+
+            <li>
+              <a href="./CLAUDE_md.html">
+                CLAUDE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Gemfile.html">
+                Gemfile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Gemfile_lock.html">
+                Gemfile.lock
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./LICENSE.html">
+                LICENSE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./README_md.html">
+                README
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Rakefile.html">
+                Rakefile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./TODO_md.html">
+                TODO
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./demo_sh.html">
+                demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  docs
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./docs/README_md.html">
+                      README
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/docker-testing-guide_md.html">
+                      docker-testing-guide
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-buffer_md.html">
+                      h-buffer
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-pane_md.html">
+                      h-pane
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-plugin_md.html">
+                      h-plugin
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-session_md.html">
+                      h-session
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-window_md.html">
+                      h-window
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="./h-tmux-plugins_tmux.html">
+                h-tmux-plugins.tmux
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./notes.html">
+                notes
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./obsidian_slides_md.html">
+                obsidian_slides
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./record-demo_sh.html">
+                record-demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  script
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./script/compare.html">
+                      compare
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/install.html">
+                      install
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/sync.html">
+                      sync
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/test.html">
+                      test
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/update.html">
+                      update
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="./slides_md.html">
+                slides
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  tmp
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./tmp/gql-error_message_json.html">
+                      gql-error_message.json
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./tmp/sync_sh.html">
+                      sync.sh
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./tmp/yaml_files.html">
+                      yaml_files
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  <div id="classindex-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-layers"></use></svg>
+      </span>
+      <span class="nav-section-title">Classes and Modules</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+
+    <ul class="link-list nav-list"><li><code><a href="./App.html">App</a></code></li><li><code><a href="./BranchManager.html">BranchManager</a></code></li><li><code><a href="./Directory.html">Directory</a></code></li><li><code><a href="./Environment.html">Environment</a></code></li><li><details><summary><code><a href="./Hiiro.html">Hiiro</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/AnyStruct.html">AnyStruct</a></code></li><li><code><a href="./Hiiro/App.html">App</a></code></li><li><code><a href="./Hiiro/AppFiles.html">AppFiles</a></code></li><li><code><a href="./Hiiro/Args.html">Args</a></code></li><li><code><a href="./Hiiro/Bins.html">Bins</a></code></li><li><code><a href="./Hiiro/Config.html">Config</a></code></li><li><code><a href="./Hiiro/Environment.html">Environment</a></code></li><li><code><a href="./Hiiro/Fuzzyfind.html">Fuzzyfind</a></code></li><li><details><summary><code><a href="./Hiiro/Git.html">Git</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Git/Branch.html">Branch</a></code></li><li><code><a href="./Hiiro/Git/Branches.html">Branches</a></code></li><li><code><a href="./Hiiro/Git/Pr.html">Pr</a></code></li><li><code><a href="./Hiiro/Git/Remote.html">Remote</a></code></li><li><code><a href="./Hiiro/Git/Worktree.html">Worktree</a></code></li><li><code><a href="./Hiiro/Git/Worktrees.html">Worktrees</a></code></li></ul></details></li><li><code><a href="./Hiiro/Glob.html">Glob</a></code></li><li><details><summary><code><a href="./Hiiro/Matcher.html">Matcher</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Matcher/Item.html">Item</a></code></li><li><code><a href="./Hiiro/Matcher/PathResult.html">PathResult</a></code></li><li><code><a href="./Hiiro/Matcher/Result.html">Result</a></code></li></ul></details></li><li><code><a href="./Hiiro/Notification.html">Notification</a></code></li><li><details><summary><code><a href="./Hiiro/Options.html">Options</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Options/Args.html">Args</a></code></li><li><code><a href="./Hiiro/Options/Definition.html">Definition</a></code></li></ul></details></li><li><details><summary><code><a href="./Hiiro/Paths.html">Paths</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Paths/Symlink.html">Symlink</a></code></li></ul></details></li><li><code><a href="./Hiiro/Matcher.html">PrefixMatcher</a></code></li><li><details><summary><code><a href="./Hiiro/Queue.html">Queue</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Queue/Prompt.html">Prompt</a></code></li></ul></details></li><li><code><a href="./Hiiro/Rbenv.html">Rbenv</a></code></li><li><code><a href="./Hiiro/RunnerTool.html">RunnerTool</a></code></li><li><details><summary><code><a href="./Hiiro/Runners.html">Runners</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Runners/Bin.html">Bin</a></code></li><li><code><a href="./Hiiro/Runners/Subcommand.html">Subcommand</a></code></li></ul></details></li><li><code><a href="./Hiiro/ServiceManager.html">ServiceManager</a></code></li><li><code><a href="./Hiiro/Shell.html">Shell</a></code></li><li><code><a href="./Hiiro/SparseGroups.html">SparseGroups</a></code></li><li><code><a href="./Hiiro/Tags.html">Tags</a></code></li><li><code><a href="./Hiiro/Task.html">Task</a></code></li><li><details><summary><code><a href="./Hiiro/TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="./Hiiro/Tasks.html">Tasks</a></code></li><li><details><summary><code><a href="./Hiiro/Tmux.html">Tmux</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Tmux/Buffer.html">Buffer</a></code></li><li><code><a href="./Hiiro/Tmux/Buffers.html">Buffers</a></code></li><li><code><a href="./Hiiro/Tmux/Pane.html">Pane</a></code></li><li><code><a href="./Hiiro/Tmux/Panes.html">Panes</a></code></li><li><code><a href="./Hiiro/Tmux/Session.html">Session</a></code></li><li><code><a href="./Hiiro/Tmux/Sessions.html">Sessions</a></code></li><li><code><a href="./Hiiro/Tmux/Window.html">Window</a></code></li><li><code><a href="./Hiiro/Tmux/Windows.html">Windows</a></code></li></ul></details></li><li><code><a href="./Hiiro/TodoItem.html">TodoItem</a></code></li><li><code><a href="./Hiiro/TodoManager.html">TodoManager</a></code></li><li><code><a href="./Hiiro/Tree.html">Tree</a></code></li></ul></details></li><li><details><summary><code><a href="./LinkManager.html">LinkManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./LinkManager/Link.html">Link</a></code></li></ul></details></li><li><code><a href="./Notify.html">Notify</a></code></li><li><code><a href="./Object.html">Object</a></code></li><li><code><a href="./PinnedPRManager.html">PinnedPRManager</a></code></li><li><details><summary><code><a href="./Pins.html">Pins</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Pins/Pin.html">Pin</a></code></li></ul></details></li><li><code><a href="./Project.html">Project</a></code></li><li><code><a href="./String.html">String</a></code></li><li><code><a href="./Task.html">Task</a></code></li><li><details><summary><code><a href="./TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="./Tasks.html">Tasks</a></code></li><li><code><a href="./TmuxSession.html">TmuxSession</a></code></li><li><code><a href="./Tree.html">Tree</a></code></li></ul>
+  </details>
+</div>
+
+</nav>
+
+<main role="main" aria-label="Page notes">
+
+<p># Principles to use for refactoring</p>
+<ul><li>
+<p>Separate data from behavior - create domain objects and any relevant value objects</p>
+</li></ul>
+
+<p># Goals</p>
+<ul><li>
+<p>same code to manage tasks/subtasks</p>
+<ul><li>
+<p>just scoped differently</p>
+</li><li>
+<p>if scope is <code>:task</code> then consider all tasks, if scope is :subtask then only consider the tasks associated with the parent task</p>
+</li></ul>
+</li><li>
+<p>extract data objects</p>
+<ul><li>
+<p>so our procedures are human and easy af</p>
+</li></ul>
+</li><li>
+<p>more composable</p>
+</li><li>
+<p>separate presentation layer from the data</p>
+</li></ul>
+
+<p># features we want</p>
+<ul><li>
+<p>list tasks/subtasks</p>
+</li><li>
+<p>start a new one (wtree/tmux session)</p>
+</li><li>
+<p>switch between them</p>
+</li><li>
+<p>cd to an app’s directory</p>
+</li><li>
+<p>stop a task</p>
+</li><li>
+<p>use yml files to track things</p>
+</li></ul>
+
+<p>turn @plugins/tasks.rb into a plugin similar to @plugins/task.rb</p>
+
+<p>but in add_subcommands(hiiro) i want to define 2 subtasks:</p>
+<ol><li>
+<p><code>:task</code></p>
+</li><li>
+<p><code>:subtask</code></p>
+</li></ol>
+
+<p>both subcommands should initialize ‘Tasks.new(hiiro_instance, :task)` or `Tasks.new(hiiro_instance, :subtask)` if the subtask subcmd was called</p>
+
+<p>then uses the instance of <a href="Tasks.html"><code>Tasks</code></a> to either do all the things that it needs to do… or just use it to get the data it needs, so that it can do the high level things like running tmux or git worktree commands. if it doesn’t put those things inside <a href="Tasks.html"><code>Tasks</code></a>, that would be better, so I can use these objects in other places like inside @bin/h-link</p>
+
+<p>use the following interface as a guide for how to organize things inside the new <a href="Tasks.html"><code>Tasks</code></a> plugin</p>
+
+<p># Interface</p>
+
+<p>class <a href="Environment.html"><code>Environment</code></a></p>
+
+<pre>def self.current  # =&gt; Environment - makes new instance
+def all_tasks     # =&gt; Task[] - call Task.all and memo cache the result
+def all_sessions  # =&gt; Session[] - call TmuxSession.all and memo cache the result
+def all_trees     # =&gt; Tree[] - call Tree.all and memo cache the result
+def task          # =&gt; Task - move Task.current&#39;s behavior into this method, and memo cache the result
+def session       # =&gt; Session - move TmuxSession.current here and memo cache the result
+def tree          # =&gt; Tree - move Tree.current here and memo cache the result</pre>
+
+<p>class <a href="Tree.html"><code>Tree</code></a></p>
+
+<pre>attr_reader :path, :task, :session
+
+def self.current  # =&gt; Tree - move to Environment#tree
+def self.all      # =&gt; Tree[]</pre>
+
+<p>class Session</p>
+
+<pre>attr_reader :name, :task
+
+def self.current  # =&gt; Session - move to Environment#session
+def self.all      # =&gt; Session[]</pre>
+
+<p>class <a href="Task.html"><code>Task</code></a></p>
+
+<pre>attr_reader :name, :tree, :session, :parent, :subtasks
+
+def self.current  # =&gt; Task - move to Environment#task
+def self.all      # =&gt; Task[]</pre>
+
+<p>class <a href="App.html"><code>App</code></a></p>
+
+<pre>attr_reader :name, :path
+def self.current      # =&gt; App[]
+def self.all          # =&gt; App[]</pre>
+
+<p>class <a href="Tasks.html"><code>Tasks</code></a></p>
+
+<pre>attr_reader :hiiro, :scope, :environment
+
+def tasks                           # =&gt; Task[]
+def subtasks(task)                  # =&gt; Task[]
+def task_by_name(name)              # =&gt; Task
+def task_by_tree(tree_name)         # =&gt; Task
+def task_by_session(session_name)   # =&gt; Task
+def current_task                    # =&gt; Task
+def current_session                 # =&gt; Session
+def current_tree                    # =&gt; Tree
+
+def start_task(name, path)          # =&gt; Task
+def switch_to_task(task)            # =&gt; nil
+def stop_task(task)                 # =&gt; nil
+def list(tasks)                     # =&gt; nil # print to screen
+def cd_to_task(task)                # =&gt; nil
+def cd_to_app(app_name)             # =&gt; nil
+
+class Config
+  attr_reader :path</pre>
+
+<p># Follow-up prompts</p>
+
+<p>## i forget</p>
+
+<p>&gt; when initializing an instance of <a href="Task.html"><code>Task</code></a>…it shouldn’t have a <code>parent_task</code> or <code>parent_name</code> kwarg.  it derive that context from the name given.  if the name has a <code>/</code> in it…then it is a subtask and the left side is the parent name and the right side is the subtask name.</p>
+
+<p>## lots of updates</p>
+
+<p>here are some updates i’d like to make:</p>
+<ul><li>
+<p>all arguments received from the user should looking that object using</p>
+
+<pre>- something like `start_with?` so they can abbreviate the names of things to
+  match
+- the only special one is task_name or subtask_name...if there is a `/` the
+  left side will do the abbreviation lookup on a parent name and the right
+  side will do a lookup on the subtask name
+    - you might want to add `#find_tree(abbreviated_name)` method to
+    Environment
+    - you might want to add `#find_session(abbreviated_name)` method to
+    Environment
+    - you might want to add `#find_app(abbreviated_name)` method to
+    Environment
+    - you might want to add `#find_task(abbreviated_name)` method to
+    Environment, where it does the left/right abbreviation lookups
+    - these new methods should help clean up and simplify all the lookups in
+      the other methods that typically use `.find{ ... }`</pre>
+</li><li>
+<p>get rid of methods like <code>apps_hash</code> and in the places that used it…</p>
+
+<pre>- just use the array returned from `#apps` and the attr_reader methods
+for things like name and path or other values that there are attr_readers
+for.
+- always favor an instance method or attr_reader over exporting something
+like hash</pre>
+</li><li>
+<p>start_task shouldn’t take an optional <code>tree_path</code> keyword arg</p>
+
+<pre>- instead it should take an optional `app_name` kwarg and set the tmux
+session&#39;s base directory to the matching app&#39;s configured directory</pre>
+</li><li>
+<p>switch_task should also take an optional <code>app_name</code> kwarg. if a tmux</p>
+
+<pre>session already exists, just update the configs, associating the task 
+with that app.  if the tmux session doesn&#39;t exist, use the app&#39;s path as the
+base_directory.</pre>
+</li></ul>
+
+<p>here’s one fix i really want to get right.</p>
+
+<p>right now TasksPlugin has a dispatch method that uses a case statement to handle the subcommands.  what i’d like instead is for tasks plugin to initialize a new instance of <a href="Hiiro.html"><code>Hiiro</code></a> but instead of it receiving it’s usual ‘*ARGV` as positional args, you should pass-in t `*hiiro.args` using the existing <code>hiiro</code> instance.  then for the new <a href="Hiiro.html"><code>Hiiro</code></a> instance…before you call run on it…add each of the subcommands defined in the case statement using the <code>add_subcmd</code> method and have the block passed in be the handler for those subcommands</p>
+
+<p>so something like this:</p>
+
+<p>“‘ruby module TasksPlugin</p>
+
+<pre class="ruby"><span class="ruby-comment"># ...</span>
+
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">add_subcommands</span>(<span class="ruby-identifier">hiiro</span>)
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:task</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">mgr</span> = <span class="ruby-constant">Tasks</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-value">scope:</span> <span class="ruby-value">:task</span>)
+    <span class="ruby-identifier">new_hiiro</span> = <span class="ruby-identifier">task_hiiro</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-identifier">mgr</span>)
+    <span class="ruby-identifier">new_hiiro</span>.<span class="ruby-identifier">run</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:subtask</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">mgr</span> = <span class="ruby-constant">Tasks</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-value">scope:</span> <span class="ruby-value">:subtask</span>)
+    <span class="ruby-identifier">new_hiiro</span> = <span class="ruby-identifier">task_hiiro</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-identifier">mgr</span>)
+    <span class="ruby-identifier">new_hiiro</span>.<span class="ruby-identifier">run</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span>
+
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">task_hiiro</span>(<span class="ruby-identifier">parent_hiiro</span>, <span class="ruby-identifier">mgr</span>)
+  <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">init</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">parent_hiiro</span>.<span class="ruby-identifier">args</span>, <span class="ruby-value">mgr:</span> <span class="ruby-identifier">mgr</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">task_hiiro</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">task_hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:ls</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+      <span class="ruby-comment"># TODO: the logic to print out the task list based on mgr&#39;s values</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">task_hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:start</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">task_name</span>, <span class="ruby-identifier">app_name</span>=<span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+      <span class="ruby-comment"># TODO: the logic to print out the task list based on mgr&#39;s values</span>
+      <span class="ruby-comment">#       like:</span>
+      <span class="ruby-identifier">mgr</span>.<span class="ruby-identifier">start_task</span>(<span class="ruby-identifier">task_name</span>, <span class="ruby-value">app_name:</span> <span class="ruby-identifier">app_name</span>)
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">task_hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:switch</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">task_name</span>, <span class="ruby-identifier">app_name</span>=<span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+      <span class="ruby-comment"># TODO: the logic to print out the task list based on mgr&#39;s values</span>
+      <span class="ruby-identifier">mgr</span>.<span class="ruby-identifier">switch_to_task</span>(<span class="ruby-identifier">task_name</span>, <span class="ruby-value">app_name:</span> <span class="ruby-identifier">app_name</span>)
+
+      <span class="ruby-comment"># but if you need to add logic, i would do it here...like:</span>
+      <span class="ruby-identifier">task</span> = <span class="ruby-identifier">mgr</span>.<span class="ruby-identifier">find_task</span>(<span class="ruby-identifier">task_name</span>)
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">task</span>
+        <span class="ruby-comment"># run cmds to switch to task here...</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-comment"># print some msg like no task found</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-comment"># ...</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span>
+
+<span class="ruby-comment"># ...</span>
+</pre>
+
+<p>end “‘</p>
+
+<p>## third prompt</p>
+
+<p>for things like listing and switching subtasks always consider the main/parent task as a potential subtask to switch to. for lookups, treat the task name as parent name and <code>main</code> as the subtask name so something like <code>nameofparent/main</code></p>
+
+</main>
+
+<aside class="table-of-contents" role="complementary" aria-label="Table of Contents">
+  <div class="toc-sticky">
+    <h3 class="toc-heading">On This Page</h3>
+    <nav class="toc-nav" id="toc-nav" aria-label="Page sections">
+      <!-- Generated by JavaScript based on page headings -->
+    </nav>
+  </div>
+</aside>
+
+
+<footer class="site-footer">
+  
+
+  <div class="footer-bottom">
+    <p>
+      Generated by <a href="https://ruby.github.io/rdoc/">RDoc 7.2.0</a>
+      using the Aliki theme by <a href="http://st0012.dev">Stan Lo</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+

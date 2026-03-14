@@ -1,0 +1,3382 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>class Hiiro::Tmux - RDoc Documentation</title>
+
+
+  <meta
+    name="keywords"
+    content="ruby,class,Hiiro::Tmux"
+  >
+
+    <meta
+      name="description"
+      content="Documentation for the Hiiro::Tmux class"
+    >
+
+
+
+
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="class Hiiro::Tmux - RDoc Documentation">
+
+
+
+    <meta
+      property="og:description"
+      content="Documentation for Hiiro::Tmux class - API reference and code examples"
+    >
+
+
+
+
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="class Hiiro::Tmux - RDoc Documentation">
+
+
+
+    <meta
+      name="twitter:description"
+      content="Documentation for Hiiro::Tmux class - API reference and code examples"
+    >
+
+
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "../";
+  var index_rel_prefix = "../";
+</script>
+
+<script
+  src="../js/theme-toggle.js?v=7.2.0"
+></script>
+
+<script
+  src="../js/search_navigation.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/search_data.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/search_ranker.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/search_controller.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/c_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/bash_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/aliki.js?v=7.2.0"
+  defer
+></script>
+
+<link
+  href="../css/rdoc.css?v=7.2.0"
+  rel="stylesheet"
+>
+
+
+
+
+<body role="document" class="class has-toc">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <!-- Chevron (right arrow) - used for expand/collapse -->
+  <symbol
+    id="icon-chevron"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </symbol>
+
+  <!-- File/Document - Pages section -->
+  <symbol
+    id="icon-file"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path
+      d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+    ></path>
+
+    <polyline points="14 2 14 8 20 8"></polyline>
+  </symbol>
+
+  <!-- Layers/Stack - Classes and Modules section -->
+  <symbol
+    id="icon-layers"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+    <polyline points="2 17 12 22 22 17"></polyline>
+    <polyline points="2 12 12 17 22 12"></polyline>
+  </symbol>
+
+  <!-- Curly braces with C - Class Methods section -->
+  <symbol
+    id="icon-class-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      C
+    </text>
+  </symbol>
+
+  <!-- Curly braces with I - Instance Methods section -->
+  <symbol
+    id="icon-instance-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      I
+    </text>
+  </symbol>
+
+  <!-- Double chevrons up - Ancestors section -->
+  <symbol
+    id="icon-ancestors"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="17 11 12 6 7 11"></polyline>
+    <polyline points="17 18 12 13 7 18"></polyline>
+  </symbol>
+
+  <!-- User with plus - Included Modules section -->
+  <symbol
+    id="icon-includes"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+
+    <line
+      x1="20"
+      y1="8"
+      x2="20"
+      y2="14"
+    ></line>
+
+    <line
+      x1="23"
+      y1="11"
+      x2="17"
+      y2="11"
+    ></line>
+  </symbol>
+
+  <!-- User with check - Extended Modules section -->
+  <symbol
+    id="icon-extends"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+    <polyline points="17 11 19 13 23 9"></polyline>
+  </symbol>
+
+  <!-- List - Sections section -->
+  <symbol
+    id="icon-list"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <line
+      x1="8"
+      y1="6"
+      x2="21"
+      y2="6"
+    ></line>
+
+    <line
+      x1="8"
+      y1="12"
+      x2="21"
+      y2="12"
+    ></line>
+
+    <line
+      x1="8"
+      y1="18"
+      x2="21"
+      y2="18"
+    ></line>
+
+    <line
+      x1="3"
+      y1="6"
+      x2="3.01"
+      y2="6"
+    ></line>
+
+    <line
+      x1="3"
+      y1="12"
+      x2="3.01"
+      y2="12"
+    ></line>
+
+    <line
+      x1="3"
+      y1="18"
+      x2="3.01"
+      y2="18"
+    ></line>
+  </symbol>
+</svg>
+
+<header class="top-navbar">
+  <a href="../index.html" class="navbar-brand">
+    RDoc Documentation
+  </a>
+
+  <!-- Desktop search bar -->
+  <div class="navbar-search navbar-search-desktop" role="search">
+    <form action="#" method="get" accept-charset="utf-8">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results-desktop"
+             type="text" name="search" placeholder="Search (/) for a class, method..."
+             spellcheck="false" autocomplete="off"
+             title="Type to search, Up and Down to navigate, Enter to load">
+      <ul id="search-results-desktop" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="initially-hidden search-results"></ul>
+    </form>
+  </div>
+
+  <!-- Mobile search icon button -->
+  <button id="search-toggle" class="navbar-search-mobile" aria-label="Open search" type="button">
+    <span aria-hidden="true">🔍</span>
+  </button>
+
+  <!-- Theme toggle button -->
+  <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" type="button">
+    <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+  </button>
+</header>
+
+<!-- Search Modal (Mobile) -->
+<div id="search-modal" class="search-modal" hidden aria-modal="true" role="dialog" aria-label="Search">
+  <div class="search-modal-backdrop"></div>
+  <div class="search-modal-content">
+    <div class="search-modal-header">
+      <form class="search-modal-form" action="#" method="get" accept-charset="utf-8">
+        <span class="search-modal-icon" aria-hidden="true">🔍</span>
+        <input id="search-field-mobile" role="combobox" aria-label="Search"
+               aria-autocomplete="list" aria-controls="search-results-mobile"
+               type="text" name="search" placeholder="Search documentation"
+               spellcheck="false" autocomplete="off">
+        <button type="button" class="search-modal-close" aria-label="Close search" id="search-modal-close">
+          <span aria-hidden="true">esc</span>
+        </button>
+      </form>
+    </div>
+    <div class="search-modal-body">
+      <ul id="search-results-mobile" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="search-results search-modal-results initially-hidden"></ul>
+      <div class="search-modal-empty">
+        <p>No recent searches</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
+  <span aria-hidden="true">&#9776;</span>
+</div>
+
+
+<nav id="navigation" role="navigation" hidden>
+  
+
+
+
+
+  <div id="fileindex-section" class="nav-section">
+    <details class="nav-section-collapsible" >
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg>
+            <use href="#icon-file"></use>
+          </svg>
+        </span>
+
+        <span class="nav-section-title">Pages</span>
+
+        <span class="nav-section-chevron">
+          <svg>
+            <use href="#icon-chevron"></use>
+          </svg>
+        </span>
+      </summary>
+
+      <ul class="nav-list">
+
+
+
+
+
+
+            <li>
+              <a href="../CLAUDE_md.html">
+                CLAUDE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../Gemfile.html">
+                Gemfile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../Gemfile_lock.html">
+                Gemfile.lock
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../LICENSE.html">
+                LICENSE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../README_md.html">
+                README
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../Rakefile.html">
+                Rakefile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../TODO_md.html">
+                TODO
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../demo_sh.html">
+                demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  docs
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="../docs/README_md.html">
+                      README
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/docker-testing-guide_md.html">
+                      docker-testing-guide
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-buffer_md.html">
+                      h-buffer
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-pane_md.html">
+                      h-pane
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-plugin_md.html">
+                      h-plugin
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-session_md.html">
+                      h-session
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-window_md.html">
+                      h-window
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="../h-tmux-plugins_tmux.html">
+                h-tmux-plugins.tmux
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../notes.html">
+                notes
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../obsidian_slides_md.html">
+                obsidian_slides
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../record-demo_sh.html">
+                record-demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  script
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="../script/compare.html">
+                      compare
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/install.html">
+                      install
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/sync.html">
+                      sync
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/test.html">
+                      test
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/update.html">
+                      update
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="../slides_md.html">
+                slides
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  tmp
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="../tmp/gql-error_message_json.html">
+                      gql-error_message.json
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../tmp/sync_sh.html">
+                      sync.sh
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../tmp/yaml_files.html">
+                      yaml_files
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  
+
+  
+<div id="parent-class-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-ancestors"></use></svg>
+      </span>
+      <span class="nav-section-title">Ancestors</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+    <ul><li><a href="../Object.html">Object</a><ul><li>BasicObject</li></ul></li></ul>
+  </details>
+</div>
+
+
+  
+
+  
+
+  
+  <div class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg><use href="#icon-class-methods"></use></svg>
+        </span>
+        <span class="nav-section-title">Class Methods</span>
+        <span class="nav-section-chevron">
+          <svg><use href="#icon-chevron"></use></svg>
+        </span>
+      </summary>
+      <ul class="nav-list" role="directory">
+
+        <li ><a href="#method-c-client">client</a></li>
+
+        <li ><a href="#method-c-client-21">client!</a></li>
+
+        <li ><a href="#method-c-new">new</a></li>
+
+        <li ><a href="#method-c-open_session">open_session</a></li>
+
+      </ul>
+    </details>
+  </div>
+
+
+
+  <div class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg><use href="#icon-instance-methods"></use></svg>
+        </span>
+        <span class="nav-section-title">Instance Methods</span>
+        <span class="nav-section-chevron">
+          <svg><use href="#icon-chevron"></use></svg>
+        </span>
+      </summary>
+      <ul class="nav-list" role="directory">
+
+        <li ><a href="#method-i-attach_session">attach_session</a></li>
+
+        <li ><a href="#method-i-break_pane">break_pane</a></li>
+
+        <li ><a href="#method-i-buffers">buffers</a></li>
+
+        <li ><a href="#method-i-capture_pane">capture_pane</a></li>
+
+        <li ><a href="#method-i-choose_buffer">choose_buffer</a></li>
+
+        <li ><a href="#method-i-current_pane">current_pane</a></li>
+
+        <li ><a href="#method-i-current_session">current_session</a></li>
+
+        <li ><a href="#method-i-current_window">current_window</a></li>
+
+        <li ><a href="#method-i-delete_buffer">delete_buffer</a></li>
+
+        <li ><a href="#method-i-detach_client">detach_client</a></li>
+
+        <li ><a href="#method-i-display_info">display_info</a></li>
+
+        <li ><a href="#method-i-display_message">display_message</a></li>
+
+        <li ><a href="#method-i-find_session">find_session</a></li>
+
+        <li ><a href="#method-i-hsplit_window">hsplit_window</a></li>
+
+        <li ><a href="#method-i-in_nvim-3F">in_nvim?</a></li>
+
+        <li ><a href="#method-i-in_tmux-3F">in_tmux?</a></li>
+
+        <li ><a href="#method-i-join_pane">join_pane</a></li>
+
+        <li ><a href="#method-i-kill_pane">kill_pane</a></li>
+
+        <li ><a href="#method-i-kill_session">kill_session</a></li>
+
+        <li ><a href="#method-i-kill_window">kill_window</a></li>
+
+        <li ><a href="#method-i-last_window">last_window</a></li>
+
+        <li ><a href="#method-i-link_window">link_window</a></li>
+
+        <li ><a href="#method-i-load_buffer">load_buffer</a></li>
+
+        <li ><a href="#method-i-move_pane">move_pane</a></li>
+
+        <li ><a href="#method-i-move_window">move_window</a></li>
+
+        <li ><a href="#method-i-new_session">new_session</a></li>
+
+        <li ><a href="#method-i-new_window">new_window</a></li>
+
+        <li ><a href="#method-i-next_window">next_window</a></li>
+
+        <li ><a href="#method-i-open_session">open_session</a></li>
+
+        <li ><a href="#method-i-panes">panes</a></li>
+
+        <li ><a href="#method-i-paste_buffer">paste_buffer</a></li>
+
+        <li ><a href="#method-i-previous_window">previous_window</a></li>
+
+        <li ><a href="#method-i-rename_session">rename_session</a></li>
+
+        <li ><a href="#method-i-rename_window">rename_window</a></li>
+
+        <li ><a href="#method-i-resize_pane">resize_pane</a></li>
+
+        <li ><a href="#method-i-save_buffer">save_buffer</a></li>
+
+        <li ><a href="#method-i-select_pane">select_pane</a></li>
+
+        <li ><a href="#method-i-select_window">select_window</a></li>
+
+        <li ><a href="#method-i-server_running-3F">server_running?</a></li>
+
+        <li ><a href="#method-i-session_exists-3F">session_exists?</a></li>
+
+        <li ><a href="#method-i-sessions">sessions</a></li>
+
+        <li ><a href="#method-i-set_buffer">set_buffer</a></li>
+
+        <li ><a href="#method-i-show_buffer">show_buffer</a></li>
+
+        <li ><a href="#method-i-split_window">split_window</a></li>
+
+        <li ><a href="#method-i-swap_current_pane">swap_current_pane</a></li>
+
+        <li ><a href="#method-i-swap_pane">swap_pane</a></li>
+
+        <li ><a href="#method-i-swap_window">swap_window</a></li>
+
+        <li ><a href="#method-i-switch_client">switch_client</a></li>
+
+        <li ><a href="#method-i-unlink_window">unlink_window</a></li>
+
+        <li ><a href="#method-i-vsplit_window">vsplit_window</a></li>
+
+        <li ><a href="#method-i-windows">windows</a></li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  <div id="classindex-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-layers"></use></svg>
+      </span>
+      <span class="nav-section-title">Classes and Modules</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+
+    <ul class="link-list nav-list"><li><code><a href="../App.html">App</a></code></li><li><code><a href="../BranchManager.html">BranchManager</a></code></li><li><code><a href="../Directory.html">Directory</a></code></li><li><code><a href="../Environment.html">Environment</a></code></li><li><details><summary><code><a href="../Hiiro.html">Hiiro</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/AnyStruct.html">AnyStruct</a></code></li><li><code><a href="../Hiiro/App.html">App</a></code></li><li><code><a href="../Hiiro/AppFiles.html">AppFiles</a></code></li><li><code><a href="../Hiiro/Args.html">Args</a></code></li><li><code><a href="../Hiiro/Bins.html">Bins</a></code></li><li><code><a href="../Hiiro/Config.html">Config</a></code></li><li><code><a href="../Hiiro/Environment.html">Environment</a></code></li><li><code><a href="../Hiiro/Fuzzyfind.html">Fuzzyfind</a></code></li><li><details><summary><code><a href="../Hiiro/Git.html">Git</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Git/Branch.html">Branch</a></code></li><li><code><a href="../Hiiro/Git/Branches.html">Branches</a></code></li><li><code><a href="../Hiiro/Git/Pr.html">Pr</a></code></li><li><code><a href="../Hiiro/Git/Remote.html">Remote</a></code></li><li><code><a href="../Hiiro/Git/Worktree.html">Worktree</a></code></li><li><code><a href="../Hiiro/Git/Worktrees.html">Worktrees</a></code></li></ul></details></li><li><code><a href="../Hiiro/Glob.html">Glob</a></code></li><li><details><summary><code><a href="../Hiiro/Matcher.html">Matcher</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Matcher/Item.html">Item</a></code></li><li><code><a href="../Hiiro/Matcher/PathResult.html">PathResult</a></code></li><li><code><a href="../Hiiro/Matcher/Result.html">Result</a></code></li></ul></details></li><li><code><a href="../Hiiro/Notification.html">Notification</a></code></li><li><details><summary><code><a href="../Hiiro/Options.html">Options</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Options/Args.html">Args</a></code></li><li><code><a href="../Hiiro/Options/Definition.html">Definition</a></code></li></ul></details></li><li><details><summary><code><a href="../Hiiro/Paths.html">Paths</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Paths/Symlink.html">Symlink</a></code></li></ul></details></li><li><code><a href="../Hiiro/Matcher.html">PrefixMatcher</a></code></li><li><details><summary><code><a href="../Hiiro/Queue.html">Queue</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Queue/Prompt.html">Prompt</a></code></li></ul></details></li><li><code><a href="../Hiiro/Rbenv.html">Rbenv</a></code></li><li><code><a href="../Hiiro/RunnerTool.html">RunnerTool</a></code></li><li><details><summary><code><a href="../Hiiro/Runners.html">Runners</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Runners/Bin.html">Bin</a></code></li><li><code><a href="../Hiiro/Runners/Subcommand.html">Subcommand</a></code></li></ul></details></li><li><code><a href="../Hiiro/ServiceManager.html">ServiceManager</a></code></li><li><code><a href="../Hiiro/Shell.html">Shell</a></code></li><li><code><a href="../Hiiro/SparseGroups.html">SparseGroups</a></code></li><li><code><a href="../Hiiro/Tags.html">Tags</a></code></li><li><code><a href="../Hiiro/Task.html">Task</a></code></li><li><details><summary><code><a href="../Hiiro/TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="../Hiiro/Tasks.html">Tasks</a></code></li><li><details><summary><code><a href="../Hiiro/Tmux.html">Tmux</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Tmux/Buffer.html">Buffer</a></code></li><li><code><a href="../Hiiro/Tmux/Buffers.html">Buffers</a></code></li><li><code><a href="../Hiiro/Tmux/Pane.html">Pane</a></code></li><li><code><a href="../Hiiro/Tmux/Panes.html">Panes</a></code></li><li><code><a href="../Hiiro/Tmux/Session.html">Session</a></code></li><li><code><a href="../Hiiro/Tmux/Sessions.html">Sessions</a></code></li><li><code><a href="../Hiiro/Tmux/Window.html">Window</a></code></li><li><code><a href="../Hiiro/Tmux/Windows.html">Windows</a></code></li></ul></details></li><li><code><a href="../Hiiro/TodoItem.html">TodoItem</a></code></li><li><code><a href="../Hiiro/TodoManager.html">TodoManager</a></code></li><li><code><a href="../Hiiro/Tree.html">Tree</a></code></li></ul></details></li><li><details><summary><code><a href="../LinkManager.html">LinkManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../LinkManager/Link.html">Link</a></code></li></ul></details></li><li><code><a href="../Notify.html">Notify</a></code></li><li><code><a href="../Object.html">Object</a></code></li><li><code><a href="../PinnedPRManager.html">PinnedPRManager</a></code></li><li><details><summary><code><a href="../Pins.html">Pins</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Pins/Pin.html">Pin</a></code></li></ul></details></li><li><code><a href="../Project.html">Project</a></code></li><li><code><a href="../String.html">String</a></code></li><li><code><a href="../Task.html">Task</a></code></li><li><details><summary><code><a href="../TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="../Tasks.html">Tasks</a></code></li><li><code><a href="../TmuxSession.html">TmuxSession</a></code></li><li><code><a href="../Tree.html">Tree</a></code></li></ul>
+  </details>
+</div>
+
+</nav>
+
+<main role="main" aria-labelledby="class-hiiro-tmux">
+  
+  
+    <ol role="navigation" aria-label="Breadcrumb navigation" class="breadcrumb">
+      
+      <li>
+        
+        <a href="../Hiiro.html">Hiiro</a><span>::</span>
+        
+      </li>
+      
+      <li>
+        
+        <span>Tmux</span>
+        
+      </li>
+      
+    </ol>
+  
+
+  <span id="class-Hiiro::Tmux" class="legacy-anchor"></span>
+  <h1 id="class-hiiro-tmux" class="anchor-link class">
+    class Hiiro::Tmux
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+
+  <span id="5Buntitled-5D" class="legacy-anchor"></span>
+  <section class="documentation-section anchor-link">
+
+
+
+
+
+
+
+    <section class="attribute-method-details method-section">
+      <header>
+        <h3 id="untitled-attributes"><a href="#untitled-attributes">Attributes</a></h3>
+      </header>
+
+
+      <div id="attribute-i-hiiro" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-hiiro" title="Link to this attribute">
+            <span class="method-name">hiiro</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+    </section>
+
+
+
+
+
+
+     <section id="public-class-untitled-method-details" class="method-section anchor-link">
+       <header>
+         <h3 id="public-class-untitled-methods"><a href="#public-class-untitled-methods">Public Class Methods</a></h3>
+       </header>
+
+
+      <div id="method-c-client" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-client" title="Link to this method">
+                <span class="method-name">client</span>
+                <span class="method-args">(hiiro = nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="client-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 16</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">client</span>(<span class="ruby-identifier">hiiro</span> = <span class="ruby-keyword">nil</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-ivar">@client</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@client</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-ivar">@client</span>.<span class="ruby-identifier">hiiro</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">hiiro</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">hiiro</span>
+    <span class="ruby-identifier">client!</span>(<span class="ruby-identifier">hiiro</span>)
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">new</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-client-21" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-client-21" title="Link to this method">
+                <span class="method-name">client!</span>
+                <span class="method-args">(hiiro = nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="client-21-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 12</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">client!</span>(<span class="ruby-identifier">hiiro</span> = <span class="ruby-keyword">nil</span>)
+  <span class="ruby-ivar">@client</span> = <span class="ruby-identifier">new</span>(<span class="ruby-identifier">hiiro</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-new" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-new" title="Link to this method">
+                <span class="method-name">new</span>
+                <span class="method-args">(hiiro = nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="new-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 32</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">hiiro</span> = <span class="ruby-keyword">nil</span>)
+  <span class="ruby-ivar">@hiiro</span> = <span class="ruby-identifier">hiiro</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-open_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-open_session" title="Link to this method">
+                <span class="method-name">open_session</span>
+                <span class="method-args">(name, **opts)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="open_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 26</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">open_session</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>)
+  <span class="ruby-identifier">client</span>.<span class="ruby-identifier">open_session</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+    </section>
+
+
+
+
+
+
+
+     <section id="public-instance-untitled-method-details" class="method-section anchor-link">
+       <header>
+         <h3 id="public-instance-untitled-methods"><a href="#public-instance-untitled-methods">Public Instance Methods</a></h3>
+       </header>
+
+
+      <div id="method-i-attach_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-attach_session" title="Link to this method">
+                <span class="method-name">attach_session</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="attach_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 126</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">attach_session</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-identifier">resolved</span> = <span class="ruby-identifier">find_session</span>(<span class="ruby-identifier">name</span>)&amp;.<span class="ruby-identifier">name</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">tr</span>(<span class="ruby-string">&#39;.&#39;</span>, <span class="ruby-string">&#39;_&#39;</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;attach-session&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-node">&quot;=#{resolved}&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-break_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-break_pane" title="Link to this method">
+                <span class="method-name">break_pane</span>
+                <span class="method-args">(src: nil, dst: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="break_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 246</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">break_pane</span>(<span class="ruby-value">src:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">dst:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;break-pane&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">src</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">src</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">dst</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">dst</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-buffers" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-buffers" title="Link to this method">
+                <span class="method-name">buffers</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="buffers-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 76</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">buffers</span>
+  <span class="ruby-constant">Buffers</span>.<span class="ruby-identifier">fetch</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-capture_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-capture_pane" title="Link to this method">
+                <span class="method-name">capture_pane</span>
+                <span class="method-args">(target: nil, buffer: nil, print: true)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="capture_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 268</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">capture_pane</span>(<span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">buffer:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">print:</span> <span class="ruby-keyword">true</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;capture-pane&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">target</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-b&#39;</span>, <span class="ruby-identifier">buffer</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">buffer</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&#39;-p&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">print</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">print</span>
+    <span class="ruby-identifier">run_safe</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-choose_buffer" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-choose_buffer" title="Link to this method">
+                <span class="method-name">choose_buffer</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="choose_buffer-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 318</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">choose_buffer</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;choose-buffer&#39;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-current_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-current_pane" title="Link to this method">
+                <span class="method-name">current_pane</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="current_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 58</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">current_pane</span>
+  <span class="ruby-constant">Pane</span>.<span class="ruby-identifier">current</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-current_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-current_session" title="Link to this method">
+                <span class="method-name">current_session</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="current_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 50</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">current_session</span>
+  <span class="ruby-constant">Session</span>.<span class="ruby-identifier">current</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-current_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-current_window" title="Link to this method">
+                <span class="method-name">current_window</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="current_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 54</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">current_window</span>
+  <span class="ruby-constant">Window</span>.<span class="ruby-identifier">current</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-delete_buffer" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-delete_buffer" title="Link to this method">
+                <span class="method-name">delete_buffer</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="delete_buffer-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 310</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">delete_buffer</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;delete-buffer&#39;</span>, <span class="ruby-string">&#39;-b&#39;</span>, <span class="ruby-identifier">name</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-detach_client" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-detach_client" title="Link to this method">
+                <span class="method-name">detach_client</span>
+                <span class="method-args">(session: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="detach_client-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 136</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">detach_client</span>(<span class="ruby-value">session:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;detach-client&#39;</span>]
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">session</span>
+    <span class="ruby-identifier">resolved</span> = <span class="ruby-identifier">find_session</span>(<span class="ruby-identifier">session</span>)&amp;.<span class="ruby-identifier">name</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">session</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">tr</span>(<span class="ruby-string">&#39;.&#39;</span>, <span class="ruby-string">&#39;_&#39;</span>)
+    <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">resolved</span>]
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-display_info" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-display_info" title="Link to this method">
+                <span class="method-name">display_info</span>
+                <span class="method-args">(format_string, target: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="display_info-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 331</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">display_info</span>(<span class="ruby-identifier">format_string</span>, <span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;display-message&#39;</span>, <span class="ruby-string">&#39;-p&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">target</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">format_string</span>
+  <span class="ruby-identifier">run_safe</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-display_message" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-display_message" title="Link to this method">
+                <span class="method-name">display_message</span>
+                <span class="method-args">(message, target: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="display_message-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 324</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">display_message</span>(<span class="ruby-identifier">message</span>, <span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;display-message&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">target</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">message</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          <p>Display methods</p>
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-find_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-find_session" title="Link to this method">
+                <span class="method-name">find_session</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="find_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 82</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_session</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-identifier">normalized</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">tr</span>(<span class="ruby-string">&#39;.&#39;</span>, <span class="ruby-string">&#39;_&#39;</span>)
+  <span class="ruby-identifier">sessions</span>.<span class="ruby-identifier">find</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span> <span class="ruby-identifier">s</span>.<span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">normalized</span> } <span class="ruby-operator">||</span>
+    <span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">by_prefix</span>(<span class="ruby-identifier">sessions</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:name</span>), <span class="ruby-identifier">normalized</span>)&amp;.<span class="ruby-identifier">resolved</span>&amp;.<span class="ruby-identifier">then</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">m</span><span class="ruby-operator">|</span> <span class="ruby-identifier">sessions</span>.<span class="ruby-identifier">find</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span> <span class="ruby-identifier">s</span>.<span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">m</span>.<span class="ruby-identifier">item</span> } }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          <p><a href="Tmux/Session.html"><code>Session</code></a> methods</p>
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-hsplit_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-hsplit_window" title="Link to this method">
+                <span class="method-name">hsplit_window</span>
+                <span class="method-args">(**kwargs)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="hsplit_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 202</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">hsplit_window</span>(<span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+  <span class="ruby-comment"># tmux&#39;s horizontal/vertical is the opposite of vim&#39;s</span>
+  <span class="ruby-identifier">split_window</span>(<span class="ruby-value">horizontal:</span> <span class="ruby-keyword">false</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          <p><a href="Tmux/Pane.html"><code>Pane</code></a> methods</p>
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-in_nvim-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-in_nvim-3F" title="Link to this method">
+                <span class="method-name">in_nvim?</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="in_nvim-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 42</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">in_nvim?</span>
+  <span class="ruby-operator">!</span><span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;NVIM&#39;</span>].<span class="ruby-identifier">nil?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;NVIM&#39;</span>].<span class="ruby-identifier">empty?</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-in_tmux-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-in_tmux-3F" title="Link to this method">
+                <span class="method-name">in_tmux?</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="in_tmux-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 38</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">in_tmux?</span>
+  <span class="ruby-operator">!</span><span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;TMUX&#39;</span>].<span class="ruby-identifier">nil?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;TMUX&#39;</span>].<span class="ruby-identifier">empty?</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          <p>Context methods</p>
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-join_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-join_pane" title="Link to this method">
+                <span class="method-name">join_pane</span>
+                <span class="method-args">(src, dst, horizontal: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="join_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 253</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">join_pane</span>(<span class="ruby-identifier">src</span>, <span class="ruby-identifier">dst</span>, <span class="ruby-value">horizontal:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;join-pane&#39;</span>, <span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">src</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">dst</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&#39;-h&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">horizontal</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-kill_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-kill_pane" title="Link to this method">
+                <span class="method-name">kill_pane</span>
+                <span class="method-args">(target)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="kill_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 223</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">kill_pane</span>(<span class="ruby-identifier">target</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;kill-pane&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-kill_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-kill_session" title="Link to this method">
+                <span class="method-name">kill_session</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="kill_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 121</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">kill_session</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-identifier">resolved</span> = <span class="ruby-identifier">find_session</span>(<span class="ruby-identifier">name</span>)&amp;.<span class="ruby-identifier">name</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">tr</span>(<span class="ruby-string">&#39;.&#39;</span>, <span class="ruby-string">&#39;_&#39;</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;kill-session&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">resolved</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-kill_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-kill_window" title="Link to this method">
+                <span class="method-name">kill_window</span>
+                <span class="method-args">(target)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="kill_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 160</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">kill_window</span>(<span class="ruby-identifier">target</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;kill-window&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-last_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-last_window" title="Link to this method">
+                <span class="method-name">last_window</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="last_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 176</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">last_window</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;last-window&#39;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-link_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-link_window" title="Link to this method">
+                <span class="method-name">link_window</span>
+                <span class="method-args">(src, dst)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="link_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 192</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">link_window</span>(<span class="ruby-identifier">src</span>, <span class="ruby-identifier">dst</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;link-window&#39;</span>, <span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">src</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">dst</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-load_buffer" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-load_buffer" title="Link to this method">
+                <span class="method-name">load_buffer</span>
+                <span class="method-args">(path, name: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="load_buffer-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 289</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">load_buffer</span>(<span class="ruby-identifier">path</span>, <span class="ruby-value">name:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;load-buffer&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-b&#39;</span>, <span class="ruby-identifier">name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">path</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-move_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-move_pane" title="Link to this method">
+                <span class="method-name">move_pane</span>
+                <span class="method-args">(src, dst)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="move_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 242</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">move_pane</span>(<span class="ruby-identifier">src</span>, <span class="ruby-identifier">dst</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;move-pane&#39;</span>, <span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">src</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">dst</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-move_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-move_window" title="Link to this method">
+                <span class="method-name">move_window</span>
+                <span class="method-args">(src, dst)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="move_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 188</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">move_window</span>(<span class="ruby-identifier">src</span>, <span class="ruby-identifier">dst</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;move-window&#39;</span>, <span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">src</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">dst</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-new_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-new_session" title="Link to this method">
+                <span class="method-name">new_session</span>
+                <span class="method-args">(name = nil, **opts)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="new_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 112</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">new_session</span>(<span class="ruby-identifier">name</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;new-session&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&#39;-d&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">opts</span>[<span class="ruby-value">:detached</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-c&#39;</span>, <span class="ruby-identifier">opts</span>[<span class="ruby-value">:start_directory</span>]] <span class="ruby-keyword">if</span> <span class="ruby-identifier">opts</span>[<span class="ruby-value">:start_directory</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-n&#39;</span>, <span class="ruby-identifier">opts</span>[<span class="ruby-value">:window_name</span>]] <span class="ruby-keyword">if</span> <span class="ruby-identifier">opts</span>[<span class="ruby-value">:window_name</span>]
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-new_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-new_window" title="Link to this method">
+                <span class="method-name">new_window</span>
+                <span class="method-args">(name: nil, target: nil, start_directory: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="new_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 152</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">new_window</span>(<span class="ruby-value">name:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">start_directory:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;new-window&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">target</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-n&#39;</span>, <span class="ruby-identifier">name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-c&#39;</span>, <span class="ruby-identifier">start_directory</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">start_directory</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          <p><a href="Tmux/Window.html"><code>Window</code></a> methods</p>
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-next_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-next_window" title="Link to this method">
+                <span class="method-name">next_window</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="next_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 168</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">next_window</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;next-window&#39;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-open_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-open_session" title="Link to this method">
+                <span class="method-name">open_session</span>
+                <span class="method-args">(name, **opts)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="open_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 92</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">open_session</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>)
+  <span class="ruby-identifier">session_name</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">tr</span>(<span class="ruby-string">&#39;.&#39;</span>, <span class="ruby-string">&#39;_&#39;</span>)
+  <span class="ruby-identifier">existing</span> = <span class="ruby-identifier">find_session</span>(<span class="ruby-identifier">session_name</span>)
+
+  <span class="ruby-keyword">unless</span> <span class="ruby-identifier">existing</span>
+    <span class="ruby-identifier">new_session</span>(<span class="ruby-identifier">session_name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>, <span class="ruby-value">detached:</span> <span class="ruby-keyword">true</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">resolved_name</span> = <span class="ruby-identifier">existing</span>&amp;.<span class="ruby-identifier">name</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">session_name</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">in_tmux?</span>
+    <span class="ruby-identifier">switch_client</span>(<span class="ruby-identifier">resolved_name</span>)
+  <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">in_nvim?</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Can&#39;t attach to tmux inside a vim terminal&quot;</span>
+    <span class="ruby-keyword">false</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">attach_session</span>(<span class="ruby-identifier">resolved_name</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-panes" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-panes" title="Link to this method">
+                <span class="method-name">panes</span>
+                <span class="method-args">(target: nil, all: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="panes-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 72</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">panes</span>(<span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">all:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-constant">Panes</span>.<span class="ruby-identifier">fetch</span>(<span class="ruby-value">target:</span> <span class="ruby-identifier">target</span>, <span class="ruby-value">all:</span> <span class="ruby-identifier">all</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-paste_buffer" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-paste_buffer" title="Link to this method">
+                <span class="method-name">paste_buffer</span>
+                <span class="method-args">(name: nil, target: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="paste_buffer-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 303</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">paste_buffer</span>(<span class="ruby-value">name:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;paste-buffer&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-b&#39;</span>, <span class="ruby-identifier">name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">target</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-previous_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-previous_window" title="Link to this method">
+                <span class="method-name">previous_window</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="previous_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 172</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">previous_window</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;previous-window&#39;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-rename_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-rename_session" title="Link to this method">
+                <span class="method-name">rename_session</span>
+                <span class="method-args">(old_name, new_name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="rename_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 145</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">rename_session</span>(<span class="ruby-identifier">old_name</span>, <span class="ruby-identifier">new_name</span>)
+  <span class="ruby-identifier">resolved</span> = <span class="ruby-identifier">find_session</span>(<span class="ruby-identifier">old_name</span>)&amp;.<span class="ruby-identifier">name</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">old_name</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">tr</span>(<span class="ruby-string">&#39;.&#39;</span>, <span class="ruby-string">&#39;_&#39;</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;rename-session&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">resolved</span>, <span class="ruby-identifier">new_name</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-rename_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-rename_window" title="Link to this method">
+                <span class="method-name">rename_window</span>
+                <span class="method-args">(target, new_name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="rename_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 180</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">rename_window</span>(<span class="ruby-identifier">target</span>, <span class="ruby-identifier">new_name</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;rename-window&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>, <span class="ruby-identifier">new_name</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-resize_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-resize_pane" title="Link to this method">
+                <span class="method-name">resize_pane</span>
+                <span class="method-args">(target: nil, width: nil, height: nil, zoom: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="resize_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 259</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">resize_pane</span>(<span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">width:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">height:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">zoom:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;resize-pane&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">target</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&#39;-Z&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">zoom</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-x&#39;</span>, <span class="ruby-identifier">width</span>.<span class="ruby-identifier">to_s</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">width</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-y&#39;</span>, <span class="ruby-identifier">height</span>.<span class="ruby-identifier">to_s</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">height</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-save_buffer" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-save_buffer" title="Link to this method">
+                <span class="method-name">save_buffer</span>
+                <span class="method-args">(path, name: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="save_buffer-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 296</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">save_buffer</span>(<span class="ruby-identifier">path</span>, <span class="ruby-value">name:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;save-buffer&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-b&#39;</span>, <span class="ruby-identifier">name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">path</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-select_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-select_pane" title="Link to this method">
+                <span class="method-name">select_pane</span>
+                <span class="method-args">(target)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="select_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 227</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">select_pane</span>(<span class="ruby-identifier">target</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;select-pane&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-select_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-select_window" title="Link to this method">
+                <span class="method-name">select_window</span>
+                <span class="method-args">(target)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="select_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 164</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">select_window</span>(<span class="ruby-identifier">target</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;select-window&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-server_running-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-server_running-3F" title="Link to this method">
+                <span class="method-name">server_running?</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="server_running-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 46</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">server_running?</span>
+  <span class="ruby-identifier">run_success?</span>(<span class="ruby-string">&#39;has-session&#39;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-session_exists-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-session_exists-3F" title="Link to this method">
+                <span class="method-name">session_exists?</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="session_exists-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 88</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">session_exists?</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-operator">!</span><span class="ruby-identifier">find_session</span>(<span class="ruby-identifier">name</span>).<span class="ruby-identifier">nil?</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-sessions" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-sessions" title="Link to this method">
+                <span class="method-name">sessions</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="sessions-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 64</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">sessions</span>
+  <span class="ruby-constant">Sessions</span>.<span class="ruby-identifier">fetch</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          <p>Collection accessors</p>
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-set_buffer" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-set_buffer" title="Link to this method">
+                <span class="method-name">set_buffer</span>
+                <span class="method-args">(content, name: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="set_buffer-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 282</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_buffer</span>(<span class="ruby-identifier">content</span>, <span class="ruby-value">name:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;set-buffer&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-b&#39;</span>, <span class="ruby-identifier">name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">content</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          <p><a href="Tmux/Buffer.html"><code>Buffer</code></a> methods</p>
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-show_buffer" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-show_buffer" title="Link to this method">
+                <span class="method-name">show_buffer</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="show_buffer-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 314</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">show_buffer</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-identifier">run_safe</span>(<span class="ruby-string">&#39;show-buffer&#39;</span>, <span class="ruby-string">&#39;-b&#39;</span>, <span class="ruby-identifier">name</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-split_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-split_window" title="Link to this method">
+                <span class="method-name">split_window</span>
+                <span class="method-args">(horizontal: false, target: nil, start_directory: nil, size: nil, command: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="split_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 212</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">split_window</span>(<span class="ruby-value">horizontal:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">start_directory:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">size:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">command:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;split-window&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&#39;-h&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">horizontal</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&#39;-v&#39;</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">horizontal</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">target</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-c&#39;</span>, <span class="ruby-identifier">start_directory</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">start_directory</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-l&#39;</span>, <span class="ruby-identifier">size</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">size</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">command</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">command</span>
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-swap_current_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-swap_current_pane" title="Link to this method">
+                <span class="method-name">swap_current_pane</span>
+                <span class="method-args">(dst=0, keep_active: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="swap_current_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 231</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">swap_current_pane</span>(<span class="ruby-identifier">dst</span>=<span class="ruby-value">0</span>, <span class="ruby-value">keep_active:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-identifier">args</span> = [<span class="ruby-string">&#39;swap-pane&#39;</span>]
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&#39;-d&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">keep_active</span>
+  <span class="ruby-identifier">args</span> <span class="ruby-operator">+=</span> [<span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">dst</span>&amp;.<span class="ruby-identifier">to_s</span>]
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-swap_pane" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-swap_pane" title="Link to this method">
+                <span class="method-name">swap_pane</span>
+                <span class="method-args">(src, dst)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="swap_pane-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 238</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">swap_pane</span>(<span class="ruby-identifier">src</span>, <span class="ruby-identifier">dst</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;swap-pane&#39;</span>, <span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">src</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">dst</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-swap_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-swap_window" title="Link to this method">
+                <span class="method-name">swap_window</span>
+                <span class="method-args">(src, dst)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="swap_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 184</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">swap_window</span>(<span class="ruby-identifier">src</span>, <span class="ruby-identifier">dst</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;swap-window&#39;</span>, <span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">src</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">dst</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-switch_client" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-switch_client" title="Link to this method">
+                <span class="method-name">switch_client</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="switch_client-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 131</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">switch_client</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-identifier">resolved</span> = <span class="ruby-identifier">find_session</span>(<span class="ruby-identifier">name</span>)&amp;.<span class="ruby-identifier">name</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">tr</span>(<span class="ruby-string">&#39;.&#39;</span>, <span class="ruby-string">&#39;_&#39;</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;switch-client&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-node">&quot;=#{resolved}&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-unlink_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-unlink_window" title="Link to this method">
+                <span class="method-name">unlink_window</span>
+                <span class="method-args">(target)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="unlink_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 196</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">unlink_window</span>(<span class="ruby-identifier">target</span>)
+  <span class="ruby-identifier">run_system</span>(<span class="ruby-string">&#39;unlink-window&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-vsplit_window" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-vsplit_window" title="Link to this method">
+                <span class="method-name">vsplit_window</span>
+                <span class="method-args">(**kwargs)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="vsplit_window-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 207</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">vsplit_window</span>(<span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+  <span class="ruby-comment"># tmux&#39;s horizontal/vertical is the opposite of vim&#39;s</span>
+  <span class="ruby-identifier">split_window</span>(<span class="ruby-value">horizontal:</span> <span class="ruby-keyword">true</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-windows" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-windows" title="Link to this method">
+                <span class="method-name">windows</span>
+                <span class="method-args">(session: nil, all: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="windows-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/tmux.rb, line 68</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">windows</span>(<span class="ruby-value">session:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">all:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-constant">Windows</span>.<span class="ruby-identifier">fetch</span>(<span class="ruby-value">session:</span> <span class="ruby-identifier">session</span>, <span class="ruby-value">all:</span> <span class="ruby-identifier">all</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+    </section>
+
+
+
+
+  </section>
+
+</main>
+
+<aside class="table-of-contents" role="complementary" aria-label="Table of Contents">
+  <div class="toc-sticky">
+    <h3 class="toc-heading">On This Page</h3>
+    <nav class="toc-nav" id="toc-nav" aria-label="Page sections">
+      <!-- Generated by JavaScript based on page headings -->
+    </nav>
+  </div>
+</aside>
+
+
+<footer class="site-footer">
+  
+
+  <div class="footer-bottom">
+    <p>
+      Generated by <a href="https://ruby.github.io/rdoc/">RDoc 7.2.0</a>
+      using the Aliki theme by <a href="http://st0012.dev">Stan Lo</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+

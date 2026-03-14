@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>CLAUDE - RDoc Documentation</title>
+
+
+  <meta name="keywords" content="ruby,documentation,CLAUDE">
+  <meta
+    name="description"
+    content="CLAUDE: CLAUDE. md This file provides guidance to Claude Code (claude."
+  >
+
+
+
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="CLAUDE - RDoc Documentation">
+
+
+
+    <meta property="og:description" content="CLAUDE. md This file provides guidance to Claude Code (claude.">
+
+
+
+
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="CLAUDE - RDoc Documentation">
+
+
+
+    <meta name="twitter:description" content="CLAUDE. md This file provides guidance to Claude Code (claude.">
+
+
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script
+  src="./js/theme-toggle.js?v=7.2.0"
+></script>
+
+<script
+  src="./js/search_navigation.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_data.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_ranker.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_controller.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/c_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/bash_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/aliki.js?v=7.2.0"
+  defer
+></script>
+
+<link
+  href="./css/rdoc.css?v=7.2.0"
+  rel="stylesheet"
+>
+
+
+
+
+<body role="document" class="file has-toc">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <!-- Chevron (right arrow) - used for expand/collapse -->
+  <symbol
+    id="icon-chevron"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </symbol>
+
+  <!-- File/Document - Pages section -->
+  <symbol
+    id="icon-file"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path
+      d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+    ></path>
+
+    <polyline points="14 2 14 8 20 8"></polyline>
+  </symbol>
+
+  <!-- Layers/Stack - Classes and Modules section -->
+  <symbol
+    id="icon-layers"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+    <polyline points="2 17 12 22 22 17"></polyline>
+    <polyline points="2 12 12 17 22 12"></polyline>
+  </symbol>
+
+  <!-- Curly braces with C - Class Methods section -->
+  <symbol
+    id="icon-class-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      C
+    </text>
+  </symbol>
+
+  <!-- Curly braces with I - Instance Methods section -->
+  <symbol
+    id="icon-instance-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      I
+    </text>
+  </symbol>
+
+  <!-- Double chevrons up - Ancestors section -->
+  <symbol
+    id="icon-ancestors"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="17 11 12 6 7 11"></polyline>
+    <polyline points="17 18 12 13 7 18"></polyline>
+  </symbol>
+
+  <!-- User with plus - Included Modules section -->
+  <symbol
+    id="icon-includes"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+
+    <line
+      x1="20"
+      y1="8"
+      x2="20"
+      y2="14"
+    ></line>
+
+    <line
+      x1="23"
+      y1="11"
+      x2="17"
+      y2="11"
+    ></line>
+  </symbol>
+
+  <!-- User with check - Extended Modules section -->
+  <symbol
+    id="icon-extends"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+    <polyline points="17 11 19 13 23 9"></polyline>
+  </symbol>
+
+  <!-- List - Sections section -->
+  <symbol
+    id="icon-list"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <line
+      x1="8"
+      y1="6"
+      x2="21"
+      y2="6"
+    ></line>
+
+    <line
+      x1="8"
+      y1="12"
+      x2="21"
+      y2="12"
+    ></line>
+
+    <line
+      x1="8"
+      y1="18"
+      x2="21"
+      y2="18"
+    ></line>
+
+    <line
+      x1="3"
+      y1="6"
+      x2="3.01"
+      y2="6"
+    ></line>
+
+    <line
+      x1="3"
+      y1="12"
+      x2="3.01"
+      y2="12"
+    ></line>
+
+    <line
+      x1="3"
+      y1="18"
+      x2="3.01"
+      y2="18"
+    ></line>
+  </symbol>
+</svg>
+
+<header class="top-navbar">
+  <a href="./index.html" class="navbar-brand">
+    RDoc Documentation
+  </a>
+
+  <!-- Desktop search bar -->
+  <div class="navbar-search navbar-search-desktop" role="search">
+    <form action="#" method="get" accept-charset="utf-8">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results-desktop"
+             type="text" name="search" placeholder="Search (/) for a class, method..."
+             spellcheck="false" autocomplete="off"
+             title="Type to search, Up and Down to navigate, Enter to load">
+      <ul id="search-results-desktop" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="initially-hidden search-results"></ul>
+    </form>
+  </div>
+
+  <!-- Mobile search icon button -->
+  <button id="search-toggle" class="navbar-search-mobile" aria-label="Open search" type="button">
+    <span aria-hidden="true">🔍</span>
+  </button>
+
+  <!-- Theme toggle button -->
+  <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" type="button">
+    <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+  </button>
+</header>
+
+<!-- Search Modal (Mobile) -->
+<div id="search-modal" class="search-modal" hidden aria-modal="true" role="dialog" aria-label="Search">
+  <div class="search-modal-backdrop"></div>
+  <div class="search-modal-content">
+    <div class="search-modal-header">
+      <form class="search-modal-form" action="#" method="get" accept-charset="utf-8">
+        <span class="search-modal-icon" aria-hidden="true">🔍</span>
+        <input id="search-field-mobile" role="combobox" aria-label="Search"
+               aria-autocomplete="list" aria-controls="search-results-mobile"
+               type="text" name="search" placeholder="Search documentation"
+               spellcheck="false" autocomplete="off">
+        <button type="button" class="search-modal-close" aria-label="Close search" id="search-modal-close">
+          <span aria-hidden="true">esc</span>
+        </button>
+      </form>
+    </div>
+    <div class="search-modal-body">
+      <ul id="search-results-mobile" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="search-results search-modal-results initially-hidden"></ul>
+      <div class="search-modal-empty">
+        <p>No recent searches</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
+  <span aria-hidden="true">&#9776;</span>
+</div>
+
+
+<nav id="navigation" role="navigation" hidden>
+  
+
+
+
+
+
+
+  <div id="fileindex-section" class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg>
+            <use href="#icon-file"></use>
+          </svg>
+        </span>
+
+        <span class="nav-section-title">Pages</span>
+
+        <span class="nav-section-chevron">
+          <svg>
+            <use href="#icon-chevron"></use>
+          </svg>
+        </span>
+      </summary>
+
+      <ul class="nav-list">
+
+
+
+
+
+
+            <li>
+              <a href="./CLAUDE_md.html">
+                CLAUDE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Gemfile.html">
+                Gemfile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Gemfile_lock.html">
+                Gemfile.lock
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./LICENSE.html">
+                LICENSE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./README_md.html">
+                README
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Rakefile.html">
+                Rakefile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./TODO_md.html">
+                TODO
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./demo_sh.html">
+                demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  docs
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./docs/README_md.html">
+                      README
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/docker-testing-guide_md.html">
+                      docker-testing-guide
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-buffer_md.html">
+                      h-buffer
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-pane_md.html">
+                      h-pane
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-plugin_md.html">
+                      h-plugin
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-session_md.html">
+                      h-session
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-window_md.html">
+                      h-window
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="./h-tmux-plugins_tmux.html">
+                h-tmux-plugins.tmux
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./notes.html">
+                notes
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./obsidian_slides_md.html">
+                obsidian_slides
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./record-demo_sh.html">
+                record-demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  script
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./script/compare.html">
+                      compare
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/install.html">
+                      install
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/sync.html">
+                      sync
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/test.html">
+                      test
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/update.html">
+                      update
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="./slides_md.html">
+                slides
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  tmp
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./tmp/gql-error_message_json.html">
+                      gql-error_message.json
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./tmp/sync_sh.html">
+                      sync.sh
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./tmp/yaml_files.html">
+                      yaml_files
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  <div id="classindex-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-layers"></use></svg>
+      </span>
+      <span class="nav-section-title">Classes and Modules</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+
+    <ul class="link-list nav-list"><li><code><a href="./App.html">App</a></code></li><li><code><a href="./BranchManager.html">BranchManager</a></code></li><li><code><a href="./Directory.html">Directory</a></code></li><li><code><a href="./Environment.html">Environment</a></code></li><li><details><summary><code><a href="./Hiiro.html">Hiiro</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/AnyStruct.html">AnyStruct</a></code></li><li><code><a href="./Hiiro/App.html">App</a></code></li><li><code><a href="./Hiiro/AppFiles.html">AppFiles</a></code></li><li><code><a href="./Hiiro/Args.html">Args</a></code></li><li><code><a href="./Hiiro/Bins.html">Bins</a></code></li><li><code><a href="./Hiiro/Config.html">Config</a></code></li><li><code><a href="./Hiiro/Environment.html">Environment</a></code></li><li><code><a href="./Hiiro/Fuzzyfind.html">Fuzzyfind</a></code></li><li><details><summary><code><a href="./Hiiro/Git.html">Git</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Git/Branch.html">Branch</a></code></li><li><code><a href="./Hiiro/Git/Branches.html">Branches</a></code></li><li><code><a href="./Hiiro/Git/Pr.html">Pr</a></code></li><li><code><a href="./Hiiro/Git/Remote.html">Remote</a></code></li><li><code><a href="./Hiiro/Git/Worktree.html">Worktree</a></code></li><li><code><a href="./Hiiro/Git/Worktrees.html">Worktrees</a></code></li></ul></details></li><li><code><a href="./Hiiro/Glob.html">Glob</a></code></li><li><details><summary><code><a href="./Hiiro/Matcher.html">Matcher</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Matcher/Item.html">Item</a></code></li><li><code><a href="./Hiiro/Matcher/PathResult.html">PathResult</a></code></li><li><code><a href="./Hiiro/Matcher/Result.html">Result</a></code></li></ul></details></li><li><code><a href="./Hiiro/Notification.html">Notification</a></code></li><li><details><summary><code><a href="./Hiiro/Options.html">Options</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Options/Args.html">Args</a></code></li><li><code><a href="./Hiiro/Options/Definition.html">Definition</a></code></li></ul></details></li><li><details><summary><code><a href="./Hiiro/Paths.html">Paths</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Paths/Symlink.html">Symlink</a></code></li></ul></details></li><li><code><a href="./Hiiro/Matcher.html">PrefixMatcher</a></code></li><li><details><summary><code><a href="./Hiiro/Queue.html">Queue</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Queue/Prompt.html">Prompt</a></code></li></ul></details></li><li><code><a href="./Hiiro/Rbenv.html">Rbenv</a></code></li><li><code><a href="./Hiiro/RunnerTool.html">RunnerTool</a></code></li><li><details><summary><code><a href="./Hiiro/Runners.html">Runners</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Runners/Bin.html">Bin</a></code></li><li><code><a href="./Hiiro/Runners/Subcommand.html">Subcommand</a></code></li></ul></details></li><li><code><a href="./Hiiro/ServiceManager.html">ServiceManager</a></code></li><li><code><a href="./Hiiro/Shell.html">Shell</a></code></li><li><code><a href="./Hiiro/SparseGroups.html">SparseGroups</a></code></li><li><code><a href="./Hiiro/Tags.html">Tags</a></code></li><li><code><a href="./Hiiro/Task.html">Task</a></code></li><li><details><summary><code><a href="./Hiiro/TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="./Hiiro/Tasks.html">Tasks</a></code></li><li><details><summary><code><a href="./Hiiro/Tmux.html">Tmux</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Tmux/Buffer.html">Buffer</a></code></li><li><code><a href="./Hiiro/Tmux/Buffers.html">Buffers</a></code></li><li><code><a href="./Hiiro/Tmux/Pane.html">Pane</a></code></li><li><code><a href="./Hiiro/Tmux/Panes.html">Panes</a></code></li><li><code><a href="./Hiiro/Tmux/Session.html">Session</a></code></li><li><code><a href="./Hiiro/Tmux/Sessions.html">Sessions</a></code></li><li><code><a href="./Hiiro/Tmux/Window.html">Window</a></code></li><li><code><a href="./Hiiro/Tmux/Windows.html">Windows</a></code></li></ul></details></li><li><code><a href="./Hiiro/TodoItem.html">TodoItem</a></code></li><li><code><a href="./Hiiro/TodoManager.html">TodoManager</a></code></li><li><code><a href="./Hiiro/Tree.html">Tree</a></code></li></ul></details></li><li><details><summary><code><a href="./LinkManager.html">LinkManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./LinkManager/Link.html">Link</a></code></li></ul></details></li><li><code><a href="./Notify.html">Notify</a></code></li><li><code><a href="./Object.html">Object</a></code></li><li><code><a href="./PinnedPRManager.html">PinnedPRManager</a></code></li><li><details><summary><code><a href="./Pins.html">Pins</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Pins/Pin.html">Pin</a></code></li></ul></details></li><li><code><a href="./Project.html">Project</a></code></li><li><code><a href="./String.html">String</a></code></li><li><code><a href="./Task.html">Task</a></code></li><li><details><summary><code><a href="./TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="./Tasks.html">Tasks</a></code></li><li><code><a href="./TmuxSession.html">TmuxSession</a></code></li><li><code><a href="./Tree.html">Tree</a></code></li></ul>
+  </details>
+</div>
+
+</nav>
+
+<main role="main" aria-label="Page CLAUDE.md">
+
+<span id="label-CLAUDE.md" class="legacy-anchor"></span>
+<h1 id="claudemd"><a href="#claudemd"><a href="CLAUDE_md.html">CLAUDE.md</a></a></h1>
+
+<p>This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.</p>
+
+<span id="label-Project+Overview" class="legacy-anchor"></span>
+<h2 id="project-overview"><a href="#project-overview"><a href="Project.html"><code>Project</code></a> Overview</a></h2>
+
+<p><a href="Hiiro.html"><code>Hiiro</code></a> is a lightweight CLI framework for Ruby that enables building multi-command tools similar to <code>git</code> or <code>docker</code>. It provides subcommand dispatch, abbreviation matching (e.g., <code>h ex hel</code> matches <code>h example hello</code>), and a plugin system.</p>
+
+<span id="label-Development+Commands" class="legacy-anchor"></span>
+<h2 id="development-commands"><a href="#development-commands">Development Commands</a></h2>
+
+<pre class="bash"># Edit the main h script
+h edit
+
+# List available subcommands
+h
+
+# Search plugin code
+h plugin rg &quot;pattern&quot;
+
+# Edit a specific plugin
+h plugin edit pins
+
+# Syntax check Ruby files
+ruby -c bin/h
+ruby -c plugins/*.rb</pre>
+
+<span id="label-Testing" class="legacy-anchor"></span>
+<h2 id="testing"><a href="#testing">Testing</a></h2>
+
+<p>Run the test suite with:</p>
+
+<pre class="bash">bundle exec rake test</pre>
+
+<p>Tests are organized under <code>test/</code>: - <code>test/hiiro/</code> - Core library tests (Matcher, Options, Shell, Fuzzyfind, Todo, etc.) - <code>test/plugins/</code> - Plugin tests (<a href="Pins.html"><code>Pins</code></a>, <a href="Tasks.html"><code>Tasks</code></a>, <a href="Notify.html"><code>Notify</code></a>, <a href="Project.html"><code>Project</code></a>) - <code>test/bin/</code> - Bin file tests using <code>Hiiro::TestHarness</code></p>
+
+<p>The <code>Hiiro::TestHarness</code> class (in <code>test/test_helper.rb</code>) enables testing bin files by capturing the block passed to <a href="Hiiro.html#method-c-run"><code>Hiiro.run</code></a> and evaluating it in a test context with stubbed <code>system</code> calls.</p>
+
+<span id="label-Architecture" class="legacy-anchor"></span>
+<h2 id="architecture"><a href="#architecture">Architecture</a></h2>
+
+<span id="label-Core+Components+-28bin-2Fh-29" class="legacy-anchor"></span>
+<h3 id="core-components-binh"><a href="#core-components-binh">Core Components (<a href="bin/h.html">bin/h</a>)</a></h3>
+
+<p>The <a href="Hiiro.html"><code>Hiiro</code></a> class is the main entry point with these nested classes:</p>
+<ul><li>
+<p><strong><code>Runners</code></strong> - Discovers executables matching <code>h-*</code> in PATH and manages inline subcommands. Implements exact and prefix-based matching.</p>
+</li><li>
+<p><strong><code>Runners::Bin</code></strong> - Represents external executables found in PATH</p>
+</li><li>
+<p><strong><code>Runners::Subcommand</code></strong> - Represents inline subcommands registered via blocks</p>
+</li><li>
+<p><strong><code>Args</code></strong> - Parses single-dash flags (<code>-abc</code> becomes flags <code>a</code>, <code>b</code>, <code>c</code>)</p>
+</li><li>
+<p><strong><code>Config</code></strong> - Manages <code>~/.config/hiiro/</code> directory structure</p>
+</li></ul>
+
+<span id="label-Subcommand+Resolution+Flow" class="legacy-anchor"></span>
+<h3 id="subcommand-resolution-flow"><a href="#subcommand-resolution-flow">Subcommand Resolution Flow</a></h3>
+<ol><li>
+<p><a href="Hiiro.html#method-c-init"><code>Hiiro.init()</code></a> parses first arg as subcommand name</p>
+</li><li>
+<p><code>Runners</code> searches for exact match in subcommands and PATH executables</p>
+</li><li>
+<p>If no exact match, tries prefix matching (abbreviations)</p>
+</li><li>
+<p>Ambiguous matches show help with possible options</p>
+</li></ol>
+
+<span id="label-Plugin+System" class="legacy-anchor"></span>
+<h3 id="plugin-system"><a href="#plugin-system">Plugin System</a></h3>
+
+<p>Plugins are Ruby modules with a <code>self.load(hiiro)</code> method:</p>
+
+<pre class="ruby"><span class="ruby-keyword">module</span> <span class="ruby-constant">MyPlugin</span>
+  <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">load</span>(<span class="ruby-identifier">hiiro</span>)
+    <span class="ruby-comment"># Add methods to hiiro instance</span>
+    <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">instance_eval</span> <span class="ruby-keyword">do</span>
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">my_helper</span>; <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-comment"># Register subcommands</span>
+    <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:mycmd</span>) { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span> <span class="ruby-operator">...</span> }
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span>
+</pre>
+
+<p>Plugins auto-load from <code>~/.config/hiiro/plugins/</code>. Load order matters when plugins depend on each other (e.g., <a href="Task.html"><code>Task</code></a> and <a href="Project.html"><code>Project</code></a> depend on Tmux).</p>
+
+<span id="label-Global+Values+Pattern" class="legacy-anchor"></span>
+<h3 id="global-values-pattern"><a href="#global-values-pattern">Global Values Pattern</a></h3>
+
+<p>Values passed to <a href="Hiiro.html#method-c-run"><code>Hiiro.run()</code></a> are available in subcommand handlers:</p>
+
+<pre class="ruby"><span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">run</span>(<span class="ruby-operator">*</span><span class="ruby-constant">ARGV</span>, <span class="ruby-value">cwd:</span> <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">pwd</span>) <span class="ruby-keyword">do</span>
+  <span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:pwd</span>) { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">cwd</span> = <span class="ruby-identifier">get_value</span>(<span class="ruby-value">:cwd</span>)
+    <span class="ruby-identifier">puts</span> <span class="ruby-identifier">cwd</span>
+  }
+<span class="ruby-keyword">end</span>
+</pre>
+
+<span id="label-Creating+Subcommands" class="legacy-anchor"></span>
+<h2 id="creating-subcommands"><a href="#creating-subcommands">Creating Subcommands</a></h2>
+
+<p>There are two ways to add subcommands to Hiiro:</p>
+
+<span id="label-1.+External+Bin+File+-28Preferred-29" class="legacy-anchor"></span>
+<h3 id="1-external-bin-file-preferred"><a href="#1-external-bin-file-preferred">1. External Bin File (Preferred)</a></h3>
+
+<p>Create a new executable <code>bin/h-&lt;name&gt;</code> that uses <a href="Hiiro.html#method-c-run"><code>Hiiro.run</code></a>:</p>
+
+<pre class="ruby"><span class="ruby-comment">#!/usr/bin/env ruby</span>
+<span class="ruby-identifier">require</span> <span class="ruby-string">&#39;hiiro&#39;</span>
+
+<span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">run</span>(<span class="ruby-operator">*</span><span class="ruby-constant">ARGV</span>, <span class="ruby-value">plugins:</span> [<span class="ruby-value">:Tasks</span>]) {
+  <span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:list</span>) {
+    <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Listing items...&quot;</span>
+  }
+
+  <span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:add</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span>, <span class="ruby-identifier">path</span>=<span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Adding #{name} at #{path}&quot;</span>
+  }
+
+  <span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:remove</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span>=<span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">nil?</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Usage: h mycommand remove &lt;name&gt;&quot;</span>
+      <span class="ruby-keyword">next</span>
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Removed #{name}&quot;</span>
+  }
+}
+</pre>
+
+<p>This creates commands like <code>h mycommand list</code>, <code>h mycommand add foo /path</code>.</p>
+
+<span id="label-2.+Nested+Subcommands+via+build_hiiro" class="legacy-anchor"></span>
+<h3 id="2-nested-subcommands-via-buildhiiro"><a href="#2-nested-subcommands-via-buildhiiro">2. Nested Subcommands via build_hiiro</a></h3>
+
+<p>For complex command hierarchies with shared state, create a nested <a href="Hiiro.html"><code>Hiiro</code></a> instance:</p>
+
+<pre class="ruby"><span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">add_subcommands</span>(<span class="ruby-identifier">hiiro</span>)
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:task</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">tm</span> = <span class="ruby-constant">TaskManager</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-value">scope:</span> <span class="ruby-value">:task</span>)
+    <span class="ruby-identifier">build_hiiro</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-identifier">tm</span>).<span class="ruby-identifier">run</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span>
+
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">build_hiiro</span>(<span class="ruby-identifier">parent_hiiro</span>, <span class="ruby-identifier">tm</span>)
+  <span class="ruby-identifier">bin_name</span> = [<span class="ruby-identifier">parent_hiiro</span>.<span class="ruby-identifier">bin</span>, <span class="ruby-identifier">parent_hiiro</span>.<span class="ruby-identifier">subcmd</span> <span class="ruby-operator">||</span> <span class="ruby-string">&#39;&#39;</span>].<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;-&#39;</span>)
+
+  <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">run</span>(<span class="ruby-value">bin_name:</span>, <span class="ruby-value">args:</span> <span class="ruby-identifier">parent_hiiro</span>.<span class="ruby-identifier">args</span>) <span class="ruby-keyword">do</span>
+    <span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:list</span>) { <span class="ruby-identifier">tm</span>.<span class="ruby-identifier">list</span> }
+    <span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:start</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-identifier">tm</span>.<span class="ruby-identifier">start_task</span>(<span class="ruby-identifier">name</span>) }
+    <span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:switch</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span>=<span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">name</span> <span class="ruby-operator">||=</span> <span class="ruby-identifier">tm</span>.<span class="ruby-identifier">select_task_interactive</span>
+      <span class="ruby-identifier">tm</span>.<span class="ruby-identifier">switch_to_task</span>(<span class="ruby-identifier">tm</span>.<span class="ruby-identifier">task_by_name</span>(<span class="ruby-identifier">name</span>))
+    }
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span>
+</pre>
+
+<p>This pattern: - Passes remaining args from parent to child via <code>args: parent_hiiro.args</code> - Allows shared state (like <code>tm</code>) across all nested subcommands - Creates commands like <code>h task list</code>, <code>h task start foo</code></p>
+
+<span id="label-Library+Components+-28lib-2F-29" class="legacy-anchor"></span>
+<h2 id="library-components-lib"><a href="#library-components-lib">Library Components (lib/)</a></h2>
+
+<p>The <a href="lib/hiiro_rb.html">lib/hiiro.rb</a> file and <code>lib/hiiro/</code> directory contain the core framework classes:</p>
+
+<span id="label-Hiiro+-28lib-2Fhiiro.rb-29" class="legacy-anchor"></span>
+<h3 id="hiiro-libhiirorb"><a href="#hiiro-libhiirorb"><a href="Hiiro.html"><code>Hiiro</code></a> (<a href="lib/hiiro_rb.html">lib/hiiro.rb</a>)</a></h3>
+
+<p>Main entry point with class methods: - <code>Hiiro.run(*ARGV, plugins: [...]) { ... }</code> - Initialize and run immediately - <code>Hiiro.init(*ARGV, plugins: [...]) { ... }</code> - Initialize without running (returns hiiro instance). <strong>NEVER USE THIS</strong> without a good reason, always favor <a href="Hiiro.html#method-c-run"><code>Hiiro.run</code></a></p>
+
+<p>Instance methods available in subcommand blocks: - <code>git</code> - Returns <a href="Hiiro/Git.html"><code>Hiiro::Git</code></a> instance for git operations - <code>fuzzyfind(lines)</code> - Interactive selection via skim - <code>fuzzyfind_from_map(hash)</code> - Interactive selection returning mapped value - <code>pins</code> - Key-value storage per command - <code>todo_manager</code> - Todo item management - <code>attach_method(name, &amp;block)</code> - Add methods to hiiro instance dynamically - <code>make_child(subcmd, *args)</code> - Create nested <a href="Hiiro.html"><code>Hiiro</code></a> for sub-subcommands</p>
+
+<span id="label-Hiiro-3A-3AMatcher+-28lib-2Fhiiro-2Fmatcher.rb-29" class="legacy-anchor"></span>
+<h3 id="hiiromatcher-libhiiromatcherrb"><a href="#hiiromatcher-libhiiromatcherrb"><a href="Hiiro/Matcher.html"><code>Hiiro::Matcher</code></a> (<a href="lib/hiiro/matcher_rb.html">lib/hiiro/matcher.rb</a>)</a></h3>
+
+<p>Handles pattern matching for commands and items with prefix and substring matching:</p>
+
+<pre class="ruby"><span class="ruby-identifier">matcher</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">items</span>, <span class="ruby-value">:name</span>)
+
+<span class="ruby-comment"># Prefix matching - find items where name starts with pattern</span>
+<span class="ruby-identifier">result</span> = <span class="ruby-identifier">matcher</span>.<span class="ruby-identifier">by_prefix</span>(<span class="ruby-string">&quot;pre&quot;</span>)
+<span class="ruby-identifier">result</span>.<span class="ruby-identifier">match?</span>                     <span class="ruby-comment"># Any matches?</span>
+<span class="ruby-identifier">result</span>.<span class="ruby-identifier">one?</span>                       <span class="ruby-comment"># Exactly one match?</span>
+<span class="ruby-identifier">result</span>.<span class="ruby-identifier">ambiguous?</span>                 <span class="ruby-comment"># Multiple matches?</span>
+<span class="ruby-identifier">result</span>.<span class="ruby-identifier">first</span>&amp;.<span class="ruby-identifier">item</span>                <span class="ruby-comment"># Get first matching item</span>
+<span class="ruby-identifier">result</span>.<span class="ruby-identifier">resolved</span>&amp;.<span class="ruby-identifier">item</span>             <span class="ruby-comment"># Get exact or single match</span>
+
+<span class="ruby-comment"># Substring matching - find items where name contains pattern anywhere</span>
+<span class="ruby-identifier">result</span> = <span class="ruby-identifier">matcher</span>.<span class="ruby-identifier">by_substring</span>(<span class="ruby-string">&quot;abc&quot;</span>)
+<span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:item</span>)        <span class="ruby-comment"># All matching items</span>
+
+<span class="ruby-comment"># Path-based matching for hierarchical names (e.g., &quot;task/subtask&quot;)</span>
+<span class="ruby-identifier">result</span> = <span class="ruby-identifier">matcher</span>.<span class="ruby-identifier">resolve_path</span>(<span class="ruby-string">&quot;t/s&quot;</span>)
+
+<span class="ruby-comment"># Class methods for one-off matching</span>
+<span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">by_prefix</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;pre&quot;</span>, <span class="ruby-value">key:</span> <span class="ruby-value">:name</span>)
+<span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">by_substring</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;abc&quot;</span>, <span class="ruby-value">key:</span> <span class="ruby-value">:name</span>)
+</pre>
+
+<p>Note: <a href="Hiiro/Matcher.html"><code>Hiiro::PrefixMatcher</code></a> is aliased to <a href="Hiiro/Matcher.html"><code>Hiiro::Matcher</code></a> for backward compatibility.</p>
+
+<span id="label-Hiiro-3A-3AGit+-28lib-2Fhiiro-2Fgit.rb-29" class="legacy-anchor"></span>
+<h3 id="hiirogit-libhiirogitrb"><a href="#hiirogit-libhiirogitrb"><a href="Hiiro/Git.html"><code>Hiiro::Git</code></a> (<a href="lib/hiiro/git_rb.html">lib/hiiro/git.rb</a>)</a></h3>
+
+<p>Git operations wrapper with submodules for branches, worktrees, remotes, and PRs:</p>
+
+<pre class="ruby"><span class="ruby-identifier">git</span> = <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">git</span>
+<span class="ruby-identifier">git</span>.<span class="ruby-identifier">root</span>                          <span class="ruby-comment"># Repository root path</span>
+<span class="ruby-identifier">git</span>.<span class="ruby-identifier">branch</span>                        <span class="ruby-comment"># Current branch name</span>
+<span class="ruby-identifier">git</span>.<span class="ruby-identifier">branches</span>                      <span class="ruby-comment"># List all branches</span>
+<span class="ruby-identifier">git</span>.<span class="ruby-identifier">worktrees</span>                     <span class="ruby-comment"># List all worktrees</span>
+<span class="ruby-identifier">git</span>.<span class="ruby-identifier">add_worktree</span>(<span class="ruby-identifier">path</span>, <span class="ruby-value">branch:</span>)   <span class="ruby-comment"># Create worktree</span>
+<span class="ruby-identifier">git</span>.<span class="ruby-identifier">move_worktree</span>(<span class="ruby-identifier">from</span>, <span class="ruby-identifier">to</span>)       <span class="ruby-comment"># Rename worktree</span>
+<span class="ruby-identifier">git</span>.<span class="ruby-identifier">current_pr</span>                    <span class="ruby-comment"># Get current PR info</span>
+</pre>
+
+<span id="label-Hiiro-3A-3AFuzzyfind+-28lib-2Fhiiro-2Ffuzzyfind.rb-29" class="legacy-anchor"></span>
+<h3 id="hiirofuzzyfind-libhiirofuzzyfindrb"><a href="#hiirofuzzyfind-libhiirofuzzyfindrb"><a href="Hiiro/Fuzzyfind.html"><code>Hiiro::Fuzzyfind</code></a> (<a href="lib/hiiro/fuzzyfind_rb.html">lib/hiiro/fuzzyfind.rb</a>)</a></h3>
+
+<p>Integration with <code>sk</code> (skim) or <code>fzf</code> fuzzy finders:</p>
+
+<pre class="ruby"><span class="ruby-identifier">selected</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Fuzzyfind</span>.<span class="ruby-identifier">select</span>([<span class="ruby-string">&quot;option1&quot;</span>, <span class="ruby-string">&quot;option2&quot;</span>, <span class="ruby-string">&quot;option3&quot;</span>])
+<span class="ruby-comment"># Returns selected string or nil if cancelled</span>
+
+<span class="ruby-identifier">value</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Fuzzyfind</span>.<span class="ruby-identifier">map_select</span>({ <span class="ruby-string">&quot;Display 1&quot;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-string">&quot;value1&quot;</span>, <span class="ruby-string">&quot;Display 2&quot;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-string">&quot;value2&quot;</span> })
+<span class="ruby-comment"># Shows keys, returns corresponding value</span>
+</pre>
+
+<span id="label-Hiiro-3A-3ATodoManager+-28lib-2Fhiiro-2Ftodo.rb-29" class="legacy-anchor"></span>
+<h3 id="hiirotodomanager-libhiirotodorb"><a href="#hiirotodomanager-libhiirotodorb"><a href="Hiiro/TodoManager.html"><code>Hiiro::TodoManager</code></a> (<a href="lib/hiiro/todo_rb.html">lib/hiiro/todo.rb</a>)</a></h3>
+
+<p>Todo item management with task association:</p>
+
+<pre class="ruby"><span class="ruby-identifier">tm</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TodoManager</span>.<span class="ruby-identifier">new</span>
+<span class="ruby-identifier">tm</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Fix bug&quot;</span>, <span class="ruby-value">tags:</span> <span class="ruby-string">&quot;urgent&quot;</span>, <span class="ruby-value">task_info:</span> { <span class="ruby-value">task_name:</span> <span class="ruby-string">&quot;feature&quot;</span> })
+<span class="ruby-identifier">tm</span>.<span class="ruby-identifier">start</span>(<span class="ruby-value">0</span>)                       <span class="ruby-comment"># Mark item as started</span>
+<span class="ruby-identifier">tm</span>.<span class="ruby-identifier">done</span>(<span class="ruby-value">0</span>)                        <span class="ruby-comment"># Mark item as done</span>
+<span class="ruby-identifier">tm</span>.<span class="ruby-identifier">active</span>                         <span class="ruby-comment"># Items not done/skipped</span>
+<span class="ruby-identifier">tm</span>.<span class="ruby-identifier">filter_by_task</span>(<span class="ruby-string">&quot;feature&quot;</span>)      <span class="ruby-comment"># Items for specific task</span>
+</pre>
+
+<span id="label-Hiiro-3A-3AShell+-28lib-2Fhiiro-2Fshell.rb-29" class="legacy-anchor"></span>
+<h3 id="hiiroshell-libhiiroshellrb"><a href="#hiiroshell-libhiiroshellrb"><a href="Hiiro/Shell.html"><code>Hiiro::Shell</code></a> (<a href="lib/hiiro/shell_rb.html">lib/hiiro/shell.rb</a>)</a></h3>
+
+<p>Utility for piping content to external commands:</p>
+
+<pre class="ruby"><span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Shell</span>.<span class="ruby-identifier">pipe</span>(<span class="ruby-string">&quot;content&quot;</span>, <span class="ruby-string">&quot;pbcopy&quot;</span>)           <span class="ruby-comment"># Pipe string to command</span>
+<span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Shell</span>.<span class="ruby-identifier">pipe_lines</span>([<span class="ruby-string">&quot;a&quot;</span>, <span class="ruby-string">&quot;b&quot;</span>], <span class="ruby-string">&quot;command&quot;</span>)   <span class="ruby-comment"># Join array with newlines and pipe</span>
+</pre>
+
+<span id="label-Hiiro-3A-3AOptions+-28lib-2Fhiiro-2Foptions.rb-29" class="legacy-anchor"></span>
+<h3 id="hiirooptions-libhiirooptionsrb"><a href="#hiirooptions-libhiirooptionsrb"><a href="Hiiro/Options.html"><code>Hiiro::Options</code></a> (<a href="lib/hiiro/options_rb.html">lib/hiiro/options.rb</a>)</a></h3>
+
+<p>Argument parsing with flag and option support:</p>
+
+<pre class="ruby"><span class="ruby-identifier">opts</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Options</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">args</span>) <span class="ruby-keyword">do</span>
+  <span class="ruby-identifier">option</span>(<span class="ruby-value">:output</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:o</span>, <span class="ruby-value">desc:</span> <span class="ruby-string">&quot;Output file&quot;</span>)
+  <span class="ruby-identifier">option</span>(<span class="ruby-value">:verbose</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:v</span>, <span class="ruby-value">type:</span> <span class="ruby-value">:flag</span>, <span class="ruby-value">desc:</span> <span class="ruby-string">&quot;Verbose output&quot;</span>)
+<span class="ruby-keyword">end</span>
+<span class="ruby-identifier">opts</span>.<span class="ruby-identifier">output</span>    <span class="ruby-comment"># Value of --output or -o</span>
+<span class="ruby-identifier">opts</span>.<span class="ruby-identifier">verbose</span>   <span class="ruby-comment"># true if --verbose or -v was passed</span>
+<span class="ruby-identifier">opts</span>.<span class="ruby-identifier">args</span>      <span class="ruby-comment"># Remaining non-option arguments</span>
+</pre>
+
+<span id="label-Hiiro-3A-3ANotification+-28lib-2Fhiiro-2Fnotification.rb-29" class="legacy-anchor"></span>
+<h3 id="hiironotification-libhiironotificationrb"><a href="#hiironotification-libhiironotificationrb"><a href="Hiiro/Notification.html"><code>Hiiro::Notification</code></a> (<a href="lib/hiiro/notification_rb.html">lib/hiiro/notification.rb</a>)</a></h3>
+
+<p>macOS notification wrapper using terminal-notifier:</p>
+
+<pre class="ruby"><span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Notification</span>.<span class="ruby-identifier">show</span>(<span class="ruby-identifier">hiiro</span>)   <span class="ruby-comment"># Show notification based on hiiro.args</span>
+<span class="ruby-comment"># Supports: -m message, -t title, -l link, -c command, -s sound</span>
+</pre>
+
+<span id="label-Hiiro-3A-3AQueue+-28lib-2Fhiiro-2Fqueue.rb-29" class="legacy-anchor"></span>
+<h3 id="hiiroqueue-libhiiroqueuerb"><a href="#hiiroqueue-libhiiroqueuerb"><a href="Hiiro/Queue.html"><code>Hiiro::Queue</code></a> (<a href="lib/hiiro/queue_rb.html">lib/hiiro/queue.rb</a>)</a></h3>
+
+<p><a href="Task.html"><code>Task</code></a> queue that pipes prompts to <code>claude</code> via tmux. <a href="Tasks.html"><code>Tasks</code></a> are markdown files with optional YAML frontmatter (<code>task_name</code>, <code>tree_name</code>, <code>session_name</code>) that flow through statuses: <code>wip</code> -&gt; <code>pending</code> -&gt; <code>running</code> -&gt; <code>done</code>/<code>failed</code>.</p>
+
+<p>Subcommands (<code>h queue &lt;subcmd&gt;</code>): - <code>ls</code>/<code>list</code> - List all tasks with status, elapsed time, and preview - <code>status</code> - Detailed status with working directory info - <code>add</code> - Create a new prompt (opens editor or accepts stdin/args, supports <code>-t &lt;task&gt;</code> flag) - <code>wip</code> - Create/edit a work-in-progress prompt - <code>ready</code> - Move wip task to pending - <code>run [name]</code> - Launch pending task(s) in tmux windows - <code>watch</code> - Continuously poll and launch pending tasks - <code>attach [name]</code> - Switch to running task’s tmux window (fuzzy select if no name) - <code>kill [name]</code> - Kill running task’s tmux window, move to failed - <code>retry [name]</code> - Move failed/done task back to pending - <code>clean</code> - Remove all done/failed task files - <code>dir</code> - Print queue directory path</p>
+
+<p>Config: <code>~/.config/hiiro/queue/{wip,pending,running,done,failed}/</code></p>
+
+<p>Key internals: - <code>Queue::Prompt</code> - Parses frontmatter to resolve task/tree/session for working directory - <a href="Tasks.html"><code>Tasks</code></a> launch in tmux windows within the task’s session (from frontmatter) or default <code>hq</code> session - Launcher script runs <code>cat prompt | claude</code>, then moves files to done/failed based on exit code</p>
+
+<span id="label-Hiiro-3A-3AServiceManager+-28lib-2Fhiiro-2Fservice_manager.rb-29" class="legacy-anchor"></span>
+<h3 id="hiiroservicemanager-libhiiroservicemanagerrb"><a href="#hiiroservicemanager-libhiiroservicemanagerrb"><a href="Hiiro/ServiceManager.html"><code>Hiiro::ServiceManager</code></a> (<a href="lib/hiiro/service_manager_rb.html">lib/hiiro/service_manager.rb</a>)</a></h3>
+
+<p>Manages background development services with tmux integration, env file management, and service groups.</p>
+
+<p>Subcommands (<code>h service &lt;subcmd&gt;</code>): - <code>ls</code>/<code>list</code> - List all services with running status, port, and base_dir - <code>start &lt;name&gt; [--use VAR=variation ...]</code> - Start a service or group; prepares env file first - <code>stop &lt;name&gt;</code> - Stop a running service (sends C-c to tmux pane or runs stop command) - <code>attach &lt;name&gt;</code> - Switch to service’s tmux pane - <code>open &lt;name&gt;</code> - Open service URL in browser - <code>url &lt;name&gt;</code> / <code>port &lt;name&gt;</code> - Print service URL or port - <code>status &lt;name&gt;</code> - Show detailed service info (pid, pane, task, started_at) - <code>add</code> - Add new service via editor template - <code>rm</code>/<code>remove &lt;name&gt;</code> - Remove a service - <code>config</code> - Edit services.yml - <code>groups</code> - List all service groups and their members - <code>env &lt;name&gt;</code> - Show env_vars, their variation options, and base_env/env_file config</p>
+
+<p>Service config (<code>~/.config/hiiro/services.yml</code>):</p>
+
+<pre class="yaml">my-rails:
+  base_dir: apps/myapp
+  host: localhost
+  port: 3000
+  init: [&quot;bundle install&quot;]
+  start: bundle exec rails s -p 3000
+  stop: &quot;&quot;
+  cleanup: []
+  env_file: .env.development          # destination in base_dir
+  base_env: my-rails.env              # template in ~/.config/hiiro/env_templates/
+  env_vars:
+    GRAPHQL_URL:
+      variations:
+        local: http://localhost:4000/graphql
+        staging: https://graphql.staging.example.com/graphql</pre>
+
+<p>Service group config (same file, distinguished by <code>services:</code> key):</p>
+
+<pre class="yaml">my-stack:
+  services:
+    - name: my-rails
+      use:
+        GRAPHQL_URL: staging
+    - name: my-graphql</pre>
+
+<p>Key internals: - <code>prepare_env(svc_name, variation_overrides:)</code> - Copies base_env template from <code>~/.config/hiiro/env_templates/</code> to <code>base_dir/env_file</code>, then injects variation values - <code>find_group(name)</code> / <code>start_group(name, ...)</code> - Detect and start service groups, applying per-member <code>use:</code> overrides - Default variation is <code>local</code> when not specified - State tracked in <code>~/.config/hiiro/services/running.yml</code></p>
+
+<span id="label-Hiiro-3A-3ARunnerTool+-28lib-2Fhiiro-2Frunner_tool.rb-29" class="legacy-anchor"></span>
+<h3 id="hiirorunnertool-libhiirorunnertoolrb"><a href="#hiirorunnertool-libhiirorunnertoolrb"><a href="Hiiro/RunnerTool.html"><code>Hiiro::RunnerTool</code></a> (<a href="lib/hiiro/runner_tool_rb.html">lib/hiiro/runner_tool.rb</a>)</a></h3>
+
+<p>Run dev tools (linters, formatters, test suites) against changed files.</p>
+
+<p>Subcommands (<code>h run [change_set] [tool_type] [file_group]</code>): - Default (no subcmd) - Run matching tools with positional filters - <code>ls</code> - List configured tools with type, group, extensions, and variations - <code>add</code> - Add new tool via editor template - <code>rm &lt;name&gt;</code> - Remove a tool - <code>config</code> - Edit tools.yml</p>
+
+<p>Arguments (positional, any order): - <strong>change_set</strong>: <code>dirty</code> (default, git status), <code>branch</code> (diff from main), <code>all</code> - <strong>tool_type</strong>: <code>lint</code>, <code>test</code>, <code>format</code> - <strong>file_type_group</strong>: custom group identifier (e.g., <code>ruby</code>, <code>frontend</code>) - <code>--variation</code>/<code>-v &lt;name&gt;</code> - Use a named tool variation</p>
+
+<p>Config (<code>~/.config/hiiro/tools.yml</code>):</p>
+
+<pre class="yaml">rubocop:
+  tool_type: lint
+  command: &quot;rubocop [FILENAMES]&quot;
+  file_type_group: ruby
+  file_extensions: &quot;rb&quot;
+  variations:
+    quick: &quot;rubocop --only Style [FILENAMES]&quot;
+    fix: &quot;rubocop -A [FILENAMES]&quot;</pre>
+
+<p><code>[FILENAMES]</code> is replaced with the space-joined list of matching files.</p>
+
+<span id="label-Hiiro-3A-3AAppFiles+-28lib-2Fhiiro-2Fapp_files.rb-29" class="legacy-anchor"></span>
+<h3 id="hiiroappfiles-libhiiroappfilesrb"><a href="#hiiroappfiles-libhiiroappfilesrb"><a href="Hiiro/AppFiles.html"><code>Hiiro::AppFiles</code></a> (<a href="lib/hiiro/app_files_rb.html">lib/hiiro/app_files.rb</a>)</a></h3>
+
+<p>Track frequently-used files per application, open them together in your editor.</p>
+
+<p>Subcommands (<code>h file &lt;subcmd&gt;</code>): - <code>ls [app_name]</code> - List tracked files (all apps or specific app) - <code>add &lt;app&gt; &lt;file1&gt; [file2 ...]</code> - Add files to an app’s file list - <code>rm &lt;app&gt; &lt;file1&gt; [file2 ...]</code> - Remove files - <code>edit &lt;app&gt;</code> - Open all tracked files in editor (vim uses <code>-O</code> for vertical splits)</p>
+
+<p>Config: <code>~/.config/hiiro/app_files.yml</code></p>
+
+<p>Files are resolved relative to the current task’s tree root when an environment is available.</p>
+
+<span id="label-Jumplist+-28bin-2Fh-jumplist-29" class="legacy-anchor"></span>
+<h3 id="jumplist-binh-jumplist"><a href="#jumplist-binh-jumplist">Jumplist (<a href="bin/h-jumplist.html">bin/h-jumplist</a>)</a></h3>
+
+<p>Vim-style navigation history for tmux. Records pane/window/session changes and lets you jump backward/forward through your navigation history.</p>
+
+<p>Subcommands (<code>h jumplist &lt;subcmd&gt;</code>): - <code>setup</code> - Install tmux hooks and keybindings (<code>Ctrl-B</code> back, <code>Ctrl-F</code> forward) - <code>record</code> - Record current position (called automatically by tmux hooks) - <code>back</code> - Navigate to previous position - <code>forward</code> - Navigate to next position - <code>ls</code>/<code>list</code> - Show history with timestamps and current position marker - <code>clear</code> - Clear history - <code>path</code> - Print jumplist file path</p>
+
+<p>Config: <code>~/.config/hiiro/jumplist/</code> (per-client entries and position files, max 50 entries)</p>
+
+<p>Dead panes are automatically pruned. Duplicate consecutive entries are deduplicated. Forward history is truncated when navigating to a new location (like vim).</p>
+
+<span id="label-Key+Files" class="legacy-anchor"></span>
+<h2 id="key-files"><a href="#key-files">Key Files</a></h2>
+<ul><li>
+<p><a href="exe/h.html">exe/h</a> - Entry point that loads <a href="lib/hiiro_rb.html">lib/hiiro.rb</a></p>
+</li><li>
+<p><code>bin/h-*</code> - External subcommands (tmux wrappers, git helpers, jumplist, etc.)</p>
+</li><li>
+<p><code>plugins/*.rb</code> - Reusable plugin modules (<a href="Pins.html"><code>Pins</code></a>, <a href="Project.html"><code>Project</code></a>, <a href="Tasks.html"><code>Tasks</code></a>, <a href="Notify.html"><code>Notify</code></a>)</p>
+</li><li>
+<p><a href="lib/hiiro_rb.html">lib/hiiro.rb</a> - Main <a href="Hiiro.html"><code>Hiiro</code></a> class and Runners</p>
+</li><li>
+<p><code>lib/hiiro/*.rb</code> - Supporting classes (Git, Matcher, Fuzzyfind, Todo, Shell, Options, Notification, Tmux, Queue, ServiceManager, RunnerTool, AppFiles)</p>
+</li></ul>
+
+<span id="label-External+Dependencies" class="legacy-anchor"></span>
+<h2 id="external-dependencies"><a href="#external-dependencies">External Dependencies</a></h2>
+<ul><li>
+<p>Ruby with <code>pry</code> gem</p>
+</li><li>
+<p><code>tmux</code> for session/window/pane management</p>
+</li><li>
+<p><code>sk</code> (skim) or <code>fzf</code> for fuzzy finding</p>
+</li><li>
+<p><code>gh</code> CLI for GitHub operations (h-pr)</p>
+</li><li>
+<p><code>terminal-notifier</code> for macOS notifications (notify plugin)</p>
+</li><li>
+<p><code>claude</code> CLI for queue task execution</p>
+</li></ul>
+
+<span id="label-Configuration+Locations" class="legacy-anchor"></span>
+<h2 id="configuration-locations"><a href="#configuration-locations">Configuration Locations</a></h2>
+
+<p>All config lives in <code>~/.config/hiiro/</code>: - <code>plugins/</code> - Auto-loaded plugin files - <code>pins/</code> - Per-command YAML key-value storage - <code>tasks/</code> - <a href="Task.html"><code>Task</code></a> metadata for worktree management - <code>queue/</code> - Prompt queue (wip, pending, running, done, failed) - <code>services/</code> - Service runtime state - <code>jumplist/</code> - Per-client tmux navigation history - <code>env_templates/</code> - Base .env template files for services - <code>projects.yml</code> - <a href="Project.html"><code>Project</code></a> directory aliases - <code>apps.yml</code> - <a href="App.html"><code>App</code></a> directory mappings for task plugin - <code>services.yml</code> - Service and service group definitions - <code>tools.yml</code> - Runner tool definitions - <code>app_files.yml</code> - Per-app tracked file lists</p>
+
+<span id="label-Groups+of+files" class="legacy-anchor"></span>
+<h1 id="groups-of-files"><a href="#groups-of-files">Groups of files</a></h1>
+
+<span id="label-tmux-related+files" class="legacy-anchor"></span>
+<h2 id="tmux-related-files"><a href="#tmux-related-files">tmux-related files</a></h2>
+<ul><li>
+<p><a href="bin/h-buffer.html">bin/h-buffer</a></p>
+</li><li>
+<p><a href="bin/h-pane.html">bin/h-pane</a></p>
+</li><li>
+<p><a href="bin/h-window.html">bin/h-window</a></p>
+</li><li>
+<p><a href="bin/h-session.html">bin/h-session</a></p>
+</li><li>
+<p><a href="lib/hiiro/tmux_rb.html">lib/hiiro/tmux.rb</a></p>
+</li><li>
+<p>lib/hiiro/tmux/*</p>
+</li></ul>
+
+</main>
+
+<aside class="table-of-contents" role="complementary" aria-label="Table of Contents">
+  <div class="toc-sticky">
+    <h3 class="toc-heading">On This Page</h3>
+    <nav class="toc-nav" id="toc-nav" aria-label="Page sections">
+      <!-- Generated by JavaScript based on page headings -->
+    </nav>
+  </div>
+</aside>
+
+
+<footer class="site-footer">
+  
+
+  <div class="footer-bottom">
+    <p>
+      Generated by <a href="https://ruby.github.io/rdoc/">RDoc 7.2.0</a>
+      using the Aliki theme by <a href="http://st0012.dev">Stan Lo</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+

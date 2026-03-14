@@ -1,0 +1,2491 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>class Hiiro::Queue - RDoc Documentation</title>
+
+
+  <meta
+    name="keywords"
+    content="ruby,class,Hiiro::Queue"
+  >
+
+    <meta
+      name="description"
+      content="Documentation for the Hiiro::Queue class"
+    >
+
+
+
+
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="class Hiiro::Queue - RDoc Documentation">
+
+
+
+    <meta
+      property="og:description"
+      content="Documentation for Hiiro::Queue class - API reference and code examples"
+    >
+
+
+
+
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="class Hiiro::Queue - RDoc Documentation">
+
+
+
+    <meta
+      name="twitter:description"
+      content="Documentation for Hiiro::Queue class - API reference and code examples"
+    >
+
+
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "../";
+  var index_rel_prefix = "../";
+</script>
+
+<script
+  src="../js/theme-toggle.js?v=7.2.0"
+></script>
+
+<script
+  src="../js/search_navigation.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/search_data.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/search_ranker.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/search_controller.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/c_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/bash_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="../js/aliki.js?v=7.2.0"
+  defer
+></script>
+
+<link
+  href="../css/rdoc.css?v=7.2.0"
+  rel="stylesheet"
+>
+
+
+
+
+<body role="document" class="class has-toc">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <!-- Chevron (right arrow) - used for expand/collapse -->
+  <symbol
+    id="icon-chevron"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </symbol>
+
+  <!-- File/Document - Pages section -->
+  <symbol
+    id="icon-file"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path
+      d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+    ></path>
+
+    <polyline points="14 2 14 8 20 8"></polyline>
+  </symbol>
+
+  <!-- Layers/Stack - Classes and Modules section -->
+  <symbol
+    id="icon-layers"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+    <polyline points="2 17 12 22 22 17"></polyline>
+    <polyline points="2 12 12 17 22 12"></polyline>
+  </symbol>
+
+  <!-- Curly braces with C - Class Methods section -->
+  <symbol
+    id="icon-class-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      C
+    </text>
+  </symbol>
+
+  <!-- Curly braces with I - Instance Methods section -->
+  <symbol
+    id="icon-instance-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      I
+    </text>
+  </symbol>
+
+  <!-- Double chevrons up - Ancestors section -->
+  <symbol
+    id="icon-ancestors"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="17 11 12 6 7 11"></polyline>
+    <polyline points="17 18 12 13 7 18"></polyline>
+  </symbol>
+
+  <!-- User with plus - Included Modules section -->
+  <symbol
+    id="icon-includes"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+
+    <line
+      x1="20"
+      y1="8"
+      x2="20"
+      y2="14"
+    ></line>
+
+    <line
+      x1="23"
+      y1="11"
+      x2="17"
+      y2="11"
+    ></line>
+  </symbol>
+
+  <!-- User with check - Extended Modules section -->
+  <symbol
+    id="icon-extends"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+    <polyline points="17 11 19 13 23 9"></polyline>
+  </symbol>
+
+  <!-- List - Sections section -->
+  <symbol
+    id="icon-list"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <line
+      x1="8"
+      y1="6"
+      x2="21"
+      y2="6"
+    ></line>
+
+    <line
+      x1="8"
+      y1="12"
+      x2="21"
+      y2="12"
+    ></line>
+
+    <line
+      x1="8"
+      y1="18"
+      x2="21"
+      y2="18"
+    ></line>
+
+    <line
+      x1="3"
+      y1="6"
+      x2="3.01"
+      y2="6"
+    ></line>
+
+    <line
+      x1="3"
+      y1="12"
+      x2="3.01"
+      y2="12"
+    ></line>
+
+    <line
+      x1="3"
+      y1="18"
+      x2="3.01"
+      y2="18"
+    ></line>
+  </symbol>
+</svg>
+
+<header class="top-navbar">
+  <a href="../index.html" class="navbar-brand">
+    RDoc Documentation
+  </a>
+
+  <!-- Desktop search bar -->
+  <div class="navbar-search navbar-search-desktop" role="search">
+    <form action="#" method="get" accept-charset="utf-8">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results-desktop"
+             type="text" name="search" placeholder="Search (/) for a class, method..."
+             spellcheck="false" autocomplete="off"
+             title="Type to search, Up and Down to navigate, Enter to load">
+      <ul id="search-results-desktop" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="initially-hidden search-results"></ul>
+    </form>
+  </div>
+
+  <!-- Mobile search icon button -->
+  <button id="search-toggle" class="navbar-search-mobile" aria-label="Open search" type="button">
+    <span aria-hidden="true">🔍</span>
+  </button>
+
+  <!-- Theme toggle button -->
+  <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" type="button">
+    <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+  </button>
+</header>
+
+<!-- Search Modal (Mobile) -->
+<div id="search-modal" class="search-modal" hidden aria-modal="true" role="dialog" aria-label="Search">
+  <div class="search-modal-backdrop"></div>
+  <div class="search-modal-content">
+    <div class="search-modal-header">
+      <form class="search-modal-form" action="#" method="get" accept-charset="utf-8">
+        <span class="search-modal-icon" aria-hidden="true">🔍</span>
+        <input id="search-field-mobile" role="combobox" aria-label="Search"
+               aria-autocomplete="list" aria-controls="search-results-mobile"
+               type="text" name="search" placeholder="Search documentation"
+               spellcheck="false" autocomplete="off">
+        <button type="button" class="search-modal-close" aria-label="Close search" id="search-modal-close">
+          <span aria-hidden="true">esc</span>
+        </button>
+      </form>
+    </div>
+    <div class="search-modal-body">
+      <ul id="search-results-mobile" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="search-results search-modal-results initially-hidden"></ul>
+      <div class="search-modal-empty">
+        <p>No recent searches</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
+  <span aria-hidden="true">&#9776;</span>
+</div>
+
+
+<nav id="navigation" role="navigation" hidden>
+  
+
+
+
+
+  <div id="fileindex-section" class="nav-section">
+    <details class="nav-section-collapsible" >
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg>
+            <use href="#icon-file"></use>
+          </svg>
+        </span>
+
+        <span class="nav-section-title">Pages</span>
+
+        <span class="nav-section-chevron">
+          <svg>
+            <use href="#icon-chevron"></use>
+          </svg>
+        </span>
+      </summary>
+
+      <ul class="nav-list">
+
+
+
+
+
+
+            <li>
+              <a href="../CLAUDE_md.html">
+                CLAUDE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../Gemfile.html">
+                Gemfile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../Gemfile_lock.html">
+                Gemfile.lock
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../LICENSE.html">
+                LICENSE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../README_md.html">
+                README
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../Rakefile.html">
+                Rakefile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../TODO_md.html">
+                TODO
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../demo_sh.html">
+                demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  docs
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="../docs/README_md.html">
+                      README
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/docker-testing-guide_md.html">
+                      docker-testing-guide
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-buffer_md.html">
+                      h-buffer
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-pane_md.html">
+                      h-pane
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-plugin_md.html">
+                      h-plugin
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-session_md.html">
+                      h-session
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../docs/h-window_md.html">
+                      h-window
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="../h-tmux-plugins_tmux.html">
+                h-tmux-plugins.tmux
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../notes.html">
+                notes
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../obsidian_slides_md.html">
+                obsidian_slides
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="../record-demo_sh.html">
+                record-demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  script
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="../script/compare.html">
+                      compare
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/install.html">
+                      install
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/sync.html">
+                      sync
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/test.html">
+                      test
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../script/update.html">
+                      update
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="../slides_md.html">
+                slides
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  tmp
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="../tmp/gql-error_message_json.html">
+                      gql-error_message.json
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../tmp/sync_sh.html">
+                      sync.sh
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="../tmp/yaml_files.html">
+                      yaml_files
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  
+
+  
+<div id="parent-class-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-ancestors"></use></svg>
+      </span>
+      <span class="nav-section-title">Ancestors</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+    <ul><li><a href="../Object.html">Object</a><ul><li>BasicObject</li></ul></li></ul>
+  </details>
+</div>
+
+
+  
+
+  
+
+  
+  <div class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg><use href="#icon-class-methods"></use></svg>
+        </span>
+        <span class="nav-section-title">Class Methods</span>
+        <span class="nav-section-chevron">
+          <svg><use href="#icon-chevron"></use></svg>
+        </span>
+      </summary>
+      <ul class="nav-list" role="directory">
+
+        <li ><a href="#method-c-build_hiiro">build_hiiro</a></li>
+
+        <li ><a href="#method-c-current">current</a></li>
+
+        <li ><a href="#method-c-new">new</a></li>
+
+      </ul>
+    </details>
+  </div>
+
+
+
+  <div class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg><use href="#icon-instance-methods"></use></svg>
+        </span>
+        <span class="nav-section-title">Instance Methods</span>
+        <span class="nav-section-chevron">
+          <svg><use href="#icon-chevron"></use></svg>
+        </span>
+      </summary>
+      <ul class="nav-list" role="directory">
+
+        <li ><a href="#method-i-add_with_frontmatter">add_with_frontmatter</a></li>
+
+        <li ><a href="#method-i-all_tasks">all_tasks</a></li>
+
+        <li ><a href="#method-i-ensure_tmux_session">ensure_tmux_session</a></li>
+
+        <li ><a href="#method-i-existing_window_name-3F">existing_window_name?</a></li>
+
+        <li ><a href="#method-i-find_task">find_task</a></li>
+
+        <li ><a href="#method-i-format_mtime">format_mtime</a></li>
+
+        <li ><a href="#method-i-launch_task">launch_task</a></li>
+
+        <li ><a href="#method-i-list_lines">list_lines</a></li>
+
+        <li ><a href="#method-i-meta_for">meta_for</a></li>
+
+        <li ><a href="#method-i-queue_dirs">queue_dirs</a></li>
+
+        <li ><a href="#method-i-read_prompt">read_prompt</a></li>
+
+        <li ><a href="#method-i-resolve_task_info">resolve_task_info</a></li>
+
+        <li ><a href="#method-i-select_task">select_task</a></li>
+
+        <li ><a href="#method-i-short_window_name">short_window_name</a></li>
+
+        <li ><a href="#method-i-slugify">slugify</a></li>
+
+        <li ><a href="#method-i-strip_frontmatter">strip_frontmatter</a></li>
+
+        <li ><a href="#method-i-task_info_for">task_info_for</a></li>
+
+        <li ><a href="#method-i-task_preview">task_preview</a></li>
+
+        <li ><a href="#method-i-tasks_in">tasks_in</a></li>
+
+        <li ><a href="#method-i-tasks_in_sorted">tasks_in_sorted</a></li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  <div id="classindex-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-layers"></use></svg>
+      </span>
+      <span class="nav-section-title">Classes and Modules</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+
+    <ul class="link-list nav-list"><li><code><a href="../App.html">App</a></code></li><li><code><a href="../BranchManager.html">BranchManager</a></code></li><li><code><a href="../Directory.html">Directory</a></code></li><li><code><a href="../Environment.html">Environment</a></code></li><li><details><summary><code><a href="../Hiiro.html">Hiiro</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/AnyStruct.html">AnyStruct</a></code></li><li><code><a href="../Hiiro/App.html">App</a></code></li><li><code><a href="../Hiiro/AppFiles.html">AppFiles</a></code></li><li><code><a href="../Hiiro/Args.html">Args</a></code></li><li><code><a href="../Hiiro/Bins.html">Bins</a></code></li><li><code><a href="../Hiiro/Config.html">Config</a></code></li><li><code><a href="../Hiiro/Environment.html">Environment</a></code></li><li><code><a href="../Hiiro/Fuzzyfind.html">Fuzzyfind</a></code></li><li><details><summary><code><a href="../Hiiro/Git.html">Git</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Git/Branch.html">Branch</a></code></li><li><code><a href="../Hiiro/Git/Branches.html">Branches</a></code></li><li><code><a href="../Hiiro/Git/Pr.html">Pr</a></code></li><li><code><a href="../Hiiro/Git/Remote.html">Remote</a></code></li><li><code><a href="../Hiiro/Git/Worktree.html">Worktree</a></code></li><li><code><a href="../Hiiro/Git/Worktrees.html">Worktrees</a></code></li></ul></details></li><li><code><a href="../Hiiro/Glob.html">Glob</a></code></li><li><details><summary><code><a href="../Hiiro/Matcher.html">Matcher</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Matcher/Item.html">Item</a></code></li><li><code><a href="../Hiiro/Matcher/PathResult.html">PathResult</a></code></li><li><code><a href="../Hiiro/Matcher/Result.html">Result</a></code></li></ul></details></li><li><code><a href="../Hiiro/Notification.html">Notification</a></code></li><li><details><summary><code><a href="../Hiiro/Options.html">Options</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Options/Args.html">Args</a></code></li><li><code><a href="../Hiiro/Options/Definition.html">Definition</a></code></li></ul></details></li><li><details><summary><code><a href="../Hiiro/Paths.html">Paths</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Paths/Symlink.html">Symlink</a></code></li></ul></details></li><li><code><a href="../Hiiro/Matcher.html">PrefixMatcher</a></code></li><li><details><summary><code><a href="../Hiiro/Queue.html">Queue</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Queue/Prompt.html">Prompt</a></code></li></ul></details></li><li><code><a href="../Hiiro/Rbenv.html">Rbenv</a></code></li><li><code><a href="../Hiiro/RunnerTool.html">RunnerTool</a></code></li><li><details><summary><code><a href="../Hiiro/Runners.html">Runners</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Runners/Bin.html">Bin</a></code></li><li><code><a href="../Hiiro/Runners/Subcommand.html">Subcommand</a></code></li></ul></details></li><li><code><a href="../Hiiro/ServiceManager.html">ServiceManager</a></code></li><li><code><a href="../Hiiro/Shell.html">Shell</a></code></li><li><code><a href="../Hiiro/SparseGroups.html">SparseGroups</a></code></li><li><code><a href="../Hiiro/Tags.html">Tags</a></code></li><li><code><a href="../Hiiro/Task.html">Task</a></code></li><li><details><summary><code><a href="../Hiiro/TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="../Hiiro/Tasks.html">Tasks</a></code></li><li><details><summary><code><a href="../Hiiro/Tmux.html">Tmux</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Tmux/Buffer.html">Buffer</a></code></li><li><code><a href="../Hiiro/Tmux/Buffers.html">Buffers</a></code></li><li><code><a href="../Hiiro/Tmux/Pane.html">Pane</a></code></li><li><code><a href="../Hiiro/Tmux/Panes.html">Panes</a></code></li><li><code><a href="../Hiiro/Tmux/Session.html">Session</a></code></li><li><code><a href="../Hiiro/Tmux/Sessions.html">Sessions</a></code></li><li><code><a href="../Hiiro/Tmux/Window.html">Window</a></code></li><li><code><a href="../Hiiro/Tmux/Windows.html">Windows</a></code></li></ul></details></li><li><code><a href="../Hiiro/TodoItem.html">TodoItem</a></code></li><li><code><a href="../Hiiro/TodoManager.html">TodoManager</a></code></li><li><code><a href="../Hiiro/Tree.html">Tree</a></code></li></ul></details></li><li><details><summary><code><a href="../LinkManager.html">LinkManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../LinkManager/Link.html">Link</a></code></li></ul></details></li><li><code><a href="../Notify.html">Notify</a></code></li><li><code><a href="../Object.html">Object</a></code></li><li><code><a href="../PinnedPRManager.html">PinnedPRManager</a></code></li><li><details><summary><code><a href="../Pins.html">Pins</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Pins/Pin.html">Pin</a></code></li></ul></details></li><li><code><a href="../Project.html">Project</a></code></li><li><code><a href="../String.html">String</a></code></li><li><code><a href="../Task.html">Task</a></code></li><li><details><summary><code><a href="../TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="../Tasks.html">Tasks</a></code></li><li><code><a href="../TmuxSession.html">TmuxSession</a></code></li><li><code><a href="../Tree.html">Tree</a></code></li></ul>
+  </details>
+</div>
+
+</nav>
+
+<main role="main" aria-labelledby="class-hiiro-queue">
+  
+  
+    <ol role="navigation" aria-label="Breadcrumb navigation" class="breadcrumb">
+      
+      <li>
+        
+        <a href="../Hiiro.html">Hiiro</a><span>::</span>
+        
+      </li>
+      
+      <li>
+        
+        <span>Queue</span>
+        
+      </li>
+      
+    </ol>
+  
+
+  <span id="class-Hiiro::Queue" class="legacy-anchor"></span>
+  <h1 id="class-hiiro-queue" class="anchor-link class">
+    class Hiiro::Queue
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+
+  <span id="5Buntitled-5D" class="legacy-anchor"></span>
+  <section class="documentation-section anchor-link">
+
+
+
+
+
+    <section class="constants-list">
+      <header>
+        <h3 id="untitled-constants"><a href="#untitled-constants">Constants</a></h3>
+      </header>
+      <dl>
+
+        <dt id="DIR">DIR</dt>
+
+        <dd>
+
+          
+        </dd>
+
+
+        <dt id="STATUSES">STATUSES</dt>
+
+        <dd>
+
+          
+        </dd>
+
+
+        <dt id="TMUX_SESSION">TMUX_SESSION</dt>
+
+        <dd>
+
+          
+        </dd>
+
+
+      </dl>
+    </section>
+
+
+
+    <section class="attribute-method-details method-section">
+      <header>
+        <h3 id="untitled-attributes"><a href="#untitled-attributes">Attributes</a></h3>
+      </header>
+
+
+      <div id="attribute-i-hiiro" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-hiiro" title="Link to this attribute">
+            <span class="method-name">hiiro</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+    </section>
+
+
+
+
+
+
+     <section id="public-class-untitled-method-details" class="method-section anchor-link">
+       <header>
+         <h3 id="public-class-untitled-methods"><a href="#public-class-untitled-methods">Public Class Methods</a></h3>
+       </header>
+
+
+      <div id="method-c-build_hiiro" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-build_hiiro" title="Link to this method">
+                <span class="method-name">build_hiiro</span>
+                <span class="method-args">(parent_hiiro, q=nil, task_info: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="build_hiiro-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 319</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">build_hiiro</span>(<span class="ruby-identifier">parent_hiiro</span>, <span class="ruby-identifier">q</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-value">task_info:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">q</span> <span class="ruby-operator">||=</span> <span class="ruby-identifier">current</span>(<span class="ruby-identifier">parent_hiiro</span>)
+
+  <span class="ruby-identifier">parent_hiiro</span>.<span class="ruby-identifier">make_child</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">h</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:watch</span>) {
+      <span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>
+      <span class="ruby-identifier">current_version</span> = <span class="ruby-string">`gem which hiiro`</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/.*hiiro-/</span>, <span class="ruby-string">&#39;&#39;</span>).<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/\/.*/</span>, <span class="ruby-string">&#39;&#39;</span>)
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Watching #{File.join(DIR, &#39;pending&#39;)} ...&quot;</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Press Ctrl-C to stop&quot;</span>
+      <span class="ruby-identifier">loops</span> = <span class="ruby-value">0</span>
+      <span class="ruby-identifier">loop</span> <span class="ruby-keyword">do</span>
+        <span class="ruby-identifier">loops</span> <span class="ruby-operator">+=</span> <span class="ruby-value">1</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">current_version</span>
+          <span class="ruby-identifier">latest</span> = <span class="ruby-string">`gem which hiiro`</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/.*hiiro-/</span>, <span class="ruby-string">&#39;&#39;</span>).<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/\/.*/</span>, <span class="ruby-string">&#39;&#39;</span>) <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">nil</span>
+
+          <span class="ruby-keyword">if</span> <span class="ruby-identifier">latest</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">latest</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">current_version</span>
+            <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;New hiiro version detected (#{latest}), restarting...&quot;</span>
+            <span class="ruby-identifier">exec</span>(<span class="ruby-string">&#39;h&#39;</span>, <span class="ruby-string">&#39;queue&#39;</span>, <span class="ruby-string">&#39;watch&#39;</span>)
+          <span class="ruby-keyword">end</span>
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-identifier">q</span>.<span class="ruby-identifier">tasks_in</span>(<span class="ruby-value">:pending</span>).<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-identifier">q</span>.<span class="ruby-identifier">launch_task</span>(<span class="ruby-identifier">name</span>) }
+        <span class="ruby-identifier">sleep</span> <span class="ruby-value">2</span>
+      <span class="ruby-keyword">end</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:run</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span> = <span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+        <span class="ruby-identifier">name</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/\.md$/</span>, <span class="ruby-string">&#39;&#39;</span>)
+        <span class="ruby-identifier">found</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">find_task</span>(<span class="ruby-identifier">name</span>)
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">found</span>.<span class="ruby-identifier">nil?</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Task not found: #{name}&quot;</span>
+          <span class="ruby-keyword">next</span>
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">found</span>[<span class="ruby-value">:status</span>] <span class="ruby-operator">!=</span> <span class="ruby-string">&#39;pending&#39;</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Task &#39;#{name}&#39; is #{found[:status]}, not pending&quot;</span>
+          <span class="ruby-keyword">next</span>
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-identifier">q</span>.<span class="ruby-identifier">launch_task</span>(<span class="ruby-identifier">name</span>)
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">pending</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">tasks_in</span>(<span class="ruby-value">:pending</span>)
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">pending</span>.<span class="ruby-identifier">empty?</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;No pending tasks&quot;</span>
+          <span class="ruby-keyword">next</span>
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-identifier">pending</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">n</span><span class="ruby-operator">|</span> <span class="ruby-identifier">q</span>.<span class="ruby-identifier">launch_task</span>(<span class="ruby-identifier">n</span>) }
+      <span class="ruby-keyword">end</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:ls</span>, <span class="ruby-value">:list</span>) { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">opts</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Options</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">args</span>) <span class="ruby-keyword">do</span>
+        <span class="ruby-identifier">flag</span>(<span class="ruby-value">:all</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:a</span>, <span class="ruby-value">desc:</span> <span class="ruby-string">&#39;Show all tasks without limit; use pager if output exceeds terminal height&#39;</span>)
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-identifier">lines</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">list_lines</span>(<span class="ruby-value">all:</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">all</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">empty?</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;No tasks&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">all</span>
+        <span class="ruby-identifier">terminal_lines</span> = <span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;LINES&#39;</span>]&amp;.<span class="ruby-identifier">to_i</span> <span class="ruby-operator">||</span> <span class="ruby-value">24</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&gt;</span> <span class="ruby-identifier">terminal_lines</span>
+          <span class="ruby-constant">IO</span>.<span class="ruby-identifier">popen</span>(<span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;PAGER&#39;</span>] <span class="ruby-operator">||</span> <span class="ruby-string">&#39;less&#39;</span>, <span class="ruby-string">&#39;w&#39;</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">io</span><span class="ruby-operator">|</span> <span class="ruby-identifier">io</span>.<span class="ruby-identifier">puts</span> <span class="ruby-identifier">lines</span> }
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-identifier">lines</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">lines</span>
+      <span class="ruby-keyword">end</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:status</span>) {
+      <span class="ruby-identifier">tasks</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">all_tasks</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">tasks</span>.<span class="ruby-identifier">empty?</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;No tasks&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-identifier">tasks</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">t</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">meta</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">meta_for</span>(<span class="ruby-identifier">t</span>[<span class="ruby-value">:name</span>], <span class="ruby-identifier">t</span>[<span class="ruby-value">:status</span>].<span class="ruby-identifier">to_sym</span>)
+        <span class="ruby-identifier">line</span> = <span class="ruby-string">&quot;%-10s %s&quot;</span> <span class="ruby-operator">%</span> [<span class="ruby-identifier">t</span>[<span class="ruby-value">:status</span>], <span class="ruby-identifier">t</span>[<span class="ruby-value">:name</span>]]
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">meta</span>
+          <span class="ruby-identifier">started</span> = <span class="ruby-identifier">meta</span>[<span class="ruby-string">&#39;started_at&#39;</span>]
+          <span class="ruby-keyword">if</span> <span class="ruby-identifier">started</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">t</span>[<span class="ruby-value">:status</span>] <span class="ruby-operator">==</span> <span class="ruby-string">&#39;running&#39;</span>
+            <span class="ruby-identifier">elapsed</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span> <span class="ruby-operator">-</span> <span class="ruby-constant">Time</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">started</span>)
+            <span class="ruby-identifier">mins</span> = (<span class="ruby-identifier">elapsed</span> <span class="ruby-operator">/</span> <span class="ruby-value">60</span>).<span class="ruby-identifier">to_i</span>
+            <span class="ruby-identifier">line</span> <span class="ruby-operator">+=</span> <span class="ruby-node">&quot;  (#{mins}m elapsed)&quot;</span>
+          <span class="ruby-keyword">end</span>
+          <span class="ruby-identifier">line</span> <span class="ruby-operator">+=</span> <span class="ruby-node">&quot;  [#{meta[&#39;tmux_session&#39;]}:#{meta[&#39;tmux_window&#39;]}]&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">meta</span>[<span class="ruby-string">&#39;tmux_session&#39;</span>]
+          <span class="ruby-identifier">line</span> <span class="ruby-operator">+=</span> <span class="ruby-node">&quot;  dir:#{meta[&#39;working_dir&#39;]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">meta</span>[<span class="ruby-string">&#39;working_dir&#39;</span>]
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">line</span>
+      <span class="ruby-keyword">end</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:attach</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span> = <span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">running</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">tasks_in</span>(<span class="ruby-value">:running</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">running</span>.<span class="ruby-identifier">empty?</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;No running tasks&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">nil?</span>
+        <span class="ruby-identifier">name</span> = <span class="ruby-identifier">h</span>.<span class="ruby-identifier">fuzzyfind</span>(<span class="ruby-identifier">running</span>)
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">result</span> = <span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">by_prefix</span>(<span class="ruby-identifier">running</span>, <span class="ruby-identifier">name</span>)
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">result</span>.<span class="ruby-identifier">one?</span>
+          <span class="ruby-identifier">name</span> = <span class="ruby-identifier">result</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">item</span>
+        <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">result</span>.<span class="ruby-identifier">ambiguous?</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Ambiguous match for &#39;#{name}&#39;:&quot;</span>
+          <span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">m</span><span class="ruby-operator">|</span> <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;  #{m.item}&quot;</span> }
+          <span class="ruby-keyword">next</span>
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;No running task matching: #{name}&quot;</span>
+          <span class="ruby-keyword">next</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">name</span>
+
+      <span class="ruby-identifier">meta</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">meta_for</span>(<span class="ruby-identifier">name</span>, <span class="ruby-value">:running</span>)
+      <span class="ruby-identifier">session</span> = <span class="ruby-identifier">meta</span>&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-string">&#39;tmux_session&#39;</span>) <span class="ruby-operator">||</span> <span class="ruby-constant">TMUX_SESSION</span>
+      <span class="ruby-identifier">win</span> = <span class="ruby-identifier">meta</span>&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-string">&#39;tmux_window&#39;</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">name</span>
+      <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;switch-client&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-node">&quot;#{session}:#{win}&quot;</span>)
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:session</span>) {
+      <span class="ruby-identifier">work_dir</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">expand_path</span>(<span class="ruby-string">&#39;~/work&#39;</span>)
+      <span class="ruby-constant">Tmux</span>.<span class="ruby-identifier">open_session</span>(<span class="ruby-constant">TMUX_SESSION</span>, <span class="ruby-value">start_directory:</span> <span class="ruby-identifier">work_dir</span>)
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:add</span>) { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>
+      <span class="ruby-identifier">opts</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Options</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">args</span>) <span class="ruby-keyword">do</span>
+        <span class="ruby-identifier">option</span>(<span class="ruby-value">:task</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:t</span>, <span class="ruby-value">desc:</span> <span class="ruby-string">&#39;Task name&#39;</span>)
+        <span class="ruby-identifier">flag</span>(<span class="ruby-value">:choose</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:T</span>, <span class="ruby-value">desc:</span> <span class="ruby-string">&#39;Choose task interactively&#39;</span>)
+        <span class="ruby-identifier">flag</span>(<span class="ruby-value">:session</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:s</span>, <span class="ruby-value">desc:</span> <span class="ruby-string">&#39;Use current tmux session&#39;</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">help?</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">help_text</span>
+        <span class="ruby-identifier">exit</span> <span class="ruby-value">1</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">args</span> = <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">args</span>
+      <span class="ruby-identifier">ti</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">resolve_task_info</span>(<span class="ruby-identifier">opts</span>, <span class="ruby-identifier">h</span>, <span class="ruby-identifier">task_info</span>)
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">session</span>
+        <span class="ruby-identifier">session_name</span> = <span class="ruby-identifier">h</span>.<span class="ruby-identifier">tmux_client</span>.<span class="ruby-identifier">current_session</span>&amp;.<span class="ruby-identifier">name</span>
+        <span class="ruby-identifier">ti</span> = (<span class="ruby-identifier">ti</span> <span class="ruby-operator">||</span> {}).<span class="ruby-identifier">merge</span>(<span class="ruby-value">session_name:</span> <span class="ruby-identifier">session_name</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">session_name</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">tmpfile</span> = <span class="ruby-constant">Tempfile</span>.<span class="ruby-identifier">new</span>([<span class="ruby-string">&#39;hq-&#39;</span>, <span class="ruby-string">&#39;.md&#39;</span>])
+      <span class="ruby-identifier">prompt_file</span> = <span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">path</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">$stdin</span>.<span class="ruby-identifier">tty?</span>
+        <span class="ruby-identifier">content</span> = <span class="ruby-identifier">$stdin</span>.<span class="ruby-identifier">read</span>.<span class="ruby-identifier">strip</span>
+      <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">any?</span>
+        <span class="ruby-identifier">content</span> = <span class="ruby-identifier">args</span>.<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39; &#39;</span>)
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-comment"># Pre-fill with frontmatter template if task_info is available</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">ti</span>
+          <span class="ruby-identifier">fm_lines</span> = [<span class="ruby-string">&quot;---&quot;</span>]
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;task_name: #{ti[:task_name]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">ti</span>[<span class="ruby-value">:task_name</span>]
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;tree_name: #{ti[:tree_name]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">ti</span>[<span class="ruby-value">:tree_name</span>]
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;session_name: #{ti[:session_name]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">ti</span>[<span class="ruby-value">:session_name</span>]
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&quot;---&quot;</span>
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&quot;\n&quot;</span>
+          <span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">fm_lines</span>.<span class="ruby-identifier">join</span>(<span class="ruby-string">&quot;\n&quot;</span>))
+        <span class="ruby-keyword">end</span>
+
+        <span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">close</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">h</span>.<span class="ruby-identifier">vim?</span>
+          <span class="ruby-identifier">system</span>(<span class="ruby-identifier">h</span>.<span class="ruby-identifier">editor</span>, <span class="ruby-string">&#39;+$&#39;</span>, <span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">path</span>)
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-identifier">system</span>(<span class="ruby-identifier">h</span>.<span class="ruby-identifier">editor</span>, <span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">path</span>)
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-identifier">content</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">read</span>(<span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">path</span>).<span class="ruby-identifier">strip</span>
+        <span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">unlink</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">content</span>.<span class="ruby-identifier">empty?</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Aborted (empty file)&quot;</span>
+          <span class="ruby-keyword">next</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">result</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">add_with_frontmatter</span>(<span class="ruby-identifier">content</span>, <span class="ruby-value">task_info:</span> <span class="ruby-identifier">ti</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">result</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Created: #{result[:path]}&quot;</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Could not generate a task name&quot;</span>
+      <span class="ruby-keyword">end</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:wip</span>) { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>
+      <span class="ruby-identifier">opts</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Options</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">args</span>) <span class="ruby-keyword">do</span>
+        <span class="ruby-identifier">option</span>(<span class="ruby-value">:task</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:t</span>, <span class="ruby-value">desc:</span> <span class="ruby-string">&#39;Task name&#39;</span>)
+        <span class="ruby-identifier">flag</span>(<span class="ruby-value">:choose</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:T</span>, <span class="ruby-value">desc:</span> <span class="ruby-string">&#39;Choose task interactively&#39;</span>)
+        <span class="ruby-identifier">flag</span>(<span class="ruby-value">:session</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:s</span>, <span class="ruby-value">desc:</span> <span class="ruby-string">&#39;Use current tmux session&#39;</span>)
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-identifier">args</span> = <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">args</span>
+      <span class="ruby-identifier">ti</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">resolve_task_info</span>(<span class="ruby-identifier">opts</span>, <span class="ruby-identifier">h</span>, <span class="ruby-identifier">task_info</span>)
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">session</span>
+        <span class="ruby-identifier">session_name</span> = <span class="ruby-identifier">h</span>.<span class="ruby-identifier">tmux_client</span>.<span class="ruby-identifier">current_session</span>&amp;.<span class="ruby-identifier">name</span>
+        <span class="ruby-identifier">ti</span> = (<span class="ruby-identifier">ti</span> <span class="ruby-operator">||</span> {}).<span class="ruby-identifier">merge</span>(<span class="ruby-value">session_name:</span> <span class="ruby-identifier">session_name</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">session_name</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">name</span> = <span class="ruby-identifier">args</span>.<span class="ruby-identifier">first</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">nil?</span>
+        <span class="ruby-identifier">existing</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">tasks_in</span>(<span class="ruby-value">:wip</span>)
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">existing</span>.<span class="ruby-identifier">any?</span>
+          <span class="ruby-identifier">name</span> = <span class="ruby-identifier">h</span>.<span class="ruby-identifier">fuzzyfind</span>(<span class="ruby-identifier">existing</span>)
+          <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">name</span>
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;No wip tasks. Provide a name to create one.&quot;</span>
+          <span class="ruby-keyword">next</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">name</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/\.md$/</span>, <span class="ruby-string">&#39;&#39;</span>)
+      <span class="ruby-identifier">path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>[<span class="ruby-value">:wip</span>], <span class="ruby-node">&quot;#{name}.md&quot;</span>)
+
+      <span class="ruby-keyword">unless</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">path</span>)
+        <span class="ruby-comment"># Pre-fill with frontmatter if task_info available</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">ti</span>
+          <span class="ruby-identifier">fm_lines</span> = [<span class="ruby-string">&quot;---&quot;</span>]
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;task_name: #{ti[:task_name]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">ti</span>[<span class="ruby-value">:task_name</span>]
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;tree_name: #{ti[:tree_name]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">ti</span>[<span class="ruby-value">:tree_name</span>]
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;session_name: #{ti[:session_name]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">ti</span>[<span class="ruby-value">:session_name</span>]
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&quot;---&quot;</span>
+          <span class="ruby-identifier">fm_lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&quot;&quot;</span>
+          <span class="ruby-constant">File</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">path</span>, <span class="ruby-identifier">fm_lines</span>.<span class="ruby-identifier">join</span>(<span class="ruby-string">&quot;\n&quot;</span>))
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">h</span>.<span class="ruby-identifier">edit_files</span>(<span class="ruby-identifier">path</span>)
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:ready</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span> = <span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">wip</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">tasks_in</span>(<span class="ruby-value">:wip</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">wip</span>.<span class="ruby-identifier">empty?</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;No wip tasks&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">nil?</span>
+        <span class="ruby-identifier">name</span> = <span class="ruby-identifier">wip</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">wip</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">h</span>.<span class="ruby-identifier">fuzzyfind</span>(<span class="ruby-identifier">wip</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">name</span>
+
+      <span class="ruby-identifier">name</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/\.md$/</span>, <span class="ruby-string">&#39;&#39;</span>)
+      <span class="ruby-identifier">src</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>[<span class="ruby-value">:wip</span>], <span class="ruby-node">&quot;#{name}.md&quot;</span>)
+      <span class="ruby-keyword">unless</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">src</span>)
+        <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Wip task not found: #{name}&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">dst</span>, <span class="ruby-identifier">dest_name</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Paths</span>.<span class="ruby-identifier">unique_path</span>(<span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>[<span class="ruby-value">:pending</span>], <span class="ruby-identifier">name</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">dest_name</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">name</span>
+        <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mv</span>(<span class="ruby-identifier">src</span>, <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>[<span class="ruby-value">:wip</span>], <span class="ruby-node">&quot;#{dest_name}.md&quot;</span>))
+        <span class="ruby-identifier">src</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>[<span class="ruby-value">:wip</span>], <span class="ruby-node">&quot;#{dest_name}.md&quot;</span>)
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mv</span>(<span class="ruby-identifier">src</span>, <span class="ruby-identifier">dst</span>)
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Moved to pending: #{dest_name}&quot;</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:kill</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span> = <span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">running</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">tasks_in</span>(<span class="ruby-value">:running</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">running</span>.<span class="ruby-identifier">empty?</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;No running tasks&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">nil?</span>
+        <span class="ruby-identifier">name</span> = <span class="ruby-identifier">running</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">running</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">h</span>.<span class="ruby-identifier">fuzzyfind</span>(<span class="ruby-identifier">running</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">name</span>
+
+      <span class="ruby-identifier">meta</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">meta_for</span>(<span class="ruby-identifier">name</span>, <span class="ruby-value">:running</span>)
+      <span class="ruby-identifier">session</span> = <span class="ruby-identifier">meta</span>&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-string">&#39;tmux_session&#39;</span>) <span class="ruby-operator">||</span> <span class="ruby-constant">TMUX_SESSION</span>
+      <span class="ruby-identifier">win</span> = <span class="ruby-identifier">meta</span>&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-string">&#39;tmux_window&#39;</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">name</span>
+      <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;kill-window&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-node">&quot;#{session}:#{win}&quot;</span>)
+
+      <span class="ruby-identifier">dirs</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>
+      <span class="ruby-identifier">md</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:running</span>], <span class="ruby-node">&quot;#{name}.md&quot;</span>)
+      <span class="ruby-identifier">meta_path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:running</span>], <span class="ruby-node">&quot;#{name}.meta&quot;</span>)
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mv</span>(<span class="ruby-identifier">md</span>, <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:failed</span>], <span class="ruby-node">&quot;#{name}.md&quot;</span>)) <span class="ruby-keyword">if</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">md</span>)
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mv</span>(<span class="ruby-identifier">meta_path</span>, <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:failed</span>], <span class="ruby-node">&quot;#{name}.meta&quot;</span>)) <span class="ruby-keyword">if</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">meta_path</span>)
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Killed: #{name}&quot;</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:retry</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span> = <span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">retryable</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">tasks_in</span>(<span class="ruby-value">:failed</span>) <span class="ruby-operator">+</span> <span class="ruby-identifier">q</span>.<span class="ruby-identifier">tasks_in</span>(<span class="ruby-value">:done</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">retryable</span>.<span class="ruby-identifier">empty?</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;No failed/done tasks to retry&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">nil?</span>
+        <span class="ruby-identifier">name</span> = <span class="ruby-identifier">retryable</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">retryable</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">h</span>.<span class="ruby-identifier">fuzzyfind</span>(<span class="ruby-identifier">retryable</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">name</span>
+
+      <span class="ruby-identifier">found</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">find_task</span>(<span class="ruby-identifier">name</span>)
+      <span class="ruby-keyword">unless</span> <span class="ruby-identifier">found</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-node">%w[failed done]</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">found</span>[<span class="ruby-value">:status</span>])
+        <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Task &#39;#{name}&#39; is not in failed/done state&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">dirs</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>
+      <span class="ruby-identifier">src_dir</span> = <span class="ruby-identifier">dirs</span>[<span class="ruby-identifier">found</span>[<span class="ruby-value">:status</span>].<span class="ruby-identifier">to_sym</span>]
+      <span class="ruby-identifier">dst</span>, <span class="ruby-identifier">dest_name</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Paths</span>.<span class="ruby-identifier">unique_path</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:pending</span>], <span class="ruby-identifier">name</span>)
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mv</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">src_dir</span>, <span class="ruby-node">&quot;#{name}.md&quot;</span>), <span class="ruby-identifier">dst</span>)
+      <span class="ruby-identifier">meta_path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">src_dir</span>, <span class="ruby-node">&quot;#{name}.meta&quot;</span>)
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">rm_f</span>(<span class="ruby-identifier">meta_path</span>) <span class="ruby-keyword">if</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">meta_path</span>)
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Moved to pending: #{dest_name}&quot;</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:clean</span>) {
+      <span class="ruby-identifier">dirs</span> = <span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>
+      <span class="ruby-identifier">count</span> = <span class="ruby-value">0</span>
+      <span class="ruby-node">%i[done failed]</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">status</span><span class="ruby-operator">|</span>
+        <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">glob</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-identifier">status</span>], <span class="ruby-string">&#39;*&#39;</span>)).<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span>
+          <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">rm_f</span>(<span class="ruby-identifier">f</span>)
+          <span class="ruby-identifier">count</span> <span class="ruby-operator">+=</span> <span class="ruby-value">1</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Cleaned #{count} files&quot;</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:dir</span>) {
+      <span class="ruby-identifier">q</span>.<span class="ruby-identifier">queue_dirs</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-constant">DIR</span>
+    }
+
+    <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:migrate</span>) {
+      <span class="ruby-identifier">old_dir</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-constant">Dir</span>.<span class="ruby-identifier">home</span>, <span class="ruby-string">&#39;.config/hiiro/queue&#39;</span>)
+      <span class="ruby-identifier">new_dir</span> = <span class="ruby-constant">DIR</span>
+
+      <span class="ruby-keyword">unless</span> <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">old_dir</span>)
+        <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Nothing to migrate: #{old_dir} does not exist&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">old_dir</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">new_dir</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Source and destination are the same: #{old_dir}&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">new_dir</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">glob</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">new_dir</span>, <span class="ruby-string">&#39;**&#39;</span>, <span class="ruby-string">&#39;*&#39;</span>)).<span class="ruby-identifier">any?</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Destination already has files: #{new_dir}&quot;</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Remove it manually if you want to migrate from #{old_dir}&quot;</span>
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkdir_p</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">dirname</span>(<span class="ruby-identifier">new_dir</span>))
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mv</span>(<span class="ruby-identifier">old_dir</span>, <span class="ruby-identifier">new_dir</span>)
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Migrated: #{old_dir} -&gt; #{new_dir}&quot;</span>
+    }
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-current" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-current" title="Link to this method">
+                <span class="method-name">current</span>
+                <span class="method-args">(hiiro=nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="current-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 14</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">current</span>(<span class="ruby-identifier">hiiro</span>=<span class="ruby-keyword">nil</span>)
+  <span class="ruby-ivar">@current</span> <span class="ruby-operator">||=</span> <span class="ruby-identifier">new</span>(<span class="ruby-identifier">hiiro</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-new" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-new" title="Link to this method">
+                <span class="method-name">new</span>
+                <span class="method-args">(hiiro=nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="new-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 20</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">hiiro</span>=<span class="ruby-keyword">nil</span>)
+  <span class="ruby-ivar">@hiiro</span> = <span class="ruby-identifier">hiiro</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+    </section>
+
+
+
+
+
+
+
+     <section id="public-instance-untitled-method-details" class="method-section anchor-link">
+       <header>
+         <h3 id="public-instance-untitled-methods"><a href="#public-instance-untitled-methods">Public Instance Methods</a></h3>
+       </header>
+
+
+      <div id="method-i-add_with_frontmatter" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-add_with_frontmatter" title="Link to this method">
+                <span class="method-name">add_with_frontmatter</span>
+                <span class="method-args">(content, task_info: nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="add_with_frontmatter-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 292</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_with_frontmatter</span>(<span class="ruby-identifier">content</span>, <span class="ruby-value">task_info:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">queue_dirs</span> <span class="ruby-comment"># ensure dirs exist</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">task_info</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">content</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-string">&quot;---&quot;</span>)
+    <span class="ruby-identifier">fm</span> = {}
+    <span class="ruby-identifier">fm</span>[<span class="ruby-string">&#39;task_name&#39;</span>] = <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:task_name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:task_name</span>]
+    <span class="ruby-identifier">fm</span>[<span class="ruby-string">&#39;tree_name&#39;</span>] = <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:tree_name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:tree_name</span>]
+    <span class="ruby-identifier">fm</span>[<span class="ruby-string">&#39;session_name&#39;</span>] = <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:session_name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:session_name</span>]
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">fm</span>.<span class="ruby-identifier">any?</span>
+      <span class="ruby-identifier">content</span> = <span class="ruby-node">&quot;---\n#{fm.map { |k, v| &quot;#{k}: #{v}&quot; }.join(&quot;\n&quot;)}\n---\n#{content}&quot;</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">content_lines</span> =<span class="ruby-identifier">content</span>.<span class="ruby-identifier">lines</span>.<span class="ruby-identifier">drop_while</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">l</span><span class="ruby-operator">|</span> <span class="ruby-identifier">l</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">l</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-string">&#39;---&#39;</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">l</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-regexp">/^\w+:/</span>) }.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">strip</span>
+  <span class="ruby-identifier">name</span> = <span class="ruby-identifier">slugify</span>(<span class="ruby-identifier">content_lines</span>)
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">empty?</span>
+    <span class="ruby-identifier">name</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>.<span class="ruby-identifier">strftime</span>(<span class="ruby-string">&quot;%Y%m%d%H%M%S&quot;</span>)
+    <span class="ruby-identifier">name</span> <span class="ruby-operator">+=</span> <span class="ruby-string">&#39;-&#39;</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:task_name</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">task_info</span>&amp;.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:task_name</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">path</span>, <span class="ruby-identifier">name</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Paths</span>.<span class="ruby-identifier">unique_path</span>(<span class="ruby-identifier">queue_dirs</span>[<span class="ruby-value">:pending</span>], <span class="ruby-identifier">name</span>)
+  <span class="ruby-constant">File</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">path</span>, <span class="ruby-identifier">content</span> <span class="ruby-operator">+</span> <span class="ruby-string">&quot;\n&quot;</span>)
+  { <span class="ruby-value">name:</span> <span class="ruby-identifier">name</span>, <span class="ruby-value">path:</span> <span class="ruby-identifier">path</span> }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-all_tasks" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-all_tasks" title="Link to this method">
+                <span class="method-name">all_tasks</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="all_tasks-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 87</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">all_tasks</span>
+  <span class="ruby-constant">STATUSES</span>.<span class="ruby-identifier">flat_map</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">status</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">tasks_in</span>(<span class="ruby-identifier">status</span>.<span class="ruby-identifier">to_sym</span>).<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> { <span class="ruby-value">name:</span> <span class="ruby-identifier">name</span>, <span class="ruby-value">status:</span> <span class="ruby-identifier">status</span> } }
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-ensure_tmux_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-ensure_tmux_session" title="Link to this method">
+                <span class="method-name">ensure_tmux_session</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="ensure_tmux_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 122</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ensure_tmux_session</span>
+  <span class="ruby-keyword">unless</span> <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;has-session&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-constant">TMUX_SESSION</span>, <span class="ruby-value">out:</span> <span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-constant">NULL</span>, <span class="ruby-value">err:</span> <span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-constant">NULL</span>)
+    <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;new-session&#39;</span>, <span class="ruby-string">&#39;-d&#39;</span>, <span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-constant">TMUX_SESSION</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-existing_window_name-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-existing_window_name-3F" title="Link to this method">
+                <span class="method-name">existing_window_name?</span>
+                <span class="method-args">(wname)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="existing_window_name-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 283</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">existing_window_name?</span>(<span class="ruby-identifier">wname</span>)
+  <span class="ruby-identifier">windows</span> = <span class="ruby-string">`tmux list-windows -a -F &#39;#\{window_name\}&#39; 2&gt;/dev/null`</span>.<span class="ruby-identifier">lines</span>(<span class="ruby-value">chomp:</span> <span class="ruby-keyword">true</span>)
+  <span class="ruby-identifier">windows</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">wname</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-find_task" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-find_task" title="Link to this method">
+                <span class="method-name">find_task</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="find_task-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 114</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_task</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-constant">STATUSES</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">status</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">md</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">queue_dirs</span>[<span class="ruby-identifier">status</span>.<span class="ruby-identifier">to_sym</span>], <span class="ruby-node">&quot;#{name}.md&quot;</span>)
+    <span class="ruby-keyword">return</span> { <span class="ruby-value">name:</span> <span class="ruby-identifier">name</span>, <span class="ruby-value">status:</span> <span class="ruby-identifier">status</span> } <span class="ruby-keyword">if</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">md</span>)
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">nil</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-format_mtime" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-format_mtime" title="Link to this method">
+                <span class="method-name">format_mtime</span>
+                <span class="method-args">(mtime)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="format_mtime-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 50</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">format_mtime</span>(<span class="ruby-identifier">mtime</span>)
+  <span class="ruby-identifier">now</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>
+  <span class="ruby-identifier">mtime</span>.<span class="ruby-identifier">year</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">now</span>.<span class="ruby-identifier">year</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">mtime</span>.<span class="ruby-identifier">strftime</span>(<span class="ruby-string">&quot;%m-%d %H:%M&quot;</span>) <span class="ruby-operator">:</span> <span class="ruby-identifier">mtime</span>.<span class="ruby-identifier">strftime</span>(<span class="ruby-string">&quot;%Y-%m-%d %H:%M&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-launch_task" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-launch_task" title="Link to this method">
+                <span class="method-name">launch_task</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="launch_task-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 128</span>
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">launch_task</span>(<span class="ruby-identifier">name</span>)
+      <span class="ruby-identifier">dirs</span> = <span class="ruby-identifier">queue_dirs</span>
+      <span class="ruby-identifier">md_file</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:pending</span>], <span class="ruby-node">&quot;#{name}.md&quot;</span>)
+      <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">md_file</span>)
+
+      <span class="ruby-identifier">running_md</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:running</span>], <span class="ruby-node">&quot;#{name}.md&quot;</span>)
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mv</span>(<span class="ruby-identifier">md_file</span>, <span class="ruby-identifier">running_md</span>)
+
+      <span class="ruby-identifier">prompt_obj</span> = <span class="ruby-constant">Prompt</span>.<span class="ruby-identifier">from_file</span>(<span class="ruby-identifier">running_md</span>, <span class="ruby-value">hiiro:</span> <span class="ruby-identifier">hiiro</span>)
+
+      <span class="ruby-comment"># Determine target tmux session and working directory from frontmatter</span>
+      <span class="ruby-identifier">target_session</span> = <span class="ruby-constant">TMUX_SESSION</span>
+      <span class="ruby-identifier">working_dir</span> = <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">pwd</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">prompt_obj</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">task</span>
+          <span class="ruby-identifier">target_session</span> = <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">session_name</span>
+          <span class="ruby-identifier">tree</span> = <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">task</span>.<span class="ruby-identifier">tree</span>
+          <span class="ruby-identifier">working_dir</span> = <span class="ruby-identifier">tree</span>.<span class="ruby-identifier">path</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">tree</span>
+        <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">session</span>
+          <span class="ruby-identifier">target_session</span> = <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">session</span>.<span class="ruby-identifier">name</span>
+          <span class="ruby-identifier">working_dir</span> = <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">session</span>.<span class="ruby-identifier">path</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">working_dir</span>
+        <span class="ruby-keyword">end</span>
+
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">tree</span>
+          <span class="ruby-identifier">working_dir</span> = <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">tree</span>.<span class="ruby-identifier">path</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-comment"># Ensure the target session exists</span>
+      <span class="ruby-keyword">unless</span> <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;has-session&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target_session</span>, <span class="ruby-value">out:</span> <span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-constant">NULL</span>, <span class="ruby-value">err:</span> <span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-constant">NULL</span>)
+        <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;new-session&#39;</span>, <span class="ruby-string">&#39;-d&#39;</span>, <span class="ruby-string">&#39;-s&#39;</span>, <span class="ruby-identifier">target_session</span>, <span class="ruby-string">&#39;-c&#39;</span>, <span class="ruby-identifier">working_dir</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-comment"># Write a clean prompt file (no frontmatter) for claude</span>
+      <span class="ruby-identifier">raw</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">read</span>(<span class="ruby-identifier">running_md</span>).<span class="ruby-identifier">strip</span>
+      <span class="ruby-identifier">prompt_body</span> = <span class="ruby-identifier">prompt_obj</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">strip_frontmatter</span>(<span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">doc</span>.<span class="ruby-identifier">content</span>.<span class="ruby-identifier">strip</span>) <span class="ruby-operator">:</span> <span class="ruby-identifier">strip_frontmatter</span>(<span class="ruby-identifier">raw</span>)
+      <span class="ruby-identifier">prompt_file</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:running</span>], <span class="ruby-node">&quot;#{name}.prompt&quot;</span>)
+      <span class="ruby-constant">File</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">prompt_file</span>, <span class="ruby-identifier">prompt_body</span> <span class="ruby-operator">+</span> <span class="ruby-string">&quot;\n&quot;</span>)
+
+      <span class="ruby-comment"># Write a launcher script</span>
+      <span class="ruby-identifier">script_path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:running</span>], <span class="ruby-node">&quot;#{name}.sh&quot;</span>)
+      <span class="ruby-constant">File</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">script_path</span>, <span class="ruby-identifier">&lt;&lt;~SH</span>)
+<span class="ruby-value">        #!/usr/bin/env bash
+
+        cd #{Shellwords.shellescape(working_dir)}
+        cat #{Shellwords.shellescape(prompt_file)} | claude
+        HQ_EXIT=$?
+
+        # Move task files to done/failed based on exit code
+        ruby -e &#39;
+          require &quot;fileutils&quot;
+          name = #{name.inspect}
+          qdir = #{DIR.inspect}
+          exit_code = ENV[&quot;HQ_EXIT&quot;].to_i
+          dst_dir = exit_code == 0 ? &quot;done&quot; : &quot;failed&quot;
+          %w[.md .meta .prompt .sh].each do |ext|
+            src = File.join(qdir, &quot;running&quot;, name + ext)
+            if ext == &quot;.prompt&quot; || ext == &quot;.sh&quot;
+              FileUtils.rm_f(src)
+            elsif File.exist?(src)
+              FileUtils.mv(src, File.join(qdir, dst_dir, name + ext))
+            end
+          end
+        &#39;
+
+        exec #{Shellwords.shellescape(ENV[&#39;SHELL&#39;] || &#39;zsh&#39;)}</span>
+<span class="ruby-identifier">      SH</span>
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">chmod</span>(<span class="ruby-value">0755</span>, <span class="ruby-identifier">script_path</span>)
+
+      <span class="ruby-identifier">win_name</span> = <span class="ruby-identifier">short_window_name</span>(<span class="ruby-identifier">name</span>)
+      <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;new-window&#39;</span>, <span class="ruby-string">&#39;-d&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">target_session</span>, <span class="ruby-string">&#39;-n&#39;</span>, <span class="ruby-identifier">win_name</span>, <span class="ruby-string">&#39;-c&#39;</span>, <span class="ruby-identifier">working_dir</span>, <span class="ruby-identifier">script_path</span>)
+
+      <span class="ruby-comment"># Write meta sidecar</span>
+      <span class="ruby-identifier">meta</span> = {
+        <span class="ruby-string">&#39;tmux_session&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">target_session</span>,
+        <span class="ruby-string">&#39;tmux_window&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">win_name</span>,
+        <span class="ruby-string">&#39;started_at&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>.<span class="ruby-identifier">iso8601</span>,
+        <span class="ruby-string">&#39;working_dir&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">working_dir</span>,
+      }
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">prompt_obj</span>
+        <span class="ruby-identifier">meta</span>[<span class="ruby-string">&#39;task_name&#39;</span>] = <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">task_name</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">task_name</span>
+        <span class="ruby-identifier">meta</span>[<span class="ruby-string">&#39;tree_name&#39;</span>] = <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">tree_name</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">tree_name</span>
+        <span class="ruby-identifier">meta</span>[<span class="ruby-string">&#39;session_name&#39;</span>] = <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">session_name</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">prompt_obj</span>.<span class="ruby-identifier">session_name</span>
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-constant">File</span>.<span class="ruby-identifier">write</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dirs</span>[<span class="ruby-value">:running</span>], <span class="ruby-node">&quot;#{name}.meta&quot;</span>), <span class="ruby-identifier">meta</span>.<span class="ruby-identifier">to_yaml</span>)
+
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Launched: #{name} [#{target_session}:#{win_name}]&quot;</span>
+    <span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-list_lines" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-list_lines" title="Link to this method">
+                <span class="method-name">list_lines</span>
+                <span class="method-args">(all: false)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="list_lines-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 55</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">list_lines</span>(<span class="ruby-value">all:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-identifier">lines</span> = []
+  <span class="ruby-constant">STATUSES</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">status</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">tasks</span> = <span class="ruby-identifier">tasks_in_sorted</span>(<span class="ruby-identifier">status</span>.<span class="ruby-identifier">to_sym</span>)
+    <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">tasks</span>.<span class="ruby-identifier">empty?</span>
+
+    <span class="ruby-identifier">display</span> = <span class="ruby-identifier">all</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">tasks</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">tasks</span>.<span class="ruby-identifier">first</span>(<span class="ruby-value">10</span>)
+    <span class="ruby-identifier">display</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">t</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">ts</span> = <span class="ruby-identifier">format_mtime</span>(<span class="ruby-identifier">t</span>[<span class="ruby-value">:mtime</span>])
+      <span class="ruby-identifier">line</span> = <span class="ruby-string">&quot;%-10s %-12s %s&quot;</span> <span class="ruby-operator">%</span> [<span class="ruby-identifier">status</span>, <span class="ruby-identifier">ts</span>, <span class="ruby-identifier">t</span>[<span class="ruby-value">:name</span>]]
+      <span class="ruby-identifier">meta</span> = <span class="ruby-identifier">meta_for</span>(<span class="ruby-identifier">t</span>[<span class="ruby-value">:name</span>], <span class="ruby-identifier">status</span>.<span class="ruby-identifier">to_sym</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">meta</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">status</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;running&#39;</span>
+        <span class="ruby-identifier">started</span> = <span class="ruby-identifier">meta</span>[<span class="ruby-string">&#39;started_at&#39;</span>]
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">started</span>
+          <span class="ruby-identifier">elapsed</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span> <span class="ruby-operator">-</span> <span class="ruby-constant">Time</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">started</span>)
+          <span class="ruby-identifier">mins</span> = (<span class="ruby-identifier">elapsed</span> <span class="ruby-operator">/</span> <span class="ruby-value">60</span>).<span class="ruby-identifier">to_i</span>
+          <span class="ruby-identifier">line</span> <span class="ruby-operator">+=</span> <span class="ruby-node">&quot;  (#{mins}m)&quot;</span>
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-identifier">line</span> <span class="ruby-operator">+=</span> <span class="ruby-node">&quot;  [#{meta[&#39;tmux_session&#39;]}:#{meta[&#39;tmux_window&#39;]}]&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">meta</span>[<span class="ruby-string">&#39;tmux_session&#39;</span>]
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-identifier">preview</span> = <span class="ruby-identifier">task_preview</span>(<span class="ruby-identifier">t</span>[<span class="ruby-value">:name</span>], <span class="ruby-identifier">status</span>.<span class="ruby-identifier">to_sym</span>)
+      <span class="ruby-identifier">line</span> <span class="ruby-operator">+=</span> <span class="ruby-node">&quot;  #{preview}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">preview</span>
+      <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">line</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">all</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">tasks</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">10</span>
+      <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-node">&quot;  ... and #{tasks.size - 10} more&quot;</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">lines</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-meta_for" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-meta_for" title="Link to this method">
+                <span class="method-name">meta_for</span>
+                <span class="method-args">(name, status)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="meta_for-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 93</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">meta_for</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">status</span>)
+  <span class="ruby-identifier">path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">queue_dirs</span>[<span class="ruby-identifier">status</span>], <span class="ruby-node">&quot;#{name}.meta&quot;</span>)
+  <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">path</span>) <span class="ruby-operator">?</span> <span class="ruby-constant">YAML</span>.<span class="ruby-identifier">safe_load_file</span>(<span class="ruby-identifier">path</span>) <span class="ruby-operator">:</span> <span class="ruby-keyword">nil</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-queue_dirs" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-queue_dirs" title="Link to this method">
+                <span class="method-name">queue_dirs</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="queue_dirs-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 30</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">queue_dirs</span>
+  <span class="ruby-ivar">@queue_dirs</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">STATUSES</span>.<span class="ruby-identifier">each_with_object</span>({}) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span>, <span class="ruby-identifier">h</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">dir</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-constant">DIR</span>, <span class="ruby-identifier">name</span>)
+    <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkdir_p</span>(<span class="ruby-identifier">dir</span>)
+    <span class="ruby-identifier">h</span>[<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>] = <span class="ruby-identifier">dir</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-read_prompt" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-read_prompt" title="Link to this method">
+                <span class="method-name">read_prompt</span>
+                <span class="method-args">(filepath)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="read_prompt-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 24</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">read_prompt</span>(<span class="ruby-identifier">filepath</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span> <span class="ruby-keyword">unless</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">filepath</span>)
+
+  <span class="ruby-constant">Prompt</span>.<span class="ruby-identifier">from_file</span>(<span class="ruby-identifier">filepath</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-resolve_task_info" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-resolve_task_info" title="Link to this method">
+                <span class="method-name">resolve_task_info</span>
+                <span class="method-args">(opts, hiiro, default_task_info)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="resolve_task_info-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 247</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">resolve_task_info</span>(<span class="ruby-identifier">opts</span>, <span class="ruby-identifier">hiiro</span>, <span class="ruby-identifier">default_task_info</span>)
+  <span class="ruby-identifier">task_name</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">choose</span>
+    <span class="ruby-identifier">select_task</span>(<span class="ruby-identifier">hiiro</span>)&amp;.<span class="ruby-identifier">name</span>
+  <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">task</span>
+    <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">task</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-keyword">nil</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">task_name</span>
+    <span class="ruby-identifier">task_info_for</span>(<span class="ruby-identifier">task_name</span>)
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">default_task_info</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-select_task" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-select_task" title="Link to this method">
+                <span class="method-name">select_task</span>
+                <span class="method-args">(hiiro)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="select_task-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 232</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">select_task</span>(<span class="ruby-identifier">hiiro</span>)
+  <span class="ruby-identifier">env</span> = <span class="ruby-constant">Environment</span>.<span class="ruby-identifier">current</span> <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">nil</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">env</span>
+
+  <span class="ruby-identifier">tasks</span> = <span class="ruby-identifier">env</span>.<span class="ruby-identifier">all_tasks</span>.<span class="ruby-identifier">sort_by</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:name</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">tasks</span>.<span class="ruby-identifier">empty?</span>
+
+  <span class="ruby-identifier">mapping</span> = <span class="ruby-identifier">tasks</span>.<span class="ruby-identifier">each_with_object</span>({}) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">task</span>, <span class="ruby-identifier">h</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">line</span> = <span class="ruby-identifier">format</span>(<span class="ruby-string">&quot;%-25s  tree: %-20s&quot;</span>, <span class="ruby-identifier">task</span>.<span class="ruby-identifier">name</span>, <span class="ruby-identifier">task</span>.<span class="ruby-identifier">tree_name</span> <span class="ruby-operator">||</span> <span class="ruby-string">&#39;(none)&#39;</span>)
+    <span class="ruby-identifier">h</span>[<span class="ruby-identifier">line</span>] = <span class="ruby-identifier">task</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">fuzzyfind_from_map</span>(<span class="ruby-identifier">mapping</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-short_window_name" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-short_window_name" title="Link to this method">
+                <span class="method-name">short_window_name</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="short_window_name-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 271</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">short_window_name</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-identifier">base</span> = <span class="ruby-identifier">name</span>[<span class="ruby-value">0</span>, <span class="ruby-value">8</span>]
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">base</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">existing_window_name?</span>(<span class="ruby-identifier">base</span>)
+
+  <span class="ruby-comment"># append digits to make unique</span>
+  (<span class="ruby-value">2</span><span class="ruby-operator">..</span><span class="ruby-value">99</span>).<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">i</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">candidate</span> = <span class="ruby-node">&quot;#{base[0, 7]}#{i}&quot;</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">candidate</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">existing_window_name?</span>(<span class="ruby-identifier">candidate</span>)
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">base</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-slugify" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-slugify" title="Link to this method">
+                <span class="method-name">slugify</span>
+                <span class="method-args">(text)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="slugify-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 288</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">slugify</span>(<span class="ruby-identifier">text</span>)
+  <span class="ruby-identifier">text</span>.<span class="ruby-identifier">downcase</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/[^a-z0-9]+/</span>, <span class="ruby-string">&#39;-&#39;</span>).<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/^-|-$/</span>, <span class="ruby-string">&#39;&#39;</span>)[<span class="ruby-value">0</span>, <span class="ruby-value">60</span>]
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-strip_frontmatter" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-strip_frontmatter" title="Link to this method">
+                <span class="method-name">strip_frontmatter</span>
+                <span class="method-args">(text)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="strip_frontmatter-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 263</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">strip_frontmatter</span>(<span class="ruby-identifier">text</span>)
+  <span class="ruby-identifier">lines</span> = <span class="ruby-identifier">text</span>.<span class="ruby-identifier">lines</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">text</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">first</span>&amp;.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;---&#39;</span>
+  <span class="ruby-identifier">end_idx</span> = <span class="ruby-identifier">lines</span>[<span class="ruby-value">1</span><span class="ruby-operator">..</span>].<span class="ruby-identifier">index</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">l</span><span class="ruby-operator">|</span> <span class="ruby-identifier">l</span>.<span class="ruby-identifier">strip</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;---&#39;</span> }
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">text</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">end_idx</span>
+  <span class="ruby-identifier">lines</span>[(<span class="ruby-identifier">end_idx</span> <span class="ruby-operator">+</span> <span class="ruby-value">2</span>)<span class="ruby-operator">..</span>].<span class="ruby-identifier">join</span>.<span class="ruby-identifier">strip</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-task_info_for" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-task_info_for" title="Link to this method">
+                <span class="method-name">task_info_for</span>
+                <span class="method-args">(task_name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="task_info_for-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 218</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">task_info_for</span>(<span class="ruby-identifier">task_name</span>)
+  <span class="ruby-identifier">env</span> = <span class="ruby-constant">Environment</span>.<span class="ruby-identifier">current</span> <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">nil</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">env</span>
+
+  <span class="ruby-identifier">task</span> = <span class="ruby-identifier">env</span>.<span class="ruby-identifier">find_task</span>(<span class="ruby-identifier">task_name</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">task</span>
+
+  {
+    <span class="ruby-value">task_name:</span> <span class="ruby-identifier">task</span>.<span class="ruby-identifier">name</span>,
+    <span class="ruby-value">tree_name:</span> <span class="ruby-identifier">task</span>.<span class="ruby-identifier">tree_name</span>,
+    <span class="ruby-value">session_name:</span> <span class="ruby-identifier">task</span>.<span class="ruby-identifier">session_name</span>,
+  }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-task_preview" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-task_preview" title="Link to this method">
+                <span class="method-name">task_preview</span>
+                <span class="method-args">(name, status)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="task_preview-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 98</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">task_preview</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">status</span>)
+  <span class="ruby-identifier">path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">queue_dirs</span>[<span class="ruby-identifier">status</span>], <span class="ruby-node">&quot;#{name}.md&quot;</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">path</span>)
+
+  <span class="ruby-identifier">lines</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">readlines</span>(<span class="ruby-identifier">path</span>, <span class="ruby-value">chomp:</span> <span class="ruby-keyword">true</span>)
+  <span class="ruby-comment"># Skip frontmatter</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;---&#39;</span>
+    <span class="ruby-identifier">end_idx</span> = <span class="ruby-identifier">lines</span>[<span class="ruby-value">1</span><span class="ruby-operator">..</span>].<span class="ruby-identifier">index</span>(<span class="ruby-string">&#39;---&#39;</span>)
+    <span class="ruby-identifier">lines</span> = <span class="ruby-identifier">lines</span>[(<span class="ruby-identifier">end_idx</span> <span class="ruby-operator">+</span> <span class="ruby-value">2</span>)<span class="ruby-operator">..</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">end_idx</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">first</span> = <span class="ruby-identifier">lines</span>&amp;.<span class="ruby-identifier">find</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">l</span><span class="ruby-operator">|</span> <span class="ruby-operator">!</span><span class="ruby-identifier">l</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">empty?</span> }&amp;.<span class="ruby-identifier">strip</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">first</span>
+
+  <span class="ruby-identifier">first</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">60</span> <span class="ruby-operator">?</span> <span class="ruby-node">&quot;| #{first[0, 57]}...&quot;</span> <span class="ruby-operator">:</span> <span class="ruby-node">&quot;| #{first}&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-tasks_in" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-tasks_in" title="Link to this method">
+                <span class="method-name">tasks_in</span>
+                <span class="method-args">(status)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="tasks_in-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 38</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">tasks_in</span>(<span class="ruby-identifier">status</span>)
+  <span class="ruby-identifier">dir</span> = <span class="ruby-identifier">queue_dirs</span>[<span class="ruby-identifier">status</span>]
+  <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">glob</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dir</span>, <span class="ruby-string">&#39;*.md&#39;</span>)).<span class="ruby-identifier">sort</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">basename</span>(<span class="ruby-identifier">f</span>, <span class="ruby-string">&#39;.md&#39;</span>) }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-tasks_in_sorted" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-tasks_in_sorted" title="Link to this method">
+                <span class="method-name">tasks_in_sorted</span>
+                <span class="method-args">(status)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="tasks_in_sorted-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/queue.rb, line 43</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">tasks_in_sorted</span>(<span class="ruby-identifier">status</span>)
+  <span class="ruby-identifier">dir</span> = <span class="ruby-identifier">queue_dirs</span>[<span class="ruby-identifier">status</span>]
+  <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">glob</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dir</span>, <span class="ruby-string">&#39;*.md&#39;</span>)).<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span>
+    { <span class="ruby-value">name:</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">basename</span>(<span class="ruby-identifier">f</span>, <span class="ruby-string">&#39;.md&#39;</span>), <span class="ruby-value">mtime:</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">mtime</span>(<span class="ruby-identifier">f</span>) }
+  }.<span class="ruby-identifier">sort_by</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">t</span><span class="ruby-operator">|</span> <span class="ruby-operator">-</span><span class="ruby-identifier">t</span>[<span class="ruby-value">:mtime</span>].<span class="ruby-identifier">to_i</span> }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+    </section>
+
+
+
+
+  </section>
+
+</main>
+
+<aside class="table-of-contents" role="complementary" aria-label="Table of Contents">
+  <div class="toc-sticky">
+    <h3 class="toc-heading">On This Page</h3>
+    <nav class="toc-nav" id="toc-nav" aria-label="Page sections">
+      <!-- Generated by JavaScript based on page headings -->
+    </nav>
+  </div>
+</aside>
+
+
+<footer class="site-footer">
+  
+
+  <div class="footer-bottom">
+    <p>
+      Generated by <a href="https://ruby.github.io/rdoc/">RDoc 7.2.0</a>
+      using the Aliki theme by <a href="http://st0012.dev">Stan Lo</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+

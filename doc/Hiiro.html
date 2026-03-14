@@ -1,0 +1,4046 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>class Hiiro - RDoc Documentation</title>
+
+
+  <meta
+    name="keywords"
+    content="ruby,class,Hiiro"
+  >
+
+    <meta
+      name="description"
+      content="Documentation for the Hiiro class"
+    >
+
+
+
+
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="class Hiiro - RDoc Documentation">
+
+
+
+    <meta
+      property="og:description"
+      content="Documentation for Hiiro class - API reference and code examples"
+    >
+
+
+
+
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="class Hiiro - RDoc Documentation">
+
+
+
+    <meta
+      name="twitter:description"
+      content="Documentation for Hiiro class - API reference and code examples"
+    >
+
+
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script
+  src="./js/theme-toggle.js?v=7.2.0"
+></script>
+
+<script
+  src="./js/search_navigation.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_data.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_ranker.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/search_controller.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/c_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/bash_highlighter.js?v=7.2.0"
+  defer
+></script>
+
+<script
+  src="./js/aliki.js?v=7.2.0"
+  defer
+></script>
+
+<link
+  href="./css/rdoc.css?v=7.2.0"
+  rel="stylesheet"
+>
+
+
+
+
+<body role="document" class="class has-toc">
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <!-- Chevron (right arrow) - used for expand/collapse -->
+  <symbol
+    id="icon-chevron"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="9 18 15 12 9 6"></polyline>
+  </symbol>
+
+  <!-- File/Document - Pages section -->
+  <symbol
+    id="icon-file"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path
+      d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
+    ></path>
+
+    <polyline points="14 2 14 8 20 8"></polyline>
+  </symbol>
+
+  <!-- Layers/Stack - Classes and Modules section -->
+  <symbol
+    id="icon-layers"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+    <polyline points="2 17 12 22 22 17"></polyline>
+    <polyline points="2 12 12 17 22 12"></polyline>
+  </symbol>
+
+  <!-- Curly braces with C - Class Methods section -->
+  <symbol
+    id="icon-class-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      C
+    </text>
+  </symbol>
+
+  <!-- Curly braces with I - Instance Methods section -->
+  <symbol
+    id="icon-instance-methods"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
+    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
+
+    <text
+      x="12"
+      y="17"
+      text-anchor="middle"
+      font-size="13"
+      font-weight="bold"
+      fill="currentColor"
+      stroke="none"
+    >
+      I
+    </text>
+  </symbol>
+
+  <!-- Double chevrons up - Ancestors section -->
+  <symbol
+    id="icon-ancestors"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <polyline points="17 11 12 6 7 11"></polyline>
+    <polyline points="17 18 12 13 7 18"></polyline>
+  </symbol>
+
+  <!-- User with plus - Included Modules section -->
+  <symbol
+    id="icon-includes"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+
+    <line
+      x1="20"
+      y1="8"
+      x2="20"
+      y2="14"
+    ></line>
+
+    <line
+      x1="23"
+      y1="11"
+      x2="17"
+      y2="11"
+    ></line>
+  </symbol>
+
+  <!-- User with check - Extended Modules section -->
+  <symbol
+    id="icon-extends"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+    <circle cx="8.5" cy="7" r="4"></circle>
+    <polyline points="17 11 19 13 23 9"></polyline>
+  </symbol>
+
+  <!-- List - Sections section -->
+  <symbol
+    id="icon-list"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <line
+      x1="8"
+      y1="6"
+      x2="21"
+      y2="6"
+    ></line>
+
+    <line
+      x1="8"
+      y1="12"
+      x2="21"
+      y2="12"
+    ></line>
+
+    <line
+      x1="8"
+      y1="18"
+      x2="21"
+      y2="18"
+    ></line>
+
+    <line
+      x1="3"
+      y1="6"
+      x2="3.01"
+      y2="6"
+    ></line>
+
+    <line
+      x1="3"
+      y1="12"
+      x2="3.01"
+      y2="12"
+    ></line>
+
+    <line
+      x1="3"
+      y1="18"
+      x2="3.01"
+      y2="18"
+    ></line>
+  </symbol>
+</svg>
+
+<header class="top-navbar">
+  <a href="./index.html" class="navbar-brand">
+    RDoc Documentation
+  </a>
+
+  <!-- Desktop search bar -->
+  <div class="navbar-search navbar-search-desktop" role="search">
+    <form action="#" method="get" accept-charset="utf-8">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results-desktop"
+             type="text" name="search" placeholder="Search (/) for a class, method..."
+             spellcheck="false" autocomplete="off"
+             title="Type to search, Up and Down to navigate, Enter to load">
+      <ul id="search-results-desktop" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="initially-hidden search-results"></ul>
+    </form>
+  </div>
+
+  <!-- Mobile search icon button -->
+  <button id="search-toggle" class="navbar-search-mobile" aria-label="Open search" type="button">
+    <span aria-hidden="true">🔍</span>
+  </button>
+
+  <!-- Theme toggle button -->
+  <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" type="button">
+    <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+  </button>
+</header>
+
+<!-- Search Modal (Mobile) -->
+<div id="search-modal" class="search-modal" hidden aria-modal="true" role="dialog" aria-label="Search">
+  <div class="search-modal-backdrop"></div>
+  <div class="search-modal-content">
+    <div class="search-modal-header">
+      <form class="search-modal-form" action="#" method="get" accept-charset="utf-8">
+        <span class="search-modal-icon" aria-hidden="true">🔍</span>
+        <input id="search-field-mobile" role="combobox" aria-label="Search"
+               aria-autocomplete="list" aria-controls="search-results-mobile"
+               type="text" name="search" placeholder="Search documentation"
+               spellcheck="false" autocomplete="off">
+        <button type="button" class="search-modal-close" aria-label="Close search" id="search-modal-close">
+          <span aria-hidden="true">esc</span>
+        </button>
+      </form>
+    </div>
+    <div class="search-modal-body">
+      <ul id="search-results-mobile" aria-label="Search Results"
+          aria-busy="false" aria-expanded="false"
+          aria-atomic="false" class="search-results search-modal-results initially-hidden"></ul>
+      <div class="search-modal-empty">
+        <p>No recent searches</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
+  <span aria-hidden="true">&#9776;</span>
+</div>
+
+
+<nav id="navigation" role="navigation" hidden>
+  
+
+
+
+
+  <div id="fileindex-section" class="nav-section">
+    <details class="nav-section-collapsible" >
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg>
+            <use href="#icon-file"></use>
+          </svg>
+        </span>
+
+        <span class="nav-section-title">Pages</span>
+
+        <span class="nav-section-chevron">
+          <svg>
+            <use href="#icon-chevron"></use>
+          </svg>
+        </span>
+      </summary>
+
+      <ul class="nav-list">
+
+
+
+
+
+
+            <li>
+              <a href="./CLAUDE_md.html">
+                CLAUDE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Gemfile.html">
+                Gemfile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Gemfile_lock.html">
+                Gemfile.lock
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./LICENSE.html">
+                LICENSE
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./README_md.html">
+                README
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./Rakefile.html">
+                Rakefile
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./TODO_md.html">
+                TODO
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./demo_sh.html">
+                demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  docs
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./docs/README_md.html">
+                      README
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/docker-testing-guide_md.html">
+                      docker-testing-guide
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-buffer_md.html">
+                      h-buffer
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-pane_md.html">
+                      h-pane
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-plugin_md.html">
+                      h-plugin
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-session_md.html">
+                      h-session
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./docs/h-window_md.html">
+                      h-window
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="./h-tmux-plugins_tmux.html">
+                h-tmux-plugins.tmux
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./notes.html">
+                notes
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./obsidian_slides_md.html">
+                obsidian_slides
+              </a>
+            </li>
+
+
+
+
+            <li>
+              <a href="./record-demo_sh.html">
+                record-demo.sh
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  script
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./script/compare.html">
+                      compare
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/install.html">
+                      install
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/sync.html">
+                      sync
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/test.html">
+                      test
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./script/update.html">
+                      update
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+
+
+
+            <li>
+              <a href="./slides_md.html">
+                slides
+              </a>
+            </li>
+
+
+
+
+
+          <li>
+            <details >
+              <summary>
+                
+                  tmp
+                  
+                
+              </summary>
+
+              <ul class="link-list">
+
+                  <li>
+                    <a href="./tmp/gql-error_message_json.html">
+                      gql-error_message.json
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./tmp/sync_sh.html">
+                      sync.sh
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="./tmp/yaml_files.html">
+                      yaml_files
+                    </a>
+                  </li>
+
+              </ul>
+            </details>
+          </li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  
+
+  
+<div id="parent-class-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-ancestors"></use></svg>
+      </span>
+      <span class="nav-section-title">Ancestors</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+    <ul><li><a href="Object.html">Object</a><ul><li>BasicObject</li></ul></li></ul>
+  </details>
+</div>
+
+
+  
+
+  
+
+  
+  <div class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg><use href="#icon-class-methods"></use></svg>
+        </span>
+        <span class="nav-section-title">Class Methods</span>
+        <span class="nav-section-chevron">
+          <svg><use href="#icon-chevron"></use></svg>
+        </span>
+      </summary>
+      <ul class="nav-list" role="directory">
+
+        <li ><a href="#method-c-init">init</a></li>
+
+        <li ><a href="#method-c-load_env">load_env</a></li>
+
+        <li ><a href="#method-c-new">new</a></li>
+
+        <li ><a href="#method-c-options">options</a></li>
+
+        <li ><a href="#method-c-run">run</a></li>
+
+      </ul>
+    </details>
+  </div>
+
+
+
+  <div class="nav-section">
+    <details class="nav-section-collapsible" open>
+      <summary class="nav-section-header">
+        <span class="nav-section-icon">
+          <svg><use href="#icon-instance-methods"></use></svg>
+        </span>
+        <span class="nav-section-title">Instance Methods</span>
+        <span class="nav-section-chevron">
+          <svg><use href="#icon-chevron"></use></svg>
+        </span>
+      </summary>
+      <ul class="nav-list" role="directory">
+
+        <li ><a href="#method-i-add_cmd">add_cmd</a></li>
+
+        <li ><a href="#method-i-add_default">add_default</a></li>
+
+        <li ><a href="#method-i-add_flag">add_flag</a></li>
+
+        <li ><a href="#method-i-add_option">add_option</a></li>
+
+        <li ><a href="#method-i-add_subcmd">add_subcmd</a></li>
+
+        <li ><a href="#method-i-add_subcommand">add_subcommand</a></li>
+
+        <li ><a href="#method-i-attach_method">attach_method</a></li>
+
+        <li ><a href="#method-i-auto_var_name">auto_var_name</a></li>
+
+        <li ><a href="#method-i-build_location_vars">build_location_vars</a></li>
+
+        <li ><a href="#method-i-consolidate_dirs">consolidate_dirs</a></li>
+
+        <li ><a href="#method-i-default_subcommand">default_subcommand</a></li>
+
+        <li ><a href="#method-i-edit_files">edit_files</a></li>
+
+        <li ><a href="#method-i-editor">editor</a></li>
+
+        <li ><a href="#method-i-env">env</a></li>
+
+        <li ><a href="#method-i-environment">environment</a></li>
+
+        <li ><a href="#method-i-full_name">full_name</a></li>
+
+        <li ><a href="#method-i-fuzzyfind">fuzzyfind</a></li>
+
+        <li ><a href="#method-i-fuzzyfind_from_map">fuzzyfind_from_map</a></li>
+
+        <li ><a href="#method-i-get_value">get_value</a></li>
+
+        <li ><a href="#method-i-git">git</a></li>
+
+        <li ><a href="#method-i-handle_result">handle_result</a></li>
+
+        <li ><a href="#method-i-help">help</a></li>
+
+        <li ><a href="#method-i-list_runners">list_runners</a></li>
+
+        <li ><a href="#method-i-load_plugin">load_plugin</a></li>
+
+        <li ><a href="#method-i-load_plugins">load_plugins</a></li>
+
+        <li ><a href="#method-i-log">log</a></li>
+
+        <li ><a href="#method-i-make_child">make_child</a></li>
+
+        <li ><a href="#method-i-options">options</a></li>
+
+        <li ><a href="#method-i-parsed_args">parsed_args</a></li>
+
+        <li ><a href="#method-i-path_lca">path_lca</a></li>
+
+        <li ><a href="#method-i-pins">pins</a></li>
+
+        <li ><a href="#method-i-queue">queue</a></li>
+
+        <li ><a href="#method-i-run">run</a></li>
+
+        <li ><a href="#method-i-run_subcmd">run_subcmd</a></li>
+
+        <li ><a href="#method-i-run_subcommand">run_subcommand</a></li>
+
+        <li ><a href="#method-i-runnable-3F">runnable?</a></li>
+
+        <li ><a href="#method-i-runner">runner</a></li>
+
+        <li ><a href="#method-i-runners">runners</a></li>
+
+        <li ><a href="#method-i-shorten_location">shorten_location</a></li>
+
+        <li ><a href="#method-i-start_tmux_session">start_tmux_session</a></li>
+
+        <li ><a href="#method-i-subcommand_names">subcommand_names</a></li>
+
+        <li ><a href="#method-i-task_manager">task_manager</a></li>
+
+        <li ><a href="#method-i-tasks">tasks</a></li>
+
+        <li ><a href="#method-i-tasks_enabled-3F">tasks_enabled?</a></li>
+
+        <li ><a href="#method-i-this">this</a></li>
+
+        <li ><a href="#method-i-tm">tm</a></li>
+
+        <li ><a href="#method-i-tmux_client">tmux_client</a></li>
+
+        <li ><a href="#method-i-todo_manager">todo_manager</a></li>
+
+        <li ><a href="#method-i-vim-3F">vim?</a></li>
+
+      </ul>
+    </details>
+  </div>
+
+
+  <div id="classindex-section" class="nav-section">
+  <details class="nav-section-collapsible" open>
+    <summary class="nav-section-header">
+      <span class="nav-section-icon">
+        <svg><use href="#icon-layers"></use></svg>
+      </span>
+      <span class="nav-section-title">Classes and Modules</span>
+      <span class="nav-section-chevron">
+        <svg><use href="#icon-chevron"></use></svg>
+      </span>
+    </summary>
+
+    <ul class="link-list nav-list"><li><code><a href="./App.html">App</a></code></li><li><code><a href="./BranchManager.html">BranchManager</a></code></li><li><code><a href="./Directory.html">Directory</a></code></li><li><code><a href="./Environment.html">Environment</a></code></li><li><details><summary><code><a href="./Hiiro.html">Hiiro</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/AnyStruct.html">AnyStruct</a></code></li><li><code><a href="./Hiiro/App.html">App</a></code></li><li><code><a href="./Hiiro/AppFiles.html">AppFiles</a></code></li><li><code><a href="./Hiiro/Args.html">Args</a></code></li><li><code><a href="./Hiiro/Bins.html">Bins</a></code></li><li><code><a href="./Hiiro/Config.html">Config</a></code></li><li><code><a href="./Hiiro/Environment.html">Environment</a></code></li><li><code><a href="./Hiiro/Fuzzyfind.html">Fuzzyfind</a></code></li><li><details><summary><code><a href="./Hiiro/Git.html">Git</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Git/Branch.html">Branch</a></code></li><li><code><a href="./Hiiro/Git/Branches.html">Branches</a></code></li><li><code><a href="./Hiiro/Git/Pr.html">Pr</a></code></li><li><code><a href="./Hiiro/Git/Remote.html">Remote</a></code></li><li><code><a href="./Hiiro/Git/Worktree.html">Worktree</a></code></li><li><code><a href="./Hiiro/Git/Worktrees.html">Worktrees</a></code></li></ul></details></li><li><code><a href="./Hiiro/Glob.html">Glob</a></code></li><li><details><summary><code><a href="./Hiiro/Matcher.html">Matcher</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Matcher/Item.html">Item</a></code></li><li><code><a href="./Hiiro/Matcher/PathResult.html">PathResult</a></code></li><li><code><a href="./Hiiro/Matcher/Result.html">Result</a></code></li></ul></details></li><li><code><a href="./Hiiro/Notification.html">Notification</a></code></li><li><details><summary><code><a href="./Hiiro/Options.html">Options</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Options/Args.html">Args</a></code></li><li><code><a href="./Hiiro/Options/Definition.html">Definition</a></code></li></ul></details></li><li><details><summary><code><a href="./Hiiro/Paths.html">Paths</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Paths/Symlink.html">Symlink</a></code></li></ul></details></li><li><code><a href="./Hiiro/Matcher.html">PrefixMatcher</a></code></li><li><details><summary><code><a href="./Hiiro/Queue.html">Queue</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Queue/Prompt.html">Prompt</a></code></li></ul></details></li><li><code><a href="./Hiiro/Rbenv.html">Rbenv</a></code></li><li><code><a href="./Hiiro/RunnerTool.html">RunnerTool</a></code></li><li><details><summary><code><a href="./Hiiro/Runners.html">Runners</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Runners/Bin.html">Bin</a></code></li><li><code><a href="./Hiiro/Runners/Subcommand.html">Subcommand</a></code></li></ul></details></li><li><code><a href="./Hiiro/ServiceManager.html">ServiceManager</a></code></li><li><code><a href="./Hiiro/Shell.html">Shell</a></code></li><li><code><a href="./Hiiro/SparseGroups.html">SparseGroups</a></code></li><li><code><a href="./Hiiro/Tags.html">Tags</a></code></li><li><code><a href="./Hiiro/Task.html">Task</a></code></li><li><details><summary><code><a href="./Hiiro/TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="./Hiiro/Tasks.html">Tasks</a></code></li><li><details><summary><code><a href="./Hiiro/Tmux.html">Tmux</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Hiiro/Tmux/Buffer.html">Buffer</a></code></li><li><code><a href="./Hiiro/Tmux/Buffers.html">Buffers</a></code></li><li><code><a href="./Hiiro/Tmux/Pane.html">Pane</a></code></li><li><code><a href="./Hiiro/Tmux/Panes.html">Panes</a></code></li><li><code><a href="./Hiiro/Tmux/Session.html">Session</a></code></li><li><code><a href="./Hiiro/Tmux/Sessions.html">Sessions</a></code></li><li><code><a href="./Hiiro/Tmux/Window.html">Window</a></code></li><li><code><a href="./Hiiro/Tmux/Windows.html">Windows</a></code></li></ul></details></li><li><code><a href="./Hiiro/TodoItem.html">TodoItem</a></code></li><li><code><a href="./Hiiro/TodoManager.html">TodoManager</a></code></li><li><code><a href="./Hiiro/Tree.html">Tree</a></code></li></ul></details></li><li><details><summary><code><a href="./LinkManager.html">LinkManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./LinkManager/Link.html">Link</a></code></li></ul></details></li><li><code><a href="./Notify.html">Notify</a></code></li><li><code><a href="./Object.html">Object</a></code></li><li><code><a href="./PinnedPRManager.html">PinnedPRManager</a></code></li><li><details><summary><code><a href="./Pins.html">Pins</a></code></summary><ul class="link-list nav-list"><li><code><a href="./Pins/Pin.html">Pin</a></code></li></ul></details></li><li><code><a href="./Project.html">Project</a></code></li><li><code><a href="./String.html">String</a></code></li><li><code><a href="./Task.html">Task</a></code></li><li><details><summary><code><a href="./TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="./TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="./Tasks.html">Tasks</a></code></li><li><code><a href="./TmuxSession.html">TmuxSession</a></code></li><li><code><a href="./Tree.html">Tree</a></code></li></ul>
+  </details>
+</div>
+
+</nav>
+
+<main role="main" aria-labelledby="class-hiiro">
+  
+  
+
+  <span id="class-Hiiro" class="legacy-anchor"></span>
+  <h1 id="class-hiiro" class="anchor-link class">
+    class Hiiro
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+
+  <span id="5Buntitled-5D" class="legacy-anchor"></span>
+  <section class="documentation-section anchor-link">
+
+
+
+
+
+    <section class="constants-list">
+      <header>
+        <h3 id="untitled-constants"><a href="#untitled-constants">Constants</a></h3>
+      </header>
+      <dl>
+
+        <dt id="PrefixMatcher">PrefixMatcher</dt>
+
+        <dd>
+
+          <p>Backward compatibility alias</p>
+        </dd>
+
+
+        <dt id="REPO_PATH">REPO_PATH</dt>
+
+        <dd>
+
+          
+        </dd>
+
+
+        <dt id="VERSION">VERSION</dt>
+
+        <dd>
+
+          
+        </dd>
+
+
+        <dt id="WORK_DIR">WORK_DIR</dt>
+
+        <dd>
+
+          
+        </dd>
+
+
+      </dl>
+    </section>
+
+
+
+    <section class="attribute-method-details method-section">
+      <header>
+        <h3 id="untitled-attributes"><a href="#untitled-attributes">Attributes</a></h3>
+      </header>
+
+
+      <div id="attribute-i-all_args" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-all_args" title="Link to this attribute">
+            <span class="method-name">all_args</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-args" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-args" title="Link to this attribute">
+            <span class="method-name">args</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-bin" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-bin" title="Link to this attribute">
+            <span class="method-name">bin</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-bin_name" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-bin_name" title="Link to this attribute">
+            <span class="method-name">bin_name</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-full_command" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-full_command" title="Link to this attribute">
+            <span class="method-name">full_command</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-global_values" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-global_values" title="Link to this attribute">
+            <span class="method-name">global_values</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-loaded_plugins" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-loaded_plugins" title="Link to this attribute">
+            <span class="method-name">loaded_plugins</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-logging" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-logging" title="Link to this attribute">
+            <span class="method-name">logging</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-opts" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-opts" title="Link to this attribute">
+            <span class="method-name">opts</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-subcmd" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-subcmd" title="Link to this attribute">
+            <span class="method-name">subcmd</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+      <div id="attribute-i-task_scope" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-task_scope" title="Link to this attribute">
+            <span class="method-name">task_scope</span>
+            <span class="attribute-access-type">[R]</span>
+          </a>
+        </div>
+
+        <div class="method-description">
+
+
+        
+
+        </div>
+      </div>
+
+    </section>
+
+
+
+
+
+
+     <section id="public-class-untitled-method-details" class="method-section anchor-link">
+       <header>
+         <h3 id="public-class-untitled-methods"><a href="#public-class-untitled-methods">Public Class Methods</a></h3>
+       </header>
+
+
+      <div id="method-c-init" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-init" title="Link to this method">
+                <span class="method-name">init</span>
+                <span class="method-args">(*oargs, plugins: [], logging: false, tasks: false, task_scope: nil, **values, &amp;block)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="init-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 45</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">init</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">oargs</span>, <span class="ruby-value">plugins:</span> [], <span class="ruby-value">logging:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">tasks:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">task_scope:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">load_env</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">values</span>[<span class="ruby-value">:args</span>]
+    <span class="ruby-identifier">args</span> = <span class="ruby-identifier">values</span>[<span class="ruby-value">:args</span>]
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">args</span> <span class="ruby-operator">||=</span> <span class="ruby-identifier">oargs</span>
+    <span class="ruby-identifier">args</span> = <span class="ruby-constant">ARGV</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">empty?</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">bin_name</span> = <span class="ruby-identifier">values</span>[<span class="ruby-value">:bin_name</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">$0</span>
+
+  <span class="ruby-identifier">new</span>(<span class="ruby-identifier">bin_name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-value">logging:</span> <span class="ruby-identifier">logging</span>, <span class="ruby-value">tasks:</span> <span class="ruby-identifier">tasks</span>, <span class="ruby-value">task_scope:</span> <span class="ruby-identifier">task_scope</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>).<span class="ruby-identifier">tap</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">hiiro</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">load_plugins</span>(<span class="ruby-identifier">plugins</span>)
+
+    <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_subcommand</span>(<span class="ruby-value">:pry</span>) { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">binding</span>.<span class="ruby-identifier">pry</span>
+    }
+
+    <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:edit</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>) { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">edit_files</span>(<span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">bin</span>)
+    }
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">tasks_enabled?</span>
+      <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:task</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">tm</span> = <span class="ruby-constant">TaskManager</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-value">scope:</span> <span class="ruby-value">:task</span>)
+        <span class="ruby-constant">Tasks</span>.<span class="ruby-identifier">build_hiiro</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-identifier">tm</span>).<span class="ruby-identifier">run</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:subtask</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">tm</span> = <span class="ruby-constant">TaskManager</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-value">scope:</span> <span class="ruby-value">:subtask</span>)
+        <span class="ruby-constant">Tasks</span>.<span class="ruby-identifier">build_hiiro</span>(<span class="ruby-identifier">hiiro</span>, <span class="ruby-identifier">tm</span>).<span class="ruby-identifier">run</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">block</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">block</span>.<span class="ruby-identifier">arity</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span>
+        <span class="ruby-identifier">block</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">hiiro</span>)
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">instance_eval</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-load_env" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-load_env" title="Link to this method">
+                <span class="method-name">load_env</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="load_env-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 100</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">load_env</span>
+  <span class="ruby-constant">Config</span>.<span class="ruby-identifier">plugin_files</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">plugin_file</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">require</span> <span class="ruby-identifier">plugin_file</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">self</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-new" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-new" title="Link to this method">
+                <span class="method-name">new</span>
+                <span class="method-args">(bin, *all_args, logging: false, tasks: false, task_scope: nil, **values)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="new-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 116</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">bin</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">all_args</span>, <span class="ruby-value">logging:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">tasks:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">task_scope:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>)
+  <span class="ruby-ivar">@bin</span> = <span class="ruby-identifier">bin</span>
+  <span class="ruby-ivar">@bin_name</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">basename</span>(<span class="ruby-identifier">bin</span>)
+  <span class="ruby-ivar">@all_args</span> = <span class="ruby-identifier">all_args</span>
+  <span class="ruby-ivar">@subcmd</span>, <span class="ruby-operator">*</span><span class="ruby-ivar">@args</span> = <span class="ruby-identifier">all_args</span> <span class="ruby-comment"># normally i would never do this</span>
+  <span class="ruby-ivar">@loaded_plugins</span> = []
+  <span class="ruby-ivar">@logging</span> = <span class="ruby-identifier">logging</span>
+  <span class="ruby-ivar">@tasks_enabled</span> = <span class="ruby-identifier">tasks</span>
+  <span class="ruby-ivar">@task_scope</span> = <span class="ruby-identifier">task_scope</span>
+  <span class="ruby-ivar">@global_values</span> = <span class="ruby-identifier">values</span>
+  <span class="ruby-ivar">@full_command</span> = [
+    <span class="ruby-identifier">bin_name</span>,
+    <span class="ruby-operator">*</span><span class="ruby-identifier">all_args</span>,
+  ].<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:shellescape</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39; &#39;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-options" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-options" title="Link to this method">
+                <span class="method-name">options</span>
+                <span class="method-args">(&amp;block)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="options-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 90</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">options</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-constant">Options</span>.<span class="ruby-identifier">setup</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-c-run" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-c-run" title="Link to this method">
+                <span class="method-name">run</span>
+                <span class="method-args">(*args, plugins: [], logging: false, tasks: false, task_scope: nil, **values, &amp;block)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="run-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 94</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">run</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-value">plugins:</span> [], <span class="ruby-value">logging:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">tasks:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">task_scope:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">hiiro</span> = <span class="ruby-identifier">init</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-value">plugins:</span>, <span class="ruby-value">logging:</span>, <span class="ruby-value">tasks:</span>, <span class="ruby-value">task_scope:</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">run</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+    </section>
+
+
+
+
+
+
+
+     <section id="public-instance-untitled-method-details" class="method-section anchor-link">
+       <header>
+         <h3 id="public-instance-untitled-methods"><a href="#public-instance-untitled-methods">Public Instance Methods</a></h3>
+       </header>
+
+
+      <div id="method-i-add_cmd" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-add_cmd" title="Link to this method">
+                <span class="method-name">add_cmd</span>
+                <span class="method-args">(*names, args: [], opts: [], &amp;block)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="add_cmd-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 255</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_cmd</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">names</span>, <span class="ruby-value">args:</span> [], <span class="ruby-value">opts:</span> [], <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">cmd_opts</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">select</span>(<span class="ruby-identifier">opts</span>)
+
+  <span class="ruby-identifier">wrapper</span> = <span class="ruby-identifier">lambda</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">raw_args</span><span class="ruby-operator">|</span>
+    <span class="ruby-ivar">@opts</span> = <span class="ruby-identifier">cmd_opts</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">raw_args</span>)
+    <span class="ruby-identifier">instance_eval</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">names</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">runners</span>.<span class="ruby-identifier">add_subcommand</span>(
+      <span class="ruby-identifier">name</span>, <span class="ruby-identifier">wrapper</span>,
+      <span class="ruby-value">subcmd_args:</span> <span class="ruby-identifier">args</span>,
+      <span class="ruby-value">subcmd_opts:</span> <span class="ruby-identifier">cmd_opts</span>,
+      <span class="ruby-operator">**</span><span class="ruby-identifier">global_values</span>
+    )
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-add_default" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-add_default" title="Link to this method">
+                <span class="method-name">add_default</span>
+                <span class="method-args">(**values, &amp;handler)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="add_default-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 232</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_default</span>(<span class="ruby-operator">**</span><span class="ruby-identifier">values</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">handler</span>)
+  <span class="ruby-identifier">runners</span>.<span class="ruby-identifier">add_default</span>(<span class="ruby-identifier">handler</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">global_values</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-add_flag" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-add_flag" title="Link to this method">
+                <span class="method-name">add_flag</span>
+                <span class="method-args">(name, **kwargs)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="add_flag-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 251</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_flag</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+  <span class="ruby-identifier">options</span>.<span class="ruby-identifier">flag</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-add_option" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-add_option" title="Link to this method">
+                <span class="method-name">add_option</span>
+                <span class="method-args">(name, **kwargs)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="add_option-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 247</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_option</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+  <span class="ruby-identifier">options</span>.<span class="ruby-identifier">option</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-add_subcmd" class="method-detail anchor-link method-alias">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-add_subcmd" title="Link to this method">
+                <span class="method-name">add_subcmd</span>
+                <span class="method-args">(*names, opts: nil, **values, &amp;handler)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+        <div class="aliases">
+          Alias for: <a href="Hiiro.html#method-i-add_subcommand">add_subcommand</a>
+        </div>
+
+      </div>
+
+
+      <div id="method-i-add_subcommand" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-add_subcommand" title="Link to this method">
+                <span class="method-name">add_subcommand</span>
+                <span class="method-args">(*names, opts: nil, **values, &amp;handler)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="add_subcommand-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 236</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_subcommand</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">names</span>, <span class="ruby-value">opts:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">handler</span>)
+  <span class="ruby-identifier">names</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">runners</span>.<span class="ruby-identifier">add_subcommand</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">handler</span>, <span class="ruby-value">opts:</span> <span class="ruby-identifier">opts</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">global_values</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+        <div class="aliases">
+          Also aliased as: <a href="Hiiro.html#method-i-add_subcmd">add_subcmd</a>
+        </div>
+
+
+
+      </div>
+
+
+      <div id="method-i-attach_method" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-attach_method" title="Link to this method">
+                <span class="method-name">attach_method</span>
+                <span class="method-args">(name, &amp;block)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="attach_method-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 292</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">attach_method</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-auto_var_name" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-auto_var_name" title="Link to this method">
+                <span class="method-name">auto_var_name</span>
+                <span class="method-args">(path, existing_vars)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="auto_var_name-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 414</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">auto_var_name</span>(<span class="ruby-identifier">path</span>, <span class="ruby-identifier">existing_vars</span>)
+  <span class="ruby-identifier">parts</span> = <span class="ruby-identifier">path</span>.<span class="ruby-identifier">delete_prefix</span>(<span class="ruby-string">&#39;/&#39;</span>).<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>)
+  (<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-identifier">parts</span>.<span class="ruby-identifier">length</span>).<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">n</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">candidate</span> = <span class="ruby-identifier">parts</span>.<span class="ruby-identifier">last</span>(<span class="ruby-identifier">n</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;_&#39;</span>).<span class="ruby-identifier">upcase</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/[^A-Z0-9]/</span>, <span class="ruby-string">&#39;_&#39;</span>).<span class="ruby-identifier">squeeze</span>(<span class="ruby-string">&#39;_&#39;</span>).<span class="ruby-identifier">delete_prefix</span>(<span class="ruby-string">&#39;_&#39;</span>).<span class="ruby-identifier">delete_suffix</span>(<span class="ruby-string">&#39;_&#39;</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">candidate</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">existing_vars</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">candidate</span>)
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-node">&quot;DIR_#{existing_vars.length + 1}&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-build_location_vars" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-build_location_vars" title="Link to this method">
+                <span class="method-name">build_location_vars</span>
+                <span class="method-args">(list)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="build_location_vars-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 377</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">build_location_vars</span>(<span class="ruby-identifier">list</span>)
+  <span class="ruby-identifier">paths</span> = <span class="ruby-identifier">list</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span> <span class="ruby-identifier">r</span>.<span class="ruby-identifier">location</span> }.<span class="ruby-identifier">compact</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">loc</span><span class="ruby-operator">|</span> <span class="ruby-identifier">loc</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/:\d+$/</span>, <span class="ruby-string">&#39;&#39;</span>) }
+  <span class="ruby-identifier">dirs</span>  = <span class="ruby-identifier">paths</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">dirname</span>(<span class="ruby-identifier">p</span>) }.<span class="ruby-identifier">uniq</span>
+
+  <span class="ruby-identifier">ancestors</span> = <span class="ruby-identifier">consolidate_dirs</span>(<span class="ruby-identifier">dirs</span>, <span class="ruby-value">min_depth:</span> <span class="ruby-value">4</span>)
+
+  <span class="ruby-identifier">vars</span> = {}
+  <span class="ruby-identifier">ancestors</span>.<span class="ruby-identifier">sort</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">ancestor</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">name</span> = <span class="ruby-identifier">auto_var_name</span>(<span class="ruby-identifier">ancestor</span>, <span class="ruby-identifier">vars</span>)
+    <span class="ruby-identifier">vars</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-identifier">ancestor</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">vars</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-consolidate_dirs" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-consolidate_dirs" title="Link to this method">
+                <span class="method-name">consolidate_dirs</span>
+                <span class="method-args">(dirs, min_depth:)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="consolidate_dirs-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 393</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">consolidate_dirs</span>(<span class="ruby-identifier">dirs</span>, <span class="ruby-value">min_depth:</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">dirs</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">dirs</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">&lt;=</span> <span class="ruby-value">1</span>
+
+  <span class="ruby-identifier">lca</span>       = <span class="ruby-identifier">dirs</span>.<span class="ruby-identifier">reduce</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span><span class="ruby-operator">|</span> <span class="ruby-identifier">path_lca</span>(<span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span>) }
+  <span class="ruby-identifier">lca_depth</span> = <span class="ruby-identifier">lca</span>.<span class="ruby-identifier">delete_prefix</span>(<span class="ruby-string">&#39;/&#39;</span>).<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>).<span class="ruby-identifier">reject</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:empty?</span>).<span class="ruby-identifier">length</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">lca_depth</span> <span class="ruby-operator">&gt;=</span> <span class="ruby-identifier">min_depth</span>
+    [<span class="ruby-identifier">lca</span>]
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">lca_parts</span> = <span class="ruby-identifier">lca</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>)
+    <span class="ruby-identifier">subgroups</span> = <span class="ruby-identifier">dirs</span>.<span class="ruby-identifier">group_by</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">d</span><span class="ruby-operator">|</span> <span class="ruby-identifier">d</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>).<span class="ruby-identifier">first</span>(<span class="ruby-identifier">lca_parts</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">+</span> <span class="ruby-value">1</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;/&#39;</span>) }
+    <span class="ruby-identifier">subgroups</span>.<span class="ruby-identifier">flat_map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">_</span>, <span class="ruby-identifier">group</span><span class="ruby-operator">|</span> <span class="ruby-identifier">consolidate_dirs</span>(<span class="ruby-identifier">group</span>, <span class="ruby-value">min_depth:</span> <span class="ruby-identifier">min_depth</span>) }.<span class="ruby-identifier">uniq</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          <p>Recursively group directories under their common ancestor when that ancestor is deep enough to be a useful alias (&gt;= min_depth components).</p>
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-default_subcommand" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-default_subcommand" title="Link to this method">
+                <span class="method-name">default_subcommand</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="default_subcommand-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 453</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">default_subcommand</span>
+  <span class="ruby-constant">Runners</span><span class="ruby-operator">::</span><span class="ruby-constant">Subcommand</span>.<span class="ruby-identifier">new</span>(
+    <span class="ruby-identifier">bin_name</span>,
+    <span class="ruby-value">:DEFAULT</span>,
+    <span class="ruby-identifier">lambda</span> { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span> <span class="ruby-identifier">help</span>; <span class="ruby-keyword">false</span> },
+  )
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-edit_files" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-edit_files" title="Link to this method">
+                <span class="method-name">edit_files</span>
+                <span class="method-args">(*files, max_splits: 3)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="edit_files-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 165</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">edit_files</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">files</span>, <span class="ruby-value">max_splits:</span> <span class="ruby-value">3</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">editor</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-regexp">/vim/i</span>)
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">files</span>.<span class="ruby-identifier">count</span> <span class="ruby-operator">&gt;</span> <span class="ruby-identifier">max_splits</span>.<span class="ruby-identifier">to_i</span>
+      <span class="ruby-identifier">system</span>(<span class="ruby-identifier">editor</span>, <span class="ruby-string">&#39;-O&#39;</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">max_splits</span>.<span class="ruby-identifier">to_i</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">files</span>)
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">system</span>(<span class="ruby-identifier">editor</span>, <span class="ruby-string">&#39;-O&#39;</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">files</span>)
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">system</span>(<span class="ruby-identifier">editor</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">files</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-editor" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-editor" title="Link to this method">
+                <span class="method-name">editor</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="editor-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 155</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">editor</span>
+  <span class="ruby-identifier">editors</span> = <span class="ruby-constant">Bins</span>.<span class="ruby-identifier">glob</span>(<span class="ruby-node">%w[nvim vim vi]</span>).<span class="ruby-identifier">find</span>(<span class="ruby-operator">&amp;</span><span class="ruby-constant">File</span>.<span class="ruby-identifier">method</span>(<span class="ruby-value">:executable?</span>))
+
+  <span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;EDITOR&#39;</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">editors</span>.<span class="ruby-identifier">first</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-env" class="method-detail anchor-link method-alias">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-env" title="Link to this method">
+                <span class="method-name">env</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+        <div class="aliases">
+          Alias for: <a href="Hiiro.html#method-i-environment">environment</a>
+        </div>
+
+      </div>
+
+
+      <div id="method-i-environment" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-environment" title="Link to this method">
+                <span class="method-name">environment</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="environment-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 140</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">environment</span>
+  <span class="ruby-ivar">@environment</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Environment</span>.<span class="ruby-identifier">current</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+        <div class="aliases">
+          Also aliased as: <a href="Hiiro.html#method-i-env">env</a>
+        </div>
+
+
+
+      </div>
+
+
+      <div id="method-i-full_name" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-full_name" title="Link to this method">
+                <span class="method-name">full_name</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="full_name-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 278</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">full_name</span>
+  <span class="ruby-identifier">runner</span>&amp;.<span class="ruby-identifier">full_name</span> <span class="ruby-operator">||</span> [<span class="ruby-identifier">bin_name</span>, <span class="ruby-identifier">subcmd</span>].<span class="ruby-identifier">join</span>(<span class="ruby-value">?-</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-fuzzyfind" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-fuzzyfind" title="Link to this method">
+                <span class="method-name">fuzzyfind</span>
+                <span class="method-args">(lines)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="fuzzyfind-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 441</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fuzzyfind</span>(<span class="ruby-identifier">lines</span>)
+  <span class="ruby-constant">Fuzzyfind</span>.<span class="ruby-identifier">select</span>(<span class="ruby-identifier">lines</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-fuzzyfind_from_map" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-fuzzyfind_from_map" title="Link to this method">
+                <span class="method-name">fuzzyfind_from_map</span>
+                <span class="method-args">(mapping)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="fuzzyfind_from_map-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 445</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fuzzyfind_from_map</span>(<span class="ruby-identifier">mapping</span>)
+  <span class="ruby-constant">Fuzzyfind</span>.<span class="ruby-identifier">map_select</span>(<span class="ruby-identifier">mapping</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-get_value" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-get_value" title="Link to this method">
+                <span class="method-name">get_value</span>
+                <span class="method-args">(name)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="get_value-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 449</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">get_value</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-identifier">runner</span>&amp;.<span class="ruby-identifier">values</span>&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-identifier">name</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-git" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-git" title="Link to this method">
+                <span class="method-name">git</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="git-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 288</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">git</span>
+  <span class="ruby-ivar">@git</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Git</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>, <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">pwd</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-handle_result" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-handle_result" title="Link to this method">
+                <span class="method-name">handle_result</span>
+                <span class="method-args">(result)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="handle_result-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 214</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">handle_result</span>(<span class="ruby-identifier">result</span>)
+  <span class="ruby-identifier">exit</span> <span class="ruby-value">0</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">result</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">result</span>
+
+  <span class="ruby-identifier">exit</span> <span class="ruby-value">1</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-help" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-help" title="Link to this method">
+                <span class="method-name">help</span>
+                <span class="method-args">(options=nil)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="help-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 317</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">help</span>(<span class="ruby-identifier">options</span>=<span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">ambiguous</span> = <span class="ruby-identifier">runners</span>.<span class="ruby-identifier">ambiguous_matches</span>
+
+  <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Current command: #{bin_name}!&quot;</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">ambiguous</span>.<span class="ruby-identifier">any?</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Ambiguous subcommand #{subcmd.inspect}!&quot;</span>
+    <span class="ruby-identifier">puts</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Did you mean one of these?&quot;</span>
+    <span class="ruby-identifier">list_runners</span>(<span class="ruby-identifier">ambiguous</span>)
+    <span class="ruby-identifier">puts</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Subcommand required for #{bin_name}&quot;</span>
+    <span class="ruby-identifier">puts</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Possible subcommands:&quot;</span>
+    <span class="ruby-identifier">list_runners</span>(<span class="ruby-identifier">runners</span>.<span class="ruby-identifier">all_runners</span>)
+    <span class="ruby-identifier">puts</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">global</span> = <span class="ruby-ivar">@options</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">global</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">global</span>.<span class="ruby-identifier">definitions</span>.<span class="ruby-identifier">any?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">k</span>, <span class="ruby-identifier">_</span><span class="ruby-operator">|</span> <span class="ruby-identifier">k</span> <span class="ruby-operator">!=</span> <span class="ruby-value">:help</span> }
+    <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Options:&quot;</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-identifier">global</span>.<span class="ruby-identifier">help_text</span>
+    <span class="ruby-identifier">puts</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Options:&quot;</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-identifier">options</span>.<span class="ruby-identifier">help_text</span>
+    <span class="ruby-identifier">puts</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">exit</span> <span class="ruby-value">1</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-list_runners" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-list_runners" title="Link to this method">
+                <span class="method-name">list_runners</span>
+                <span class="method-args">(list)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="list_runners-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 352</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">list_runners</span>(<span class="ruby-identifier">list</span>)
+  <span class="ruby-identifier">sorted</span> = <span class="ruby-identifier">list</span>.<span class="ruby-identifier">sort_by</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:subcommand_name</span>)
+  <span class="ruby-identifier">vars</span> = <span class="ruby-identifier">build_location_vars</span>(<span class="ruby-identifier">sorted</span>)
+
+  <span class="ruby-identifier">vars</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">path</span><span class="ruby-operator">|</span> <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;export #{var_name}=\&quot;#{path}\&quot;&quot;</span> }
+  <span class="ruby-identifier">puts</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">vars</span>.<span class="ruby-identifier">any?</span>
+
+  <span class="ruby-identifier">max_name</span>   = <span class="ruby-identifier">sorted</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span> <span class="ruby-identifier">r</span>.<span class="ruby-identifier">subcommand_name</span>.<span class="ruby-identifier">length</span> }.<span class="ruby-identifier">max</span> <span class="ruby-operator">||</span> <span class="ruby-value">0</span>
+  <span class="ruby-identifier">max_type</span>   = <span class="ruby-identifier">sorted</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span> <span class="ruby-identifier">r</span>.<span class="ruby-identifier">type</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">length</span> }.<span class="ruby-identifier">max</span> <span class="ruby-operator">||</span> <span class="ruby-value">0</span>
+
+  <span class="ruby-identifier">params_with_opts</span> = <span class="ruby-identifier">sorted</span>.<span class="ruby-identifier">map</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">parts</span> = [<span class="ruby-identifier">r</span>.<span class="ruby-identifier">params_string</span>, (<span class="ruby-identifier">r</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:opts_hint</span>) <span class="ruby-operator">?</span> <span class="ruby-identifier">r</span>.<span class="ruby-identifier">opts_hint</span> <span class="ruby-operator">:</span> <span class="ruby-keyword">nil</span>)]
+    <span class="ruby-identifier">parts</span>.<span class="ruby-identifier">compact</span>.<span class="ruby-identifier">reject</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:empty?</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;  &#39;</span>)
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">max_params</span> = <span class="ruby-identifier">params_with_opts</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:length</span>).<span class="ruby-identifier">max</span> <span class="ruby-operator">||</span> <span class="ruby-value">0</span>
+
+  <span class="ruby-identifier">sorted</span>.<span class="ruby-identifier">each_with_index</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">r</span>, <span class="ruby-identifier">i</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">name</span>       = <span class="ruby-identifier">r</span>.<span class="ruby-identifier">subcommand_name</span>.<span class="ruby-identifier">ljust</span>(<span class="ruby-identifier">max_name</span>)
+    <span class="ruby-identifier">type</span>       = <span class="ruby-node">&quot;(#{r.type})&quot;</span>.<span class="ruby-identifier">ljust</span>(<span class="ruby-identifier">max_type</span> <span class="ruby-operator">+</span> <span class="ruby-value">2</span>)
+    <span class="ruby-identifier">params_col</span> = <span class="ruby-identifier">params_with_opts</span>[<span class="ruby-identifier">i</span>].<span class="ruby-identifier">ljust</span>(<span class="ruby-identifier">max_params</span>)
+    <span class="ruby-identifier">location</span>   = <span class="ruby-identifier">shorten_location</span>(<span class="ruby-identifier">r</span>.<span class="ruby-identifier">location</span>, <span class="ruby-identifier">vars</span>)
+    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;  #{name}  #{params_col}  #{type}  #{location}&quot;</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-load_plugin" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-load_plugin" title="Link to this method">
+                <span class="method-name">load_plugin</span>
+                <span class="method-args">(plugin_const)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="load_plugin-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 300</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">load_plugin</span>(<span class="ruby-identifier">plugin_const</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">plugin_const</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">plugin_const</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Symbol</span>)
+    <span class="ruby-keyword">begin</span>
+      <span class="ruby-identifier">plugin_const</span> = <span class="ruby-constant">Kernel</span>.<span class="ruby-identifier">const_get</span>(<span class="ruby-identifier">plugin_const</span>.<span class="ruby-identifier">to_sym</span>)
+    <span class="ruby-keyword">rescue</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">e</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;unable to load plugin: #{plugin_const}&quot;</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Error message: #{e.message}&quot;</span>
+      <span class="ruby-keyword">return</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@loaded_plugins</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">plugin_const</span>)
+
+  <span class="ruby-identifier">plugin_const</span>.<span class="ruby-identifier">load</span>(<span class="ruby-keyword">self</span>)
+  <span class="ruby-ivar">@loaded_plugins</span>.<span class="ruby-identifier">push</span>(<span class="ruby-identifier">plugin_const</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-load_plugins" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-load_plugins" title="Link to this method">
+                <span class="method-name">load_plugins</span>
+                <span class="method-args">(*plugins)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="load_plugins-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 296</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">load_plugins</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">plugins</span>)
+  <span class="ruby-identifier">plugins</span>.<span class="ruby-identifier">flatten</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">plugin</span><span class="ruby-operator">|</span> <span class="ruby-identifier">load_plugin</span>(<span class="ruby-identifier">plugin</span>) }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-log" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-log" title="Link to this method">
+                <span class="method-name">log</span>
+                <span class="method-args">(message)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="log-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 431</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">log</span>(<span class="ruby-identifier">message</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">logging</span>
+
+  <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;[Hiiro: #{bin_name} #{(runner&amp;.subcommand_name || subcmd).inspect}]: #{message}&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-make_child" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-make_child" title="Link to this method">
+                <span class="method-name">make_child</span>
+                <span class="method-args">(custom_subcmd=nil, custom_args=nil, **kwargs, &amp;block)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="make_child-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 185</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">make_child</span>(<span class="ruby-identifier">custom_subcmd</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-identifier">custom_args</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">child_subcmd</span> = <span class="ruby-identifier">custom_subcmd</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">subcmd</span>
+  <span class="ruby-identifier">child_args</span> = <span class="ruby-identifier">custom_args</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">args</span>
+
+  <span class="ruby-identifier">child_bin_name</span> = [<span class="ruby-identifier">bin</span>, <span class="ruby-identifier">child_subcmd</span>.<span class="ruby-identifier">to_s</span>].<span class="ruby-identifier">join</span>(<span class="ruby-value">?-</span>)
+
+  <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">init</span>(<span class="ruby-value">bin_name:</span> <span class="ruby-identifier">child_bin_name</span>, <span class="ruby-value">args:</span> <span class="ruby-identifier">child_args</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-options" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-options" title="Link to this method">
+                <span class="method-name">options</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="options-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 243</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">options</span>
+  <span class="ruby-ivar">@options</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Options</span>.<span class="ruby-identifier">setup</span> {}
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-parsed_args" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-parsed_args" title="Link to this method">
+                <span class="method-name">parsed_args</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="parsed_args-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 437</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parsed_args</span>
+  <span class="ruby-identifier">i</span> = <span class="ruby-constant">Args</span>.<span class="ruby-identifier">new</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-path_lca" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-path_lca" title="Link to this method">
+                <span class="method-name">path_lca</span>
+                <span class="method-args">(a, b)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="path_lca-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 408</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">path_lca</span>(<span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span>)
+  <span class="ruby-identifier">a_parts</span> = <span class="ruby-identifier">a</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>)
+  <span class="ruby-identifier">b_parts</span> = <span class="ruby-identifier">b</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>)
+  <span class="ruby-identifier">a_parts</span>.<span class="ruby-identifier">zip</span>(<span class="ruby-identifier">b_parts</span>).<span class="ruby-identifier">take_while</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">x</span>, <span class="ruby-identifier">y</span><span class="ruby-operator">|</span> <span class="ruby-identifier">x</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">y</span> }.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:first</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;/&#39;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-pins" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-pins" title="Link to this method">
+                <span class="method-name">pins</span>
+                <span class="method-args">(= @pins ||= Pin.new(self))</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="pins-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 286</span>
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pins</span> = <span class="ruby-ivar">@pins</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Pin</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>)
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">git</span>
+    <span class="ruby-ivar">@git</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Git</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>, <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">pwd</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">attach_method</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+    <span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">load_plugins</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">plugins</span>)
+    <span class="ruby-identifier">plugins</span>.<span class="ruby-identifier">flatten</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">plugin</span><span class="ruby-operator">|</span> <span class="ruby-identifier">load_plugin</span>(<span class="ruby-identifier">plugin</span>) }
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">load_plugin</span>(<span class="ruby-identifier">plugin_const</span>)
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">plugin_const</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">plugin_const</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Symbol</span>)
+      <span class="ruby-keyword">begin</span>
+        <span class="ruby-identifier">plugin_const</span> = <span class="ruby-constant">Kernel</span>.<span class="ruby-identifier">const_get</span>(<span class="ruby-identifier">plugin_const</span>.<span class="ruby-identifier">to_sym</span>)
+      <span class="ruby-keyword">rescue</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">e</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;unable to load plugin: #{plugin_const}&quot;</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Error message: #{e.message}&quot;</span>
+        <span class="ruby-keyword">return</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@loaded_plugins</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">plugin_const</span>)
+
+    <span class="ruby-identifier">plugin_const</span>.<span class="ruby-identifier">load</span>(<span class="ruby-keyword">self</span>)
+    <span class="ruby-ivar">@loaded_plugins</span>.<span class="ruby-identifier">push</span>(<span class="ruby-identifier">plugin_const</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">help</span>(<span class="ruby-identifier">options</span>=<span class="ruby-keyword">nil</span>)
+    <span class="ruby-identifier">ambiguous</span> = <span class="ruby-identifier">runners</span>.<span class="ruby-identifier">ambiguous_matches</span>
+
+    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Current command: #{bin_name}!&quot;</span>
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">ambiguous</span>.<span class="ruby-identifier">any?</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Ambiguous subcommand #{subcmd.inspect}!&quot;</span>
+      <span class="ruby-identifier">puts</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Did you mean one of these?&quot;</span>
+      <span class="ruby-identifier">list_runners</span>(<span class="ruby-identifier">ambiguous</span>)
+      <span class="ruby-identifier">puts</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Subcommand required for #{bin_name}&quot;</span>
+      <span class="ruby-identifier">puts</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Possible subcommands:&quot;</span>
+      <span class="ruby-identifier">list_runners</span>(<span class="ruby-identifier">runners</span>.<span class="ruby-identifier">all_runners</span>)
+      <span class="ruby-identifier">puts</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">global</span> = <span class="ruby-ivar">@options</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">global</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">global</span>.<span class="ruby-identifier">definitions</span>.<span class="ruby-identifier">any?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">k</span>, <span class="ruby-identifier">_</span><span class="ruby-operator">|</span> <span class="ruby-identifier">k</span> <span class="ruby-operator">!=</span> <span class="ruby-value">:help</span> }
+      <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Options:&quot;</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-identifier">global</span>.<span class="ruby-identifier">help_text</span>
+      <span class="ruby-identifier">puts</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Options:&quot;</span>
+      <span class="ruby-identifier">puts</span> <span class="ruby-identifier">options</span>.<span class="ruby-identifier">help_text</span>
+      <span class="ruby-identifier">puts</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">exit</span> <span class="ruby-value">1</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">list_runners</span>(<span class="ruby-identifier">list</span>)
+    <span class="ruby-identifier">sorted</span> = <span class="ruby-identifier">list</span>.<span class="ruby-identifier">sort_by</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:subcommand_name</span>)
+    <span class="ruby-identifier">vars</span> = <span class="ruby-identifier">build_location_vars</span>(<span class="ruby-identifier">sorted</span>)
+
+    <span class="ruby-identifier">vars</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">path</span><span class="ruby-operator">|</span> <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;export #{var_name}=\&quot;#{path}\&quot;&quot;</span> }
+    <span class="ruby-identifier">puts</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">vars</span>.<span class="ruby-identifier">any?</span>
+
+    <span class="ruby-identifier">max_name</span>   = <span class="ruby-identifier">sorted</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span> <span class="ruby-identifier">r</span>.<span class="ruby-identifier">subcommand_name</span>.<span class="ruby-identifier">length</span> }.<span class="ruby-identifier">max</span> <span class="ruby-operator">||</span> <span class="ruby-value">0</span>
+    <span class="ruby-identifier">max_type</span>   = <span class="ruby-identifier">sorted</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span> <span class="ruby-identifier">r</span>.<span class="ruby-identifier">type</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">length</span> }.<span class="ruby-identifier">max</span> <span class="ruby-operator">||</span> <span class="ruby-value">0</span>
+
+    <span class="ruby-identifier">params_with_opts</span> = <span class="ruby-identifier">sorted</span>.<span class="ruby-identifier">map</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">parts</span> = [<span class="ruby-identifier">r</span>.<span class="ruby-identifier">params_string</span>, (<span class="ruby-identifier">r</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:opts_hint</span>) <span class="ruby-operator">?</span> <span class="ruby-identifier">r</span>.<span class="ruby-identifier">opts_hint</span> <span class="ruby-operator">:</span> <span class="ruby-keyword">nil</span>)]
+      <span class="ruby-identifier">parts</span>.<span class="ruby-identifier">compact</span>.<span class="ruby-identifier">reject</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:empty?</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;  &#39;</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">max_params</span> = <span class="ruby-identifier">params_with_opts</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:length</span>).<span class="ruby-identifier">max</span> <span class="ruby-operator">||</span> <span class="ruby-value">0</span>
+
+    <span class="ruby-identifier">sorted</span>.<span class="ruby-identifier">each_with_index</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">r</span>, <span class="ruby-identifier">i</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">name</span>       = <span class="ruby-identifier">r</span>.<span class="ruby-identifier">subcommand_name</span>.<span class="ruby-identifier">ljust</span>(<span class="ruby-identifier">max_name</span>)
+      <span class="ruby-identifier">type</span>       = <span class="ruby-node">&quot;(#{r.type})&quot;</span>.<span class="ruby-identifier">ljust</span>(<span class="ruby-identifier">max_type</span> <span class="ruby-operator">+</span> <span class="ruby-value">2</span>)
+      <span class="ruby-identifier">params_col</span> = <span class="ruby-identifier">params_with_opts</span>[<span class="ruby-identifier">i</span>].<span class="ruby-identifier">ljust</span>(<span class="ruby-identifier">max_params</span>)
+      <span class="ruby-identifier">location</span>   = <span class="ruby-identifier">shorten_location</span>(<span class="ruby-identifier">r</span>.<span class="ruby-identifier">location</span>, <span class="ruby-identifier">vars</span>)
+      <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;  #{name}  #{params_col}  #{type}  #{location}&quot;</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">build_location_vars</span>(<span class="ruby-identifier">list</span>)
+    <span class="ruby-identifier">paths</span> = <span class="ruby-identifier">list</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span> <span class="ruby-identifier">r</span>.<span class="ruby-identifier">location</span> }.<span class="ruby-identifier">compact</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">loc</span><span class="ruby-operator">|</span> <span class="ruby-identifier">loc</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/:\d+$/</span>, <span class="ruby-string">&#39;&#39;</span>) }
+    <span class="ruby-identifier">dirs</span>  = <span class="ruby-identifier">paths</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">dirname</span>(<span class="ruby-identifier">p</span>) }.<span class="ruby-identifier">uniq</span>
+
+    <span class="ruby-identifier">ancestors</span> = <span class="ruby-identifier">consolidate_dirs</span>(<span class="ruby-identifier">dirs</span>, <span class="ruby-value">min_depth:</span> <span class="ruby-value">4</span>)
+
+    <span class="ruby-identifier">vars</span> = {}
+    <span class="ruby-identifier">ancestors</span>.<span class="ruby-identifier">sort</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">ancestor</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">name</span> = <span class="ruby-identifier">auto_var_name</span>(<span class="ruby-identifier">ancestor</span>, <span class="ruby-identifier">vars</span>)
+      <span class="ruby-identifier">vars</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-identifier">ancestor</span>
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">vars</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-comment"># Recursively group directories under their common ancestor when that</span>
+  <span class="ruby-comment"># ancestor is deep enough to be a useful alias (&gt;= min_depth components).</span>
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">consolidate_dirs</span>(<span class="ruby-identifier">dirs</span>, <span class="ruby-value">min_depth:</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">dirs</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">dirs</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">&lt;=</span> <span class="ruby-value">1</span>
+
+    <span class="ruby-identifier">lca</span>       = <span class="ruby-identifier">dirs</span>.<span class="ruby-identifier">reduce</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span><span class="ruby-operator">|</span> <span class="ruby-identifier">path_lca</span>(<span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span>) }
+    <span class="ruby-identifier">lca_depth</span> = <span class="ruby-identifier">lca</span>.<span class="ruby-identifier">delete_prefix</span>(<span class="ruby-string">&#39;/&#39;</span>).<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>).<span class="ruby-identifier">reject</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:empty?</span>).<span class="ruby-identifier">length</span>
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">lca_depth</span> <span class="ruby-operator">&gt;=</span> <span class="ruby-identifier">min_depth</span>
+      [<span class="ruby-identifier">lca</span>]
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">lca_parts</span> = <span class="ruby-identifier">lca</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>)
+      <span class="ruby-identifier">subgroups</span> = <span class="ruby-identifier">dirs</span>.<span class="ruby-identifier">group_by</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">d</span><span class="ruby-operator">|</span> <span class="ruby-identifier">d</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>).<span class="ruby-identifier">first</span>(<span class="ruby-identifier">lca_parts</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">+</span> <span class="ruby-value">1</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;/&#39;</span>) }
+      <span class="ruby-identifier">subgroups</span>.<span class="ruby-identifier">flat_map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">_</span>, <span class="ruby-identifier">group</span><span class="ruby-operator">|</span> <span class="ruby-identifier">consolidate_dirs</span>(<span class="ruby-identifier">group</span>, <span class="ruby-value">min_depth:</span> <span class="ruby-identifier">min_depth</span>) }.<span class="ruby-identifier">uniq</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">path_lca</span>(<span class="ruby-identifier">a</span>, <span class="ruby-identifier">b</span>)
+    <span class="ruby-identifier">a_parts</span> = <span class="ruby-identifier">a</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>)
+    <span class="ruby-identifier">b_parts</span> = <span class="ruby-identifier">b</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>)
+    <span class="ruby-identifier">a_parts</span>.<span class="ruby-identifier">zip</span>(<span class="ruby-identifier">b_parts</span>).<span class="ruby-identifier">take_while</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">x</span>, <span class="ruby-identifier">y</span><span class="ruby-operator">|</span> <span class="ruby-identifier">x</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">y</span> }.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:first</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;/&#39;</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">auto_var_name</span>(<span class="ruby-identifier">path</span>, <span class="ruby-identifier">existing_vars</span>)
+    <span class="ruby-identifier">parts</span> = <span class="ruby-identifier">path</span>.<span class="ruby-identifier">delete_prefix</span>(<span class="ruby-string">&#39;/&#39;</span>).<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>)
+    (<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-identifier">parts</span>.<span class="ruby-identifier">length</span>).<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">n</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">candidate</span> = <span class="ruby-identifier">parts</span>.<span class="ruby-identifier">last</span>(<span class="ruby-identifier">n</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;_&#39;</span>).<span class="ruby-identifier">upcase</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/[^A-Z0-9]/</span>, <span class="ruby-string">&#39;_&#39;</span>).<span class="ruby-identifier">squeeze</span>(<span class="ruby-string">&#39;_&#39;</span>).<span class="ruby-identifier">delete_prefix</span>(<span class="ruby-string">&#39;_&#39;</span>).<span class="ruby-identifier">delete_suffix</span>(<span class="ruby-string">&#39;_&#39;</span>)
+      <span class="ruby-keyword">return</span> <span class="ruby-identifier">candidate</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">existing_vars</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">candidate</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-node">&quot;DIR_#{existing_vars.length + 1}&quot;</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">shorten_location</span>(<span class="ruby-identifier">loc</span>, <span class="ruby-identifier">vars</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">loc</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">loc</span>.<span class="ruby-identifier">nil?</span>
+    <span class="ruby-identifier">vars</span>.<span class="ruby-identifier">sort_by</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">_</span>, <span class="ruby-identifier">path</span><span class="ruby-operator">|</span> <span class="ruby-operator">-</span><span class="ruby-identifier">path</span>.<span class="ruby-identifier">length</span> }.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">path</span><span class="ruby-operator">|</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-identifier">loc</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-identifier">path</span>, <span class="ruby-node">&quot;$#{var_name}&quot;</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">loc</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-identifier">path</span> <span class="ruby-operator">+</span> <span class="ruby-string">&#39;/&#39;</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">loc</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">path</span>
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">loc</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">log</span>(<span class="ruby-identifier">message</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">logging</span>
+
+    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;[Hiiro: #{bin_name} #{(runner&amp;.subcommand_name || subcmd).inspect}]: #{message}&quot;</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parsed_args</span>
+    <span class="ruby-identifier">i</span> = <span class="ruby-constant">Args</span>.<span class="ruby-identifier">new</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fuzzyfind</span>(<span class="ruby-identifier">lines</span>)
+    <span class="ruby-constant">Fuzzyfind</span>.<span class="ruby-identifier">select</span>(<span class="ruby-identifier">lines</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fuzzyfind_from_map</span>(<span class="ruby-identifier">mapping</span>)
+    <span class="ruby-constant">Fuzzyfind</span>.<span class="ruby-identifier">map_select</span>(<span class="ruby-identifier">mapping</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">get_value</span>(<span class="ruby-identifier">name</span>)
+    <span class="ruby-identifier">runner</span>&amp;.<span class="ruby-identifier">values</span>&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">default_subcommand</span>
+    <span class="ruby-constant">Runners</span><span class="ruby-operator">::</span><span class="ruby-constant">Subcommand</span>.<span class="ruby-identifier">new</span>(
+      <span class="ruby-identifier">bin_name</span>,
+      <span class="ruby-value">:DEFAULT</span>,
+      <span class="ruby-identifier">lambda</span> { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span> <span class="ruby-identifier">help</span>; <span class="ruby-keyword">false</span> },
+    )
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">class</span> <span class="ruby-constant">Runners</span>
+    <span class="ruby-identifier">attr_reader</span> <span class="ruby-value">:hiiro</span>, <span class="ruby-value">:bin_name</span>, <span class="ruby-value">:subcmd</span>, <span class="ruby-value">:subcommands</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">hiiro</span>)
+      <span class="ruby-ivar">@hiiro</span> = <span class="ruby-identifier">hiiro</span>
+      <span class="ruby-ivar">@bin_name</span> = <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">bin_name</span>
+      <span class="ruby-ivar">@subcmd</span> = <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">subcmd</span>
+      <span class="ruby-ivar">@subcommands</span> = {}
+      <span class="ruby-ivar">@default_subcommand</span> = <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">default_subcommand</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_default</span>(<span class="ruby-identifier">handler</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>)
+      <span class="ruby-ivar">@default_subcommand</span> = <span class="ruby-constant">Subcommand</span>.<span class="ruby-identifier">new</span>(
+        <span class="ruby-identifier">bin_name</span>,
+        <span class="ruby-value">:DEFAULT</span>,
+        <span class="ruby-identifier">handler</span>,
+        <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>
+      )
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">runner</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-identifier">exact_runner</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">exact_runner</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-identifier">unambiguous_runner</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">unambiguous_runner</span>
+
+      <span class="ruby-ivar">@default_subcommand</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">subcommand_names</span>
+      <span class="ruby-identifier">all_runners</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:subcommand_name</span>)
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">all_runners</span>
+      [<span class="ruby-operator">*</span><span class="ruby-identifier">all_bins</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">subcommands</span>.<span class="ruby-identifier">values</span>]
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">paths</span>
+      <span class="ruby-ivar">@paths</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;PATH&#39;</span>].<span class="ruby-identifier">split</span>(<span class="ruby-value">?:</span>).<span class="ruby-identifier">uniq</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">all_bins</span>
+      <span class="ruby-identifier">pattern</span> = <span class="ruby-identifier">format</span>(<span class="ruby-string">&#39;{%s}/%s-*&#39;</span>, <span class="ruby-identifier">paths</span>.<span class="ruby-identifier">join</span>(<span class="ruby-value">?,</span>), <span class="ruby-identifier">bin_name</span>)
+
+      <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">glob</span>(<span class="ruby-identifier">pattern</span>).<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">path</span><span class="ruby-operator">|</span> <span class="ruby-constant">Bin</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">bin_name</span>, <span class="ruby-identifier">path</span>) }
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_subcommand</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">handler</span>, <span class="ruby-value">opts:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">subcmd_args:</span> [], <span class="ruby-value">subcmd_opts:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">values</span>)
+      <span class="ruby-ivar">@subcommands</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-constant">Subcommand</span>.<span class="ruby-identifier">new</span>(
+        <span class="ruby-identifier">bin_name</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">handler</span>, <span class="ruby-identifier">values</span>,
+        <span class="ruby-value">opts:</span> <span class="ruby-identifier">opts</span>,
+        <span class="ruby-value">subcmd_args:</span> <span class="ruby-identifier">subcmd_args</span>,
+        <span class="ruby-value">subcmd_opts:</span> <span class="ruby-identifier">subcmd_opts</span>
+      )
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">run_subcommand</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+      <span class="ruby-identifier">cmd</span> = <span class="ruby-identifier">subcommands</span>[<span class="ruby-identifier">name</span>]
+
+      <span class="ruby-identifier">cmd</span>&amp;.<span class="ruby-identifier">run</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">subcmd_result</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">subcmd</span>
+      <span class="ruby-ivar">@subcmd_result</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">by_prefix</span>(<span class="ruby-identifier">all_runners</span>, <span class="ruby-identifier">subcmd</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-value">key:</span> <span class="ruby-value">:subcommand_name</span>)
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">exact_runner</span>
+      <span class="ruby-identifier">subcmd_result</span>&amp;.<span class="ruby-identifier">exact_match</span>&amp;.<span class="ruby-identifier">item</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">unambiguous_runner</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">subcmd_result</span>
+      <span class="ruby-identifier">matches</span> = <span class="ruby-identifier">matching_runners</span>
+      <span class="ruby-identifier">matches</span>.<span class="ruby-identifier">first</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">matches</span>.<span class="ruby-identifier">count</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ambiguous_matches</span>
+      <span class="ruby-keyword">return</span> [] <span class="ruby-keyword">unless</span> <span class="ruby-identifier">subcmd_result</span>
+      <span class="ruby-identifier">matches</span> = <span class="ruby-identifier">matching_runners</span>
+      <span class="ruby-identifier">matches</span>.<span class="ruby-identifier">count</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">1</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">matches</span> <span class="ruby-operator">:</span> []
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">matching_runners</span>
+      <span class="ruby-keyword">return</span> [] <span class="ruby-keyword">unless</span> <span class="ruby-identifier">subcmd_result</span>
+      <span class="ruby-identifier">remove_child_runners</span>(<span class="ruby-identifier">subcmd_result</span>.<span class="ruby-identifier">matches</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:item</span>))
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">remove_child_runners</span>(<span class="ruby-identifier">list</span>)
+      <span class="ruby-identifier">list</span>.<span class="ruby-identifier">reject</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">list</span>.<span class="ruby-identifier">any?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">other</span><span class="ruby-operator">|</span> <span class="ruby-identifier">r</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">other</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">r</span>.<span class="ruby-identifier">full_name</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-identifier">other</span>.<span class="ruby-identifier">full_name</span> <span class="ruby-operator">+</span> <span class="ruby-value">?-</span>) }
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">class</span> <span class="ruby-constant">Bin</span>
+      <span class="ruby-identifier">attr_reader</span> <span class="ruby-value">:bin_name</span>, <span class="ruby-value">:path</span>, <span class="ruby-value">:name</span>
+      <span class="ruby-keyword">alias</span> <span class="ruby-identifier">full_name</span> <span class="ruby-identifier">name</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">bin_name</span>, <span class="ruby-identifier">path</span>)
+        <span class="ruby-ivar">@bin_name</span> = <span class="ruby-identifier">bin_name</span>
+        <span class="ruby-ivar">@path</span> = <span class="ruby-identifier">path</span>
+        <span class="ruby-ivar">@name</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">basename</span>(<span class="ruby-identifier">path</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">run</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+        <span class="ruby-identifier">system</span>(<span class="ruby-identifier">path</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">exact_match?</span>(<span class="ruby-identifier">subcmd</span>)
+        <span class="ruby-identifier">subcommand_name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">subcmd</span>.<span class="ruby-identifier">to_s</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">match?</span>(<span class="ruby-identifier">subcmd</span>)
+        <span class="ruby-identifier">subcommand_name</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-identifier">subcmd</span>.<span class="ruby-identifier">to_s</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">subcommand_name</span>
+        <span class="ruby-identifier">name</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-node">&quot;#{bin_name}-&quot;</span>, <span class="ruby-string">&#39;&#39;</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">values</span>
+        {}
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">type</span>
+        <span class="ruby-value">:bin</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">location</span>
+        <span class="ruby-identifier">path</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">params_string</span>
+        <span class="ruby-keyword">nil</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">class</span> <span class="ruby-constant">Subcommand</span>
+      <span class="ruby-identifier">attr_reader</span> <span class="ruby-value">:bin_name</span>, <span class="ruby-value">:name</span>, <span class="ruby-value">:handler</span>, <span class="ruby-value">:values</span>, <span class="ruby-value">:opts</span>, <span class="ruby-value">:subcmd_args</span>, <span class="ruby-value">:subcmd_opts</span>
+      <span class="ruby-keyword">alias</span> <span class="ruby-identifier">subcommand_name</span> <span class="ruby-identifier">name</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">bin_name</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">handler</span>, <span class="ruby-identifier">values</span>={}, <span class="ruby-value">opts:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">subcmd_args:</span> [], <span class="ruby-value">subcmd_opts:</span> <span class="ruby-keyword">nil</span>)
+        <span class="ruby-ivar">@bin_name</span> = <span class="ruby-identifier">bin_name</span>
+        <span class="ruby-ivar">@name</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>
+        <span class="ruby-ivar">@handler</span> = <span class="ruby-identifier">handler</span>
+        <span class="ruby-ivar">@values</span> = <span class="ruby-identifier">values</span> <span class="ruby-operator">||</span> {}
+        <span class="ruby-ivar">@opts</span> = <span class="ruby-identifier">opts</span>
+        <span class="ruby-ivar">@subcmd_args</span> = <span class="ruby-identifier">subcmd_args</span> <span class="ruby-operator">||</span> []
+        <span class="ruby-ivar">@subcmd_opts</span> = <span class="ruby-identifier">subcmd_opts</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">run</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">opts</span>
+          <span class="ruby-identifier">parsed</span> = <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">args</span>)
+          <span class="ruby-identifier">handler</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">parsed</span>)
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-identifier">handler</span>.<span class="ruby-identifier">call</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">exact_match?</span>(<span class="ruby-identifier">subcmd</span>)
+        <span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">subcmd</span>.<span class="ruby-identifier">to_s</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">match?</span>(<span class="ruby-identifier">subcmd</span>)
+        <span class="ruby-identifier">name</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-identifier">subcmd</span>.<span class="ruby-identifier">to_s</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">full_name</span>
+        [<span class="ruby-identifier">bin_name</span>, <span class="ruby-identifier">name</span>].<span class="ruby-identifier">join</span>(<span class="ruby-value">?-</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">type</span>
+        <span class="ruby-value">:subcommand</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">location</span>
+        <span class="ruby-identifier">handler</span>.<span class="ruby-identifier">source_location</span>&amp;.<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;:&#39;</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">params_string</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">subcmd_args</span>.<span class="ruby-identifier">any?</span>
+          <span class="ruby-keyword">return</span> <span class="ruby-identifier">subcmd_args</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">a</span><span class="ruby-operator">|</span> <span class="ruby-node">&quot;&lt;#{a}&gt;&quot;</span> }.<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39; &#39;</span>)
+        <span class="ruby-keyword">end</span>
+
+        <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">handler</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:parameters</span>)
+
+        <span class="ruby-identifier">params</span> = <span class="ruby-identifier">handler</span>.<span class="ruby-identifier">parameters</span>
+        <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">params</span>.<span class="ruby-identifier">empty?</span>
+        <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">==</span> [[<span class="ruby-value">:rest</span>]] <span class="ruby-operator">||</span> <span class="ruby-identifier">params</span> <span class="ruby-operator">==</span> [[<span class="ruby-value">:rest</span>, <span class="ruby-value">:args</span>]]
+
+        <span class="ruby-identifier">params</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">type</span>, <span class="ruby-identifier">name</span><span class="ruby-operator">|</span>
+          <span class="ruby-keyword">case</span> <span class="ruby-identifier">type</span>
+          <span class="ruby-keyword">when</span> <span class="ruby-value">:req</span> <span class="ruby-keyword">then</span> <span class="ruby-node">&quot;&lt;#{name}&gt;&quot;</span>
+          <span class="ruby-keyword">when</span> <span class="ruby-value">:opt</span> <span class="ruby-keyword">then</span> <span class="ruby-node">&quot;[#{name}]&quot;</span>
+          <span class="ruby-keyword">when</span> <span class="ruby-value">:rest</span> <span class="ruby-keyword">then</span> <span class="ruby-node">&quot;[*#{name}]&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+          <span class="ruby-keyword">when</span> <span class="ruby-value">:keyreq</span> <span class="ruby-keyword">then</span> <span class="ruby-node">&quot;&lt;#{name}:&gt;&quot;</span>
+          <span class="ruby-keyword">when</span> <span class="ruby-value">:key</span> <span class="ruby-keyword">then</span> <span class="ruby-node">&quot;[#{name}:]&quot;</span>
+          <span class="ruby-keyword">when</span> <span class="ruby-value">:keyrest</span> <span class="ruby-keyword">then</span> <span class="ruby-node">&quot;[**#{name}]&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+          <span class="ruby-keyword">when</span> <span class="ruby-value">:block</span> <span class="ruby-keyword">then</span> <span class="ruby-node">&quot;[&amp;#{name}]&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
+          <span class="ruby-keyword">end</span>
+        }.<span class="ruby-identifier">compact</span>.<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39; &#39;</span>)
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">opts_hint</span>
+        <span class="ruby-identifier">subcmd_opts</span>&amp;.<span class="ruby-identifier">hint</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">class</span> <span class="ruby-constant">Args</span>
+    <span class="ruby-identifier">attr_reader</span> <span class="ruby-value">:raw_args</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">raw_args</span>)
+      <span class="ruby-ivar">@raw_args</span> = <span class="ruby-identifier">raw_args</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">flags</span>
+      <span class="ruby-ivar">@flags</span> <span class="ruby-operator">||=</span> <span class="ruby-identifier">proc</span> {
+        <span class="ruby-identifier">raw_args</span>.<span class="ruby-identifier">select</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span>
+          <span class="ruby-identifier">arg</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-regexp">/^-[^-]/</span>)
+        }.<span class="ruby-identifier">flat_map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span>
+          <span class="ruby-identifier">arg</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-regexp">/^-/</span>, <span class="ruby-string">&#39;&#39;</span>).<span class="ruby-identifier">chars</span>
+        }
+      }.<span class="ruby-identifier">call</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">flag?</span>(<span class="ruby-identifier">flag</span>)
+      <span class="ruby-identifier">flags</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">flag</span>)
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">flag_value</span>(<span class="ruby-identifier">flag</span>)
+      <span class="ruby-identifier">found_flag</span> = <span class="ruby-keyword">false</span>
+      <span class="ruby-identifier">raw_args</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">found_flag</span>
+          <span class="ruby-keyword">return</span> <span class="ruby-identifier">arg</span>
+        <span class="ruby-keyword">end</span>
+
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">arg</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-regexp">/^-\w*#{flag}/</span>)
+          <span class="ruby-identifier">found_flag</span> = <span class="ruby-keyword">true</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">nil</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">values</span>
+      <span class="ruby-identifier">raw_args</span>.<span class="ruby-identifier">reject</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">arg</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-regexp">/^-/</span>)
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">load_env</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-queue" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-queue" title="Link to this method">
+                <span class="method-name">queue</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="queue-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 198</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">queue</span>
+  <span class="ruby-ivar">@queue</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Queue</span>.<span class="ruby-identifier">current</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-run" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-run" title="Link to this method">
+                <span class="method-name">run</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="run-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 202</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">run</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-identifier">runner</span>.<span class="ruby-identifier">run</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+
+  <span class="ruby-identifier">handle_result</span>(<span class="ruby-identifier">result</span>)
+
+  <span class="ruby-identifier">exit</span> <span class="ruby-value">1</span>
+<span class="ruby-keyword">rescue</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">e</span>
+  <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;ERROR: #{e.message}&quot;</span>
+  <span class="ruby-identifier">puts</span> <span class="ruby-identifier">e</span>.<span class="ruby-identifier">backtrace</span>
+  <span class="ruby-identifier">exit</span> <span class="ruby-value">1</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-run_subcmd" class="method-detail anchor-link method-alias">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-run_subcmd" title="Link to this method">
+                <span class="method-name">run_subcmd</span>
+                <span class="method-args">(name, *args)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+        <div class="aliases">
+          Alias for: <a href="Hiiro.html#method-i-run_subcommand">run_subcommand</a>
+        </div>
+
+      </div>
+
+
+      <div id="method-i-run_subcommand" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-run_subcommand" title="Link to this method">
+                <span class="method-name">run_subcommand</span>
+                <span class="method-args">(name, *args)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="run_subcommand-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 273</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">run_subcommand</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-identifier">runners</span>.<span class="ruby-identifier">run_subcommand</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+        <div class="aliases">
+          Also aliased as: <a href="Hiiro.html#method-i-run_subcmd">run_subcmd</a>
+        </div>
+
+
+
+      </div>
+
+
+      <div id="method-i-runnable-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-runnable-3F" title="Link to this method">
+                <span class="method-name">runnable?</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="runnable-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 220</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">runnable?</span>
+  <span class="ruby-identifier">runner</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-runner" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-runner" title="Link to this method">
+                <span class="method-name">runner</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="runner-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 224</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">runner</span>
+  <span class="ruby-identifier">runners</span>.<span class="ruby-identifier">runner</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">runners</span>.<span class="ruby-identifier">default_subcommand</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-runners" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-runners" title="Link to this method">
+                <span class="method-name">runners</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="runners-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 228</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">runners</span>
+  <span class="ruby-ivar">@runners</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Runners</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-shorten_location" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-shorten_location" title="Link to this method">
+                <span class="method-name">shorten_location</span>
+                <span class="method-args">(loc, vars)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="shorten_location-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 423</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">shorten_location</span>(<span class="ruby-identifier">loc</span>, <span class="ruby-identifier">vars</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">loc</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">loc</span>.<span class="ruby-identifier">nil?</span>
+  <span class="ruby-identifier">vars</span>.<span class="ruby-identifier">sort_by</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">_</span>, <span class="ruby-identifier">path</span><span class="ruby-operator">|</span> <span class="ruby-operator">-</span><span class="ruby-identifier">path</span>.<span class="ruby-identifier">length</span> }.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">path</span><span class="ruby-operator">|</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">loc</span>.<span class="ruby-identifier">sub</span>(<span class="ruby-identifier">path</span>, <span class="ruby-node">&quot;$#{var_name}&quot;</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">loc</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-identifier">path</span> <span class="ruby-operator">+</span> <span class="ruby-string">&#39;/&#39;</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">loc</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">path</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">loc</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-start_tmux_session" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-start_tmux_session" title="Link to this method">
+                <span class="method-name">start_tmux_session</span>
+                <span class="method-args">(name, **opts)</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="start_tmux_session-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 181</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">start_tmux_session</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>)
+  <span class="ruby-identifier">tmux_client</span>.<span class="ruby-identifier">open_session</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-subcommand_names" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-subcommand_names" title="Link to this method">
+                <span class="method-name">subcommand_names</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="subcommand_names-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 282</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">subcommand_names</span>
+  <span class="ruby-identifier">runners</span>.<span class="ruby-identifier">subcommand_names</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-task_manager" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-task_manager" title="Link to this method">
+                <span class="method-name">task_manager</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="task_manager-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 145</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">task_manager</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">tasks_enabled?</span>
+  <span class="ruby-ivar">@task_manager</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">TaskManager</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>, <span class="ruby-value">scope:</span> <span class="ruby-identifier">task_scope</span> <span class="ruby-operator">||</span> <span class="ruby-value">:task</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+        <div class="aliases">
+          Also aliased as: <a href="Hiiro.html#method-i-tm">tm</a>
+        </div>
+
+
+
+      </div>
+
+
+      <div id="method-i-tasks" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-tasks" title="Link to this method">
+                <span class="method-name">tasks</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="tasks-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 151</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">tasks</span>
+  <span class="ruby-identifier">task_manager</span>&amp;.<span class="ruby-identifier">tasks</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-tasks_enabled-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-tasks_enabled-3F" title="Link to this method">
+                <span class="method-name">tasks_enabled?</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="tasks_enabled-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 136</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">tasks_enabled?</span>
+  <span class="ruby-ivar">@tasks_enabled</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-this" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-this" title="Link to this method">
+                <span class="method-name">this</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="this-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 132</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">this</span>
+  <span class="ruby-keyword">self</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-tm" class="method-detail anchor-link method-alias">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-tm" title="Link to this method">
+                <span class="method-name">tm</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+        <div class="aliases">
+          Alias for: <a href="Hiiro.html#method-i-task_manager">task_manager</a>
+        </div>
+
+      </div>
+
+
+      <div id="method-i-tmux_client" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-tmux_client" title="Link to this method">
+                <span class="method-name">tmux_client</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="tmux_client-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 177</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">tmux_client</span>
+  <span class="ruby-ivar">@tmux_client</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Tmux</span>.<span class="ruby-identifier">client!</span>(<span class="ruby-keyword">self</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-todo_manager" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-todo_manager" title="Link to this method">
+                <span class="method-name">todo_manager</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="todo_manager-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 194</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">todo_manager</span>
+  <span class="ruby-ivar">@todo_manager</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">TodoManager</span>.<span class="ruby-identifier">new</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+      <div id="method-i-vim-3F" class="method-detail anchor-link ">
+        <div class="method-header">
+
+            <div class="method-heading">
+              <a href="#method-i-vim-3F" title="Link to this method">
+                <span class="method-name">vim?</span>
+                <span class="method-args">()</span>
+              </a>
+            </div>
+
+        </div>
+
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+          <div class="method-source-code" id="vim-3F-source">
+            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro.rb, line 161</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">vim?</span>
+  <span class="ruby-identifier">editor</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-regexp">/vim/i</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+
+
+
+        <div class="method-description">
+
+
+          
+
+
+        </div>
+
+
+
+
+
+      </div>
+
+
+    </section>
+
+
+
+
+  </section>
+
+</main>
+
+<aside class="table-of-contents" role="complementary" aria-label="Table of Contents">
+  <div class="toc-sticky">
+    <h3 class="toc-heading">On This Page</h3>
+    <nav class="toc-nav" id="toc-nav" aria-label="Page sections">
+      <!-- Generated by JavaScript based on page headings -->
+    </nav>
+  </div>
+</aside>
+
+
+<footer class="site-footer">
+  
+
+  <div class="footer-bottom">
+    <p>
+      Generated by <a href="https://ruby.github.io/rdoc/">RDoc 7.2.0</a>
+      using the Aliki theme by <a href="http://st0012.dev">Stan Lo</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+
