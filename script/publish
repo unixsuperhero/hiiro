@@ -81,6 +81,39 @@ end
 puts "New version: #{new_version}"
 
 puts ""
+puts "Generating CHANGELOG.md..."
+last_tag = `git describe --tags --abbrev=0 2>/dev/null`.strip
+commit_log = last_tag.empty? ? `git log --oneline` : `git log #{last_tag}..HEAD --oneline`
+existing_changelog = File.exist?('CHANGELOG.md') ? File.read('CHANGELOG.md') : ''
+
+changelog_prompt = <<~PROMPT
+  Update or create a CHANGELOG.md for the Ruby gem "hiiro" version #{new_version}.
+
+  Recent commits (since #{last_tag.empty? ? 'the beginning' : last_tag}):
+  #{commit_log.strip}
+
+  Existing CHANGELOG.md:
+  #{existing_changelog.empty? ? '(none)' : existing_changelog}
+
+  Write the complete updated CHANGELOG.md. Add a new section for v#{new_version} at the top
+  with today's date. Group changes into Added, Changed, Fixed, Removed where appropriate.
+  Be concise. Output only the file content, no explanation.
+PROMPT
+
+new_changelog = IO.popen(['claude', '-p', '--model', 'claude-haiku-4-5-20251001'], 'r+') { |io|
+  io.write(changelog_prompt)
+  io.close_write
+  io.read
+}
+
+if new_changelog && !new_changelog.strip.empty?
+  File.write('CHANGELOG.md', new_changelog)
+  puts "Updated CHANGELOG.md"
+else
+  puts "Warning: could not generate CHANGELOG.md"
+end
+
+puts ""
 File.open('lib/hiiro/version.rb', 'w+') do |f|
   f.puts 'class Hiiro'
   f.puts "  VERSION = #{new_version.inspect}"
@@ -102,14 +135,17 @@ else
   system 'git', 'commit', '-m', "publishing v#{new_version}"
 end
 
+system 'git', 'tag', '-a', "v#{new_version}", '-m', "v#{new_version}"
+puts "Tagged v#{new_version}"
+
 puts ""
-# Try to push to origin main, fallback to a separate branch if it fails
-if system('git', 'push', 'origin', 'main')
+# Try to push to origin main (tags follow via push.followTags), fallback to a branch if needed
+if system('git', 'push', 'origin', 'main', '--follow-tags')
   puts "Pushed to origin/main"
 else
   branch_name = "publish-v#{new_version}"
   system 'git', 'checkout', '-b', branch_name
-  if system('git', 'push', 'origin', branch_name)
+  if system('git', 'push', 'origin', branch_name, '--follow-tags')
     puts "Push to main failed. Pushed to origin/#{branch_name} instead"
   else
     puts "\nERROR: unable to push to origin\n"
