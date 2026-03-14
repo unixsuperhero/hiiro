@@ -10,18 +10,24 @@ opts = Hiiro::Options.setup {
   flag(:percent, short: :p, default: false)
   flag(:bottom, short: :b, default: false)
   flag(:left, short: :l, default: false)
+  flag(:fire, short: :f, default: false)
   option(:size, short: :s, default: nil)
 }
+
+def permission_flag(opts)
+  opts.danger ? '--dangerously-skip-permissions' : '--allow-dangerously-skip-permissions'
+end
 
 def start_command(opts)
   shell = ENV['SHELL'] || 'zsh'
   escaped_args = opts.args.map(&:shellescape)
-  if opts.danger
-    escaped_args = ['--dangerously-skip-permissions', *escaped_args]
-  else
-    escaped_args = ['--allow-dangerously-skip-permissions', *escaped_args]
-  end
-  ['claude', *escaped_args, ";exec #{shell}"].join(' ')
+  ['claude', permission_flag(opts), *escaped_args, ";exec #{shell}"].join(' ')
+end
+
+# Fire-and-forget: runs claude -p, no exec $SHELL so the window closes when done
+def fire_command(opts)
+  escaped_args = opts.args.map(&:shellescape)
+  ['claude', '-p', permission_flag(opts), *escaped_args].join(' ')
 end
 
 Hiiro.run(*ARGV, plugins: [Pins]) {
@@ -30,8 +36,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
 
     size = opts.size || '40'
     size += '%' if opts.percent
+    cmd = opts.fire ? fire_command(opts) : start_command(opts)
 
-    tmux_client.split_window(horizontal: !opts.horizontal, size: size, command: start_command(opts))
+    tmux_client.split_window(horizontal: !opts.horizontal, size: size, command: cmd)
   }
 
   add_subcmd(:vsplit) { |*args|
@@ -39,8 +46,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
 
     size = opts.size
     size += '%' if size && opts.percent
+    cmd = opts.fire ? fire_command(opts) : start_command(opts)
 
-    tmux_client.vsplit_window(size: size, command: start_command(opts))
+    tmux_client.vsplit_window(size: size, command: cmd)
     tmux_client.swap_current_pane(0, keep_active: true) if opts.left
   }
 
@@ -49,9 +57,51 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
 
     size = opts.size
     size += '%' if size && opts.percent
+    cmd = opts.fire ? fire_command(opts) : start_command(opts)
 
-    tmux_client.hsplit_window(size: size, command: start_command(opts))
+    tmux_client.hsplit_window(size: size, command: cmd)
     tmux_client.swap_current_pane(0, keep_active: true) unless opts.bottom
+  }
+
+  add_subcmd(:window) { |*args|
+    opts = opts.parse(args)
+    cmd = opts.fire ? fire_command(opts) : start_command(opts)
+    tmux_client.new_window(command: cmd)
+  }
+
+  add_subcmd(:watch) { |*args|
+    opts = opts.parse(args)
+    dir = opts.args.first || raise("Usage: h claude watch <prompt-dir>")
+
+    raise "Directory not found: #{dir}" unless File.directory?(dir)
+
+    puts "Watching #{dir} for prompt files..."
+    seen = {}
+
+    loop do
+      Dir.glob(File.join(dir, '*.md')).sort.each do |path|
+        next if seen[path]
+        seen[path] = true
+
+        prompt = File.read(path).strip
+        next if prompt.empty?
+
+        name = File.basename(path, '.md')
+        cmd = if opts.fire
+          escaped = prompt.shellescape
+          "claude -p #{permission_flag(opts)} #{escaped}"
+        else
+          shell = ENV['SHELL'] || 'zsh'
+          escaped = prompt.shellescape
+          "claude #{permission_flag(opts)} #{escaped} ;exec #{shell}"
+        end
+
+        tmux_client.new_window(name: name, command: cmd)
+        puts "Spawned window '#{name}' for #{File.basename(path)}"
+      end
+
+      sleep 2
+    end
   }
 
   add_subcmd(:env) { |*args|
