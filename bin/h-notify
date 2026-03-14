@@ -98,7 +98,6 @@ Hiiro.run(*ARGV, tasks: true) do
     data[session].unshift(entry)
     write_log(data)
 
-    tmux_client.display_message("#{@preset[:prefix]} #{message}")
     system('terminal-notifier',
       '-title', @preset[:title],
       '-message', message,
@@ -136,7 +135,6 @@ Hiiro.run(*ARGV, tasks: true) do
     entries = data[session] || []
 
     if entries.empty?
-      tmux_client.display_message('No notifications')
       next
     end
 
@@ -166,14 +164,12 @@ Hiiro.run(*ARGV, tasks: true) do
     entries = data[session] || []
 
     if index >= entries.length
-      tmux_client.display_message('Notification not found')
       next
     end
 
     entry = entries[index]
 
     unless pane_exists?(entry['pane_id'])
-      tmux_client.display_message("Pane #{entry['pane_id']} no longer exists")
       entries.delete_at(index)
       data[session] = entries
       write_log(data)
@@ -193,7 +189,6 @@ Hiiro.run(*ARGV, tasks: true) do
     data    = read_log
     data.delete(session)
     write_log(data)
-    tmux_client.display_message('Notifications cleared')
   end
 
   # Called by tmux hook: after-kill-pane
