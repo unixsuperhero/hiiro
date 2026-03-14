@@ -17,6 +17,7 @@ if behind > 0
   exit 1
 end
 
+puts ""
 # Fetch all published versions from RubyGems
 def fetch_versions
   uri = URI("https://rubygems.org/api/v1/versions/hiiro.json")
@@ -79,6 +80,7 @@ end
 
 puts "New version: #{new_version}"
 
+puts ""
 File.open('lib/hiiro/version.rb', 'w+') do |f|
   f.puts 'class Hiiro'
   f.puts "  VERSION = #{new_version.inspect}"
@@ -86,13 +88,13 @@ File.open('lib/hiiro/version.rb', 'w+') do |f|
 end
 
 built = system('gem', 'build', 'hiiro.gemspec')
-
 puts "\nERROR: unable to build gem\n" unless built
 
+puts ""
 pushed = system('gem', 'push', "hiiro-#{new_version}.gem")
-
 puts "\nERROR: unable to push\n" unless pushed
 
+puts ""
 system 'git', 'add', '--all'
 if has_pending_changes
   system 'git', 'commit'
@@ -100,6 +102,7 @@ else
   system 'git', 'commit', '-m', "publishing v#{new_version}"
 end
 
+puts ""
 # Try to push to origin main, fallback to a separate branch if it fails
 if system('git', 'push', 'origin', 'main')
   puts "Pushed to origin/main"
@@ -114,4 +117,5 @@ else
   system 'git', 'checkout', 'main'
 end
 
+puts ""
 system('./script/update')
