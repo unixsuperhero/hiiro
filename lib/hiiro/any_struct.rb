@@ -1,29 +1,29 @@
 class Hiiro
-  module AnyStruct
-    attr_reader :_args, :_raw_data
-
-    def initialize(*args, **raw_data)
-      @_args = args
-      @_raw_data = raw_data
-
-      hashes = args.select{|arg| arg.is_a?(Hash) }.each
-      init_data(*hashes, raw_data)
+  class AnyStruct
+    def self.recursive_new(*args, **raw_data)
+      args.push(raw_data).select { |arg|
+        arg.is_a?(Hash)
+      }.inject(:merge)
     end
 
-    private def init_data(*hashes)
-      hashes.each do |h|
-        h.each do |key, value|
-          instance_variable_set(:"@#{key}", value)
+    attr_reader :_raw_data
 
-          define_singleton_method(key) do
-            instance_variable_get(:"@#{key}")
-          end
+    def initialize(*args, **raw_data)
+      hashes = args.select{|arg| arg.is_a?(Hash) }.inject(:merge)
+      @_raw_data = hashes.merge(raw_data)
+      @_raw_data.each { |k,v| set(k, v) }
+    end
 
-          define_singleton_method(:"#{key}=") do |val|
-            instance_variable_set(:"@#{key}", val)
-          end
-        end
+    def set(key, value)
+      _raw_data[key.to_sym] = value
+
+      define_singleton_method(key.to_sym) do
+        _raw_data[key.to_sym]
       end
+    end
+
+    def get(key)
+      _raw_data[key.to_sym]
     end
   end
 end
