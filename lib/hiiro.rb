@@ -23,6 +23,7 @@ require_relative "hiiro/service_manager"
 require_relative "hiiro/runner_tool"
 require_relative "hiiro/app_files"
 require_relative "hiiro/rbenv"
+require_relative "hiiro/any_struct"
 
 class String
   def underscore(camel_cased_word=self)
