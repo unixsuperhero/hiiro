@@ -6,6 +6,17 @@ require "json"
 # Parse -t flag for pre-release
 pre_release = ARGV.include?('-t')
 
+# Check for uncommitted changes before we modify anything
+has_pending_changes = !`git status --porcelain`.strip.empty?
+
+# Ensure local branch is up to date with remote
+system('git', 'fetch', 'origin')
+behind = `git rev-list HEAD..origin/main --count`.strip.to_i
+if behind > 0
+  puts "ERROR: Local branch is #{behind} commit(s) behind origin/main. Pull before publishing."
+  exit 1
+end
+
 # Fetch all published versions from RubyGems
 def fetch_versions
   uri = URI("https://rubygems.org/api/v1/versions/hiiro.json")
@@ -83,7 +94,11 @@ pushed = system('gem', 'push', "hiiro-#{new_version}.gem")
 puts "\nERROR: unable to push\n" unless pushed
 
 system 'git', 'add', '--all'
-system 'git', 'commit', '-m', "publishing v#{new_version}"
+if has_pending_changes
+  system 'git', 'commit'
+else
+  system 'git', 'commit', '-m', "publishing v#{new_version}"
+end
 
 # Try to push to origin main, fallback to a separate branch if it fails
 if system('git', 'push', 'origin', 'main')
