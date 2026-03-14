@@ -158,15 +158,12 @@ Hiiro.run(*ARGV) do
     branches = git.branches(sort_by: 'authordate', ignore_case: true)
 
     if opts.edit
-      branch_lines = branches.map { |b| "- #{b}" }
+      branch_lines = branches.map { |b| "#{b}:" }
       yaml_content = <<~YAML
         # Select branches to tag and list the tags to apply.
         # All listed branches will receive all listed tags.
 
-        branches:
-        #{branch_lines.join("\n")}
-
-        tags:
+        #{branch_lines.join("\n  -\n")}
         -
       YAML
 
@@ -184,23 +181,15 @@ Hiiro.run(*ARGV) do
         next
       end
 
-      selected = Array(parsed['branches']).map(&:to_s).reject(&:empty?)
-      new_tags = Array(parsed['tags']).map(&:to_s).reject(&:empty?)
-
-      if selected.empty? || new_tags.empty?
-        puts "Aborted: need at least one branch and one tag"
-        next
-      end
-
-      selected.each do |b|
-        tag_store.add(b, *new_tags)
-        puts "Tagged #{b} with: #{new_tags.join(', ')}"
+      parsed.each do |branch, tags|
+        tag_store.add(branch, *tags)
+        puts "Tagged #{branch} with: #{tags.join(', ')}"
       end
     else
       branch   = opts.args[0] || git.branch
       tag_names = opts.args[1..]
 
-      if tag_names.empty?
+      if tag_names&.count.to_i == 0
         puts "Usage: h branch tag [branch] <tag> [tag2 ...]"
         puts "       h branch tag -e  (bulk edit mode)"
         next
