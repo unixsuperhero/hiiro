@@ -13,6 +13,7 @@ require_relative "hiiro/glob"
 require_relative "hiiro/matcher"
 require_relative "hiiro/notification"
 require_relative "hiiro/options"
+require_relative "hiiro/input_file"
 require_relative "hiiro/paths"
 require_relative "hiiro/tags"
 require_relative "hiiro/queue"
@@ -160,6 +161,14 @@ class Hiiro
 
   def vim?
     editor.to_s.match?(/vim/i)
+  end
+
+  def yaml_input_file(content: nil, append: false, prefix: 'edit-')
+    InputFile.yaml_file(hiiro: self, content:, append:, prefix:)
+  end
+
+  def md_input_file(content: nil, append: false, prefix: 'edit-')
+    InputFile.md_file(hiiro: self, content:, append:, prefix:)
   end
 
   def edit_files(*files, max_splits: 3)
