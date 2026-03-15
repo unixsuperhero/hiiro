@@ -80,6 +80,56 @@ end
 
 puts "New version: #{new_version}"
 
+if has_pending_changes
+  puts ""
+  puts "Generating commit plan for pending changes..."
+
+  diff   = `git diff HEAD`
+  status = `git status --short`
+
+  commit_prompt = <<~PROMPT
+    Analyze these git changes and create a logical commit plan.
+
+    git status:
+    #{status.strip}
+
+    git diff:
+    #{diff.strip}
+
+    Group related changes into logical commits. Output a JSON array only, no explanation, no markdown fences:
+    [
+      {"message": "commit message", "files": ["path/to/file"]},
+      ...
+    ]
+
+    Use conventional commit format (feat:, fix:, chore:, refactor:, docs:, etc.).
+    Only include files that appear in the status output above.
+  PROMPT
+
+  response = IO.popen(['claude', '-p', '--model', 'claude-haiku-4-5-20251001'], 'r+') { |io|
+    io.write(commit_prompt)
+    io.close_write
+    io.read
+  }
+
+  begin
+    json_str = response.strip.gsub(/\A```(?:json)?\n?/, '').gsub(/\n?```\z/, '')
+    commits  = JSON.parse(json_str)
+
+    system('git', 'add', '--all')
+    commits.each do |commit|
+      system('git', 'reset', 'HEAD')
+      commit['files'].each { |f| system('git', 'add', '--', f) }
+      system('git', 'commit', '-m', commit['message'])
+      puts "  → #{commit['message']}"
+    end
+  rescue => e
+    puts "Warning: could not parse claude commit plan (#{e.message}), committing all as one"
+    system('git', 'add', '--all')
+    system('git', 'commit', '-m', 'chore: pre-publish changes')
+  end
+end
+
 puts ""
 puts "Generating CHANGELOG.md..."
 last_tag = `git describe --tags --abbrev=0 2>/dev/null`.strip
@@ -129,11 +179,7 @@ puts "\nERROR: unable to push\n" unless pushed
 
 puts ""
 system 'git', 'add', '--all'
-if has_pending_changes
-  system 'git', 'commit'
-else
-  system 'git', 'commit', '-m', "publishing v#{new_version}"
-end
+system 'git', 'commit', '-m', "publishing v#{new_version}"
 
 system 'git', 'tag', '-a', "v#{new_version}", '-m', "v#{new_version}"
 puts "Tagged v#{new_version}"
