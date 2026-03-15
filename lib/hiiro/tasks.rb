@@ -117,7 +117,8 @@ class Hiiro
       apply_sparse_checkout(target_path, sparse_groups) if sparse_groups.any?
 
       session_name = task_name
-      task = Task.new(name: task_name, tree: subtree_name, session: session_name)
+      color_index = Hiiro::TaskColors.next_index(config.tasks.map(&:color_index).compact)
+      task = Task.new(name: task_name, tree: subtree_name, session: session_name, color_index: color_index)
       config.save_task(task)
 
       base_dir = target_path
@@ -127,6 +128,11 @@ class Hiiro
       end
 
       Dir.chdir(base_dir)
+      # Create the session detached first so colors are applied before the user attaches
+      unless system('tmux', 'has-session', '-t', session_name, err: File::NULL)
+        system('tmux', 'new-session', '-d', '-s', session_name, '-c', Dir.pwd)
+      end
+      Hiiro::TaskColors.apply(session_name, color_index)
       hiiro.start_tmux_session(session_name)
 
       puts "Started task '#{task_name}' in worktree '#{subtree_name}'"
@@ -150,6 +156,7 @@ class Hiiro
           puts "Session '#{session_name}' is already attached. Use -f to switch anyway."
           exit 1
         end
+        Hiiro::TaskColors.apply(session_name, task.color_index) if task.color_index
         hiiro.start_tmux_session(session_name)
       else
         base_dir = tree_path
@@ -160,6 +167,11 @@ class Hiiro
 
         if Dir.exist?(base_dir)
           Dir.chdir(base_dir)
+          # Create detached first so colors are applied before the user attaches
+          unless system('tmux', 'has-session', '-t', session_name, err: File::NULL)
+            system('tmux', 'new-session', '-d', '-s', session_name, '-c', Dir.pwd)
+          end
+          Hiiro::TaskColors.apply(session_name, task.color_index) if task.color_index
           hiiro.start_tmux_session(session_name)
         else
           puts "ERROR: Path '#{base_dir}' does not exist"
@@ -618,6 +630,7 @@ class Hiiro
             h = { 'name' => name }
             h['tree'] = data['tree'] if data['tree']
             h['session'] = data['session'] if data['session']
+            h['color_index'] = data['color_index'] if data['color_index']
             h
           end
           return { 'tasks' => tasks }
@@ -680,13 +693,10 @@ class Hiiro
             task_names = tm.tasks.map(&:name)
             task_lines = task_names.map { |n| "- #{n}" }
             yaml_content = "# Select tasks to tag.\n\ntasks:\n#{task_lines.join("\n")}\n\ntags:\n-\n"
-            require 'tempfile'
-            tmpfile = Tempfile.new(['task-tag-', '.yml'])
-            tmpfile.write(yaml_content)
-            tmpfile.close
-            h.edit_files(tmpfile.path)
-            parsed   = YAML.safe_load(File.read(tmpfile.path)) rescue nil
-            tmpfile.unlink
+            input = InputFile.yaml_file(hiiro: h, content: yaml_content, prefix: 'task-tag-')
+            input.edit
+            parsed = input.parsed_file
+            input.cleanup
             selected = Array(parsed&.dig('tasks')).map(&:to_s).reject(&:empty?)
             new_tags = Array(parsed&.dig('tags')).map(&:to_s).reject(&:empty?)
             if selected.empty? || new_tags.empty?
@@ -905,6 +915,21 @@ class Hiiro
 
         h.add_subcmd(:save) { tm.save }
 
+        h.add_subcmd(:color) do
+          task = tm.current_task
+          unless task
+            puts "Not in a task session"
+            next
+          end
+          unless task.color_index
+            puts "No color assigned to task '#{task.name}'"
+            next
+          end
+          Hiiro::TaskColors.apply(task.session_name, task.color_index)
+          colors = Hiiro::TaskColors.for_index(task.color_index)
+          puts "Applied color theme #{task.color_index}: bg=#{colors[:bg]} fg=#{colors[:fg]}"
+        end
+
         h.add_subcmd(:stop) do |task_name=nil|
           if task_name.nil?
             selected = tm.select_task_interactive
@@ -1113,12 +1138,13 @@ class Hiiro
   end
 
   class Task
-    attr_reader :name, :tree_name, :session_name
+    attr_reader :name, :tree_name, :session_name, :color_index
 
-    def initialize(name:, tree: nil, session: nil, **_)
+    def initialize(name:, tree: nil, session: nil, color_index: nil, **_)
       @name = name
       @tree_name = tree
       @session_name = session || name
+      @color_index = color_index
     end
 
     def parent_name
@@ -1162,6 +1188,7 @@ class Hiiro
       h = { name: name }
       h[:tree] = tree_name if tree_name
       h[:session] = session_name if session_name != name
+      h[:color_index] = color_index unless color_index.nil?
       h
     end
 

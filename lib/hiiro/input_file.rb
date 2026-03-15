@@ -55,10 +55,10 @@ class Hiiro
     # Parses the file contents according to type:
     #   :yaml → Hash or Array (via YAML.safe_load)
     #   :md   → FrontMatterParser::Document (call .front_matter, .content)
-    def parsed_file
+    def parsed_file(permitted_classes: [])
       @parsed_file ||= case type
       when :yaml
-        YAML.safe_load_file(tmpfile.path) rescue nil
+        YAML.safe_load_file(tmpfile.path, permitted_classes:) rescue nil
       when :md
         require 'front_matter_parser'
         FrontMatterParser::Parser.parse_file(tmpfile.path)

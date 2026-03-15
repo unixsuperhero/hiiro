@@ -3,8 +3,6 @@ require 'fileutils'
 require 'shellwords'
 require 'time'
 require 'front_matter_parser'
-require 'tempfile'
-
 class Hiiro
   class Queue
     DIR = Hiiro::Config.data_path('queue')
@@ -470,32 +468,26 @@ class Hiiro
             ti = (ti || {}).merge(session_name: session_name) if session_name
           end
 
-          tmpfile = Tempfile.new(['hq-', '.md'])
-          prompt_file = tmpfile.path
           if args.empty? && !$stdin.tty?
             content = $stdin.read.strip
           elsif args.any?
             content = args.join(' ')
           else
             # Pre-fill with frontmatter template if task_info is available
-            if ti
+            fm_content = if ti
               fm_lines = ["---"]
               fm_lines << "task_name: #{ti[:task_name]}" if ti[:task_name]
               fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
               fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
               fm_lines << "---"
-              fm_lines << "\n"
-              tmpfile.write(fm_lines.join("\n"))
+              fm_lines << ""
+              fm_lines.join("\n")
             end
 
-            tmpfile.close
-            if h.vim?
-              system(h.editor, '+$', tmpfile.path)
-            else
-              system(h.editor, tmpfile.path)
-            end
-            content = File.read(tmpfile.path).strip
-            tmpfile.unlink
+            input = InputFile.md_file(hiiro: h, content: fm_content, append: !!fm_content, prefix: 'hq-')
+            input.edit
+            content = input.contents
+            input.cleanup
             if content.empty?
               puts "Aborted (empty file)"
               next

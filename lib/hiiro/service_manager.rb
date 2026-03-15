@@ -641,22 +641,18 @@ class Hiiro
             ],
           }
 
-          require 'tempfile'
-          tmpfile = Tempfile.new(['service', '.yml'])
-          tmpfile.write(YAML.dump({ 'new_service' => template }))
-          tmpfile.close
-
-          h.edit_files(tmpfile.path)
+          input = InputFile.yaml_file(hiiro: h, content: YAML.dump({ 'new_service' => template }), prefix: 'service')
+          input.edit
 
           begin
-            data = YAML.safe_load_file(tmpfile.path, permitted_classes: [Symbol]) || {}
+            data = input.parsed_file(permitted_classes: [Symbol]) || {}
             data.each do |name, cfg|
               sm.add_service({ 'name' => name }.merge(cfg || {}))
             end
           rescue => e
             puts "Error parsing config: #{e.message}"
           ensure
-            tmpfile.unlink
+            input.cleanup
           end
         end
 

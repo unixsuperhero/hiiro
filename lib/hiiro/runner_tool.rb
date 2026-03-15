@@ -194,22 +194,18 @@ class Hiiro
             'file_extensions' => '',
           }
 
-          require 'tempfile'
-          tmpfile = Tempfile.new(['tool', '.yml'])
-          tmpfile.write(YAML.dump({ 'new_tool' => template }))
-          tmpfile.close
-
-          h.edit_files(tmpfile.path)
+          input = InputFile.yaml_file(hiiro: h, content: YAML.dump({ 'new_tool' => template }), prefix: 'tool')
+          input.edit
 
           begin
-            data = YAML.safe_load_file(tmpfile.path, permitted_classes: [Symbol]) || {}
+            data = input.parsed_file(permitted_classes: [Symbol]) || {}
             data.each do |name, cfg|
               rt.add_tool({ 'name' => name }.merge(cfg || {}))
             end
           rescue => e
             puts "Error parsing config: #{e.message}"
           ensure
-            tmpfile.unlink
+            input.cleanup
           end
         end
 
