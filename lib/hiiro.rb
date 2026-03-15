@@ -200,6 +200,10 @@ class Hiiro
     Hiiro.init(bin_name: child_bin_name, args: child_args, **kwargs, &block)
   end
 
+  def run_child(custom_subcmd=nil, custom_args=nil, **kwargs, &block)
+    make_child(custom_subcmd, custom_args, **kwargs, &block).run
+  end
+
   def todo_manager
     @todo_manager ||= TodoManager.new
   end

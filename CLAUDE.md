@@ -174,7 +174,8 @@ Instance methods available in subcommand blocks:
 - `pins` - Key-value storage per command
 - `todo_manager` - Todo item management
 - `attach_method(name, &block)` - Add methods to hiiro instance dynamically
-- `make_child(subcmd, *args)` - Create nested Hiiro for sub-subcommands
+- `make_child(subcmd, *args)` - Create nested Hiiro for sub-subcommands (returns instance, must call `.run` manually)
+- `run_child(subcmd, *args)` - Create a nested Hiiro instance AND immediately run it (preferred over `make_child(...).run`)
 
 ### Hiiro::Matcher (lib/hiiro/matcher.rb)
 
@@ -416,6 +417,37 @@ Subcommands (`h jumplist <subcmd>`):
 Config: `~/.config/hiiro/jumplist/` (per-client entries and position files, max 50 entries)
 
 Dead panes are automatically pruned. Duplicate consecutive entries are deduplicated. Forward history is truncated when navigating to a new location (like vim).
+
+### Using `run_child`
+
+`run_child` is the instance-level equivalent of `Hiiro.run` — it creates a child Hiiro instance scoped to a subcommand and immediately dispatches it. Use it instead of `make_child(...).run`:
+
+```ruby
+# Inside a subcommand handler or plugin:
+hiiro.add_subcmd(:service) do |*args|
+  sm = ServiceManager.new
+  hiiro.run_child(:service) do |h|
+    h.add_subcmd(:list) { sm.list }
+    h.add_subcmd(:start) { |name| sm.start(name) }
+  end
+end
+```
+
+This is equivalent to `hiiro.make_child(:service) { ... }.run`, but cleaner and mirrors the `Hiiro.run` / `Hiiro.init` relationship.
+
+## Coding Rules and Conventions
+
+### `Hiiro.run` is mandatory for `bin/` files
+
+New `bin/h-*` files MUST always use `Hiiro.run`. NEVER use `Hiiro.init` or call `Hiiro.load_env` directly in bin files. `Hiiro.init` returns an instance without running it — `Hiiro.run` initializes and dispatches immediately, which is always what bin files need.
+
+### CHANGELOG.md is append-only
+
+ALWAYS add an entry to `CHANGELOG.md` when making changes. NEVER remove or modify existing entries. New entries go at the top.
+
+### Keep docs current
+
+ALWAYS update `README.md` and any files in `docs/` or other markdown files that describe how to use hiiro, its bins, or how it works whenever you change behavior. Never let these go stale.
 
 ## Key Files
 
