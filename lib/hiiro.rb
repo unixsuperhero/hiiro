@@ -213,7 +213,8 @@ class Hiiro
   end
 
   def run
-    result = runner.run(*args)
+    run_args = runners.using_default? ? [subcmd, *args].compact : args
+    result = runner.run(*run_args)
 
     handle_result(result)
 
@@ -496,6 +497,10 @@ class Hiiro
       return unambiguous_runner if unambiguous_runner
 
       @default_subcommand
+    end
+
+    def using_default?
+      !exact_runner && !unambiguous_runner
     end
 
     def subcommand_names

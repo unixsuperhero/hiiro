@@ -125,6 +125,54 @@ class HiiroRunnersSubcommandTest < Minitest::Test
   end
 end
 
+class HiiroAddDefaultTest < Minitest::Test
+  # Use Hiiro.new directly to avoid global_values leaking into Subcommand
+  def make_hiiro(args_list, &block)
+    hiiro = Hiiro.new("testbin-zzz", *args_list)
+    hiiro.instance_eval(&block) if block
+    hiiro
+  end
+
+  def test_using_default_true_when_no_subcommand_matches
+    hiiro = make_hiiro(["foo", "bar"]) { add_subcmd(:greet) { :ok } }
+    assert hiiro.runners.using_default?
+  end
+
+  def test_using_default_false_when_subcommand_matches
+    hiiro = make_hiiro(["greet"]) { add_subcmd(:greet) { :ok } }
+    refute hiiro.runners.using_default?
+  end
+
+  def test_using_default_false_with_prefix_match
+    hiiro = make_hiiro(["gr"]) { add_subcmd(:greet) { :ok } }
+    refute hiiro.runners.using_default?
+  end
+
+  def test_default_runner_receives_subcmd_prepended
+    received = nil
+    hiiro = make_hiiro(["foo", "bar"]) { add_default { |*a| received = a } }
+    run_args = hiiro.runners.using_default? ? [hiiro.subcmd, *hiiro.args].compact : hiiro.args
+    hiiro.runner.run(*run_args)
+    assert_equal ["foo", "bar"], received
+  end
+
+  def test_default_runner_receives_subcmd_only_when_no_extra_args
+    received = nil
+    hiiro = make_hiiro(["foo"]) { add_default { |*a| received = a } }
+    run_args = hiiro.runners.using_default? ? [hiiro.subcmd, *hiiro.args].compact : hiiro.args
+    hiiro.runner.run(*run_args)
+    assert_equal ["foo"], received
+  end
+
+  def test_normal_subcmd_runner_does_not_receive_subcmd_prepended
+    received = nil
+    hiiro = make_hiiro(["greet", "world"]) { add_subcmd(:greet) { |*a| received = a } }
+    run_args = hiiro.runners.using_default? ? [hiiro.subcmd, *hiiro.args].compact : hiiro.args
+    hiiro.runner.run(*run_args)
+    assert_equal ["world"], received
+  end
+end
+
 class HiiroRunnersBinTest < Minitest::Test
   def test_bin_subcommand_name
     bin = Hiiro::Runners::Bin.new("h", "/usr/local/bin/h-project")
