@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+require "fileutils"
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:update) do
+    session_name = `tmux display-message -p '\#{session_name}' 2>/dev/null`.strip
+    next if session_name.empty?
+
+    env = Hiiro::Environment.current
+    task = env.all_tasks.find { |t| t.session_name == session_name }
+    title = task ? task.name : session_name
+
+    client_tty = `tmux display-message -p '\#{client_tty}' 2>/dev/null`.strip
+    next if client_tty.empty?
+
+    begin
+      File.write(client_tty, "\033]0;#{title}\007")
+    rescue
+      # best-effort; silently ignore permission errors
+    end
+  end
+
+  add_subcmd(:setup) do
+    conf_dir = File.join(Dir.home, '.config', 'tmux')
+    conf_file = File.join(conf_dir, 'h-title.tmux.conf')
+    tmux_conf = File.join(Dir.home, '.tmux.conf')
+    source_line = "source-file #{conf_file}"
+
+    FileUtils.mkdir_p(conf_dir)
+
+    title_conf = <<~CONF
+      # --- Terminal tab title hooks (h-title) ---
+      set-hook -g client-session-changed "run-shell -b 'h title update'"
+      set-hook -g after-new-session      "run-shell -b 'h title update'"
+    CONF
+
+    File.write(conf_file, title_conf)
+    puts "Wrote #{conf_file}"
+
+    if File.exist?(tmux_conf)
+      existing = File.read(tmux_conf)
+      if existing.include?(source_line)
+        puts "#{tmux_conf} already sources #{conf_file}"
+        next
+      end
+    end
+
+    File.open(tmux_conf, 'a') do |f|
+      f.puts
+      f.puts source_line
+    end
+    puts "Added '#{source_line}' to #{tmux_conf}"
+  end
+end
