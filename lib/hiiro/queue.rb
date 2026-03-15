@@ -166,12 +166,15 @@ class Hiiro
       File.write(prompt_file, prompt_body + "\n")
 
       # Write a launcher script
+      fire_mode   = prompt_obj&.ignore?
+      claude_cmd  = fire_mode ? 'claude -p' : 'claude'
+      shell_line  = fire_mode ? '' : "exec #{Shellwords.shellescape(ENV['SHELL'] || 'zsh')}"
       script_path = File.join(dirs[:running], "#{name}.sh")
       File.write(script_path, <<~SH)
         #!/usr/bin/env bash
 
         cd #{Shellwords.shellescape(working_dir)}
-        cat #{Shellwords.shellescape(prompt_file)} | claude
+        cat #{Shellwords.shellescape(prompt_file)} | #{claude_cmd}
         HQ_EXIT=$?
 
         # Move task files to done/failed based on exit code
@@ -191,7 +194,7 @@ class Hiiro
           end
         '
 
-        exec #{Shellwords.shellescape(ENV['SHELL'] || 'zsh')}
+        #{shell_line}
       SH
       FileUtils.chmod(0755, script_path)
 
@@ -289,14 +292,15 @@ class Hiiro
       text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')[0, 60]
     end
 
-    def add_with_frontmatter(content, task_info: nil)
+    def add_with_frontmatter(content, task_info: nil, ignore: false)
       queue_dirs # ensure dirs exist
 
-      if task_info && !content.start_with?("---")
+      if (task_info || ignore) && !content.start_with?("---")
         fm = {}
-        fm['task_name'] = task_info[:task_name] if task_info[:task_name]
-        fm['tree_name'] = task_info[:tree_name] if task_info[:tree_name]
-        fm['session_name'] = task_info[:session_name] if task_info[:session_name]
+        fm['task_name'] = task_info[:task_name] if task_info&.dig(:task_name)
+        fm['tree_name'] = task_info[:tree_name] if task_info&.dig(:tree_name)
+        fm['session_name'] = task_info[:session_name] if task_info&.dig(:session_name)
+        fm['ignore'] = true if ignore
 
         if fm.any?
           content = "---\n#{fm.map { |k, v| "#{k}: #{v}" }.join("\n")}\n---\n#{content}"
@@ -450,6 +454,7 @@ class Hiiro
             option(:task, short: :t, desc: 'Task name')
             flag(:choose, short: :T, desc: 'Choose task interactively')
             flag(:session, short: :s, desc: 'Use current tmux session')
+            flag(:ignore, short: :i, desc: 'Background task — close window when done, no shell')
           end
 
           if opts.help?
@@ -497,7 +502,7 @@ class Hiiro
             end
           end
 
-          result = q.add_with_frontmatter(content, task_info: ti)
+          result = q.add_with_frontmatter(content, task_info: ti, ignore: opts.ignore)
           if result
             puts "Created: #{result[:path]}"
           else
@@ -693,6 +698,10 @@ class Hiiro
         @doc = doc
         @frontmatter = doc.front_matter
         @prompt = prompt
+      end
+
+      def ignore?
+        doc.front_matter['ignore'] == true
       end
 
       def task_name
