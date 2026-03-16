@@ -50,9 +50,11 @@ class Hiiro
       mtime.year == now.year ? mtime.strftime("%m-%d %H:%M") : mtime.strftime("%Y-%m-%d %H:%M")
     end
 
-    def list_lines(all: false)
+    def list_lines(all: false, statuses: nil)
+      filter = statuses && Array(statuses).map(&:to_s).reject(&:empty?)
+      active_statuses = filter&.any? ? STATUSES.select { |s| filter.include?(s) } : STATUSES
       lines = []
-      STATUSES.each do |status|
+      active_statuses.each do |status|
         tasks = tasks_in_sorted(status.to_sym)
         next if tasks.empty?
 
@@ -368,9 +370,10 @@ class Hiiro
 
         h.add_subcmd(:ls, :list) { |*args|
           opts = Hiiro::Options.parse(args) do
-            flag(:all, short: :a, desc: 'Show all tasks without limit; use pager if output exceeds terminal height')
+            flag(:all,    short: :a, desc: 'Show all tasks without limit; use pager if output exceeds terminal height')
+            option(:status, short: :s, desc: "Filter by status (#{Queue::STATUSES.join(', ')}); repeat for multiple", multi: true)
           end
-          lines = q.list_lines(all: opts.all)
+          lines = q.list_lines(all: opts.all, statuses: opts.status)
           if lines.empty?
             puts "No tasks"
             next
@@ -473,12 +476,13 @@ class Hiiro
           elsif args.any?
             content = args.join(' ')
           else
-            # Pre-fill with frontmatter template if task_info is available
-            fm_content = if ti
+            # Pre-fill with frontmatter template if task_info or flags require it
+            fm_content = if ti || opts.ignore
               fm_lines = ["---"]
-              fm_lines << "task_name: #{ti[:task_name]}" if ti[:task_name]
-              fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
-              fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
+              fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
+              fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
+              fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
+              fm_lines << "ignore: true" if opts.ignore
               fm_lines << "---"
               fm_lines << ""
               fm_lines.join("\n")
