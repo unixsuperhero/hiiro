@@ -93,17 +93,22 @@ add_subcmd(:env) { |*args|
     IO.popen(['claude', '-p'], 'w') { |io| io.write(prompt) }
   }
 
-  add_default {
-    tmpfile = Tempfile.new(['claude-', '.md'])
-    tmpfile.close
-    edit_files(tmpfile.path)
-    prompt = File.read(tmpfile.path).strip
-    tmpfile.unlink
-    if prompt.empty?
-      puts "Aborted (empty file)"
-      next
-    end
-    IO.popen(['claude', '-p'], 'w') { |io| io.write(prompt) }
+  add_subcmd(:agents) {
+    dir = File.expand_path('~/.claude/agents')
+    files = Dir.glob("#{dir}/*.md").sort
+    files.each { |f| puts File.basename(f, '.md') }
+  }
+
+  add_subcmd(:commands) {
+    dir = File.expand_path('~/.claude/commands')
+    files = Dir.glob("#{dir}/*.md").sort
+    files.each { |f| puts File.basename(f, '.md') }
+  }
+
+  add_subcmd(:skills) {
+    dir = File.expand_path('~/.claude/skills')
+    dirs = Dir.glob("#{dir}/*/").sort
+    dirs.each { |d| puts File.basename(d) }
   }
 
   add_subcmd(:new) { |*args|
