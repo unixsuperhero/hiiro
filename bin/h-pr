@@ -1504,36 +1504,53 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   # Each accepts composable filter flags and applies the action to all matching PRs.
   # Without filters, falls back to fuzzy-select.
 
-  resolve_multi = ->(pinned, opts) {
-    if pinned_manager.filter_active?(opts)
-      results = pinned_manager.apply_filters(pinned, opts)
-      if results.empty?
-        puts "No PRs match filters."
-        return nil
-      end
-      results
-    else
-      lines = pinned.each_with_index.each_with_object({}) { |(pr, i), h| h[pinned_manager.display_pinned(pr, i)] = pr }
-      sel = fuzzyfind_from_map(lines)
-      sel ? [sel] : nil
-    end
-  }
-
   add_subcmd(:mfix) do |*args|
-    opts = Hiiro::Options.parse(args) {
-      instance_eval(&FILTER_OPTS)
-      flag(:run, short: 'R', desc: 'launch tasks immediately after queuing')
-    }
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    prs = resolve_multi.call(pinned, opts)
-    next unless prs
+    pr_lines = pinned.map do |pr|
+      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
+      "- #{pr['number']}  # #{branch} #{pr['title']}"
+    end
 
+    yaml_content = <<~YAML
+      # Select PRs to queue fixes for (remove lines you don't want).
+      # Set run: true to launch tasks immediately after queuing.
+
+      prs:
+      #{pr_lines.join("\n")}
+
+      run: false
+    YAML
+
+    tmpfile = Tempfile.new(['pr-mfix-', '.yml'])
+    tmpfile.write(yaml_content)
+    tmpfile.close
+    edit_files(tmpfile.path)
+
+    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
+    tmpfile.unlink
+
+    unless parsed.is_a?(Hash)
+      puts "Aborted: could not parse YAML"
+      next
+    end
+
+    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
+
+    if selected_numbers.empty?
+      puts "Aborted: no PRs selected"
+      next
+    end
+
+    should_run = parsed['run'] == true
     q = Hiiro::Queue.current(self)
     queued_names = []
 
-    prs.each do |pr|
+    selected_numbers.each do |num|
+      pr = pinned.find { |p| p['number'].to_s == num }
+      next unless pr
+
       task_info = { task_name: pr['task'], tree_name: pr['worktree'], session_name: pr['tmux_session'] }.compact
       task_info = nil if task_info.empty?
       result = q.add_with_frontmatter("/pr:fix #{pr['number']}", task_info: task_info)
@@ -1548,7 +1565,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     if queued_names.any?
       puts
       puts "Queued #{queued_names.length} fix task(s)."
-      if opts.run
+      if should_run
         puts "Launching..."
         queued_names.each { |name| q.launch_task(name) }
       else
@@ -1558,14 +1575,38 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:mopen) do |*args|
-    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    prs = resolve_multi.call(pinned, opts)
-    next unless prs
+    pr_lines = pinned.map do |pr|
+      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
+      "- #{pr['number']}  # #{branch} #{pr['title']}"
+    end
 
-    prs.each { |pr| system('gh', 'pr', 'view', pr['number'].to_s, '--web') }
+    yaml_content = <<~YAML
+      # Select PRs to open in browser (remove lines you don't want).
+
+      prs:
+      #{pr_lines.join("\n")}
+    YAML
+
+    tmpfile = Tempfile.new(['pr-mopen-', '.yml'])
+    tmpfile.write(yaml_content)
+    tmpfile.close
+    edit_files(tmpfile.path)
+
+    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
+    tmpfile.unlink
+
+    unless parsed.is_a?(Hash)
+      puts "Aborted: could not parse YAML"
+      next
+    end
+
+    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
+    next puts "Aborted: no PRs selected" if selected_numbers.empty?
+
+    selected_numbers.each { |num| system('gh', 'pr', 'view', num, '--web') }
   end
 
   add_subcmd(:mmerge) do |*args|
@@ -1619,44 +1660,119 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:mready) do |*args|
-    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    prs = resolve_multi.call(pinned, opts)
-    next unless prs
+    pr_lines = pinned.map do |pr|
+      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
+      "- #{pr['number']}  # #{branch} #{pr['title']}"
+    end
 
-    prs.each do |pr|
-      puts "Marking ##{pr['number']} as ready: #{pr['title']}"
-      system('gh', 'pr', 'ready', pr['number'].to_s)
+    yaml_content = <<~YAML
+      # Select PRs to mark as ready for review (remove lines you don't want).
+
+      prs:
+      #{pr_lines.join("\n")}
+    YAML
+
+    tmpfile = Tempfile.new(['pr-mready-', '.yml'])
+    tmpfile.write(yaml_content)
+    tmpfile.close
+    edit_files(tmpfile.path)
+
+    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
+    tmpfile.unlink
+
+    unless parsed.is_a?(Hash)
+      puts "Aborted: could not parse YAML"
+      next
+    end
+
+    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
+    next puts "Aborted: no PRs selected" if selected_numbers.empty?
+
+    selected_numbers.each do |num|
+      pr = pinned.find { |p| p['number'].to_s == num }
+      puts "Marking ##{num} as ready: #{pr ? pr['title'] : num}"
+      system('gh', 'pr', 'ready', num)
     end
   end
 
   add_subcmd(:'mto-draft') do |*args|
-    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    prs = resolve_multi.call(pinned, opts)
-    next unless prs
+    pr_lines = pinned.map do |pr|
+      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
+      "- #{pr['number']}  # #{branch} #{pr['title']}"
+    end
 
-    prs.each do |pr|
-      puts "Converting ##{pr['number']} to draft: #{pr['title']}"
-      system('gh', 'pr', 'ready', '--draft', pr['number'].to_s)
+    yaml_content = <<~YAML
+      # Select PRs to convert to draft (remove lines you don't want).
+
+      prs:
+      #{pr_lines.join("\n")}
+    YAML
+
+    tmpfile = Tempfile.new(['pr-mto-draft-', '.yml'])
+    tmpfile.write(yaml_content)
+    tmpfile.close
+    edit_files(tmpfile.path)
+
+    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
+    tmpfile.unlink
+
+    unless parsed.is_a?(Hash)
+      puts "Aborted: could not parse YAML"
+      next
+    end
+
+    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
+    next puts "Aborted: no PRs selected" if selected_numbers.empty?
+
+    selected_numbers.each do |num|
+      pr = pinned.find { |p| p['number'].to_s == num }
+      puts "Converting ##{num} to draft: #{pr ? pr['title'] : num}"
+      system('gh', 'pr', 'ready', '--draft', num)
     end
   end
 
   add_subcmd(:mrm) do |*args|
-    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    prs = resolve_multi.call(pinned, opts)
-    next unless prs
+    pr_lines = pinned.map do |pr|
+      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
+      "- #{pr['number']}  # #{branch} #{pr['title']}"
+    end
 
-    prs.each do |pr|
-      pinned_manager.unpin(pr['number'])
-      puts "Removed ##{pr['number']}: #{pr['title']}"
+    yaml_content = <<~YAML
+      # Select PRs to remove from tracking (remove lines you don't want).
+
+      prs:
+      #{pr_lines.join("\n")}
+    YAML
+
+    tmpfile = Tempfile.new(['pr-mrm-', '.yml'])
+    tmpfile.write(yaml_content)
+    tmpfile.close
+    edit_files(tmpfile.path)
+
+    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
+    tmpfile.unlink
+
+    unless parsed.is_a?(Hash)
+      puts "Aborted: could not parse YAML"
+      next
+    end
+
+    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
+    next puts "Aborted: no PRs selected" if selected_numbers.empty?
+
+    selected_numbers.each do |num|
+      pr = pinned.find { |p| p['number'].to_s == num }
+      pinned_manager.unpin(num)
+      puts "Removed ##{num}: #{pr ? pr['title'] : num}"
     end
   end
 
