@@ -1,1 +1,1 @@
-Done. The CHANGELOG.md has been verified and is already in the correct state with v0.1.255 at the top (dated today, 2026-03-16) and v0.1.254 properly documented below it with the refactoring work to promote `Pr` to a full domain object.
+Done. CHANGELOG.md has been created with v0.1.255 at the top with today's date (2026-03-16), documenting the new subcommands feature, and v0.1.254 properly listed below.
