@@ -292,7 +292,7 @@ class Hiiro
       text.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/^-|-$/, '')[0, 60]
     end
 
-    def add_with_frontmatter(content, task_info: nil, ignore: false)
+    def add_with_frontmatter(content, task_info: nil, ignore: false, name: nil)
       queue_dirs # ensure dirs exist
 
       if (task_info || ignore) && !content.start_with?("---")
@@ -307,8 +307,12 @@ class Hiiro
         end
       end
 
-      content_lines =content.lines.drop_while { |l| l.strip.empty? || l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip
-      name = slugify(content_lines)
+      if name && !name.empty?
+        name = slugify(name)
+      else
+        content_lines = content.lines.drop_while { |l| l.strip.empty? || l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip
+        name = slugify(content_lines)
+      end
 
       if name.empty?
         name = Time.now.strftime("%Y%m%d%H%M%S")
@@ -452,10 +456,11 @@ class Hiiro
         h.add_subcmd(:add) { |*args|
           q.queue_dirs
           opts = Hiiro::Options.parse(args) do
-            option(:task, short: :t, desc: 'Task name')
-            flag(:choose, short: :T, desc: 'Choose task interactively')
-            flag(:session, short: :s, desc: 'Use current tmux session')
-            flag(:ignore, short: :i, desc: 'Background task — close window when done, no shell')
+            option(:task,   short: :t, desc: 'Task name')
+            option(:name,   short: :n, desc: 'Base filename for the queue task')
+            flag(:choose,   short: :T, desc: 'Choose task interactively')
+            flag(:session,  short: :s, desc: 'Use current tmux session')
+            flag(:ignore,   short: :i, desc: 'Background task — close window when done, no shell')
           end
 
           if opts.help?
@@ -498,7 +503,7 @@ class Hiiro
             end
           end
 
-          result = q.add_with_frontmatter(content, task_info: ti, ignore: opts.ignore)
+          result = q.add_with_frontmatter(content, task_info: ti, ignore: opts.ignore, name: opts.name)
           if result
             puts "Created: #{result[:path]}"
           else
