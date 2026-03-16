@@ -187,7 +187,6 @@ class PinnedPRManager
                   conclusion
                   status
                   detailsUrl
-                  workflowName
                 }
                 ... on StatusContext {
                   __typename
