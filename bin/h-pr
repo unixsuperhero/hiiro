@@ -1569,20 +1569,52 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:mmerge) do |*args|
-    opts = Hiiro::Options.parse(args) {
-      instance_eval(&FILTER_OPTS)
-      option(:strategy, short: 's', desc: 'merge strategy (merge, squash, rebase)')
-    }
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    prs = resolve_multi.call(pinned, opts)
-    next unless prs
+    pr_lines = pinned.map do |pr|
+      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
+      "- #{pr['number']}  # #{branch} #{pr['title']}"
+    end
 
-    merge_args = opts.strategy ? ["--#{opts.strategy}"] : []
-    prs.each do |pr|
-      puts "Merging ##{pr['number']}: #{pr['title']}"
-      system('gh', 'pr', 'merge', pr['number'].to_s, *merge_args)
+    yaml_content = <<~YAML
+      # Select PRs to merge (remove lines you don't want).
+      # strategy: merge, squash, or rebase (leave blank for GitHub default)
+
+      prs:
+      #{pr_lines.join("\n")}
+
+      strategy:
+    YAML
+
+    tmpfile = Tempfile.new(['pr-mmerge-', '.yml'])
+    tmpfile.write(yaml_content)
+    tmpfile.close
+    edit_files(tmpfile.path)
+
+    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
+    tmpfile.unlink
+
+    unless parsed.is_a?(Hash)
+      puts "Aborted: could not parse YAML"
+      next
+    end
+
+    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
+
+    if selected_numbers.empty?
+      puts "Aborted: no PRs selected"
+      next
+    end
+
+    strategy = parsed['strategy'].to_s.strip
+    merge_args = strategy.empty? ? [] : ["--#{strategy}"]
+
+    selected_numbers.each do |num|
+      pr = pinned.find { |p| p['number'].to_s == num }
+      title = pr ? pr['title'] : num
+      puts "Merging ##{num}: #{title}"
+      system('gh', 'pr', 'merge', num, *merge_args)
     end
   end
 
@@ -1629,27 +1661,56 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:mcomment) do |*args|
-    opts = Hiiro::Options.parse(args, &FILTER_OPTS)
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    prs = resolve_multi.call(pinned, opts)
-    next unless prs
+    pr_lines = pinned.map do |pr|
+      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
+      "- #{pr['number']}  # #{branch} #{pr['title']}"
+    end
 
-    tmpfile = Tempfile.new(['pr-comment-', '.md'])
+    yaml_content = <<~YAML
+      # Select PRs to comment on (remove lines you don't want).
+      # Write your comment in the 'comment' field below.
+
+      prs:
+      #{pr_lines.join("\n")}
+
+      comment: |
+
+    YAML
+
+    tmpfile = Tempfile.new(['pr-mcomment-', '.yml'])
+    tmpfile.write(yaml_content)
     tmpfile.close
     edit_files(tmpfile.path)
-    body = File.read(tmpfile.path).strip
+
+    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
     tmpfile.unlink
+
+    unless parsed.is_a?(Hash)
+      puts "Aborted: could not parse YAML"
+      next
+    end
+
+    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
+    body = parsed['comment'].to_s.strip
+
+    if selected_numbers.empty?
+      puts "Aborted: no PRs selected"
+      next
+    end
 
     if body.empty?
       puts "Aborted: empty comment"
       next
     end
 
-    prs.each do |pr|
-      puts "Commenting on ##{pr['number']}: #{pr['title']}"
-      system('gh', 'pr', 'comment', pr['number'].to_s, '--body', body)
+    selected_numbers.each do |num|
+      pr = pinned.find { |p| p['number'].to_s == num }
+      title = pr ? pr['title'] : num
+      puts "Commenting on ##{num}: #{title}"
+      system('gh', 'pr', 'comment', num, '--body', body)
     end
   end
 
