@@ -1,3 +1,3 @@
 class Hiiro
-  VERSION = "0.1.255"
+  VERSION = "0.1.256"
 end
