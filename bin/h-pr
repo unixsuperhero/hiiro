@@ -501,6 +501,13 @@ class PinnedPRManager
 
     lines.join("\n")
   end
+
+  def pr_yaml_lines(prs = nil)
+    (prs || load_pinned).map do |pr|
+      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
+      "- #{pr['number']}  # #{branch} #{pr['title']}"
+    end
+  end
 end
 
 FILTER_OPTS = Proc.new {
@@ -1501,35 +1508,27 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   # === Multi-PR action commands (mCMD) ===
-  # Each accepts composable filter flags and applies the action to all matching PRs.
-  # Without filters, falls back to fuzzy-select.
+  # Each opens a YAML editor pre-filled with all tracked PRs.
+  # Remove lines you don't want, then save to apply the action.
 
   add_subcmd(:mfix) do |*args|
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
-
-    pr_lines = pinned.map do |pr|
-      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
-      "- #{pr['number']}  # #{branch} #{pr['title']}"
-    end
 
     yaml_content = <<~YAML
       # Select PRs to queue fixes for (remove lines you don't want).
       # Set run: true to launch tasks immediately after queuing.
 
       prs:
-      #{pr_lines.join("\n")}
+      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
 
       run: false
     YAML
 
-    tmpfile = Tempfile.new(['pr-mfix-', '.yml'])
-    tmpfile.write(yaml_content)
-    tmpfile.close
-    edit_files(tmpfile.path)
-
-    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
-    tmpfile.unlink
+    input = yaml_input_file(content: yaml_content, prefix: 'pr-mfix-')
+    input.edit
+    parsed = input.parsed_file
+    input.cleanup
 
     unless parsed.is_a?(Hash)
       puts "Aborted: could not parse YAML"
@@ -1578,25 +1577,17 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    pr_lines = pinned.map do |pr|
-      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
-      "- #{pr['number']}  # #{branch} #{pr['title']}"
-    end
-
     yaml_content = <<~YAML
       # Select PRs to open in browser (remove lines you don't want).
 
       prs:
-      #{pr_lines.join("\n")}
+      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
     YAML
 
-    tmpfile = Tempfile.new(['pr-mopen-', '.yml'])
-    tmpfile.write(yaml_content)
-    tmpfile.close
-    edit_files(tmpfile.path)
-
-    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
-    tmpfile.unlink
+    input = yaml_input_file(content: yaml_content, prefix: 'pr-mopen-')
+    input.edit
+    parsed = input.parsed_file
+    input.cleanup
 
     unless parsed.is_a?(Hash)
       puts "Aborted: could not parse YAML"
@@ -1613,28 +1604,20 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    pr_lines = pinned.map do |pr|
-      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
-      "- #{pr['number']}  # #{branch} #{pr['title']}"
-    end
-
     yaml_content = <<~YAML
       # Select PRs to merge (remove lines you don't want).
       # strategy: merge, squash, or rebase (leave blank for GitHub default)
 
       prs:
-      #{pr_lines.join("\n")}
+      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
 
       strategy:
     YAML
 
-    tmpfile = Tempfile.new(['pr-mmerge-', '.yml'])
-    tmpfile.write(yaml_content)
-    tmpfile.close
-    edit_files(tmpfile.path)
-
-    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
-    tmpfile.unlink
+    input = yaml_input_file(content: yaml_content, prefix: 'pr-mmerge-')
+    input.edit
+    parsed = input.parsed_file
+    input.cleanup
 
     unless parsed.is_a?(Hash)
       puts "Aborted: could not parse YAML"
@@ -1663,25 +1646,17 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    pr_lines = pinned.map do |pr|
-      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
-      "- #{pr['number']}  # #{branch} #{pr['title']}"
-    end
-
     yaml_content = <<~YAML
       # Select PRs to mark as ready for review (remove lines you don't want).
 
       prs:
-      #{pr_lines.join("\n")}
+      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
     YAML
 
-    tmpfile = Tempfile.new(['pr-mready-', '.yml'])
-    tmpfile.write(yaml_content)
-    tmpfile.close
-    edit_files(tmpfile.path)
-
-    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
-    tmpfile.unlink
+    input = yaml_input_file(content: yaml_content, prefix: 'pr-mready-')
+    input.edit
+    parsed = input.parsed_file
+    input.cleanup
 
     unless parsed.is_a?(Hash)
       puts "Aborted: could not parse YAML"
@@ -1702,25 +1677,17 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    pr_lines = pinned.map do |pr|
-      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
-      "- #{pr['number']}  # #{branch} #{pr['title']}"
-    end
-
     yaml_content = <<~YAML
       # Select PRs to convert to draft (remove lines you don't want).
 
       prs:
-      #{pr_lines.join("\n")}
+      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
     YAML
 
-    tmpfile = Tempfile.new(['pr-mto-draft-', '.yml'])
-    tmpfile.write(yaml_content)
-    tmpfile.close
-    edit_files(tmpfile.path)
-
-    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
-    tmpfile.unlink
+    input = yaml_input_file(content: yaml_content, prefix: 'pr-mto-draft-')
+    input.edit
+    parsed = input.parsed_file
+    input.cleanup
 
     unless parsed.is_a?(Hash)
       puts "Aborted: could not parse YAML"
@@ -1741,25 +1708,17 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    pr_lines = pinned.map do |pr|
-      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
-      "- #{pr['number']}  # #{branch} #{pr['title']}"
-    end
-
     yaml_content = <<~YAML
       # Select PRs to remove from tracking (remove lines you don't want).
 
       prs:
-      #{pr_lines.join("\n")}
+      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
     YAML
 
-    tmpfile = Tempfile.new(['pr-mrm-', '.yml'])
-    tmpfile.write(yaml_content)
-    tmpfile.close
-    edit_files(tmpfile.path)
-
-    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
-    tmpfile.unlink
+    input = yaml_input_file(content: yaml_content, prefix: 'pr-mrm-')
+    input.edit
+    parsed = input.parsed_file
+    input.cleanup
 
     unless parsed.is_a?(Hash)
       puts "Aborted: could not parse YAML"
@@ -1780,29 +1739,21 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    pr_lines = pinned.map do |pr|
-      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
-      "- #{pr['number']}  # #{branch} #{pr['title']}"
-    end
-
     yaml_content = <<~YAML
       # Select PRs to comment on (remove lines you don't want).
       # Write your comment in the 'comment' field below.
 
       prs:
-      #{pr_lines.join("\n")}
+      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
 
       comment: |
 
     YAML
 
-    tmpfile = Tempfile.new(['pr-mcomment-', '.yml'])
-    tmpfile.write(yaml_content)
-    tmpfile.close
-    edit_files(tmpfile.path)
-
-    parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
-    tmpfile.unlink
+    input = yaml_input_file(content: yaml_content, prefix: 'pr-mcomment-')
+    input.edit
+    parsed = input.parsed_file
+    input.cleanup
 
     unless parsed.is_a?(Hash)
       puts "Aborted: could not parse YAML"
