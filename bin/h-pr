@@ -8,15 +8,8 @@ require "json"
 require "tempfile"
 
 class PinnedPRManager
-  PINNED_FILE = Hiiro::Config.path('pinned_prs.yml')
-
-  def self.repo_from_url(url)
-    return nil unless url
-    url.match(%r{github\.com/([^/]+/[^/]+)/pull/})&.[](1)
-  end
-
   def pr_repo(pr)
-    pr['repo'] || self.class.repo_from_url(pr['url'])
+    pr.repo || Hiiro::Git::Pr.repo_from_url(pr.url)
   end
 
   def initialize
@@ -24,20 +17,20 @@ class PinnedPRManager
   end
 
   def ensure_file
-    dir = File.dirname(PINNED_FILE)
+    dir = File.dirname(Hiiro::Git::Pr::PINNED_FILE)
     FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
-    File.write(PINNED_FILE, [].to_yaml) unless File.exist?(PINNED_FILE)
+    File.write(Hiiro::Git::Pr::PINNED_FILE, [].to_yaml) unless File.exist?(Hiiro::Git::Pr::PINNED_FILE)
   end
 
   def load_pinned
     ensure_file
-    prs = YAML.load_file(PINNED_FILE) || []
-    if prs.any? { |p| !p['slot'] }
-      next_slot = prs.map { |p| p['slot'].to_i }.max.to_i
+    prs = Hiiro::Git::Pr.pinned_prs
+    if prs.any? { |p| p.slot.nil? }
+      next_slot = prs.map { |p| p.slot.to_i }.max.to_i
       prs.each do |p|
-        next if p['slot']
+        next if p.slot
         next_slot += 1
-        p['slot'] = next_slot
+        p.slot = next_slot
       end
       save_pinned(prs)
     end
@@ -46,39 +39,55 @@ class PinnedPRManager
 
   def save_pinned(prs)
     ensure_file
-    File.write(PINNED_FILE, prs.to_yaml)
+    File.write(Hiiro::Git::Pr::PINNED_FILE, prs.map(&:to_pinned_h).to_yaml)
   end
 
-  def pin(pr_info)
-    pr_info['repo'] ||= self.class.repo_from_url(pr_info['url'])
+  def pin(pr)
+    pr.repo ||= Hiiro::Git::Pr.repo_from_url(pr.url)
 
     pinned = load_pinned
     existing = pinned.find { |p|
-      p['number'] == pr_info['number'] && pr_repo(p) == pr_repo(pr_info)
+      p.number == pr.number && pr_repo(p) == pr_repo(pr)
     }
 
     if existing
-      existing.merge!(pr_info)
-      existing['updated_at'] = Time.now.iso8601
+      existing.title           = pr.title           unless pr.title.nil?
+      existing.state           = pr.state           unless pr.state.nil?
+      existing.url             = pr.url             unless pr.url.nil?
+      existing.head_branch     = pr.head_branch     unless pr.head_branch.nil?
+      existing.repo            = pr.repo            unless pr.repo.nil?
+      existing.is_draft        = pr.is_draft        unless pr.is_draft.nil?
+      existing.mergeable       = pr.mergeable       unless pr.mergeable.nil?
+      existing.review_decision = pr.review_decision unless pr.review_decision.nil?
+      existing.check_runs      = pr.check_runs      unless pr.check_runs.nil?
+      existing.checks          = pr.checks          unless pr.checks.nil?
+      existing.reviews         = pr.reviews         unless pr.reviews.nil?
+      existing.task            = pr.task            unless pr.task.nil?
+      existing.worktree        = pr.worktree        unless pr.worktree.nil?
+      existing.tmux_session    = pr.tmux_session    unless pr.tmux_session.nil?
+      existing.tags            = pr.tags            unless pr.tags.nil?
+      existing.assigned        = pr.assigned        unless pr.assigned.nil?
+      existing.authored        = pr.authored        unless pr.authored.nil?
+      existing.updated_at      = Time.now.iso8601
     else
-      pr_info['slot'] = (pinned.map { |p| p['slot'].to_i }.max.to_i) + 1
-      pr_info['pinned_at'] = Time.now.iso8601
-      pinned << pr_info
+      pr.slot      = (pinned.map { |p| p.slot.to_i }.max.to_i) + 1
+      pr.pinned_at = Time.now.iso8601
+      pinned << pr
     end
 
     save_pinned(pinned)
-    pr_info
+    pr
   end
 
   def unpin(pr_number)
     pinned = load_pinned
-    removed = pinned.reject! { |p| p['number'].to_s == pr_number.to_s }
+    removed = pinned.reject! { |p| p.number.to_s == pr_number.to_s }
     save_pinned(pinned)
     removed
   end
 
   def pinned?(pr_number)
-    load_pinned.any? { |p| p['number'].to_s == pr_number.to_s }
+    load_pinned.any? { |p| p.number.to_s == pr_number.to_s }
   end
 
   def fetch_pr_info(pr_number, repo: nil)
@@ -86,9 +95,7 @@ class PinnedPRManager
     repo_flag = repo ? " --repo #{repo}" : ""
     output = `gh pr view #{pr_number}#{repo_flag} --json #{fields} 2>/dev/null`.strip
     return nil if output.empty?
-    result = JSON.parse(output)
-    result['repo'] ||= self.class.repo_from_url(result['url'])
-    result
+    Hiiro::Git::Pr.from_gh_json(JSON.parse(output))
   rescue JSON::ParserError
     nil
   end
@@ -97,9 +104,7 @@ class PinnedPRManager
     fields = 'number,title,url,headRefName,state'
     output = `gh pr view --json #{fields} 2>/dev/null`.strip
     return nil if output.empty?
-    result = JSON.parse(output)
-    result['repo'] ||= self.class.repo_from_url(result['url'])
-    result
+    Hiiro::Git::Pr.from_gh_json(JSON.parse(output))
   rescue JSON::ParserError
     nil
   end
@@ -108,32 +113,32 @@ class PinnedPRManager
     output = `gh pr list --author @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
     return [] if output.empty?
     prs = JSON.parse(output) rescue []
-    prs.each { |pr| pr['repo'] ||= self.class.repo_from_url(pr['url']) }
+    prs.map { |data| Hiiro::Git::Pr.from_gh_json(data) }
   end
 
   def fetch_assigned_prs
     output = `gh pr list --assignee @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
     return [] if output.empty?
     prs = JSON.parse(output) rescue []
-    prs.each { |pr| pr['repo'] ||= self.class.repo_from_url(pr['url']) }
+    prs.map { |data| Hiiro::Git::Pr.from_gh_json(data) }
   end
 
   def fetch_my_and_assigned_prs
     authored_prs = fetch_my_prs
     assigned_prs = fetch_assigned_prs
 
-    authored_numbers = authored_prs.map { |pr| pr['number'] }.to_set
-    assigned_prs.each { |pr| pr['assigned'] = true unless authored_numbers.include?(pr['number']) }
-    authored_prs.each { |pr| pr['authored'] = true }
+    authored_numbers = authored_prs.map(&:number).to_set
+    assigned_prs.each { |pr| pr.assigned = true unless authored_numbers.include?(pr.number) }
+    authored_prs.each { |pr| pr.authored = true }
 
-    (authored_prs + assigned_prs).uniq { |pr| pr['number'] }
+    (authored_prs + assigned_prs).uniq(&:number)
   end
 
   def needs_refresh?(pr, force: false)
     return true if force
-    return true unless pr['last_checked']
+    return true unless pr.last_checked
 
-    last_check_time = Time.parse(pr['last_checked']) rescue nil
+    last_check_time = Time.parse(pr.last_checked) rescue nil
     return true unless last_check_time
 
     # Refresh if last check was more than 2 minutes ago
@@ -151,7 +156,7 @@ class PinnedPRManager
     result = {}
     by_repo.each do |repo_path, repo_prs|
       owner, name = repo_path.split('/', 2)
-      pr_numbers = repo_prs.map { |pr| pr['number'] }
+      pr_numbers = repo_prs.map(&:number)
       result.merge!(fetch_batch_for_repo(owner, name, pr_numbers))
     end
     result
@@ -177,11 +182,18 @@ class PinnedPRManager
             contexts(last: 100) {
               nodes {
                 ... on CheckRun {
+                  __typename
+                  name
                   conclusion
                   status
+                  detailsUrl
+                  workflowName
                 }
                 ... on StatusContext {
+                  __typename
+                  context
                   state
+                  targetUrl
                 }
               }
             }
@@ -253,17 +265,18 @@ class PinnedPRManager
     infos = batch_fetch_pr_info(prs_to_refresh)
 
     prs_to_refresh.each do |pr|
-      info = infos[[pr['number'], pr_repo(pr) || 'instacart/carrot']]
+      info = infos[[pr.number, pr_repo(pr) || 'instacart/carrot']]
       next unless info
 
-      pr['state'] = info['state']
-      pr['title'] = info['title']
-      pr['checks'] = summarize_checks(info['statusCheckRollup'])
-      pr['reviews'] = summarize_reviews(info['reviews'])
-      pr['review_decision'] = info['reviewDecision']
-      pr['is_draft'] = info['isDraft']
-      pr['mergeable'] = info['mergeable']
-      pr['last_checked'] = Time.now.iso8601
+      pr.state           = info['state']
+      pr.title           = info['title']
+      pr.check_runs      = info['statusCheckRollup']
+      pr.checks          = Hiiro::Git::Pr.summarize_checks(info['statusCheckRollup'])
+      pr.reviews         = Hiiro::Git::Pr.summarize_reviews(info['reviews'])
+      pr.review_decision = info['reviewDecision']
+      pr.is_draft        = info['isDraft']
+      pr.mergeable       = info['mergeable']
+      pr.last_checked    = Time.now.iso8601
     end
 
     prs
@@ -272,74 +285,30 @@ class PinnedPRManager
   def refresh_status(pr, force: false)
     return pr unless needs_refresh?(pr, force: force)
 
-    info = fetch_pr_info(pr['number'], repo: pr_repo(pr))
+    info = fetch_pr_info(pr.number, repo: pr_repo(pr))
     return pr unless info
 
-    pr['state'] = info['state']
-    pr['title'] = info['title']
-    pr['checks'] = summarize_checks(info['statusCheckRollup'])
-    pr['reviews'] = summarize_reviews(info['reviews'])
-    pr['review_decision'] = info['reviewDecision']
-    pr['is_draft'] = info['isDraft']
-    pr['mergeable'] = info['mergeable']
-    pr['last_checked'] = Time.now.iso8601
+    pr.state           = info.state
+    pr.title           = info.title
+    pr.check_runs      = info.check_runs
+    pr.checks          = info.checks
+    pr.reviews         = info.reviews
+    pr.review_decision = info.review_decision
+    pr.is_draft        = info.is_draft
+    pr.mergeable       = info.mergeable
+    pr.last_checked    = Time.now.iso8601
     pr
   end
 
-  FAILED_CONCLUSIONS = %w[FAILURE ERROR TIMED_OUT STALE STARTUP_FAILURE ACTION_REQUIRED].freeze
-
   FILTER_PREDICATES = {
-    red:       ->(pr) { (c = pr['checks']) && c['failed'].to_i > 0 },
-    green:     ->(pr) { (c = pr['checks']) && c['failed'].to_i == 0 && c['pending'].to_i == 0 && c['success'].to_i > 0 },
-    conflicts: ->(pr) { pr['mergeable'] == 'CONFLICTING' },
-    drafts:    ->(pr) { pr['is_draft'] == true },
-    pending:   ->(pr) { (c = pr['checks']) && c['pending'].to_i > 0 && c['failed'].to_i == 0 },
-    merged:    ->(pr) { pr['state'] == 'MERGED' },
-    active:    ->(pr) { pr['state'] != 'MERGED' && pr['state'] != 'CLOSED' },
+    red:       ->(pr) { (c = pr.checks) && c['failed'].to_i > 0 },
+    green:     ->(pr) { (c = pr.checks) && c['failed'].to_i == 0 && c['pending'].to_i == 0 && c['success'].to_i > 0 },
+    conflicts: ->(pr) { pr.conflicting? },
+    drafts:    ->(pr) { pr.draft? },
+    pending:   ->(pr) { (c = pr.checks) && c['pending'].to_i > 0 && c['failed'].to_i == 0 },
+    merged:    ->(pr) { pr.merged? },
+    active:    ->(pr) { !pr.merged? && !pr.closed? },
   }.freeze
-
-  def summarize_checks(rollup)
-    return nil unless rollup
-
-    contexts = rollup.is_a?(Array) ? rollup : []
-    return nil if contexts.empty?
-
-    total = contexts.length
-    success = contexts.count do |c|
-      c['conclusion'] == 'SUCCESS' || c['state'] == 'SUCCESS'
-    end
-    pending = contexts.count do |c|
-      %w[QUEUED IN_PROGRESS PENDING REQUESTED WAITING].include?(c['status']) ||
-        c['state'] == 'PENDING'
-    end
-    failed = contexts.count do |c|
-      FAILED_CONCLUSIONS.include?(c['conclusion']) ||
-        %w[FAILURE ERROR].include?(c['state'])
-    end
-
-    { 'total' => total, 'success' => success, 'pending' => pending, 'failed' => failed }
-  end
-
-  def summarize_reviews(reviews)
-    return nil unless reviews.is_a?(Array) && !reviews.empty?
-
-    # Get the latest review state per author
-    latest_by_author = {}
-    reviews.each do |review|
-      author = review['author']['login'] rescue nil
-      next unless author
-      # Only track if it's a meaningful state
-      state = review['state']
-      next unless %w[APPROVED CHANGES_REQUESTED COMMENTED].include?(state)
-      latest_by_author[author] = state
-    end
-
-    approved = latest_by_author.values.count { |s| s == 'APPROVED' }
-    changes_requested = latest_by_author.values.count { |s| s == 'CHANGES_REQUESTED' }
-    commented = latest_by_author.values.count { |s| s == 'COMMENTED' }
-
-    { 'approved' => approved, 'changes_requested' => changes_requested, 'commented' => commented, 'reviewers' => latest_by_author }
-  end
 
   def display_pinned(pr, idx = nil, widths: {}, oneline: false)
     slot_w  = widths[:slot]  || 1
@@ -348,13 +317,13 @@ class PinnedPRManager
     as_w    = widths[:as]    || 1
     crs_w   = widths[:crs]   || 1
 
-    slot_num = (pr['slot'] || (idx ? idx + 1 : 1)).to_s
+    slot_num = (pr.slot || (idx ? idx + 1 : 1)).to_s
     num    = "#{slot_num.rjust(slot_w)}."
     indent = " " * (slot_w + 2)
 
     check_emoji, checks_count_str =
-      if pr['checks']
-        c = pr['checks']
+      if pr.checks
+        c = pr.checks
         has_failed  = c['failed'].to_i > 0
         has_pending = c['pending'].to_i > 0
         emoji = if has_failed && has_pending
@@ -373,16 +342,16 @@ class PinnedPRManager
         ["", nil]
       end
 
-    state_label = case pr['state']
+    state_label = case pr.state
     when 'MERGED' then 'M'
     when 'CLOSED' then 'X'
-    else pr['is_draft'] ? 'd' : 'o'
+    else pr.draft? ? 'd' : 'o'
     end
 
     bracket_parts = [state_label, check_emoji, checks_count_str].reject { |p| p.nil? || p.empty? }
     state_icon = "[#{bracket_parts.join(' ')}]"
 
-    r = pr['reviews'] || {}
+    r = pr.reviews || {}
     as  = r['approved'].to_i
     crs = r['changes_requested'].to_i
 
@@ -392,23 +361,23 @@ class PinnedPRManager
     crs_colored = crs > 0 ? "\e[30;103m#{crs_val}\e[0m" : crs_val
     as_pad  = " " * [as_w  - as_val.length,  0].max
     crs_pad = " " * [crs_w - crs_val.length, 0].max
-    conflict_str = pr['mergeable'] == 'CONFLICTING' ? " \e[30;101mC\e[0m" : ""
+    conflict_str = pr.conflicting? ? " \e[30;101mC\e[0m" : ""
     reviews_str = "#{as_pad}#{as_colored}a/#{crs_pad}#{crs_colored}cr#{conflict_str}"
 
     repo = pr_repo(pr)
     repo_label = (repo && repo != 'instacart/carrot') ? "[#{repo}] " : ""
 
-    tags = Array(pr['tags'])
+    tags = Array(pr.tags)
     tags_str = tags.any? ? tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') : nil
 
-    branch_str = pr['headRefName'] ? " #{pr['headRefName']}" : ""
-    line1 = "#{num} ##{pr['number']} #{state_icon} #{reviews_str}#{branch_str}"
-    line2 = "#{indent}#{repo_label}#{pr['title']}"
-    line3 = pr['url'] ? "#{indent}#{pr['url']}" : nil
+    branch_str = pr.head_branch ? " #{pr.head_branch}" : ""
+    line1 = "#{num} ##{pr.number} #{state_icon} #{reviews_str}#{branch_str}"
+    line2 = "#{indent}#{repo_label}#{pr.title}"
+    line3 = pr.url ? "#{indent}#{pr.url}" : nil
     line4 = tags_str ? "#{indent}#{tags_str}" : nil
 
     if oneline
-      "#{line1} #{repo_label}#{pr['title']}"
+      "#{line1} #{repo_label}#{pr.title}"
     else
       [line1, line2, line3, line4].compact.join("\n")
     end
@@ -428,7 +397,7 @@ class PinnedPRManager
     # Tags are an AND post-filter; multiple tags are OR'd among themselves
     tag_filter = Array(opts.respond_to?(:tag) ? opts.tag : nil).map(&:to_s).reject(&:empty?)
     unless tag_filter.empty?
-      results = results.select { |pr| (Array(pr['tags']) & tag_filter).any? }
+      results = results.select { |pr| (Array(pr.tags) & tag_filter).any? }
     end
 
     results
@@ -438,23 +407,23 @@ class PinnedPRManager
     lines = []
     num = idx ? "#{idx + 1}." : ""
 
-    state_str = case pr['state']
+    state_str = case pr.state
     when 'MERGED' then 'MERGED'
     when 'CLOSED' then 'CLOSED'
-    else pr['is_draft'] ? 'DRAFT' : 'OPEN'
+    else pr.draft? ? 'DRAFT' : 'OPEN'
     end
 
     repo = pr_repo(pr)
     repo_label = (repo && repo != 'instacart/carrot') ? " [#{repo}]" : ""
 
-    lines << "#{num} ##{pr['number']}#{repo_label} - #{pr['title']}"
+    lines << "#{num} ##{pr.number}#{repo_label} - #{pr.title}"
     lines << "   State: #{state_str}"
-    lines << "   Branch: #{pr['headRefName']}" if pr['headRefName']
-    lines << "   URL: #{pr['url']}" if pr['url']
+    lines << "   Branch: #{pr.head_branch}" if pr.head_branch
+    lines << "   URL: #{pr.url}" if pr.url
 
     # Checks
-    if pr['checks']
-      c = pr['checks']
+    if pr.checks
+      c = pr.checks
       check_status = if c['failed'] > 0
         "FAILING (#{c['success']}/#{c['total']} passed, #{c['failed']} failed)"
       elsif c['pending'] > 0
@@ -468,8 +437,8 @@ class PinnedPRManager
     end
 
     # Reviews
-    if pr['reviews']
-      r = pr['reviews']
+    if pr.reviews
+      r = pr.reviews
       review_parts = []
       review_parts << "#{r['approved']} approved" if r['approved'] > 0
       review_parts << "#{r['changes_requested']} requesting changes" if r['changes_requested'] > 0
@@ -494,20 +463,71 @@ class PinnedPRManager
       lines << "   Reviews: (not fetched)"
     end
 
-    # Mergeable
-    if pr['mergeable']
-      lines << "   Mergeable: #{pr['mergeable']}"
-    end
+    lines << "   Mergeable: #{pr.mergeable}" if pr.mergeable
 
     lines.join("\n")
   end
 
   def pr_yaml_lines(prs = nil)
     (prs || load_pinned).map do |pr|
-      branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
-      "- #{pr['number']}  # #{branch} #{pr['title']}"
+      branch = pr.head_branch ? "[#{pr.head_branch}]" : "[##{pr.number}]"
+      "- #{pr.number}  # #{branch} #{pr.title}"
     end
   end
+
+  def display_check_runs(pr, indent: "   ")
+    runs = pr.check_runs
+    return unless runs.is_a?(Array) && runs.any?
+
+    runs.each do |run|
+      case run['__typename']
+      when 'CheckRun'
+        emoji = check_run_emoji(run['conclusion'], run['status'])
+        name  = run['name'] || run['workflowName'] || '(unknown)'
+        url   = run['detailsUrl']
+      when 'StatusContext'
+        emoji = status_context_emoji(run['state'])
+        name  = run['context'] || '(unknown)'
+        url   = run['targetUrl']
+      else
+        emoji = '?'
+        name  = run['name'] || run['context'] || '(unknown)'
+        url   = run['detailsUrl'] || run['targetUrl']
+      end
+
+      line = "#{indent}#{emoji}  #{name}"
+      line += "\n#{indent}   #{url}" if url
+      puts line
+    end
+  end
+
+  private
+
+  def check_run_emoji(conclusion, status)
+    return "⏳" if %w[QUEUED IN_PROGRESS PENDING REQUESTED WAITING].include?(status) && conclusion.nil?
+    case conclusion
+    when 'SUCCESS'          then "✅"
+    when 'FAILURE', 'ERROR' then "❌"
+    when 'TIMED_OUT'        then "⏰"
+    when 'CANCELLED'        then "🚫"
+    when 'SKIPPED'          then "⏭ "
+    when 'NEUTRAL'          then "⚪"
+    when 'STARTUP_FAILURE'  then "💥"
+    when 'ACTION_REQUIRED'  then "⚠️ "
+    else                         "⏳"
+    end
+  end
+
+  def status_context_emoji(state)
+    case state
+    when 'SUCCESS'          then "✅"
+    when 'FAILURE', 'ERROR' then "❌"
+    when 'PENDING'          then "⏳"
+    else                         "❓"
+    end
+  end
+
+  public
 end
 
 FILTER_OPTS = Proc.new {
@@ -533,7 +553,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         return nil
       end
       lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx)] = pr['number'].to_s
+        h[pinned_manager.display_pinned(pr, idx)] = pr.number.to_s
       end
       return fuzzyfind_from_map(lines)
     end
@@ -544,17 +564,17 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     pinned = pinned_manager.load_pinned
 
-    if pinned.any? { |pr| pr['number'].to_s == ref.to_s }
+    if pinned.any? { |pr| pr.number.to_s == ref.to_s }
       return ref.to_s
     end
 
     if ref.to_s =~ /^\d+$/ && ref.to_i > 0
       slot = ref.to_i
-      by_slot = pinned.find { |p| p['slot'].to_i == slot }
-      return by_slot['number'].to_s if by_slot
+      by_slot = pinned.find { |p| p.slot.to_i == slot }
+      return by_slot.number.to_s if by_slot
       # Fall back to 1-based index for unslotted data
       idx = slot - 1
-      return pinned[idx]['number'].to_s if idx < pinned.length
+      return pinned[idx].number.to_s if idx < pinned.length
     end
 
     ref.to_s
@@ -618,10 +638,10 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next unless pr_number
 
     pinned = pinned_manager.load_pinned
-    pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
+    pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
 
-    if pr && pr['url']
-      print pr['url']
+    if pr && pr.url
+      print pr.url
     else
       output = `gh pr view #{pr_number} --json url 2>/dev/null`
       info = JSON.parse(output) rescue nil
@@ -638,12 +658,18 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     if pr_number.nil?
       current = pinned_manager.fetch_current_branch_pr
       if current
-        system('gh', 'pr', 'view', current['number'].to_s, '--web')
+        pinned = pinned_manager.load_pinned
+        pr = pinned.find { |p| p.number.to_s == current.number.to_s }
+        url = pr&.url || current.url
+        url ? system('open', url) : system('gh', 'pr', 'view', current.number.to_s, '--web')
         next
       end
     end
     pr_number = resolve_pr.call(pr_number)
-    system('gh', 'pr', 'view', pr_number.to_s, '--web') if pr_number
+    next unless pr_number
+    pinned = pinned_manager.load_pinned
+    pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+    pr&.url ? system('open', pr.url) : system('gh', 'pr', 'view', pr_number.to_s, '--web')
   }
   add_subcmd(:view) { |pr_number=nil|
     pr_number = resolve_pr.call(pr_number)
@@ -659,22 +685,19 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    prs = JSON.parse(output) rescue []
+    prs = (JSON.parse(output) rescue []).map { |data| Hiiro::Git::Pr.from_gh_json(data) }
     if prs.empty?
       STDERR.puts "No open PRs found"
       next
     end
 
     lines = prs.each_with_object({}) do |pr, h|
-      display = "##{pr['number']} [#{pr['headRefName']}] #{pr['title']}"
-      h[display] = pr['number'].to_s
+      display = "##{pr.number} [#{pr.head_branch}] #{pr.title}"
+      h[display] = pr.number.to_s
     end
 
     selected = fuzzyfind_from_map(lines)
-
-    if selected
-      print selected
-    end
+    print selected if selected
   end
 
   add_subcmd(:copy) do |*args|
@@ -685,15 +708,15 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    prs = JSON.parse(output) rescue []
+    prs = (JSON.parse(output) rescue []).map { |data| Hiiro::Git::Pr.from_gh_json(data) }
     if prs.empty?
       STDERR.puts "No open PRs found"
       next
     end
 
     lines = prs.each_with_object({}) do |pr, h|
-      display = "##{pr['number']} [#{pr['headRefName']}] #{pr['title']}"
-      h[display] = pr['number'].to_s
+      display = "##{pr.number} [#{pr.head_branch}] #{pr.title}"
+      h[display] = pr.number.to_s
     end
 
     selected = fuzzyfind_from_map(lines)
@@ -722,7 +745,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         end
 
         lines = my_prs.each_with_object({}) do |pr, h|
-          display = "##{pr['number']} [#{pr['headRefName']}] #{pr['title']}"
+          display = "##{pr.number} [#{pr.head_branch}] #{pr.title}"
           h[display] = pr
         end
 
@@ -747,30 +770,30 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    if pinned_manager.pinned?(pr_info['number'])
-      puts "Already tracking ##{pr_info['number']}"
+    if pinned_manager.pinned?(pr_info.number)
+      puts "Already tracking ##{pr_info.number}"
       next
     end
 
-    context = {}
     env = Environment.current rescue nil
     if env
       task = env.task
-      context['task']         = task.name      if task
-      context['worktree']     = task.tree_name if task&.tree_name
-      context['tmux_session'] = env.session&.name
+      pr_info.task         = task.name      if task
+      pr_info.worktree     = task.tree_name if task&.tree_name
+      pr_info.tmux_session = env.session&.name
     end
 
-    pinned_manager.pin(pr_info.merge(context))
-    puts "Now tracking ##{pr_info['number']}: #{pr_info['title']}"
+    pinned_manager.pin(pr_info)
+    puts "Now tracking ##{pr_info.number}: #{pr_info.title}"
     puts
     run_subcmd(:update)
   end
 
   add_subcmd(:ls) do |*ls_args|
     opts = Hiiro::Options.parse(ls_args) {
-      flag(:update, short: 'u', desc: 'update status before listing')
+      flag(:update,  short: 'u', desc: 'update status before listing')
       flag(:oneline, short: '1', desc: 'one line per PR')
+      flag(:checks,  short: 'C', desc: 'show individual check run details')
       instance_eval(&FILTER_OPTS)
     }
 
@@ -797,16 +820,19 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     if opts.numbers
-      results.each { |pr| puts pr['number'] }
+      results.each { |pr| puts pr.number }
     else
-      slot_w  = results.map { |pr| (pr['slot'] || 1).to_s.length }.max
-      succ_w  = results.filter_map { |pr| pr.dig('checks', 'success')&.to_i&.to_s&.length }.max || 1
-      total_w = results.filter_map { |pr| pr.dig('checks', 'total')&.to_i&.to_s&.length }.max || 1
-      as_w    = results.map { |pr| [pr.dig('reviews', 'approved').to_i.to_s.length, 1].max }.max
-      crs_w   = results.map { |pr| [pr.dig('reviews', 'changes_requested').to_i.to_s.length, 1].max }.max
+      slot_w  = results.map { |pr| (pr.slot || 1).to_s.length }.max
+      succ_w  = results.filter_map { |pr| pr.checks&.dig('success')&.to_i&.to_s&.length }.max || 1
+      total_w = results.filter_map { |pr| pr.checks&.dig('total')&.to_i&.to_s&.length }.max || 1
+      as_w    = results.map { |pr| [pr.reviews&.dig('approved').to_i.to_s.length, 1].max }.max
+      crs_w   = results.map { |pr| [pr.reviews&.dig('changes_requested').to_i.to_s.length, 1].max }.max
       widths  = { slot: slot_w, succ: succ_w, total: total_w, as: as_w, crs: crs_w }
-      results.each_with_index { |pr, idx| puts pinned_manager.display_pinned(pr, idx, widths: widths, oneline: opts.oneline) }
-      last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
+      results.each_with_index do |pr, idx|
+        puts pinned_manager.display_pinned(pr, idx, widths: widths, oneline: opts.oneline)
+        pinned_manager.display_check_runs(pr) if opts.checks
+      end
+      last_checked = pinned.filter_map(&:last_checked).max
       puts "---"
       puts "Last updated: #{last_checked || 'never'}"
     end
@@ -826,13 +852,13 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     if opts.numbers
-      results.each { |pr| puts pr['number'] }
+      results.each { |pr| puts pr.number }
     else
       results.each_with_index do |pr, idx|
         puts pinned_manager.display_detailed(pr, idx)
         puts
       end
-      last_checked = pinned.filter_map { |pr| pr['last_checked'] }.max
+      last_checked = pinned.filter_map(&:last_checked).max
       puts "---"
       puts "Last updated: #{last_checked || 'never'}"
     end
@@ -869,7 +895,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     if opts.numbers
-      results.each { |pr| puts pr['number'] }
+      results.each { |pr| puts pr.number }
     else
       results.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
     end
@@ -886,7 +912,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     if opts.numbers
-      results.each { |pr| puts pr['number'] }
+      results.each { |pr| puts pr.number }
     else
       results.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
     end
@@ -903,7 +929,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     if opts.numbers
-      results.each { |pr| puts pr['number'] }
+      results.each { |pr| puts pr.number }
     else
       results.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
     end
@@ -917,7 +943,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    merged_or_closed = pinned.select { |pr| pr['state'] == 'MERGED' || pr['state'] == 'CLOSED' }
+    merged_or_closed = pinned.select { |pr| pr.merged? || pr.closed? }
 
     if merged_or_closed.empty?
       puts "No merged or closed PRs to prune"
@@ -928,8 +954,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     puts
 
     merged_or_closed.each do |pr|
-      puts "  ##{pr['number']}: #{pr['title']} [#{pr['state']}]"
-      pinned_manager.unpin(pr['number'])
+      puts "  ##{pr.number}: #{pr.title} [#{pr.state}]"
+      pinned_manager.unpin(pr.number)
     end
 
     puts
@@ -947,7 +973,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     if opts.numbers
-      results.each { |pr| puts pr['number'] }
+      results.each { |pr| puts pr.number }
     else
       results.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
     end
@@ -961,12 +987,12 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    pinned_numbers = pinned_manager.load_pinned.map { |p| p['number'] }.to_set
+    pinned_numbers = pinned_manager.load_pinned.map(&:number).to_set
     puts "PRs assigned to you (#{prs.count}):"
     puts
     prs.each_with_index do |pr, i|
-      tracked = pinned_numbers.include?(pr['number']) ? ' [tracked]' : ''
-      puts "  #{i + 1}. ##{pr['number']} #{pr['title']} [#{pr['headRefName']}]#{tracked}"
+      tracked = pinned_numbers.include?(pr.number) ? ' [tracked]' : ''
+      puts "  #{i + 1}. ##{pr.number} #{pr.title} [#{pr.head_branch}]#{tracked}"
     end
   end
 
@@ -978,19 +1004,19 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    pinned_numbers = pinned_manager.load_pinned.map { |p| p['number'] }.to_set
+    pinned_numbers = pinned_manager.load_pinned.map(&:number).to_set
     puts "PRs created by you (#{prs.count}):"
     puts
     prs.each_with_index do |pr, i|
-      tracked = pinned_numbers.include?(pr['number']) ? ' [tracked]' : ''
-      puts "  #{i + 1}. ##{pr['number']} #{pr['title']} [#{pr['headRefName']}]#{tracked}"
+      tracked = pinned_numbers.include?(pr.number) ? ' [tracked]' : ''
+      puts "  #{i + 1}. ##{pr.number} #{pr.title} [#{pr.head_branch}]#{tracked}"
     end
   end
 
   add_subcmd(:missing) do
     my_prs = pinned_manager.fetch_my_and_assigned_prs
-    pinned_numbers = pinned_manager.load_pinned.map { |p| p['number'] }
-    missing = my_prs.reject { |pr| pinned_numbers.include?(pr['number']) }
+    pinned_numbers = pinned_manager.load_pinned.map(&:number)
+    missing = my_prs.reject { |pr| pinned_numbers.include?(pr.number) }
 
     if missing.empty?
       puts "All your PRs are tracked"
@@ -1000,46 +1026,41 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     puts "Untracked PRs (#{missing.count}):"
     puts
     missing.each do |pr|
-      relationship = pr['assigned'] ? 'assigned' : 'authored'
-      puts "  ##{pr['number']} [#{pr['headRefName']}] #{pr['title']} (#{relationship})"
+      relationship = pr.assigned ? 'assigned' : 'authored'
+      puts "  ##{pr.number} [#{pr.head_branch}] #{pr.title} (#{relationship})"
     end
   end
 
   add_subcmd(:amissing) do
     my_prs = pinned_manager.fetch_my_and_assigned_prs
-    pinned_numbers = pinned_manager.load_pinned.map { |p| p['number'] }
-    missing = my_prs.reject { |pr| pinned_numbers.include?(pr['number']) }
+    pinned_numbers = pinned_manager.load_pinned.map(&:number)
+    missing = my_prs.reject { |pr| pinned_numbers.include?(pr.number) }
 
     if missing.empty?
       puts "All your PRs are already tracked"
       next
     end
 
-    missing_numbers = missing.map { |pr| pr['number'] }
-
-    tmpfile = Tempfile.new(['missing-prs-', '.yml'])
     lines = ['---']
     missing.each do |pr|
-      relationship = pr['assigned'] ? 'assigned' : 'authored'
+      relationship = pr.assigned ? 'assigned' : 'authored'
       lines << ''
-      lines << "# [#{relationship}] [#{pr['headRefName']}] #{pr['title']}"
-      lines << "# url: #{pr['url']}"
-      lines << "- #{pr['number']}"
+      lines << "# [#{relationship}] [#{pr.head_branch}] #{pr.title}"
+      lines << "# url: #{pr.url}"
+      lines << "- #{pr.number}"
     end
-    tmpfile.write(lines.join("\n"))
-    tmpfile.close
 
-    edit_files(tmpfile.path)
-
-    to_add = YAML.safe_load_file(tmpfile.path) || []
-    tmpfile.unlink
+    input = yaml_input_file(content: lines.join("\n"), prefix: 'pr-amissing-')
+    input.edit
+    to_add = input.parsed_file || []
+    input.cleanup
 
     added = 0
     to_add.each do |num|
       pr_info = pinned_manager.fetch_pr_info(num)
       next unless pr_info
       pinned_manager.pin(pr_info)
-      puts "Tracked: ##{pr_info['number']} #{pr_info['title']}"
+      puts "Tracked: ##{pr_info.number} #{pr_info.title}"
       added += 1
     end
 
@@ -1052,15 +1073,15 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next unless pr_number
 
     pinned = pinned_manager.load_pinned
-    pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
+    pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
 
     unless pr
       puts "PR ##{pr_number} not in pinned list — run 'h pr update' first"
       next
     end
 
-    branch = pr['headRefName']
-    task_name = pr['task']
+    branch = pr.head_branch
+    task_name = pr.task
 
     unless branch
       puts "PR ##{pr_number} has no branch info"
@@ -1121,7 +1142,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     if ref.nil?
       lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx)] = pr['number'].to_s
+        h[pinned_manager.display_pinned(pr, idx)] = pr.number.to_s
       end
 
       pr_number = fuzzyfind_from_map(lines)
@@ -1186,7 +1207,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
 
     prs_to_fix = if opts.red
-      failing = pinned.select { |pr| (c = pr['checks']) && c['failed'].to_i > 0 }
+      failing = pinned.select { |pr| (c = pr.checks) && c['failed'].to_i > 0 }
       if failing.empty?
         puts "No PRs with failing checks"
         next
@@ -1194,7 +1215,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       failing
     elsif opts.args.empty?
       # Default: fuzzy-select from failing PRs, fall back to all tracked
-      failing = pinned.select { |pr| (c = pr['checks']) && c['failed'].to_i > 0 }
+      failing = pinned.select { |pr| (c = pr.checks) && c['failed'].to_i > 0 }
       candidates = failing.empty? ? pinned : failing
       if candidates.empty?
         puts "No tracked PRs"
@@ -1211,7 +1232,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       opts.args.map { |ref|
         pr_num = resolve_pr.call(ref)
         next nil unless pr_num
-        pinned.find { |p| p['number'].to_s == pr_num.to_s }
+        pinned.find { |p| p.number.to_s == pr_num.to_s }
       }.compact
     end
 
@@ -1225,18 +1246,18 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     prs_to_fix.each do |pr|
       task_info = {
-        task_name:    pr['task'],
-        tree_name:    pr['worktree'],
-        session_name: pr['tmux_session'],
+        task_name:    pr.task,
+        tree_name:    pr.worktree,
+        session_name: pr.tmux_session,
       }.compact
       task_info = nil if task_info.empty?
 
-      result = q.add_with_frontmatter("/pr:fix #{pr['number']}", task_info: task_info)
+      result = q.add_with_frontmatter("/pr:fix #{pr.number}", task_info: task_info)
       if result
-        puts "Queued fix for ##{pr['number']}: #{pr['title']}"
+        puts "Queued fix for ##{pr.number}: #{pr.title}"
         queued_names << result[:name]
       else
-        STDERR.puts "Failed to queue fix for ##{pr['number']}"
+        STDERR.puts "Failed to queue fix for ##{pr.number}"
       end
     end
 
@@ -1356,7 +1377,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    matches = tracked.select { |pr| pr['task'] == task_name }
+    matches = tracked.select { |pr| pr.task == task_name }
 
     if matches.empty?
       puts "No tracked PRs for task '#{task_name}'"
@@ -1383,30 +1404,22 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         next
       end
 
-      pr_lines = pinned.map do |pr|
-        branch = pr['headRefName'] ? "[#{pr['headRefName']}]" : "[##{pr['number']}]"
-        "- #{pr['number']}  # #{branch} #{pr['title']}"
-      end
-
       yaml_content = <<~YAML
         # Select PRs to tag and list the tags to apply.
         # All listed PRs will receive all listed tags.
         # Lines starting with # are comments and are ignored.
 
         prs:
-        #{pr_lines.join("\n")}
+        #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
 
         tags:
         -
       YAML
 
-      tmpfile = Tempfile.new(['pr-tag-', '.yml'])
-      tmpfile.write(yaml_content)
-      tmpfile.close
-      edit_files(tmpfile.path)
-
-      parsed = YAML.safe_load(File.read(tmpfile.path)) rescue nil
-      tmpfile.unlink
+      input = yaml_input_file(content: yaml_content, prefix: 'pr-tag-')
+      input.edit
+      parsed = input.parsed_file
+      input.cleanup
 
       unless parsed.is_a?(Hash)
         puts "Aborted: could not parse YAML"
@@ -1424,9 +1437,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       pinned = pinned_manager.load_pinned
       updated = 0
       selected_numbers.each do |num|
-        pr = pinned.find { |p| p['number'].to_s == num }
+        pr = pinned.find { |p| p.number.to_s == num }
         next unless pr
-        pr['tags'] = (Array(pr['tags']) + new_tags).uniq
+        pr.tags = (Array(pr.tags) + new_tags).uniq
         updated += 1
         puts "Tagged ##{num} with: #{new_tags.join(', ')}"
       end
@@ -1447,16 +1460,16 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next unless pr_number
 
       pinned = pinned_manager.load_pinned
-      pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
+      pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
       unless pr
         puts "PR ##{pr_number} not in tracked list"
         next
       end
 
-      pr['tags'] = (Array(pr['tags']) + tag_names).uniq
+      pr.tags = (Array(pr.tags) + tag_names).uniq
       pinned_manager.save_pinned(pinned)
       puts "Tagged ##{pr_number} with: #{tag_names.join(', ')}"
-      puts "  Tags now: #{pr['tags'].join(', ')}"
+      puts "  Tags now: #{pr.tags.join(', ')}"
     end
   end
 
@@ -1470,18 +1483,18 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next unless pr_number
 
     pinned = pinned_manager.load_pinned
-    pr = pinned.find { |p| p['number'].to_s == pr_number.to_s }
+    pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
     unless pr
       puts "PR ##{pr_number} not in tracked list"
       next
     end
 
     if tag_names.empty?
-      pr.delete('tags')
+      pr.tags = nil
       puts "Cleared all tags from ##{pr_number}"
     else
-      pr['tags'] = Array(pr['tags']) - tag_names
-      pr.delete('tags') if pr['tags'].empty?
+      pr.tags = Array(pr.tags) - tag_names
+      pr.tags = nil if pr.tags.empty?
       puts "Removed tag(s) #{tag_names.join(', ')} from ##{pr_number}"
     end
 
@@ -1493,7 +1506,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     by_tag = Hash.new { |h, k| h[k] = [] }
 
     pinned.each do |pr|
-      Array(pr['tags']).each { |t| by_tag[t] << pr }
+      Array(pr.tags).each { |t| by_tag[t] << pr }
     end
 
     if by_tag.empty?
@@ -1503,7 +1516,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     by_tag.sort.each do |tag, prs|
       puts "\e[30;104m#{tag}\e[0m (#{prs.length})"
-      prs.each { |pr| puts "  ##{pr['number']} #{pr['title']}" }
+      prs.each { |pr| puts "  ##{pr.number} #{pr.title}" }
     end
   end
 
@@ -1547,17 +1560,17 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     queued_names = []
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p['number'].to_s == num }
+      pr = pinned.find { |p| p.number.to_s == num }
       next unless pr
 
-      task_info = { task_name: pr['task'], tree_name: pr['worktree'], session_name: pr['tmux_session'] }.compact
+      task_info = { task_name: pr.task, tree_name: pr.worktree, session_name: pr.tmux_session }.compact
       task_info = nil if task_info.empty?
-      result = q.add_with_frontmatter("/pr:fix #{pr['number']}", task_info: task_info)
+      result = q.add_with_frontmatter("/pr:fix #{pr.number}", task_info: task_info)
       if result
-        puts "Queued fix for ##{pr['number']}: #{pr['title']}"
+        puts "Queued fix for ##{pr.number}: #{pr.title}"
         queued_names << result[:name]
       else
-        STDERR.puts "Failed to queue fix for ##{pr['number']}"
+        STDERR.puts "Failed to queue fix for ##{pr.number}"
       end
     end
 
@@ -1597,7 +1610,10 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
     next puts "Aborted: no PRs selected" if selected_numbers.empty?
 
-    selected_numbers.each { |num| system('gh', 'pr', 'view', num, '--web') }
+    selected_numbers.each do |num|
+      pr = pinned.find { |p| p.number.to_s == num }
+      pr&.url ? system('open', pr.url) : system('gh', 'pr', 'view', num, '--web')
+    end
   end
 
   add_subcmd(:mmerge) do |*args|
@@ -1635,8 +1651,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     merge_args = strategy.empty? ? [] : ["--#{strategy}"]
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p['number'].to_s == num }
-      title = pr ? pr['title'] : num
+      pr = pinned.find { |p| p.number.to_s == num }
+      title = pr ? pr.title : num
       puts "Merging ##{num}: #{title}"
       system('gh', 'pr', 'merge', num, *merge_args)
     end
@@ -1667,8 +1683,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next puts "Aborted: no PRs selected" if selected_numbers.empty?
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p['number'].to_s == num }
-      puts "Marking ##{num} as ready: #{pr ? pr['title'] : num}"
+      pr = pinned.find { |p| p.number.to_s == num }
+      puts "Marking ##{num} as ready: #{pr ? pr.title : num}"
       system('gh', 'pr', 'ready', num)
     end
   end
@@ -1698,8 +1714,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next puts "Aborted: no PRs selected" if selected_numbers.empty?
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p['number'].to_s == num }
-      puts "Converting ##{num} to draft: #{pr ? pr['title'] : num}"
+      pr = pinned.find { |p| p.number.to_s == num }
+      puts "Converting ##{num} to draft: #{pr ? pr.title : num}"
       system('gh', 'pr', 'ready', '--draft', num)
     end
   end
@@ -1729,9 +1745,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next puts "Aborted: no PRs selected" if selected_numbers.empty?
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p['number'].to_s == num }
+      pr = pinned.find { |p| p.number.to_s == num }
       pinned_manager.unpin(num)
-      puts "Removed ##{num}: #{pr ? pr['title'] : num}"
+      puts "Removed ##{num}: #{pr ? pr.title : num}"
     end
   end
 
@@ -1774,8 +1790,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p['number'].to_s == num }
-      title = pr ? pr['title'] : num
+      pr = pinned.find { |p| p.number.to_s == num }
+      title = pr ? pr.title : num
       puts "Commenting on ##{num}: #{title}"
       system('gh', 'pr', 'comment', num, '--body', body)
     end
@@ -1784,11 +1800,11 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   add_subcmd(:config) do |*args|
     make_child do
       add_subcmd(:path) do
-        puts PinnedPRManager::PINNED_FILE
+        puts Hiiro::Git::Pr::PINNED_FILE
       end
 
       add_subcmd(:vim) do
-        edit_files PinnedPRManager::PINNED_FILE
+        edit_files Hiiro::Git::Pr::PINNED_FILE
       end
     end.run
   end
