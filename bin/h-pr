@@ -145,6 +145,38 @@ class PinnedPRManager
     (Time.now - last_check_time) > 120
   end
 
+  def code_freeze_active?
+    return @code_freeze_active unless @code_freeze_active.nil?
+
+    output = `isc codefreeze list 2>/dev/null`.strip
+    return @code_freeze_active = false if output.empty?
+
+    now = Time.now
+    @code_freeze_active = output.lines.drop(1).any? do |line|
+      parts = line.strip.split(/\s{2,}/)
+      next false if parts.length < 2
+
+      start_time = Time.parse(parts[0]) rescue nil
+      end_time   = Time.parse(parts[1]) rescue nil
+      next false unless start_time && end_time
+
+      now >= start_time && now <= end_time
+    end
+  rescue
+    @code_freeze_active = false
+  end
+
+  # Overrides the ISC code freeze StatusContext in a raw statusCheckRollup array
+  # to reflect the actual current freeze state rather than GitHub's cached value.
+  def apply_isc_code_freeze_override!(rollup, frozen)
+    return unless rollup.is_a?(Array)
+
+    rollup.each do |ctx|
+      next unless ctx['__typename'] == 'StatusContext' && ctx['context'] == 'ISC code freeze'
+      ctx['state'] = frozen ? 'FAILURE' : 'SUCCESS'
+    end
+  end
+
 
   # Accepts an array of PR records (each with 'number' and optionally 'repo'/'url'),
   # groups them by repo, and fetches in batches per repo via GraphQL.
@@ -262,15 +294,19 @@ class PinnedPRManager
 
     # infos is keyed by [number, repo] to avoid collisions across repos
     infos = batch_fetch_pr_info(prs_to_refresh)
+    frozen = code_freeze_active?
 
     prs_to_refresh.each do |pr|
       info = infos[[pr.number, pr_repo(pr) || 'instacart/carrot']]
       next unless info
 
+      rollup = info['statusCheckRollup']
+      apply_isc_code_freeze_override!(rollup, frozen)
+
       pr.state           = info['state']
       pr.title           = info['title']
-      pr.check_runs      = info['statusCheckRollup']
-      pr.checks          = Hiiro::Git::Pr.summarize_checks(info['statusCheckRollup'])
+      pr.check_runs      = rollup
+      pr.checks          = Hiiro::Git::Pr.summarize_checks(rollup)
       pr.reviews         = Hiiro::Git::Pr.summarize_reviews(info['reviews'])
       pr.review_decision = info['reviewDecision']
       pr.is_draft        = info['isDraft']
@@ -287,10 +323,13 @@ class PinnedPRManager
     info = fetch_pr_info(pr.number, repo: pr_repo(pr))
     return pr unless info
 
+    rollup = info.check_runs
+    apply_isc_code_freeze_override!(rollup, code_freeze_active?)
+
     pr.state           = info.state
     pr.title           = info.title
-    pr.check_runs      = info.check_runs
-    pr.checks          = info.checks
+    pr.check_runs      = rollup
+    pr.checks          = Hiiro::Git::Pr.summarize_checks(rollup)
     pr.reviews         = info.reviews
     pr.review_decision = info.review_decision
     pr.is_draft        = info.is_draft
@@ -323,12 +362,13 @@ class PinnedPRManager
     check_emoji, checks_count_str =
       if pr.checks
         c = pr.checks
-        has_failed  = c['failed'].to_i > 0
-        has_pending = c['pending'].to_i > 0
+        has_failed   = c['failed'].to_i > 0
+        has_pending  = c['pending'].to_i > 0
+        only_frozen  = has_failed && c['failed'].to_i == c['frozen'].to_i
         emoji = if has_failed && has_pending
-          "⏳❌"
+          only_frozen ? "⏳❄️" : "⏳❌"
         elsif has_failed
-          "　❌"
+          only_frozen ? "　❄️" : "　❌"
         elsif has_pending
           "⏳　"
         else

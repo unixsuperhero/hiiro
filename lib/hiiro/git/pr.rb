@@ -103,7 +103,8 @@ class Hiiro
         system(*args)
       end
 
-      # Summarizes raw statusCheckRollup contexts into { total, success, pending, failed }.
+      # Summarizes raw statusCheckRollup contexts into { total, success, pending, failed, frozen }.
+      # frozen = number of failed contexts that are specifically the ISC code freeze check.
       def self.summarize_checks(rollup)
         return nil unless rollup
 
@@ -119,8 +120,12 @@ class Hiiro
         failed  = contexts.count do |c|
           FAILED_CONCLUSIONS.include?(c['conclusion']) || %w[FAILURE ERROR].include?(c['state'])
         end
+        frozen  = contexts.count do |c|
+          c['context'] == 'ISC code freeze' &&
+            (FAILED_CONCLUSIONS.include?(c['conclusion']) || %w[FAILURE ERROR].include?(c['state']))
+        end
 
-        { 'total' => total, 'success' => success, 'pending' => pending, 'failed' => failed }
+        { 'total' => total, 'success' => success, 'pending' => pending, 'failed' => failed, 'frozen' => frozen }
       end
 
       # Summarizes raw review nodes into { approved, changes_requested, commented, reviewers }.
