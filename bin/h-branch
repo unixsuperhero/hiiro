@@ -13,8 +13,8 @@ class BranchManager
     @hiiro = hiiro
   end
 
-  def save
-    branch_name = current_branch
+  def save(branch_name = nil)
+    branch_name ||= current_branch
     unless branch_name
       puts "ERROR: Not in a git repository"
       return false
@@ -62,6 +62,11 @@ class BranchManager
     show_entry(entry)
   end
 
+  def load_data
+    return {} unless File.exist?(data_file)
+    YAML.safe_load_file(data_file) || {}
+  end
+
   private
 
   def current_branch
@@ -69,7 +74,7 @@ class BranchManager
   end
 
   def build_entry(branch_name)
-    current_task = Environment.current.task
+    current_task = Hiiro::Environment.current&.task rescue nil
     tmux_info = capture_tmux_info
 
     {
@@ -105,11 +110,6 @@ class BranchManager
     File.join(Dir.home, '.config', 'hiiro', 'branches.yml')
   end
 
-  def load_data
-    return {} unless File.exist?(data_file)
-    YAML.safe_load_file(data_file) || {}
-  end
-
   def save_data(data)
     FileUtils.mkdir_p(File.dirname(data_file))
     File.write(data_file, YAML.dump(data))
@@ -125,7 +125,34 @@ Hiiro.run(*ARGV) do
   tag_store = Hiiro::Tags.new(:branch)
 
   add_subcmd(:edit) { edit_files(__FILE__) }
-  add_subcmd(:save) { manager.save }
+  add_subcmd(:save) { |branch_name = nil| manager.save(branch_name) }
+
+  add_subcmd(:saved) do |*saved_args|
+    data = manager.load_data
+    branches = data['branches'] || []
+
+    if branches.empty?
+      puts "No saved branches."
+      next
+    end
+
+    filter = saved_args.first
+    if filter
+      branches = branches.select { |b| b['name'].include?(filter) || b['task'].to_s.include?(filter) }
+      if branches.empty?
+        puts "No saved branches matching '#{filter}'."
+        next
+      end
+    end
+
+    current = git.branch
+    branches.each do |b|
+      marker = b['name'] == current ? "* " : "  "
+      task_str = b['task'] ? "  [#{b['task']}]" : ""
+      puts "#{marker}#{b['name']}#{task_str}"
+    end
+  end
+
   add_subcmd(:current) { print `git branch --show-current` }
   add_subcmd(:info) { manager.current }
 
