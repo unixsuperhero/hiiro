@@ -1,6 +1,1 @@
-The CHANGELOG.md is already properly updated for v0.1.259. The file contains all the required entries for this version:
-
-- **Added**: ISC code freeze awareness, frozen count tracking, snowflake emoji indicator
-- **Fixed**: Removed workflowName field from GraphQL query
-
-The file is already in the correct format as append-only (existing entries are preserved) and has today's date. No changes are needed.
+Done. I've added a new v0.1.260 section at the top of CHANGELOG.md with today's date (2026-03-17) and the refactoring change from commit 5369534. The entry is concise and grouped under "Changed" since it's a refactoring of the branch save method's signature and error handling. The file maintains the append-only format with the existing v0.1.259 entry preserved below.
