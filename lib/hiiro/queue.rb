@@ -138,12 +138,16 @@ class Hiiro
       # Determine target tmux session and working directory from frontmatter
       target_session = TMUX_SESSION
       working_dir = Dir.pwd
+      tree_root = nil
 
       if prompt_obj
         if prompt_obj.task
           target_session = prompt_obj.session_name
           tree = prompt_obj.task.tree
-          working_dir = tree.path if tree
+          if tree
+            working_dir = tree.path
+            tree_root = tree.path
+          end
         elsif prompt_obj.session
           target_session = prompt_obj.session.name
           working_dir = prompt_obj.session.path || working_dir
@@ -151,6 +155,22 @@ class Hiiro
 
         if prompt_obj.tree
           working_dir = prompt_obj.tree.path
+          tree_root = prompt_obj.tree.path
+        end
+
+        # Resolve app + dir frontmatter on top of whatever tree root we have
+        if prompt_obj.app_name
+          env = Environment.current rescue nil
+          app = env&.find_app(prompt_obj.app_name)
+          if app
+            root = tree_root || git_root_of(working_dir)
+            app_dir = File.join(root, app.relative_path)
+            working_dir = prompt_obj.rel_dir ? File.join(app_dir, prompt_obj.rel_dir) : app_dir
+          else
+            warn "hq: app '#{prompt_obj.app_name}' not found — falling back to tree/session dir"
+          end
+        elsif prompt_obj.rel_dir
+          working_dir = File.join(tree_root || working_dir, prompt_obj.rel_dir)
         end
       end
 
@@ -296,6 +316,11 @@ class Hiiro
     def existing_window_name?(wname)
       windows = `tmux list-windows -a -F '#\{window_name\}' 2>/dev/null`.lines(chomp: true)
       windows.include?(wname)
+    end
+
+    def git_root_of(dir)
+      root = `git -C #{Shellwords.shellescape(dir)} rev-parse --show-toplevel 2>/dev/null`.strip
+      root.empty? ? dir : root
     end
 
     def slugify(text)
@@ -491,17 +516,17 @@ class Hiiro
           elsif args.any?
             content = args.join(' ')
           else
-            # Pre-fill with frontmatter template if task_info or flags require it
-            fm_content = if ti || opts.ignore
-              fm_lines = ["---"]
-              fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
-              fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
-              fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
-              fm_lines << "ignore: true" if opts.ignore
-              fm_lines << "---"
-              fm_lines << ""
-              fm_lines.join("\n")
-            end
+            # Pre-fill with frontmatter template
+            fm_lines = ["---"]
+            fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
+            fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
+            fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
+            fm_lines << "ignore: true" if opts.ignore
+            fm_lines << "# app: <partial-app-name>  (run claude from this app's directory)"
+            fm_lines << "# dir: <relative-path>     (subdir within app or tree root)"
+            fm_lines << "---"
+            fm_lines << ""
+            fm_content = fm_lines.join("\n")
 
             input = InputFile.md_file(hiiro: h, content: fm_content, append: !!fm_content, prefix: 'hq-')
             input.edit
@@ -553,16 +578,15 @@ class Hiiro
           path = File.join(q.queue_dirs[:wip], "#{name}.md")
 
           unless File.exist?(path)
-            # Pre-fill with frontmatter if task_info available
-            if ti
-              fm_lines = ["---"]
-              fm_lines << "task_name: #{ti[:task_name]}" if ti[:task_name]
-              fm_lines << "tree_name: #{ti[:tree_name]}" if ti[:tree_name]
-              fm_lines << "session_name: #{ti[:session_name]}" if ti[:session_name]
-              fm_lines << "---"
-              fm_lines << ""
-              File.write(path, fm_lines.join("\n"))
-            end
+            fm_lines = ["---"]
+            fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
+            fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
+            fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
+            fm_lines << "# app: <partial-app-name>  (run claude from this app's directory)"
+            fm_lines << "# dir: <relative-path>     (subdir within app or tree root)"
+            fm_lines << "---"
+            fm_lines << ""
+            File.write(path, fm_lines.join("\n"))
           end
 
           h.edit_files(path)
@@ -729,6 +753,14 @@ class Hiiro
 
       def tree_name
         doc.front_matter['tree_name']
+      end
+
+      def app_name
+        doc.front_matter['app']
+      end
+
+      def rel_dir
+        doc.front_matter['dir']
       end
 
       def session_name
