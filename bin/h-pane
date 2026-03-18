@@ -1,9 +1,21 @@
 #!/usr/bin/env ruby
 
 require 'hiiro'
+require 'yaml'
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
   tmux = tmux_client
+
+  home_config_path = Hiiro::Config.path('pane_homes.yml')
+
+  load_homes = -> {
+    return {} unless File.exist?(home_config_path)
+    YAML.load_file(home_config_path) || {}
+  }
+
+  save_homes = ->(config) {
+    File.write(home_config_path, config.to_yaml)
+  }
 
   add_subcmd(:ls) { |*args|
     if args.empty?
@@ -95,13 +107,103 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   }
 
-  add_subcmd(:sw, :switch) { |target = nil, *args|
-    if target.nil?
-      target = fuzzyfind_from_map(tmux.panes(all: true).name_map)
+  add_subcmd(:sw) { |target = nil, *args|
+    target ||= fuzzyfind_from_map(tmux.panes(all: true).name_map)
+    tmux.open_session(target) if target
+  }
+
+  add_subcmd(:switch) { |name = nil|
+    homes = load_homes.call
+
+    if name.nil?
+      if homes.empty?
+        puts "No home panes configured. Use 'h pane home add <name> <session> [path]'"
+        next
+      end
+      display_map = homes.each_with_object({}) do |(n, cfg), h|
+        label = "#{n}  [#{cfg['session']}#{cfg['path'] ? "  #{cfg['path']}" : ''}]"
+        h[label] = n
+      end
+      name = fuzzyfind_from_map(display_map)
+      next unless name
     end
 
-    if target
-      tmux.open_session(target)
+    cfg = homes[name]
+    unless cfg
+      matched = homes.keys.select { |k| k.start_with?(name) }
+      case matched.size
+      when 1
+        name = matched.first
+        cfg = homes[name]
+      when 0
+        puts "Home pane '#{name}' not found"
+        next
+      else
+        puts "Ambiguous home pane '#{name}': #{matched.join(', ')}"
+        next
+      end
+    end
+
+    session = cfg['session']
+    path = cfg['path']
+
+    if !tmux.session_exists?(session)
+      tmux.new_session(session, detached: true, start_directory: path, window_name: name)
+    else
+      window_names = `tmux list-windows -t #{session.shellescape} -F '\#{window_name}' 2>/dev/null`.lines(chomp: true)
+      unless window_names.include?(name)
+        tmux.new_window(name: name, target: session, start_directory: path)
+      end
+    end
+
+    target = "#{session}:#{name}"
+    if tmux.in_tmux?
+      system('tmux', 'switch-client', '-t', target)
+    else
+      system('tmux', 'attach-session', '-t', target)
+    end
+  }
+
+  add_subcmd(:home) { |*args|
+    run_child(:home) do |h|
+      h.add_subcmd(:ls) {
+        homes = load_homes.call
+        if homes.empty?
+          puts "No home panes configured."
+          puts "Use: h pane home add <name> <session> [path]"
+        else
+          homes.each do |name, cfg|
+            path_str = cfg['path'] ? "  #{cfg['path']}" : ''
+            puts "#{name.ljust(20)} #{cfg['session']}#{path_str}"
+          end
+        end
+      }
+
+      h.add_subcmd(:add) { |name, session, path = nil|
+        unless name && session
+          puts "Usage: h pane home add <name> <session> [path]"
+          next
+        end
+        homes = load_homes.call
+        homes[name] = { 'session' => session }
+        homes[name]['path'] = File.expand_path(path) if path
+        save_homes.call(homes)
+        puts "Added '#{name}' → #{session}#{path ? " (#{File.expand_path(path)})" : ''}"
+      }
+
+      h.add_subcmd(:rm) { |name|
+        unless name
+          puts "Usage: h pane home rm <name>"
+          next
+        end
+        homes = load_homes.call
+        if homes.delete(name)
+          save_homes.call(homes)
+          puts "Removed home pane '#{name}'"
+        else
+          puts "Home pane '#{name}' not found"
+        end
+      }
     end
   }
 
