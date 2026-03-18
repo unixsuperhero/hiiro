@@ -194,6 +194,28 @@ class Hiiro
       puts "Stopped task '#{task.name}' (worktree available for reuse)"
     end
 
+    def resume_task(tree, task_name: nil)
+      unless tree
+        puts "No available worktree selected"
+        return
+      end
+
+      # Derive a default task name from the tree name: "foo/main" -> "foo"
+      task_name ||= tree.name.end_with?('/main') ? tree.name.chomp('/main') : tree.name
+
+      if task_by_name(task_name)
+        puts "Task '#{task_name}' already exists"
+        return
+      end
+
+      color_index = Hiiro::TaskColors.next_index(config.tasks.map(&:color_index).compact)
+      task = Task.new(name: task_name, tree: tree.name, session: task_name, color_index: color_index)
+      config.save_task(task)
+      puts "Resumed task '#{task_name}' from worktree '#{tree.name}'"
+
+      switch_to_task(task)
+    end
+
     def list(tags_filter: [])
       tag_store = Hiiro::Tags.new(:task)
       items = tasks
@@ -938,6 +960,30 @@ class Hiiro
           end
           task = tm.task_by_name(task_name)
           tm.stop_task(task)
+        end
+
+        h.add_subcmd(:resume) do |tree_name=nil|
+          available = tm.environment.all_trees.reject { |t|
+            tm.environment.all_tasks.any? { |task| task.tree_name == t.name }
+          }
+
+          if available.empty?
+            puts "No available worktrees to resume"
+            next
+          end
+
+          tree = if tree_name
+            Hiiro::Matcher.new(available, :name).by_prefix(tree_name).first&.item
+          else
+            h.fuzzyfind_from_map(available.each_with_object({}) { |t, m| m[t.name] = t })
+          end
+
+          unless tree
+            puts tree_name ? "No available worktree matching '#{tree_name}'" : "No worktree selected"
+            next
+          end
+
+          tm.resume_task(tree)
         end
 
         h.add_subcmd(:edit) do
