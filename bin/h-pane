@@ -152,7 +152,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     else
       window_names = `tmux list-windows -t #{session.shellescape} -F '\#{window_name}' 2>/dev/null`.lines(chomp: true)
       unless window_names.include?(name)
-        tmux.new_window(name: name, target: session, start_directory: path)
+        dir = path || tmux.find_session(session)&.path
+        tmux.new_window(name: name, target: session, start_directory: dir)
       end
     end
 
