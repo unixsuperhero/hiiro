@@ -1543,19 +1543,26 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:tags) do
     pinned = pinned_manager.load_pinned
-    by_tag = Hash.new { |h, k| h[k] = [] }
 
-    pinned.each do |pr|
-      Array(pr.tags).each { |t| by_tag[t] << pr }
-    end
-
-    if by_tag.empty?
-      puts "No tagged PRs."
+    if pinned.empty?
+      puts "No tracked PRs."
       next
     end
 
-    by_tag.sort.each do |tag, prs|
-      puts "\e[30;104m#{tag}\e[0m (#{prs.length})"
+    by_tag = Hash.new { |h, k| h[k] = [] }
+    untagged = []
+
+    pinned.each do |pr|
+      tags = Array(pr.tags)
+      if tags.empty?
+        untagged << pr
+      else
+        tags.each { |t| by_tag[t] << pr }
+      end
+    end
+
+    render_group = lambda do |label, prs, current_tag|
+      puts label
       slot_w  = prs.map { |pr| (pr.slot || 1).to_s.length }.max
       succ_w  = prs.filter_map { |pr| pr.checks&.dig('success')&.to_i&.to_s&.length }.max || 1
       total_w = prs.filter_map { |pr| pr.checks&.dig('total')&.to_i&.to_s&.length }.max || 1
@@ -1563,9 +1570,20 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       crs_w   = prs.map { |pr| [pr.reviews&.dig('changes_requested').to_i.to_s.length, 1].max }.max
       widths  = { slot: slot_w, succ: succ_w, total: total_w, as: as_w, crs: crs_w }
       prs.each_with_index do |pr, idx|
-        puts "  #{pinned_manager.display_pinned(pr, idx, widths: widths, oneline: true)}"
+        line = pinned_manager.display_pinned(pr, idx, widths: widths, oneline: true)
+        if current_tag
+          other = Array(pr.tags) - [current_tag]
+          line += "  " + other.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') if other.any?
+        end
+        puts "  #{line}"
       end
     end
+
+    by_tag.sort.each do |tag, prs|
+      render_group.call("\e[30;104m#{tag}\e[0m (#{prs.length})", prs, tag)
+    end
+
+    render_group.call("(untagged) (#{untagged.length})", untagged, nil) if untagged.any?
   end
 
   # === Multi-PR action commands (mCMD) ===
