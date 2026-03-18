@@ -1563,7 +1563,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       crs_w   = prs.map { |pr| [pr.reviews&.dig('changes_requested').to_i.to_s.length, 1].max }.max
       widths  = { slot: slot_w, succ: succ_w, total: total_w, as: as_w, crs: crs_w }
       prs.each_with_index do |pr, idx|
-        puts "  #{display_pinned(pr, idx, widths: widths, oneline: true)}"
+        puts "  #{pinned_manager.display_pinned(pr, idx, widths: widths, oneline: true)}"
       end
     end
   end
