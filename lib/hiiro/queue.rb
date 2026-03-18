@@ -232,32 +232,42 @@ class Hiiro
       }
     end
 
-    def select_task(hiiro)
+    def select_task_or_session(hiiro)
+      mapping = {}
+
       env = Environment.current rescue nil
-      return nil unless env
-
-      tasks = env.all_tasks.sort_by(&:name)
-      return nil if tasks.empty?
-
-      mapping = tasks.each_with_object({}) do |task, h|
-        line = format("%-25s  tree: %-20s", task.name, task.tree_name || '(none)')
-        h[line] = task
+      if env
+        env.all_tasks.sort_by(&:name).each do |task|
+          line = format("task     %-25s  tree: %s", task.name, task.tree_name || '(none)')
+          mapping[line] = { type: :task, task: task }
+        end
       end
+
+      sessions = Hiiro::Tmux::Sessions.fetch rescue nil
+      if sessions
+        sessions.names.sort.each do |name|
+          mapping[format("session  %s", name)] = { type: :session, name: name }
+        end
+      end
+
+      return nil if mapping.empty?
 
       hiiro.fuzzyfind_from_map(mapping)
     end
 
     def resolve_task_info(opts, hiiro, default_task_info)
-      task_name = if opts.choose
-        select_task(hiiro)&.name
+      if opts.choose
+        selection = select_task_or_session(hiiro)
+        if selection
+          case selection[:type]
+          when :task    then task_info_for(selection[:task].name)
+          when :session then { session_name: selection[:name] }
+          end
+        else
+          default_task_info
+        end
       elsif opts.task
-        opts.task
-      else
-        nil
-      end
-
-      if task_name
-        task_info_for(task_name)
+        task_info_for(opts.task)
       else
         default_task_info
       end
@@ -651,6 +661,14 @@ class Hiiro
             end
           end
           puts "Cleaned #{count} files"
+        }
+
+        h.add_subcmd(:sadd) { |*args|
+          exec('h', 'queue', 'add', '-s', *args)
+        }
+
+        h.add_subcmd(:tadd) { |*args|
+          exec('h', 'task', 'queue', 'add', *args)
         }
 
         h.add_subcmd(:dir) {
