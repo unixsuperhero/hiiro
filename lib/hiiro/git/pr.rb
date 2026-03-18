@@ -9,7 +9,7 @@ class Hiiro
       attr_accessor :number, :title, :state, :url, :head_branch, :base_branch,
                     :repo, :slot, :is_draft, :mergeable, :review_decision,
                     :checks, :check_runs, :reviews, :last_checked, :pinned_at, :updated_at,
-                    :task, :worktree, :tmux_session, :tags, :assigned, :authored
+                    :task, :worktree, :tmux_session, :tags, :assigned, :authored, :depends_on
 
       # Load all pinned PRs from YAML, returning an array of Pr instances.
       def self.pinned_prs
@@ -58,6 +58,7 @@ class Hiiro
           tags:            hash['tags'],
           assigned:        hash['assigned'],
           authored:        hash['authored'],
+          depends_on:      hash['depends_on'],
         )
       end
 
@@ -163,7 +164,8 @@ class Hiiro
                      repo: nil, slot: nil, is_draft: nil, mergeable: nil, review_decision: nil,
                      checks: nil, check_runs: nil, reviews: nil, last_checked: nil,
                      pinned_at: nil, updated_at: nil,
-                     task: nil, worktree: nil, tmux_session: nil, tags: nil, assigned: nil, authored: nil)
+                     task: nil, worktree: nil, tmux_session: nil, tags: nil, assigned: nil, authored: nil,
+                     depends_on: nil)
         @number          = number
         @title           = title
         @state           = state
@@ -187,6 +189,7 @@ class Hiiro
         @tags            = tags
         @assigned        = assigned
         @authored        = authored
+        @depends_on      = depends_on ? Array(depends_on).map(&:to_i) : nil
       end
 
       def open?        = state&.upcase == 'OPEN'
@@ -233,6 +236,7 @@ class Hiiro
           'tags'                => (Array(tags).empty? ? nil : tags),
           'assigned'            => assigned,
           'authored'            => authored,
+          'depends_on'          => (Array(depends_on).empty? ? nil : depends_on),
         }.compact
       end
 

@@ -1863,6 +1863,115 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   end
 
+  add_subcmd(:dep) do |*args|
+    run_child(:dep) do |h|
+      h.add_subcmd(:add) { |ref = nil, *dep_refs|
+        if ref.nil? || dep_refs.empty?
+          puts "Usage: h pr dep add <pr> <dep1> [dep2 ...]"
+          next
+        end
+
+        pr_number = resolve_pr.call(ref)
+        next unless pr_number
+
+        dep_numbers = dep_refs.map { |r| resolve_pr.call(r) }.compact
+        if dep_numbers.empty?
+          puts "No valid dependency PRs resolved"
+          next
+        end
+
+        pinned = pinned_manager.load_pinned
+        pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+        unless pr
+          puts "PR ##{pr_number} is not tracked — pin it first with: h pr track #{pr_number}"
+          next
+        end
+
+        pr.depends_on = (Array(pr.depends_on) + dep_numbers.map(&:to_i)).uniq.sort
+        pinned_manager.save_pinned(pinned)
+        puts "PR ##{pr_number} now depends on: #{pr.depends_on.map { |n| "##{n}" }.join(', ')}"
+      }
+
+      h.add_subcmd(:rm) { |ref = nil, *dep_refs|
+        if ref.nil?
+          puts "Usage: h pr dep rm <pr> [dep1 dep2 ...]  (omit deps to clear all)"
+          next
+        end
+
+        pr_number = resolve_pr.call(ref)
+        next unless pr_number
+
+        pinned = pinned_manager.load_pinned
+        pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+        unless pr
+          puts "PR ##{pr_number} not in tracked list"
+          next
+        end
+
+        if dep_refs.empty?
+          pr.depends_on = nil
+          puts "Cleared all dependencies from ##{pr_number}"
+        else
+          dep_numbers = dep_refs.map { |r| resolve_pr.call(r) }.compact.map(&:to_i)
+          pr.depends_on = (Array(pr.depends_on) - dep_numbers).then { |d| d.empty? ? nil : d }
+          puts "Removed dep(s) #{dep_numbers.map { |n| "##{n}" }.join(', ')} from ##{pr_number}"
+          puts "  Remaining: #{Array(pr.depends_on).map { |n| "##{n}" }.join(', ').then { |s| s.empty? ? '(none)' : s }}"
+        end
+
+        pinned_manager.save_pinned(pinned)
+      }
+
+      h.add_subcmd(:ls) { |ref = nil|
+        pinned = pinned_manager.load_pinned
+
+        if ref
+          pr_number = resolve_pr.call(ref)
+          next unless pr_number
+          pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+          unless pr
+            puts "PR ##{pr_number} not in tracked list"
+            next
+          end
+          deps = Array(pr.depends_on)
+          if deps.empty?
+            puts "##{pr_number} has no dependencies"
+          else
+            puts "##{pr_number}: #{pr.title}"
+            puts "  depends on:"
+            deps.each do |dep_num|
+              dep = pinned.find { |p| p.number == dep_num }
+              label = dep ? "  ##{dep_num}: #{dep.title}" : "  ##{dep_num} (not tracked)"
+              puts label
+            end
+          end
+        else
+          with_deps = pinned.select { |p| Array(p.depends_on).any? }
+          if with_deps.empty?
+            puts "No dependency relationships configured."
+            puts "Use: h pr dep add <pr> <dep1> [dep2 ...]"
+          else
+            with_deps.each do |pr|
+              puts "##{pr.number}: #{pr.title}"
+              Array(pr.depends_on).each do |dep_num|
+                dep = pinned.find { |p| p.number == dep_num }
+                label = dep ? "  └─ ##{dep_num}: #{dep.title}" : "  └─ ##{dep_num} (not tracked)"
+                puts label
+              end
+            end
+          end
+        end
+      }
+
+      h.add_subcmd(:config) {
+        puts Hiiro::Git::Pr::PINNED_FILE
+      }
+
+      h.add_subcmd(:edit) {
+        edit_files Hiiro::Git::Pr::PINNED_FILE
+      }
+    end
+  end
+
   add_subcmd(:config) do |*args|
     make_child do
       add_subcmd(:path) do
