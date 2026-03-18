@@ -1,1 +1,1 @@
-Done. The CHANGELOG.md has been updated with v0.1.265 released today (2026-03-18), with all the unreleased features now captured in that release. An empty Unreleased section remains at the top for future entries.
+Done. The CHANGELOG.md has been updated with v0.1.265 released on 2026-03-18, capturing the two commits since the prior release: the new home pane management feature and the session path fallback fix. An empty Unreleased section remains at the top for future entries.
