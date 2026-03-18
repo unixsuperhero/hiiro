@@ -1,1 +1,58 @@
-Done. The CHANGELOG.md now has v0.1.261 at the top with today's date and the style enhancement from commit 8e1db54 grouped under "Changed".
+# Changelog
+
+## [0.1.263] - 2026-03-18
+
+### Changed
+- `h pr tags` now displays branches using the same compact oneline format as `h pr ls -1`
+
+## [0.1.262] - 2026-03-18
+
+### Added
+- `h task prs` — delegates to `h pr` subcommands in task context (e.g. `h task prs track`)
+- `h task branches` — delegates to `h branch` subcommands in task context
+- `h task wtrees` — delegates to `h wtree` subcommands in task context
+
+## [0.1.261] - 2026-03-17
+
+### Changed
+- Enhanced pinned PR display with bold titles and dim branch names
+
+## [0.1.260] - 2026-03-17
+
+### Changed
+- Improved `h branch save` method signature and error handling
+
+## [0.1.259] - 2026-03-16
+
+### Added
+- ISC code freeze awareness in `h pr update`: calls `isc codefreeze list` to get the real current freeze state, overrides stale GitHub-cached `ISC code freeze` status check accordingly
+- `frozen` count in checks summary to track code-freeze-only failures separately
+- Snowflake emoji (❄️) in PR list when a PR is failing exclusively due to code freeze (vs ❌ for other failures)
+
+### Fixed
+- Removed `workflowName` from batch GraphQL query — field doesn't exist on GitHub's raw `CheckRun` type, causing `h pr update` to silently fail and never refresh PR data
+
+## [0.1.257] - 2026-03-16
+
+### Added
+- Custom name option to queue add command
+
+## [0.1.256] - 2026-03-16
+
+### Added
+- Status filtering to queue list command
+
+## [0.1.255] - 2026-03-16
+
+### Added
+- Subcommands to list agents, commands, and skills
+
+## [0.1.254] - 2026-03-13
+
+### Changed
+- Refactored h-pr to use Pr domain object with method access
+- Promoted Pr to full domain object with all pinned attributes
+
+### Fixed
+- Removed code duplication in multi-pr pr commands
+- Updated all multi-pr commands to use YAML
