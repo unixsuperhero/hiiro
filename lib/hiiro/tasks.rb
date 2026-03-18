@@ -1089,6 +1089,18 @@ class Hiiro
           af = Hiiro::AppFiles.new
           Hiiro::AppFiles.build_hiiro(h, af, environment: tm.environment).run
         end
+
+        h.add_subcmd(:prs) do |*args|
+          exec('h', 'pr', *args)
+        end
+
+        h.add_subcmd(:branches) do |*args|
+          exec('h', 'branch', *args)
+        end
+
+        h.add_subcmd(:wtrees) do |*args|
+          exec('h', 'wtree', *args)
+        end
       end
 
       task_hiiro
