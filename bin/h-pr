@@ -1556,7 +1556,15 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     by_tag.sort.each do |tag, prs|
       puts "\e[30;104m#{tag}\e[0m (#{prs.length})"
-      prs.each { |pr| puts "  ##{pr.number} #{pr.title}" }
+      slot_w  = prs.map { |pr| (pr.slot || 1).to_s.length }.max
+      succ_w  = prs.filter_map { |pr| pr.checks&.dig('success')&.to_i&.to_s&.length }.max || 1
+      total_w = prs.filter_map { |pr| pr.checks&.dig('total')&.to_i&.to_s&.length }.max || 1
+      as_w    = prs.map { |pr| [pr.reviews&.dig('approved').to_i.to_s.length, 1].max }.max
+      crs_w   = prs.map { |pr| [pr.reviews&.dig('changes_requested').to_i.to_s.length, 1].max }.max
+      widths  = { slot: slot_w, succ: succ_w, total: total_w, as: as_w, crs: crs_w }
+      prs.each_with_index do |pr, idx|
+        puts "  #{display_pinned(pr, idx, widths: widths, oneline: true)}"
+      end
     end
   end
 
