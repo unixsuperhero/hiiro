@@ -22,8 +22,8 @@ NOTIFY_TMUX_HOOKS = %w[after-kill-pane window-unlinked session-closed].freeze
 NOTIFY_TMUX_CONF_CONTENT = <<~'CONF'
   # --- Notify hooks (clean up notifications when panes/windows/sessions close) ---
   set-hook -g after-kill-pane  "run-shell -b 'h notify remove_pane \#{hook_pane_id}'"
-  set-hook -g window-unlinked  "run-shell -b 'h notify remove_window \#{hook_window_id}'"
   set-hook -g session-closed   "run-shell -b 'h notify remove_session \#{hook_session_name}'"
+  # set-hook -g window-unlinked  "run-shell -b 'h notify remove_window \#{hook_window_id}'"
 
   # --- Notify keybinding (prefix + N to open notification menu) ---
   bind-key N run-shell "h notify menu"
