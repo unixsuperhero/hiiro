@@ -345,7 +345,7 @@ class Hiiro
       if name && !name.empty?
         name = slugify(name)
       else
-        content_lines = content.lines.drop_while { |l| l.strip.empty? || l.start_with?('---') || l.match?(/^\w+:/) }.first.to_s.strip
+        content_lines = content.lines.drop_while { |l| l.strip.empty? || l.start_with?('---') || l.match?(/^\w+:/) || l.start_with?('# ') }.first.to_s.strip
         name = slugify(content_lines)
       end
 
