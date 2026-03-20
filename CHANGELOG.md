@@ -1,4 +1,10 @@
+```
 # Changelog
+
+## [0.1.268] - 2026-03-20
+
+### Fixed
+- Notify: Disable window-unlinked hook
 
 ## [0.1.267] - 2026-03-20
 
@@ -13,3 +19,4 @@
 
 ### Fixed
 - PR: Dependency tracking for pull requests
+```
