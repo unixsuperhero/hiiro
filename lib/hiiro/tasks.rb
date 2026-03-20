@@ -772,6 +772,11 @@ class Hiiro
             flag(:disable, short: 'd', desc: 'disable sparse checkout on the current task worktree')
           end
 
+          if opts.help
+            puts opts.help_text
+            exit 1
+          end
+
           if opts.list
             groups = Hiiro::SparseGroups.load
             if groups.empty?
