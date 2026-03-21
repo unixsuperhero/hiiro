@@ -1,0 +1,128 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'fileutils'
+require 'hiiro'
+
+SPARSE_FILE = File.join(Dir.home, '.config', 'hiiro', 'sparse_groups.yml')
+
+def load_groups
+  return {} unless File.exist?(SPARSE_FILE)
+  YAML.safe_load_file(SPARSE_FILE) || {}
+end
+
+def save_groups(groups)
+  FileUtils.mkdir_p(File.dirname(SPARSE_FILE))
+  File.write(SPARSE_FILE, groups.to_yaml)
+end
+
+Hiiro.run(*ARGV) {
+  add_subcmd(:config) {
+    edit_files(SPARSE_FILE)
+  }
+
+  add_subcmd(:ls) { |group_name=nil|
+    groups = load_groups
+
+    if groups.empty?
+      puts "No sparse groups configured."
+      puts "Edit #{SPARSE_FILE} with: h sparse config"
+      next
+    end
+
+    if group_name
+      match = groups.keys.find { |k| k == group_name } ||
+              groups.keys.find { |k| k.start_with?(group_name) } ||
+              groups.keys.find { |k| k.include?(group_name) }
+
+      unless match
+        puts "Group '#{group_name}' not found."
+        puts
+        puts "Available groups: #{groups.keys.join(', ')}"
+        next
+      end
+
+      puts "#{match}:"
+      Array(groups[match]).each { |path| puts "  #{path}" }
+    else
+      max_len = groups.keys.map(&:length).max
+      groups.each do |name, paths|
+        puts format("  %-#{max_len}s  (%d paths)", name, Array(paths).length)
+      end
+    end
+  }
+
+  add_subcmd(:list) { |*args| run_subcmd(:ls, *args) }
+
+  add_subcmd(:add) { |group_name=nil, *paths|
+    if group_name.nil? || paths.empty?
+      puts "Usage: h sparse add <group> <path> [path...]"
+      next
+    end
+
+    groups = load_groups
+    existing = Array(groups[group_name])
+    added = []
+
+    paths.each do |path|
+      if existing.include?(path)
+        puts "  already in '#{group_name}': #{path}"
+      else
+        existing << path
+        added << path
+      end
+    end
+
+    if added.any?
+      groups[group_name] = existing
+      save_groups(groups)
+      puts "Added to '#{group_name}':"
+      added.each { |p| puts "  #{p}" }
+    end
+  }
+
+  add_subcmd(:rm) { |group_name=nil, *paths|
+    if group_name.nil?
+      puts "Usage: h sparse rm <group> [path...]"
+      next
+    end
+
+    groups = load_groups
+
+    unless groups.key?(group_name)
+      puts "Group '#{group_name}' not found."
+      puts
+      puts "Available groups: #{groups.keys.join(', ')}"
+      next
+    end
+
+    if paths.empty?
+      groups.delete(group_name)
+      save_groups(groups)
+      puts "Removed group '#{group_name}'"
+    else
+      existing = Array(groups[group_name])
+      removed = []
+      not_found = []
+
+      paths.each do |path|
+        if existing.delete(path)
+          removed << path
+        else
+          not_found << path
+        end
+      end
+
+      not_found.each { |p| puts "  not found in '#{group_name}': #{p}" }
+
+      if removed.any?
+        groups[group_name] = existing
+        save_groups(groups)
+        puts "Removed from '#{group_name}':"
+        removed.each { |p| puts "  #{p}" }
+        puts "(#{existing.length} paths remaining)" if existing.any?
+        puts "(group is now empty — run 'h sparse rm #{group_name}' to delete it)" if existing.empty?
+      end
+    end
+  }
+}

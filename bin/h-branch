@@ -76,9 +76,11 @@ class BranchManager
   def build_entry(branch_name)
     current_task = Hiiro::Environment.current&.task rescue nil
     tmux_info = capture_tmux_info
+    sha = `git rev-parse HEAD 2>/dev/null`.strip
 
     {
       name: branch_name,
+      sha: sha.empty? ? nil : sha,
       worktree: current_task&.tree_name,
       task: current_task&.name,
       tmux: tmux_info
@@ -97,6 +99,7 @@ class BranchManager
 
   def show_entry(entry)
     puts "  Branch: #{entry[:name]}"
+    puts "  SHA: #{entry[:sha] || '(unknown)'}"
     puts "  Task: #{entry[:task] || '(none)'}"
     puts "  Worktree: #{entry[:worktree] || '(none)'}"
     if entry[:tmux]
