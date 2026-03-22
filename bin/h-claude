@@ -107,7 +107,8 @@ add_subcmd(:env) { |*args|
 
   add_subcmd(:skills) {
     dir = File.expand_path('~/.claude/skills')
-    dirs = Dir.glob("#{dir}/*/").sort
+    plugin_dir = File.expand_path('~/.claude/plugins/local/skills')
+    dirs = Dir.glob("{#{dir},#{plugin_dir}}/*/").sort
     dirs.each { |d| puts File.basename(d) }
   }
 
