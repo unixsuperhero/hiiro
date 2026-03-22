@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+
+require 'json'
+require 'hiiro/options'
+
+opts = Hiiro::Options.parse(ARGV) do
+  flag(:repo, short: :r)
+end
+
+if opts.help?
+  puts opts.help_text
+  exit 1
+end
+
+dest_dir =
+  if opts.repo
+    `git rev-parse --show-toplevel`.strip
+  else
+    Dir.home
+  end
+context = {
+  script_path: File.dirname(__FILE__),
+  script_dir: __dir__,
+  files: opts.args.flat_map { |arg|
+    Dir.glob("{bin,lib,plugins}/**/*#{arg}*").tap do |mfiles|
+      mfiles.each do |mfile|
+        if mfile.match?(/h-/)
+          puts "ARG MATCHES bin-style name => #{mfile}"
+        end
+      end
+    end
+  }.each_with_object({}) { |file, h|
+    case file
+    when /^bin/ then h[file] = File.join(Dir.home, file)
+    when /^lib/
+      ilib = `gem which hiiro`.strip
+      basename = File.basename(ilib)
+      dirname = File.dirname(ilib)
+      6.times do
+        break if basename == 'lib'
+        basename = File.basename(dirname)
+        dirname = File.dirname(dirname)
+      end
+      h[file] = File.join(dirname, file)
+    when /^plug/ then h[file] = File.join(Dir.home, '.config/hiiro', file)
+    end
+  },
+}
+
+files = context[:files].to_a.flatten
+files = files.invert if opts.repo
+
+
+system('safe_nvim', '-O2', *files)
+puts JSON.pretty_generate(context)
+

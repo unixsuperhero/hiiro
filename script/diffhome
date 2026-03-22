@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+diff_bin = File.join(__dir__, 'diff')
+
+system(diff_bin, *ARGV)
+
