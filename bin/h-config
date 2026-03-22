@@ -20,6 +20,10 @@ Hiiro.run(*ARGV) {
         open_config.(dir: '~', file: '.gitconfig')
       }
 
+      add_subcmd(:ignore) {
+        open_config.(dir: '~/.config/git', file: 'ignore')
+      }
+
       add_subcmd(:local) {
         root = `git rev-parse --show-toplevel`.chomp 
         open_config.(dir: root, file: '.git/config')
