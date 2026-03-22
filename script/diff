@@ -47,8 +47,8 @@ context = {
   },
 }
 
-files = context[:files].to_a.flatten
-files = files.invert if opts.repo
+files = opts.repo ? context[:files].invert : context[:files]
+files = files.to_a.flatten
 
 
 system('safe_nvim', '-O2', *files)
