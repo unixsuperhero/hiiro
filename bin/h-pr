@@ -593,7 +593,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         return nil
       end
       lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx)] = pr.number.to_s
+        h[pinned_manager.display_pinned(pr, idx, oneline: true)] = pr.number.to_s
       end
       return fuzzyfind_from_map(lines)
     end
@@ -831,9 +831,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:ls) do |*ls_args|
     opts = Hiiro::Options.parse(ls_args) {
-      flag(:update,  short: 'u', desc: 'update status before listing')
-      flag(:oneline, short: '1', desc: 'one line per PR')
-      flag(:checks,  short: 'C', desc: 'show individual check run details')
+      flag(:update,   short: 'u', desc: 'update status before listing')
+      flag(:verbose,  short: 'v', desc: 'multi-line output per PR')
+      flag(:checks,   short: 'C', desc: 'show individual check run details')
       instance_eval(&FILTER_OPTS)
     }
 
@@ -869,7 +869,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       crs_w   = results.map { |pr| [pr.reviews&.dig('changes_requested').to_i.to_s.length, 1].max }.max
       widths  = { slot: slot_w, succ: succ_w, total: total_w, as: as_w, crs: crs_w }
       results.each_with_index do |pr, idx|
-        puts pinned_manager.display_pinned(pr, idx, widths: widths, oneline: opts.oneline)
+        puts pinned_manager.display_pinned(pr, idx, widths: widths, oneline: !opts.verbose)
         pinned_manager.display_check_runs(pr) if opts.checks
       end
       last_checked = pinned.filter_map(&:last_checked).max
@@ -1182,7 +1182,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     if ref.nil?
       lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx)] = pr.number.to_s
+        h[pinned_manager.display_pinned(pr, idx, oneline: true)] = pr.number.to_s
       end
 
       pr_number = fuzzyfind_from_map(lines)
@@ -1262,7 +1262,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         next
       end
       lines = candidates.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx)] = pr
+        h[pinned_manager.display_pinned(pr, idx, oneline: true)] = pr
       end
       selected = fuzzyfind_from_map(lines)
       next unless selected
