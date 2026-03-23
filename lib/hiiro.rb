@@ -214,6 +214,8 @@ class Hiiro
   end
 
   def run
+    auto_tag_branch_with_task if tasks_enabled?
+
     run_args = runners.using_default? ? [subcmd, *args].compact : args
     result = runner.run(*run_args)
 
@@ -230,6 +232,22 @@ class Hiiro
     exit 0 if result.nil? || result
 
     exit 1
+  end
+
+  def auto_tag_branch_with_task
+    task = environment.task
+    return unless task
+
+    branch = environment.tree&.branch
+    return if branch.nil? || branch.empty?
+    return if %w[master main].include?(branch)
+
+    tag_store = Tags.new(:branch)
+    return if tag_store.get(branch).include?(task.name)
+
+    tag_store.add(branch, task.name)
+  rescue
+    # never let auto-tagging break a command
   end
 
   def runnable?
