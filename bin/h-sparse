@@ -54,6 +54,36 @@ Hiiro.run(*ARGV) {
 
   add_subcmd(:list) { |*args| run_subcmd(:ls, *args) }
 
+  add_subcmd(:set) { |group_name=nil|
+    if group_name.nil?
+      puts "Usage: h sparse set <group>"
+      next
+    end
+
+    groups = load_groups
+
+    match = groups.keys.find { |k| k == group_name } ||
+            groups.keys.find { |k| k.start_with?(group_name) } ||
+            groups.keys.find { |k| k.include?(group_name) }
+
+    unless match
+      puts "Group '#{group_name}' not found."
+      puts
+      puts "Available groups: #{groups.keys.join(', ')}"
+      next
+    end
+
+    paths = Array(groups[match]).map { |p| p.sub(/^\//, '') }
+    git_root = `git rev-parse --show-toplevel`.strip
+
+    if git_root.empty?
+      puts "Not inside a git repository."
+      next
+    end
+
+    system("git", "-C", git_root, "sparse-checkout", "set", "--cone", "--skip-checks", *paths)
+  }
+
   add_subcmd(:add) { |group_name=nil, *paths|
     if group_name.nil? || paths.empty?
       puts "Usage: h sparse add <group> <path> [path...]"
