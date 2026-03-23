@@ -42,14 +42,14 @@ class Hiiro
       cmd += ['-title', options.title.tr('()[]', '')] if options.title
       cmd += ['-open', options.link] if options.link
       cmd += ['-execute', options.command] if options.command
-      system(*cmd)
+      Background.run(*cmd)
 
       play_sound
     end
 
     def play_sound
       if options.sound && sounds[options.sound]
-        system('afplay', sounds[options.sound.downcase])
+        Background.run('afplay', sounds[options.sound.downcase])
       end
     end
 
