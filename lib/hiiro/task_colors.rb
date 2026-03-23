@@ -24,8 +24,8 @@ class Hiiro
     # Apply status-bg / status-fg to the named tmux session.
     def self.apply(session_name, color_index)
       colors = for_index(color_index)
-      system('tmux', 'set-option', '-t', session_name, 'status-bg', colors[:bg])
-      system('tmux', 'set-option', '-t', session_name, 'status-fg', colors[:fg])
+      Background.run('tmux', 'set-option', '-t', session_name, 'status-bg', colors[:bg])
+      Background.run('tmux', 'set-option', '-t', session_name, 'status-fg', colors[:fg])
     end
 
     # Return the first palette index not already used by existing_indices,
