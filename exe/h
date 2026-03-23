@@ -36,7 +36,13 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
 
     if opts.all
       Hiiro::Rbenv.versions.each do |ver|
-        update_hiiro(ver)
+        shell_cmd = [
+          "(RBENV_VERSION=#{ver.shellescape} rbenv exec gem update hiiro",
+          "|| RBENV_VERSION=#{ver.shellescape} rbenv exec gem install hiiro)",
+          "&& RBENV_VERSION=#{ver.shellescape} rbenv exec h setup",
+        ].join(' ')
+        puts "Queuing update for Ruby #{ver}..."
+        Hiiro::Background.run('sh', '-c', shell_cmd)
       end
     else
       update_hiiro
