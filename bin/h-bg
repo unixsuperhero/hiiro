@@ -70,10 +70,10 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:setup) do
-    puts 'Add this to your tmux.conf:'
-    puts
-    puts "  bind-key b display-popup -E -w 80% -h 40% \"h bg popup\""
-    puts
-    puts "Then reload tmux: tmux source-file ~/.tmux.conf"
+    $stderr.puts 'Add this to your tmux.conf:'
+    $stderr.puts
+    puts "bind-key b display-popup -E -w 80% -h 40% \"h bg popup\""
+    $stderr.puts
+    $stderr.puts "Then reload tmux: tmux source-file ~/.tmux.conf"
   end
 end
