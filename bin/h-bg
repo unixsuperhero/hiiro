@@ -1,0 +1,79 @@
+#!/usr/bin/env ruby
+require 'hiiro'
+require 'tempfile'
+
+HISTORY_FILE = File.expand_path('~/.config/hiiro/bg-history.txt')
+HISTORY_MAX  = 50
+
+def load_history
+  return [] unless File.exist?(HISTORY_FILE)
+  File.readlines(HISTORY_FILE, chomp: true).last(HISTORY_MAX)
+end
+
+def append_history(cmd)
+  FileUtils.mkdir_p(File.dirname(HISTORY_FILE))
+  File.open(HISTORY_FILE, 'a') { |f| f.puts(cmd) }
+end
+
+def run_in_bg(cmd)
+  Hiiro::Background.ensure_session
+  name = cmd.split.first.to_s
+  system('tmux', 'new-window', '-d', '-t', "#{Hiiro::Background::SESSION}:", '-n', name, cmd)
+end
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:popup) do
+    history = load_history
+
+    tf = Tempfile.new(['h-bg-', '.sh'])
+    unless history.empty?
+      tf.puts("# --- history (uncomment or rewrite below) ---")
+      history.reverse.each { |h| tf.puts("# #{h}") }
+      tf.puts("# ---")
+      tf.puts
+    end
+    tf.flush
+    tf.close
+
+    system(ENV['EDITOR'] || 'nvim', tf.path)
+
+    cmd = File.readlines(tf.path, chomp: true)
+      .reject { |l| l.strip.start_with?('#') || l.strip.empty? }
+      .join("\n")
+      .strip
+    tf.unlink
+
+    unless cmd.empty?
+      append_history(cmd)
+      run_in_bg(cmd)
+    end
+  end
+
+  add_subcmd(:run) do |*cmd_args|
+    cmd = cmd_args.shelljoin
+    next puts("Usage: h bg run <command>") if cmd.empty?
+    append_history(cmd)
+    run_in_bg(cmd)
+  end
+
+  add_subcmd(:attach, :a) do
+    system('tmux', 'switch-client', '-t', Hiiro::Background::SESSION)
+  end
+
+  add_subcmd(:history, :hist) do
+    history = load_history
+    if history.empty?
+      puts "No background command history yet."
+    else
+      history.each_with_index { |cmd, i| puts "#{i + 1}  #{cmd}" }
+    end
+  end
+
+  add_subcmd(:setup) do
+    puts 'Add this to your tmux.conf:'
+    puts
+    puts "  bind-key b display-popup -E -w 80% -h 40% \"h bg popup\""
+    puts
+    puts "Then reload tmux: tmux source-file ~/.tmux.conf"
+  end
+end
