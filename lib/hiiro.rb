@@ -6,6 +6,7 @@ require "ostruct"
 
 require_relative "hiiro/version"
 require_relative "hiiro/config"
+require_relative "hiiro/background"
 require_relative "hiiro/bins"
 require_relative "hiiro/fuzzyfind"
 require_relative "hiiro/git"
