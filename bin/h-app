@@ -43,6 +43,7 @@ def send_cd(path)
   end
 end
 
+
 Hiiro.run(*ARGV) {
   add_subcmd(:config) {
     edit_files(APPS_FILE)
@@ -200,6 +201,54 @@ Hiiro.run(*ARGV) {
     removed_path = apps.delete(app_name)
     save_apps(apps)
     puts "Removed app '#{app_name}' (was: #{removed_path})"
+  }
+
+  add_subcmd(:fd) { |app_name=nil, *args|
+    root = git.root || task_root
+    unless root
+      puts "Not in a git repo or task - cannot resolve path"
+      next
+    end
+    result = environment.app_matcher.find(app_name.to_s)
+    unless result.match?
+      puts "App '#{app_name}' not found"
+      next
+    end
+    app_path = File.join(root, result.first.item.relative_path)
+    Dir.chdir(app_path)
+    exec('fd', *args)
+  }
+
+  add_subcmd(:rg) { |app_name=nil, *args|
+    root = git.root || task_root
+    unless root
+      puts "Not in a git repo or task - cannot resolve path"
+      next
+    end
+    result = environment.app_matcher.find(app_name.to_s)
+    unless result.match?
+      puts "App '#{app_name}' not found"
+      next
+    end
+    app_path = File.join(root, result.first.item.relative_path)
+    Dir.chdir(app_path)
+    exec('rg', *args)
+  }
+
+  add_subcmd(:vim) { |app_name=nil, *args|
+    root = git.root || task_root
+    unless root
+      puts "Not in a git repo or task - cannot resolve path"
+      next
+    end
+    result = environment.app_matcher.find(app_name.to_s)
+    unless result.match?
+      puts "App '#{app_name}' not found"
+      next
+    end
+    app_path = File.join(root, result.first.item.relative_path)
+    Dir.chdir(app_path)
+    exec('vim', *args)
   }
 
   add_subcmd(:service) do |*svc_args|
