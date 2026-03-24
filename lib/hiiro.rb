@@ -286,6 +286,22 @@ class Hiiro
     options.flag(name, **kwargs)
   end
 
+  def add_resolver(name, current = nil, &lookup)
+    @resolvers ||= {}
+    @resolvers[name.to_sym] = { current:, lookup: }
+  end
+
+  def resolve(name, ref = nil)
+    @resolvers ||= {}
+    r = @resolvers[name.to_sym] or raise "No resolver registered for :#{name}"
+    if ref.nil?
+      c = r[:current]
+      c.respond_to?(:call) ? c.call : c
+    else
+      r[:lookup]&.call(ref)
+    end
+  end
+
   def add_cmd(*names, args: [], opts: [], &block)
     cmd_opts = options.select(opts)
 
