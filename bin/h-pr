@@ -1253,6 +1253,20 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     system('gh', 'pr', 'merge', pr_number.to_s, *merge_args)
   end
 
+  add_subcmd(:sync) do |ref = nil|
+    pr_number = resolve_pr.call(ref)
+    next unless pr_number
+
+    print "Syncing ##{pr_number} with base branch (rebase)... "
+    rebase_ok = system('gh', 'pr', 'update-branch', '--rebase', pr_number.to_s,
+                       out: $stdout, err: $stderr)
+
+    unless rebase_ok
+      puts "Rebase failed (conflicts?), falling back to merge..."
+      system('gh', 'pr', 'update-branch', pr_number.to_s)
+    end
+  end
+
   add_subcmd(:fix) do |*fix_args|
     opts = Hiiro::Options.parse(fix_args) do
       flag(:red, short: :r, desc: 'Fix all PRs with failing checks')
