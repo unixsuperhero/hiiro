@@ -70,7 +70,11 @@ class Hiiro
               mins = (elapsed / 60).to_i
               line += "  (#{mins}m)"
             end
-            line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
+            if meta['tmux_pane']
+              line += "  [pane #{meta['tmux_pane']}]"
+            elsif meta['tmux_session']
+              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]"
+            end
           end
           preview = task_preview(t[:name], status.to_sym)
           line += "  #{preview}" if preview
@@ -126,6 +130,16 @@ class Hiiro
     end
 
     def launch_task(name)
+      launch_in_mode(name, mode: :window)
+    end
+
+    def launch_in_pane(name, split:)
+      launch_in_mode(name, mode: split)
+    end
+
+    private
+
+    def launch_in_mode(name, mode:)
       dirs = queue_dirs
       md_file = File.join(dirs[:pending], "#{name}.md")
       return unless File.exist?(md_file)
@@ -174,11 +188,6 @@ class Hiiro
         end
       end
 
-      # Ensure the target session exists
-      unless system('tmux', 'has-session', '-t', target_session, out: File::NULL, err: File::NULL)
-        system('tmux', 'new-session', '-d', '-s', target_session, '-c', working_dir)
-      end
-
       # Write a clean prompt file (no frontmatter) for claude
       raw = File.read(running_md).strip
       prompt_body = prompt_obj ? strip_frontmatter(prompt_obj.doc.content.strip) : strip_frontmatter(raw)
@@ -218,25 +227,44 @@ class Hiiro
       SH
       FileUtils.chmod(0755, script_path)
 
-      win_name = short_window_name(name)
-      system('tmux', 'new-window', '-d', '-t', target_session, '-n', win_name, '-c', working_dir, script_path)
-
-      # Write meta sidecar
+      # Build base meta (no tmux_window/pane yet)
       meta = {
-        'tmux_session' => target_session,
-        'tmux_window' => win_name,
         'started_at' => Time.now.iso8601,
         'working_dir' => working_dir,
       }
       if prompt_obj
-        meta['task_name'] = prompt_obj.task_name if prompt_obj.task_name
-        meta['tree_name'] = prompt_obj.tree_name if prompt_obj.tree_name
+        meta['task_name']    = prompt_obj.task_name    if prompt_obj.task_name
+        meta['tree_name']    = prompt_obj.tree_name    if prompt_obj.tree_name
         meta['session_name'] = prompt_obj.session_name if prompt_obj.session_name
       end
-      File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
 
-      puts "Launched: #{name} [#{target_session}:#{win_name}]"
+      case mode
+      when :window
+        # Ensure the target session exists
+        unless system('tmux', 'has-session', '-t', target_session, out: File::NULL, err: File::NULL)
+          system('tmux', 'new-session', '-d', '-s', target_session, '-c', working_dir)
+        end
+        win_name = short_window_name(name)
+        system('tmux', 'new-window', '-d', '-t', target_session, '-n', win_name, '-c', working_dir, script_path)
+        meta['tmux_session'] = target_session
+        meta['tmux_window']  = win_name
+        File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
+        puts "Launched: #{name} [#{target_session}:#{win_name}]"
+
+      when :current
+        File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
+        exec(script_path)
+
+      when :hsplit, :vsplit
+        flag = mode == :hsplit ? '-v' : '-h'
+        pane_id = `tmux split-window #{flag} -P -F '\#{pane_id}' -c #{Shellwords.shellescape(working_dir)} #{Shellwords.shellescape(script_path)} 2>/dev/null`.strip
+        meta['tmux_pane'] = pane_id unless pane_id.empty?
+        File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
+        puts "Launched: #{name} [pane #{pane_id}]"
+      end
     end
+
+    public
 
     def task_info_for(task_name)
       env = Environment.current rescue nil
@@ -445,7 +473,11 @@ class Hiiro
                 mins = (elapsed / 60).to_i
                 line += "  (#{mins}m elapsed)"
               end
-              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]" if meta['tmux_session']
+              if meta['tmux_pane']
+                line += "  [pane #{meta['tmux_pane']}]"
+              elsif meta['tmux_session']
+                line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]"
+              end
               line += "  dir:#{meta['working_dir']}" if meta['working_dir']
             end
             puts line
@@ -488,7 +520,7 @@ class Hiiro
           Tmux.open_session(TMUX_SESSION, start_directory: work_dir)
         }
 
-        h.add_subcmd(:add) { |*args|
+        do_add = lambda do |args, split: nil|
           q.queue_dirs
           opts = Hiiro::Options.parse(args) do
             option(:task,   short: :t, desc: 'Task name')
@@ -516,7 +548,6 @@ class Hiiro
           elsif args.any?
             content = args.join(' ')
           else
-            # Pre-fill with frontmatter template
             fm_lines = ["---"]
             fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
             fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
@@ -539,12 +570,22 @@ class Hiiro
           end
 
           result = q.add_with_frontmatter(content, task_info: ti, ignore: opts.ignore, name: opts.name)
-          if result
-            puts "Created: #{result[:path]}"
-          else
+          unless result
             puts "Could not generate a task name"
+            next
           end
-        }
+
+          if split
+            q.launch_in_pane(result[:name], split: split)
+          else
+            puts "Created: #{result[:path]}"
+          end
+        end
+
+        h.add_subcmd(:add)  { |*args| do_add.call(args) }
+        h.add_subcmd(:cadd) { |*args| do_add.call(args, split: :current) }
+        h.add_subcmd(:hadd) { |*args| do_add.call(args, split: :hsplit) }
+        h.add_subcmd(:vadd) { |*args| do_add.call(args, split: :vsplit) }
 
         h.add_subcmd(:wip) { |*args|
           q.queue_dirs
@@ -635,9 +676,13 @@ class Hiiro
           next unless name
 
           meta = q.meta_for(name, :running)
-          session = meta&.[]('tmux_session') || TMUX_SESSION
-          win = meta&.[]('tmux_window') || name
-          system('tmux', 'kill-window', '-t', "#{session}:#{win}")
+          if meta&.key?('tmux_pane')
+            system('tmux', 'kill-pane', '-t', meta['tmux_pane'])
+          else
+            session = meta&.[]('tmux_session') || TMUX_SESSION
+            win = meta&.[]('tmux_window') || name
+            system('tmux', 'kill-window', '-t', "#{session}:#{win}")
+          end
 
           dirs = q.queue_dirs
           md = File.join(dirs[:running], "#{name}.md")
