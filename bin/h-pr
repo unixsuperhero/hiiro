@@ -515,6 +515,10 @@ class PinnedPRManager
     end
   end
 
+  def strip_ansi(str)
+    str.gsub(/\e\[[0-9;]*m/, '')
+  end
+
   def display_check_runs(pr, indent: "   ")
     runs = pr.check_runs
     return unless runs.is_a?(Array) && runs.any?
@@ -574,7 +578,7 @@ FILTER_OPTS = Proc.new {
   flag(:red,       short: 'r', desc: 'filter: failing checks')
   flag(:green,     short: 'g', desc: 'filter: passing checks')
   flag(:conflicts, short: 'c', desc: 'filter: merge conflicts')
-  flag(:drafts,    short: 'd', desc: 'filter: draft PRs')
+  flag(:drafts,    short: 'D', desc: 'filter: draft PRs')
   flag(:pending,   short: 'p', desc: 'filter: pending checks')
   flag(:merged,    short: 'm', desc: 'filter: merged PRs')
   flag(:active,    short: 'o', desc: 'filter: open (non-merged) PRs')
@@ -593,7 +597,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         return nil
       end
       lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx, oneline: true)] = pr.number.to_s
+        h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pr.number.to_s
       end
       return fuzzyfind_from_map(lines)
     end
@@ -834,6 +838,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       flag(:update,   short: 'u', desc: 'update status before listing')
       flag(:verbose,  short: 'v', desc: 'multi-line output per PR')
       flag(:checks,   short: 'C', desc: 'show individual check run details')
+      flag(:diff,     short: 'd', desc: 'open diff for selected PR')
       instance_eval(&FILTER_OPTS)
     }
 
@@ -856,6 +861,16 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     if results.empty?
       puts pinned_manager.filter_active?(opts) ? "No PRs match filters." : "No tracked PRs."
+      next
+    end
+
+    if opts.diff
+      lines = results.each_with_index.each_with_object({}) do |(pr, idx), h|
+        key = pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))
+        h[key] = pr.number.to_s
+      end
+      pr_number = fuzzyfind_from_map(lines)
+      system('gh', 'pr', 'diff', pr_number) if pr_number
       next
     end
 
@@ -1182,7 +1197,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     if ref.nil?
       lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx, oneline: true)] = pr.number.to_s
+        h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pr.number.to_s
       end
 
       pr_number = fuzzyfind_from_map(lines)
@@ -1262,7 +1277,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         next
       end
       lines = candidates.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.display_pinned(pr, idx, oneline: true)] = pr
+        h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pr
       end
       selected = fuzzyfind_from_map(lines)
       next unless selected
