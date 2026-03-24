@@ -199,7 +199,14 @@ class Hiiro
 
     child_bin_name = [bin, child_subcmd.to_s].join(?-)
 
-    Hiiro.init(bin_name: child_bin_name, args: child_args, **kwargs, &block)
+    parent_resolvers = @resolvers&.dup
+
+    wrapper = lambda do |h|
+      h.instance_variable_set(:@resolvers, parent_resolvers.dup) if parent_resolvers
+      block.arity == 1 ? block.call(h) : h.instance_eval(&block) if block
+    end
+
+    Hiiro.init(bin_name: child_bin_name, args: child_args, **kwargs, &wrapper)
   end
 
   def run_child(custom_subcmd=nil, custom_args=nil, **kwargs, &block)

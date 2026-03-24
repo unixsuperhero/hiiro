@@ -589,46 +589,48 @@ FILTER_OPTS = Proc.new {
 Hiiro.run(*ARGV, plugins: [Pins]) do
   pinned_manager = PinnedPRManager.new
 
-  resolve_pr = ->(ref) {
-    if ref.nil?
+  add_resolver(:pr,
+    -> {
       pinned = pinned_manager.load_pinned
       if pinned.empty?
         STDERR.puts "No tracked PRs. Use a PR number or 'h pr track' to track PRs."
-        return nil
+        nil
+      else
+        lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
+          h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pr.number.to_s
+        end
+        fuzzyfind_from_map(lines)
       end
-      lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pr.number.to_s
-      end
-      return fuzzyfind_from_map(lines)
-    end
-
+    }
+  ) do |ref|
     if (pin_value = pins.get(ref.to_s))
-      return pin_value
+      pin_value
+    else
+      pinned = pinned_manager.load_pinned
+      if pinned.any? { |pr| pr.number.to_s == ref.to_s }
+        ref.to_s
+      elsif ref.to_s =~ /^\d+$/ && ref.to_i > 0
+        slot = ref.to_i
+        by_slot = pinned.find { |p| p.slot.to_i == slot }
+        if by_slot
+          by_slot.number.to_s
+        elsif slot - 1 < pinned.length
+          # Fall back to 1-based index for unslotted data
+          pinned[slot - 1].number.to_s
+        else
+          ref.to_s
+        end
+      else
+        ref.to_s
+      end
     end
-
-    pinned = pinned_manager.load_pinned
-
-    if pinned.any? { |pr| pr.number.to_s == ref.to_s }
-      return ref.to_s
-    end
-
-    if ref.to_s =~ /^\d+$/ && ref.to_i > 0
-      slot = ref.to_i
-      by_slot = pinned.find { |p| p.slot.to_i == slot }
-      return by_slot.number.to_s if by_slot
-      # Fall back to 1-based index for unslotted data
-      idx = slot - 1
-      return pinned[idx].number.to_s if idx < pinned.length
-    end
-
-    ref.to_s
-  }
+  end
 
   watch_block = ->(original_pr_number=nil, *watch_args) {
     watch = get_value(:watch)
     fail_fast = get_value(:fail_fast)
 
-    pr_number = resolve_pr.call(original_pr_number)
+    pr_number = resolve(:pr, original_pr_number)
     return unless pr_number
 
     base_cmd = %w[gh pr checks]
@@ -678,7 +680,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:link) { |ref=nil|
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
 
     pinned = pinned_manager.load_pinned
@@ -709,14 +711,14 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         next
       end
     end
-    pr_number = resolve_pr.call(pr_number)
+    pr_number = resolve(:pr, pr_number)
     next unless pr_number
     pinned = pinned_manager.load_pinned
     pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
     pr&.url ? system('open', pr.url) : system('gh', 'pr', 'view', pr_number.to_s, '--web')
   }
   add_subcmd(:view) { |pr_number=nil|
-    pr_number = resolve_pr.call(pr_number)
+    pr_number = resolve(:pr, pr_number)
     system('gh', 'pr', 'view', pr_number.to_s) if pr_number
   }
 
@@ -1124,7 +1126,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:attach) do |ref = nil|
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
 
     pinned = pinned_manager.load_pinned
@@ -1222,13 +1224,13 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   # === PR State ===
 
   add_subcmd(:ready) do |ref = nil|
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
     system('gh', 'pr', 'ready', pr_number.to_s)
   end
 
   add_subcmd(:'to-draft') do |ref = nil|
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
     system('gh', 'pr', 'ready', '--draft', pr_number.to_s)
   end
@@ -1236,25 +1238,25 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   # === PR Actions ===
 
   add_subcmd(:diff) do |ref = nil|
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
     system('gh', 'pr', 'diff', pr_number.to_s)
   end
 
   add_subcmd(:checkout) do |ref = nil|
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
     system('gh', 'pr', 'checkout', pr_number.to_s)
   end
 
   add_subcmd(:merge) do |ref = nil, *merge_args|
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
     system('gh', 'pr', 'merge', pr_number.to_s, *merge_args)
   end
 
   add_subcmd(:sync) do |ref = nil|
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
 
     print "Syncing ##{pr_number} with base branch (rebase)... "
@@ -1299,7 +1301,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     else
       # Resolve each positional arg as a PR ref
       opts.args.map { |ref|
-        pr_num = resolve_pr.call(ref)
+        pr_num = resolve(:pr, ref)
         next nil unless pr_num
         pinned.find { |p| p.number.to_s == pr_num.to_s }
       }.compact
@@ -1343,7 +1345,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:comment) do |ref = nil|
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
 
     tmpfile = Tempfile.new(['pr-comment-', '.md'])
@@ -1419,7 +1421,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     template_path = fuzzyfind_from_map(template_map)
     next unless template_path
 
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
 
     body = File.read(template_path).strip
@@ -1525,7 +1527,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         next
       end
 
-      pr_number = resolve_pr.call(ref)
+      pr_number = resolve(:pr, ref)
       next unless pr_number
 
       pinned = pinned_manager.load_pinned
@@ -1548,7 +1550,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    pr_number = resolve_pr.call(ref)
+    pr_number = resolve(:pr, ref)
     next unless pr_number
 
     pinned = pinned_manager.load_pinned
@@ -1900,10 +1902,10 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
           next
         end
 
-        pr_number = resolve_pr.call(ref)
+        pr_number = resolve(:pr, ref)
         next unless pr_number
 
-        dep_numbers = dep_refs.map { |r| resolve_pr.call(r) }.compact
+        dep_numbers = dep_refs.map { |r| resolve(:pr, r) }.compact
         if dep_numbers.empty?
           puts "No valid dependency PRs resolved"
           next
@@ -1927,7 +1929,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
           next
         end
 
-        pr_number = resolve_pr.call(ref)
+        pr_number = resolve(:pr, ref)
         next unless pr_number
 
         pinned = pinned_manager.load_pinned
@@ -1941,7 +1943,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
           pr.depends_on = nil
           puts "Cleared all dependencies from ##{pr_number}"
         else
-          dep_numbers = dep_refs.map { |r| resolve_pr.call(r) }.compact.map(&:to_i)
+          dep_numbers = dep_refs.map { |r| resolve(:pr, r) }.compact.map(&:to_i)
           pr.depends_on = (Array(pr.depends_on) - dep_numbers).then { |d| d.empty? ? nil : d }
           puts "Removed dep(s) #{dep_numbers.map { |n| "##{n}" }.join(', ')} from ##{pr_number}"
           puts "  Remaining: #{Array(pr.depends_on).map { |n| "##{n}" }.join(', ').then { |s| s.empty? ? '(none)' : s }}"
@@ -1954,7 +1956,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         pinned = pinned_manager.load_pinned
 
         if ref
-          pr_number = resolve_pr.call(ref)
+          pr_number = resolve(:pr, ref)
           next unless pr_number
           pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
           unless pr
