@@ -12,6 +12,13 @@ class Hiiro
 
     attr_reader :config_file, :state_file
 
+    def self.add_resolvers(hiiro)
+      sm = new
+      hiiro.add_resolver(:service, -> { hiiro.fuzzyfind(sm.services.keys) }) do |name|
+        sm.find_service(name)&.[](:name)
+      end
+    end
+
     def initialize(config_file: CONFIG_FILE, state_file: STATE_FILE)
       @config_file = config_file
       @state_file = state_file

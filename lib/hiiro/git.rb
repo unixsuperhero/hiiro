@@ -7,6 +7,23 @@ require_relative 'git/pr'
 
 class Hiiro
   class Git
+    def self.add_resolvers(hiiro)
+      hiiro.add_resolver(:branch, -> { hiiro.fuzzyfind(Branches.local.names) }) do |name|
+        Branches.local.find_by_name(name)&.name || name
+      end
+
+      hiiro.add_resolver(:worktree,
+        -> {
+          wts = Worktrees.fetch.without_bare
+          map = wts.each_with_object({}) { |wt, h| h["#{wt.name}  #{wt.path}"] = wt.path }
+          hiiro.fuzzyfind_from_map(map)
+        }
+      ) do |ref|
+        wts = Worktrees.fetch
+        (wts.find_by_path(ref) || wts.find_by_name(ref) || wts.find_by_branch(ref))&.path || ref
+      end
+    end
+
     attr_reader :hiiro, :pwd
 
     def initialize(hiiro, pwd=Dir.pwd)
