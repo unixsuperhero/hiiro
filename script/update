@@ -3,6 +3,8 @@
 if rbenv which h
 then
   gem update hiiro
+  h update
+
   h update -a
 else
   gem install hiiro
