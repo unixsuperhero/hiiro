@@ -251,6 +251,22 @@ Hiiro.run(*ARGV) {
     exec('vim', *args)
   }
 
+  add_subcmd(:sh) { |app_name=nil, *args|
+    root = git.root || task_root
+    unless root
+      puts "Not in a git repo or task - cannot resolve path"
+      next
+    end
+    result = environment.app_matcher.find(app_name.to_s)
+    unless result.match?
+      puts "App '#{app_name}' not found"
+      next
+    end
+    app_path = File.join(root, result.first.item.relative_path)
+    Dir.chdir(app_path)
+    args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*args)
+  }
+
   add_subcmd(:service) do |*svc_args|
     sm = Hiiro::ServiceManager.new
     Hiiro::ServiceManager.build_hiiro(this, sm).run
