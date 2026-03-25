@@ -6,6 +6,16 @@ class Hiiro
     TASKS_DIR = File.join(Dir.home, '.config', 'hiiro', 'tasks')
     APPS_FILE = File.join(Dir.home, '.config', 'hiiro', 'apps.yml')
 
+    def self.add_resolvers(hiiro, scope: :task)
+      tm = new(hiiro, scope: scope)
+      hiiro.add_resolver(:task,
+        -> { tm.select_task_interactive }
+      ) { |name|
+        task = tm.task_by_name(name)
+        task&.name || name
+      }
+    end
+
     attr_reader :hiiro, :scope, :environment
 
     def initialize(hiiro, scope: :task, environment: nil)

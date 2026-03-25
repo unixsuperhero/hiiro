@@ -4,20 +4,7 @@ require "hiiro"
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
   tmux = tmux_client
-
-  select_buffer_proc = ->(partial = nil) {
-    buffers = tmux.buffers
-    return nil if buffers.empty?
-
-    if partial
-      buffers = buffers.matching(partial)
-    end
-
-    return nil if buffers.empty?
-    return buffers.first.name if buffers.size == 1
-
-    fuzzyfind_from_map(buffers.name_map)
-  }
+  Hiiro::Tmux.add_resolvers(self)
 
   add_subcmd(:ls) { |*args|
     if args.empty?
@@ -28,7 +15,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:show) { |name = nil, *args|
-    buffer_name = select_buffer_proc.call(name)
+    buffer_name = resolve(:buffer, name)
 
     unless buffer_name
       puts "No buffer selected or found"
@@ -44,7 +31,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:copy) { |name = nil|
-    buffer_name = select_buffer_proc.call(name)
+    buffer_name = resolve(:buffer, name)
     unless buffer_name
       puts "No buffer selected or found"
       next
@@ -66,7 +53,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     if name
       tmux.save_buffer(path, name: name)
     elsif args.empty?
-      buffer_name = select_buffer_proc.call(nil)
+      buffer_name = resolve(:buffer, nil)
       if buffer_name
         tmux.save_buffer(path, name: buffer_name)
       end
@@ -104,7 +91,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:delete) { |name = nil, *args|
     if name.nil?
-      name = select_buffer_proc.call(nil)
+      name = resolve(:buffer, nil)
     end
 
     if name && args.empty?
@@ -130,13 +117,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:select) do
-    buffers = tmux.buffers
-    if buffers.empty?
-      STDERR.puts "No buffers found"
-      next
-    end
-
-    selected = fuzzyfind_from_map(buffers.name_map)
+    selected = resolve(:buffer)
     print selected if selected
   end
 end

@@ -6,6 +6,7 @@ require 'yaml'
 
 Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
   tmux = tmux_client
+  Hiiro::Tmux.add_resolvers(self)
 
   add_subcmd(:ls, :list) { |*args|
     if args.empty?
@@ -24,9 +25,7 @@ Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
   }
 
   add_subcmd(:kill) { |name = nil, *args|
-    if name.nil?
-      name = fuzzyfind_from_map(tmux.sessions.name_map)
-    end
+    name = resolve(:session, name)
 
     if name && args.empty?
       tmux.kill_session(name)
@@ -36,9 +35,7 @@ Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
   }
 
   add_subcmd(:attach) { |name = nil, *args|
-    if name.nil?
-      name = fuzzyfind_from_map(tmux.sessions.name_map)
-    end
+    name = resolve(:session, name)
 
     if name && args.empty?
       tmux.attach_session(name)
@@ -48,9 +45,7 @@ Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
   }
 
   add_subcmd(:rename) { |old_name = nil, new_name = nil, *args|
-    if old_name.nil?
-      old_name = fuzzyfind_from_map(tmux.sessions.name_map)
-    end
+    old_name = resolve(:session, old_name)
 
     if old_name && new_name && args.empty?
       tmux.rename_session(old_name, new_name)
@@ -60,9 +55,7 @@ Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
   }
 
   add_subcmd(:switch) { |name = nil, *args|
-    if name.nil?
-      name = fuzzyfind_from_map(tmux.sessions.name_map)
-    end
+    name = resolve(:session, name)
 
     if name
       tmux.open_session(name)
@@ -105,24 +98,12 @@ Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
   }
 
   add_subcmd(:select) do
-    sessions = tmux.sessions
-    if sessions.empty?
-      STDERR.puts "No sessions found"
-      next
-    end
-
-    selected = fuzzyfind_from_map(sessions.name_map)
+    selected = resolve(:session)
     print selected if selected
   end
 
   add_subcmd(:copy) do
-    sessions = tmux.sessions
-    if sessions.empty?
-      STDERR.puts "No sessions found"
-      next
-    end
-
-    selected = fuzzyfind_from_map(sessions.name_map)
+    selected = resolve(:session)
     if selected
       Hiiro::Shell.pipe(selected, 'pbcopy')
       puts "Copied session '#{selected}' to clipboard"

@@ -27,6 +27,32 @@ class Hiiro
       client.open_session(name, **opts)
     end
 
+    def self.add_resolvers(hiiro)
+      hiiro.add_resolver(:pane,
+        -> { hiiro.fuzzyfind_from_map(hiiro.tmux_client.panes(all: true).name_map) }
+      ) { |ref| ref }
+
+      hiiro.add_resolver(:window,
+        -> { hiiro.fuzzyfind_from_map(hiiro.tmux_client.windows(all: true).name_map) }
+      ) { |ref| ref }
+
+      hiiro.add_resolver(:session,
+        -> { hiiro.fuzzyfind_from_map(hiiro.tmux_client.sessions.name_map) }
+      ) { |ref| ref }
+
+      hiiro.add_resolver(:buffer,
+        -> {
+          buffers = hiiro.tmux_client.buffers
+          return nil if buffers.empty?
+          hiiro.fuzzyfind_from_map(buffers.name_map)
+        }
+      ) { |ref|
+        buffers = hiiro.tmux_client.buffers
+        matching = buffers.matching(ref)
+        matching.size == 1 ? matching.first.name : ref
+      }
+    end
+
     attr_reader :hiiro
 
     def initialize(hiiro = nil)

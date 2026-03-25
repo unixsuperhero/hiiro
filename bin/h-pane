@@ -5,6 +5,7 @@ require 'yaml'
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
   tmux = tmux_client
+  Hiiro::Tmux.add_resolvers(self)
 
   home_config_path = Hiiro::Config.path('pane_homes.yml')
 
@@ -54,9 +55,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:kill) { |target = nil, *args|
-    if target.nil?
-      target = fuzzyfind_from_map(tmux.panes(all: true).name_map)
-    end
+    target = resolve(:pane, target)
 
     if target && args.empty?
       tmux.kill_pane(target)
@@ -87,9 +86,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:select) { |target = nil, *args|
-    if target.nil?
-      target = fuzzyfind_from_map(tmux.panes(all: true).name_map)
-    end
+    target = resolve(:pane, target)
 
     if target
       print target
@@ -97,9 +94,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:copy) { |target = nil, *args|
-    if target.nil?
-      target = fuzzyfind_from_map(tmux.panes(all: true).name_map)
-    end
+    target = resolve(:pane, target)
 
     if target
       Hiiro::Shell.pipe(target, 'pbcopy')
@@ -108,7 +103,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:sw, :switch) { |target = nil, *args|
-    target ||= fuzzyfind_from_map(tmux.panes(all: true).name_map)
+    target = resolve(:pane, target)
     tmux.open_session(target) if target
   }
 

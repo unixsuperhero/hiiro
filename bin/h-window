@@ -4,6 +4,7 @@ require 'hiiro'
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
   tmux = tmux_client
+  Hiiro::Tmux.add_resolvers(self)
 
   add_subcmd(:ls) { |*args|
     if args.empty?
@@ -30,9 +31,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:kill) { |target = nil, *args|
-    if target.nil?
-      target = fuzzyfind_from_map(tmux.windows(all: true).name_map)
-    end
+    target = resolve(:window, target)
 
     if target && args.empty?
       tmux.kill_window(target)
@@ -54,9 +53,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:select) { |target = nil, *args|
-    if target.nil?
-      target = fuzzyfind_from_map(tmux.windows(all: true).name_map)
-    end
+    target = resolve(:window, target)
 
     if target
       print target
@@ -64,9 +61,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:copy) { |target = nil, *args|
-    if target.nil?
-      target = fuzzyfind_from_map(tmux.windows(all: true).name_map)
-    end
+    target = resolve(:window, target)
 
     if target
       Hiiro::Shell.pipe(target, 'pbcopy')
@@ -75,9 +70,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:sw, :switch) { |target = nil, *args|
-    if target.nil?
-      target = fuzzyfind_from_map(tmux.windows(all: true).name_map)
-    end
+    target = resolve(:window, target)
 
     if target
       tmux.open_session(target)
