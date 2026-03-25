@@ -19,30 +19,16 @@ def start_tmux_session(session_name)
   end
 end
 
-# Get project directories from ~/proj/
-def project_dirs
-  Dir.glob(File.join(Dir.home, 'proj', '*/')).map { |path|
-    [File.basename(path), path]
-  }.to_h
-end
-
-# Get projects from config file
-def projects_from_config
-  projects_file = File.join(Dir.home, '.config/hiiro', 'projects.yml')
-
-  return {} unless File.exist?(projects_file)
-
-  require 'yaml'
-  YAML.safe_load_file(projects_file)
-end
-
 Hiiro.run(*ARGV) do
+  projects = Hiiro::Projects.new
+  Hiiro::Projects.add_resolvers(self)
+
   # === OPEN PROJECT (default) ===
   add_subcmd(:open) { |project_name|
     re = /#{project_name}/i
 
-    conf_matches = (projects_from_config || {}).select { |k, v| k.match?(re) }
-    dir_matches = (project_dirs || {}).select { |proj, path| proj.match?(re) }
+    conf_matches = projects.from_config.select { |k, v| k.match?(re) }
+    dir_matches  = projects.dirs.select { |proj, path| proj.match?(re) }
 
     matches = dir_matches.merge(conf_matches)
     if matches.count > 1
@@ -82,15 +68,14 @@ Hiiro.run(*ARGV) do
 
   # === LIST PROJECTS ===
   add_subcmd(:list) { |*list_args|
-    dirs = project_dirs
-    conf = projects_from_config
-
-    all_projects = dirs.merge(conf)
+    all  = projects.all
+    conf = projects.from_config
 
     puts "Projects:"
     puts
-    all_projects.keys.sort.each do |name|
-      path = all_projects[name]
+
+    all.keys.sort.each do |name|
+      path   = all[name]
       source = conf.key?(name) ? '[config]' : '[dir]'
       puts format("  %-12s %-8s %s", name, source, path)
     end
@@ -102,12 +87,10 @@ Hiiro.run(*ARGV) do
 
   # === SHOW CONFIG FILE ===
   add_subcmd(:config) { |*config_args|
-    projects_file = File.join(Dir.home, '.config/hiiro', 'projects.yml')
-
-    if File.exist?(projects_file)
-      puts File.read(projects_file)
+    if File.exist?(Hiiro::Projects::CONFIG_FILE)
+      puts File.read(Hiiro::Projects::CONFIG_FILE)
     else
-      puts "No config file found at: #{projects_file}"
+      puts "No config file found at: #{Hiiro::Projects::CONFIG_FILE}"
       puts
       puts "Create it with YAML format:"
       puts "  project_name: /path/to/project"
@@ -116,67 +99,85 @@ Hiiro.run(*ARGV) do
 
   # === EDIT CONFIG FILE ===
   add_subcmd(:edit) { |*edit_args|
-    projects_file = File.join(Dir.home, '.config/hiiro', 'projects.yml')
-    # Create config dir if needed
-    config_dir = File.dirname(projects_file)
+    config_dir = File.dirname(Hiiro::Projects::CONFIG_FILE)
     Dir.mkdir(config_dir) unless Dir.exist?(config_dir)
 
-    # Create empty file if it doesn't exist
-    unless File.exist?(projects_file)
-      File.write(projects_file, "# Project aliases\n# project_name: /path/to/project\n")
+    unless File.exist?(Hiiro::Projects::CONFIG_FILE)
+      File.write(Hiiro::Projects::CONFIG_FILE, "# Project aliases\n# project_name: /path/to/project\n")
     end
 
-    edit_files(projects_file)
+    edit_files(Hiiro::Projects::CONFIG_FILE)
   }
 
   # === SELECT PROJECT ===
   add_subcmd(:select) { |*select_args|
-    dirs = project_dirs
-    conf = projects_from_config
+    all = projects.all
 
-    all_projects = dirs.merge(conf)
-
-    if all_projects.empty?
+    if all.empty?
       STDERR.puts "No projects found"
       next
     end
 
-    lines = all_projects.each_with_object({}) do |(name, path), h|
+    conf = projects.from_config
+    lines = all.each_with_object({}) do |(name, path), h|
       source = conf.key?(name) ? '[config]' : '[dir]'
       display = format("%-15s %s  %s", name, source, path)
       h[display] = path
     end
 
     selected = fuzzyfind_from_map(lines)
-
-    if selected
-      print selected
-    end
+    print selected if selected
   }
 
   # === COPY PROJECT PATH ===
   add_subcmd(:copy) { |*copy_args|
-    dirs = project_dirs
-    conf = projects_from_config
+    all = projects.all
 
-    all_projects = dirs.merge(conf)
-
-    if all_projects.empty?
+    if all.empty?
       STDERR.puts "No projects found"
       next
     end
 
-    lines = all_projects.each_with_object({}) do |(name, path), h|
+    conf = projects.from_config
+    lines = all.each_with_object({}) do |(name, path), h|
       source = conf.key?(name) ? '[config]' : '[dir]'
       display = format("%-15s %s  %s", name, source, path)
       h[display] = path
     end
 
     selected = fuzzyfind_from_map(lines)
-
     if selected
       Hiiro::Shell.pipe(selected, 'pbcopy')
       puts "Copied project path '#{selected}' to clipboard"
+    end
+  }
+
+  # === SHELL IN PROJECT ===
+  add_subcmd(:sh) { |project_name=nil, *args|
+    if project_name.nil? || project_name.empty?
+      puts "Usage: h project sh <project_name> [command...]"
+      next
+    end
+
+    re = /#{project_name}/i
+    conf_matches = projects.from_config.select { |k, v| k.match?(re) }
+    dir_matches  = projects.dirs.select { |proj, path| proj.match?(re) }
+    matches = dir_matches.merge(conf_matches)
+    matches = matches.select { |name, path| name == project_name } if matches.count > 1
+
+    case matches.count
+    when 0
+      puts "Project '#{project_name}' not found"
+      puts
+      puts "Available projects:"
+      projects.all.keys.sort.each { |k| puts "  #{k}" }
+    when 1
+      _, path = matches.first
+      Dir.chdir(path)
+      args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*args)
+    else
+      puts "Ambiguous project '#{project_name}' — multiple matches:"
+      matches.each { |name, path| puts format("  %-15s %s", name, path) }
     end
   }
 
@@ -192,6 +193,7 @@ Hiiro.run(*ARGV) do
         h-project ls                    Alias for list
         h-project config                Show config file contents
         h-project edit                  Edit config file
+        h-project sh <project_name>     Open shell in project directory
 
       SOURCES:
         Projects are discovered from two sources:
@@ -207,35 +209,6 @@ Hiiro.run(*ARGV) do
         If multiple matches are found, an exact match is preferred.
         If still ambiguous, all matches are displayed.
     HELP
-  }
-
-  # === SHELL IN PROJECT ===
-  add_subcmd(:sh) { |project_name=nil, *args|
-    if project_name.nil? || project_name.empty?
-      puts "Usage: h project sh <project_name> [command...]"
-      next
-    end
-
-    re = /#{project_name}/i
-    conf_matches = (projects_from_config || {}).select { |k, v| k.match?(re) }
-    dir_matches  = (project_dirs || {}).select { |proj, path| proj.match?(re) }
-    matches = dir_matches.merge(conf_matches)
-    matches = matches.select { |name, path| name == project_name } if matches.count > 1
-
-    case matches.count
-    when 0
-      puts "Project '#{project_name}' not found"
-      puts
-      puts "Available projects:"
-      project_dirs.merge(projects_from_config).keys.sort.each { |k| puts "  #{k}" }
-    when 1
-      _, path = matches.first
-      Dir.chdir(path)
-      args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*args)
-    else
-      puts "Ambiguous project '#{project_name}' — multiple matches:"
-      matches.each { |name, path| puts format("  %-15s %s", name, path) }
-    end
   }
 
   add_default {

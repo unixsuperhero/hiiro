@@ -28,6 +28,7 @@ require_relative "hiiro/app_files"
 require_relative "hiiro/rbenv"
 require_relative "hiiro/any_struct"
 require_relative "hiiro/pinned_pr_manager"
+require_relative "hiiro/projects"
 
 class String
   def underscore(camel_cased_word=self)
