@@ -174,14 +174,6 @@ Hiiro.run(*ARGV) do
     entries = read_entries
     pos = get_pos
 
-    # Deduplicate: skip if current position entry matches pane/window/session
-    current_entry = entries[pos]
-    if current_entry
-      current_parts = current_entry.split('|')
-      current_key = current_parts[0..2]
-      next if current_key == [pane_id, window_id, session_name]
-    end
-
     # If position is not at head, truncate forward history
     if pos > 0 && entries.any?
       entries = entries[pos..]
@@ -190,11 +182,46 @@ Hiiro.run(*ARGV) do
       set_pos(0)
     end
 
-    # Prepend new entry (newest first)
     new_entry = [pane_id, window_id, session_name, timestamp, pane_cmd].join('|')
+
+    # Skip if the head already matches this pane (no-op navigation)
+    head_pane = entries.first&.split('|', 2)&.first
+    next if head_pane == pane_id
+
+    # Remove all earlier occurrences of this pane so it appears only once
+    entries.reject! { |e| e.split('|', 2).first == pane_id }
+
+    # Prepend new entry (newest first)
     entries.unshift(new_entry)
     entries = entries.first(MAX_SIZE)
     write_entries(entries)
+  end
+
+  add_subcmd(:to) do |index = nil|
+    if index.nil?
+      puts "Usage: h jumplist to <index>"
+      next
+    end
+
+    entries, pos = prune_dead_entries(read_entries, get_pos)
+
+    if entries.empty?
+      system('tmux', 'display-message', 'Jumplist: empty')
+      next
+    end
+
+    idx = index.to_i
+    unless (0...entries.length).include?(idx)
+      system('tmux', 'display-message', "Jumplist: no entry at index #{idx}")
+      next
+    end
+
+    parts = entries[idx].split('|')
+    system('tmux', 'set-environment', 'TMUX_JUMPLIST_SUPPRESS', '1')
+    system('tmux', 'switch-client', '-t', parts[2])
+    system('tmux', 'select-window', '-t', parts[1])
+    system('tmux', 'select-pane', '-t', parts[0])
+    set_pos(idx)
   end
 
   add_subcmd(:back) do
