@@ -825,37 +825,36 @@ class Hiiro
         new(FrontMatterParser::Parser.parse_file(path), hiiro:)
       end
 
-      attr_reader :hiiro, :doc, :frontmatter, :prompt
+      attr_reader :hiiro, :doc, :frontmatter
 
       def initialize(doc, hiiro: nil)
         @hiiro = hiiro
         @doc = doc
-        @frontmatter = doc.front_matter
-        @prompt = prompt
+        @frontmatter = doc.front_matter || {}
       end
 
       def ignore?
-        doc.front_matter['ignore'] == true
+        frontmatter['ignore'] == true
       end
 
       def task_name
-        doc.front_matter['task_name']
+        frontmatter['task_name']
       end
 
       def tree_name
-        doc.front_matter['tree_name']
+        frontmatter['tree_name']
       end
 
       def app_name
-        doc.front_matter['app']
+        frontmatter['app']
       end
 
       def rel_dir
-        doc.front_matter['dir']
+        frontmatter['dir']
       end
 
       def session_name
-        doc.front_matter['session_name'] || task&.session_name
+        frontmatter['session_name'] || task&.session_name
       end
 
       def task
