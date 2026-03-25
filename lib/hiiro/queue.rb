@@ -304,7 +304,7 @@ class Hiiro
     end
 
     def resolve_task_info(opts, hiiro, default_task_info)
-      if opts.choose
+      if opts.find
         selection = select_task_or_session(hiiro)
         if selection
           case selection[:type]
@@ -314,7 +314,7 @@ class Hiiro
         else
           default_task_info
         end
-      elsif opts.task
+      elsif opts.task.is_a?(String)
         task_info_for(opts.task)
       else
         default_task_info
@@ -523,11 +523,13 @@ class Hiiro
         do_add = lambda do |args, split: nil|
           q.queue_dirs
           opts = Hiiro::Options.parse(args) do
-            option(:task,   short: :t, desc: 'Task name')
-            option(:name,   short: :n, desc: 'Base filename for the queue task')
-            flag(:choose,   short: :T, desc: 'Choose task interactively')
-            flag(:session,  short: :s, desc: 'Use current tmux session')
-            flag(:ignore,   short: :i, desc: 'Background task — close window when done, no shell')
+            option(:task,        short: :t, desc: 'Task name', flag_ifs: [:find])
+            option(:name,        short: :n, desc: 'Base filename for the queue task')
+            flag(:find,          short: :f, desc: 'Choose task/session interactively (fuzzyfind)')
+            flag(:horizontal,    short: :h, desc: 'Split horizontally in the current tmux window')
+            flag(:vertical,      short: :v, desc: 'Split vertically in the current tmux window')
+            flag(:session,       short: :s, desc: 'Use current tmux session')
+            flag(:ignore,        short: :i, desc: 'Background task — close window when done, no shell')
           end
 
           if opts.help?
@@ -535,12 +537,56 @@ class Hiiro
             exit 1
           end
 
+          split ||= :hsplit if opts.horizontal
+          split ||= :vsplit if opts.vertical
+
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
 
           if opts.session
             session_name = h.tmux_client.current_session&.name
             ti = (ti || {}).merge(session_name: session_name) if session_name
+          end
+
+          # Split+interactive: open editor AND run claude in a new tmux pane
+          if split && args.empty? && $stdin.tty?
+            fm_lines = ["---"]
+            fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
+            fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
+            fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
+            fm_lines << "ignore: true" if opts.ignore
+            fm_lines << "# app: <partial-app-name>  (run claude from this app's directory)"
+            fm_lines << "# dir: <relative-path>     (subdir within app or tree root)"
+            fm_lines << "---"
+            fm_lines << ""
+
+            tmp_dir = File.join(Dir.home, '.config/hiiro/tmp')
+            FileUtils.mkdir_p(tmp_dir)
+            base        = File.join(tmp_dir, "hq-#{Time.now.strftime('%Y%m%d%H%M%S%L')}")
+            prompt_path = "#{base}.md"
+            script_path = "#{base}.sh"
+            File.write(prompt_path, fm_lines.join("\n"))
+
+            orig_pane  = `tmux display-message -p '\#{pane_id}'`.strip
+            split_flag = split == :hsplit ? '-v' : '-h'
+            claude_cmd = opts.ignore ? 'claude -p' : 'claude'
+            shell_line = opts.ignore ? '' : "exec ${SHELL:-zsh}"
+
+            File.write(script_path, <<~SH)
+              #!/usr/bin/env bash
+              ${EDITOR:-vim} #{Shellwords.shellescape(prompt_path)}
+              tmux select-pane -t #{Shellwords.shellescape(orig_pane)}
+              if [ -s #{Shellwords.shellescape(prompt_path)} ]; then
+                cat #{Shellwords.shellescape(prompt_path)} | #{claude_cmd}
+              fi
+              rm -f #{Shellwords.shellescape(prompt_path)} #{Shellwords.shellescape(script_path)}
+              #{shell_line}
+            SH
+            FileUtils.chmod(0755, script_path)
+
+            new_pane = `tmux split-window #{split_flag} -P -F '\#{pane_id}' #{Shellwords.shellescape(script_path)} 2>/dev/null`.strip
+            system('tmux', 'select-pane', '-t', new_pane) unless new_pane.empty?
+            next
           end
 
           if args.empty? && !$stdin.tty?
@@ -590,9 +636,9 @@ class Hiiro
         h.add_subcmd(:wip) { |*args|
           q.queue_dirs
           opts = Hiiro::Options.parse(args) do
-            option(:task, short: :t, desc: 'Task name')
-            flag(:choose, short: :T, desc: 'Choose task interactively')
-            flag(:session, short: :s, desc: 'Use current tmux session')
+            option(:task,    short: :t, desc: 'Task name', flag_ifs: [:find])
+            flag(:find,      short: :f, desc: 'Choose task/session interactively (fuzzyfind)')
+            flag(:session,   short: :s, desc: 'Use current tmux session')
           end
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
