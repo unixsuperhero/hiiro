@@ -1,6 +1,12 @@
 #!/bin/bash
 
-gem install hiiro
+if rbenv which h
+then
+  gem update hiiro
+  h update -a
+else
+  gem install hiiro
+fi
 
 h setup
 
