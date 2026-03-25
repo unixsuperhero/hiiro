@@ -51,15 +51,26 @@ class Hiiro
 
     def flag(name, long: nil, short: nil, default: false, desc: nil)
       defn = Definition.new(name, long: long, short: short, type: :flag, default: default, desc: desc)
+      deconflict_short(short) if short
       @definitions[name.to_sym] = defn
       self
     end
 
-    def option(name, long: nil, short: nil, type: :string, default: nil, desc: nil, multi: false)
-      defn = Definition.new(name, long: long, short: short, type: type, default: default, desc: desc, multi: multi)
+    def option(name, long: nil, short: nil, type: :string, default: nil, desc: nil, multi: false, flag_ifs: [])
+      defn = Definition.new(name, long: long, short: short, type: type, default: default, desc: desc, multi: multi, flag_ifs: Array(flag_ifs))
+      deconflict_short(short) if short
       @definitions[name.to_sym] = defn
       self
     end
+
+    private
+
+    def deconflict_short(short)
+      short_s = short.to_s
+      @definitions.each_value { |d| d.short = nil if d.short == short_s }
+    end
+
+    public
 
     def select(names)
       subset = self.class.setup {}
@@ -170,7 +181,7 @@ class Hiiro
         defn = @definitions.values.find { |d| d.long_form == flag_part }
         return unless defn
 
-        if defn.flag?
+        if defn.flag? || defn.flag_active?(@values)
           @values[defn.name] = !defn.default
         else
           value ||= args.shift
@@ -185,7 +196,7 @@ class Hiiro
           defn = @definitions.values.find { |d| d.short == char }
           next unless defn
 
-          if defn.flag?
+          if defn.flag? || defn.flag_active?(@values)
             @values[defn.name] = !defn.default
           elsif idx == chars.length - 1
             store_value(defn, args.shift)
@@ -207,9 +218,10 @@ class Hiiro
     end
 
     class Definition
-      attr_reader :name, :short, :long, :type, :default, :desc, :multi
+      attr_reader :name, :long, :type, :default, :desc, :multi, :flag_ifs
+      attr_accessor :short
 
-      def initialize(name, short: nil, long: nil, type: :string, default: nil, desc: nil, multi: false)
+      def initialize(name, short: nil, long: nil, type: :string, default: nil, desc: nil, multi: false, flag_ifs: [])
         @name = name.to_sym
         @short = short&.to_s
         @long = long&.to_sym
@@ -217,6 +229,11 @@ class Hiiro
         @default = default
         @desc = desc
         @multi = multi
+        @flag_ifs = flag_ifs.map(&:to_sym)
+      end
+
+      def flag_active?(values)
+        @flag_ifs.any? { |f| values[f] }
       end
 
       def flag?
