@@ -947,6 +947,18 @@ class Hiiro
           print task.session_name if task.session_name
         end
 
+        h.add_subcmd(:sh) do |task_name=nil, *args|
+          task = task_name ? tm.task_by_name(task_name) : tm.current_task
+          unless task
+            puts task_name ? "Task '#{task_name}' not found" : "Not in a task session"
+            next
+          end
+          tree = tm.environment.find_tree(task.tree_name)
+          path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
+          Dir.chdir(path)
+          args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*args)
+        end
+
         h.add_subcmd(:status) { tm.status }
         h.add_subcmd(:st) { tm.status }
 
