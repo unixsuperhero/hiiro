@@ -209,6 +209,35 @@ Hiiro.run(*ARGV) do
     HELP
   }
 
+  # === SHELL IN PROJECT ===
+  add_subcmd(:sh) { |project_name=nil, *args|
+    if project_name.nil? || project_name.empty?
+      puts "Usage: h project sh <project_name> [command...]"
+      next
+    end
+
+    re = /#{project_name}/i
+    conf_matches = (projects_from_config || {}).select { |k, v| k.match?(re) }
+    dir_matches  = (project_dirs || {}).select { |proj, path| proj.match?(re) }
+    matches = dir_matches.merge(conf_matches)
+    matches = matches.select { |name, path| name == project_name } if matches.count > 1
+
+    case matches.count
+    when 0
+      puts "Project '#{project_name}' not found"
+      puts
+      puts "Available projects:"
+      project_dirs.merge(projects_from_config).keys.sort.each { |k| puts "  #{k}" }
+    when 1
+      _, path = matches.first
+      Dir.chdir(path)
+      args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*args)
+    else
+      puts "Ambiguous project '#{project_name}' — multiple matches:"
+      matches.each { |name, path| puts format("  %-15s %s", name, path) }
+    end
+  }
+
   add_default {
     run_subcmd(:help)
   }
