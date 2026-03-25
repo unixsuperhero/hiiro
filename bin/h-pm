@@ -1,0 +1,60 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+def queue_prompt(prompt)
+  IO.popen(['h', 'queue', 'add'], 'w') { |io| io.write(prompt) }
+end
+
+PM_SUBCOMMANDS = {
+  discover:  "Auto-discover projects/tasks from PRs, worktrees, olive runs",
+  resume:    "Show 'where was I?' session briefing for a project",
+  status:    "Show project status overview",
+  add:       "Add a new task to a project",
+  start:     "Load context and begin working on a task",
+  plan:      "Generate/update proposal doc for a task",
+  complete:  "Mark a task as complete",
+  ref:       "Add a reference document (PRD, spec, Figma, etc.)",
+  impact:    "Analyze cascading impact of task deviation on children",
+  archive:   "Archive a completed/stale project",
+  unarchive: "Restore an archived project",
+}.freeze
+
+Hiiro.run(*ARGV) {
+  PM_SUBCOMMANDS.each_key do |subcmd|
+    add_subcmd(subcmd) { |*args|
+      prompt = (["/project-manager", subcmd.to_s] + args).join(' ')
+      queue_prompt(prompt)
+    }
+  end
+
+  add_subcmd(:help) {
+    puts <<~HELP
+      h-pm — Queue /project-manager skill prompts via h queue add
+
+      USAGE:
+        h pm                               Interactive: pick command
+        h pm discover [project]            Auto-discover untracked work
+        h pm resume <project>              "Where was I?" session briefing
+        h pm status <project>              Project status overview
+        h pm add <project> <task>          Add a new task
+        h pm start <project> <task>        Load context and begin task
+        h pm plan <project> <task>         Generate/update proposal doc
+        h pm complete <project> <task>     Mark task as complete
+        h pm ref <project> [url-or-path]   Add a reference document
+        h pm impact <project> <task>       Analyze task deviation impact
+        h pm archive <project>             Archive a project
+        h pm unarchive <project>           Restore an archived project
+
+      Each command builds a /project-manager prompt and queues it via h queue add.
+    HELP
+  }
+
+  add_default {
+    entries = PM_SUBCOMMANDS.map { |cmd, desc| "#{cmd.to_s.ljust(12)}  #{desc}" }
+    selected = fuzzyfind(entries)
+    next unless selected
+    cmd = selected.split.first
+    queue_prompt("/project-manager #{cmd}")
+  }
+}
