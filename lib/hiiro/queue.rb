@@ -547,7 +547,7 @@ class Hiiro
           Tmux.open_session(TMUX_SESSION, start_directory: work_dir)
         }
 
-        do_add = lambda do |args, split: nil|
+        do_add = lambda do |args, split: nil, session: false|
           q.queue_dirs
           opts = Hiiro::Options.parse(args) do
             option(:task,        short: :t, desc: 'Task name', flag_ifs: [:find])
@@ -570,7 +570,14 @@ class Hiiro
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
 
-          if opts.session
+          # Auto-detect current task from environment when no explicit context given
+          if ti.nil? && !opts.find && opts.task.nil?
+            env = Environment.current rescue nil
+            auto_task = env&.task
+            ti = q.task_info_for(auto_task.name) if auto_task
+          end
+
+          if opts.session || session
             session_name = h.tmux_client.current_session&.name
             ti = (ti || {}).merge(session_name: session_name) if session_name
           end
@@ -691,6 +698,12 @@ class Hiiro
           end
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
+
+          if ti.nil? && !opts.find && opts.task.nil?
+            env = Environment.current rescue nil
+            auto_task = env&.task
+            ti = q.task_info_for(auto_task.name) if auto_task
+          end
 
           if opts.session
             session_name = h.tmux_client.current_session&.name
@@ -828,7 +841,7 @@ class Hiiro
         }
 
         h.add_subcmd(:sadd) { |*args|
-          exec('h', 'queue', 'add', '-s', *args)
+          do_add.call(args, session: true)
         }
 
         h.add_subcmd(:tadd) { |*args|

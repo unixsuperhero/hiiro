@@ -1,3 +1,9 @@
+## Unreleased
+
+### Fixed
+- **h queue cadd/hadd/vadd/sadd**: Auto-detect current task from environment when no explicit `-f`/`-t` flag given, so frontmatter is populated without needing to pass a flag when already in a task session
+- **h queue sadd**: Fixed task context being lost — was using `exec` which replaced the process; now calls `do_add` directly so `task_info` closure is preserved
+
 ## [0.1.284] - 2026-03-25
 
 ### Added
