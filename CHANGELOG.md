@@ -1,1 +1,1 @@
-Done. CHANGELOG.md has been updated with v0.1.280 for 2026-03-25. The new section documents all the features, changes, and refactorings from the recent commits, organized by Added and Changed categories.
+Done.
