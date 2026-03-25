@@ -346,6 +346,33 @@ class Hiiro
       windows.include?(wname)
     end
 
+    # Given a (possibly-edited) prompt file and a base directory (task root),
+    # return the resolved working directory accounting for app: and dir: frontmatter.
+    def resolve_pane_dir(prompt_path, base_dir = Dir.pwd)
+      prompt_obj = Prompt.from_file(prompt_path.to_s, hiiro: @hiiro)
+      return base_dir unless prompt_obj
+
+      tree_root   = base_dir
+      working_dir = base_dir
+
+      if prompt_obj.app_name
+        env = Environment.current rescue nil
+        app = env&.find_app(prompt_obj.app_name)
+        if app
+          app_dir     = File.join(tree_root, app.relative_path)
+          working_dir = prompt_obj.rel_dir ? File.join(app_dir, prompt_obj.rel_dir) : app_dir
+        elsif prompt_obj.rel_dir
+          working_dir = File.join(tree_root, prompt_obj.rel_dir)
+        end
+      elsif prompt_obj.rel_dir
+        working_dir = File.join(tree_root, prompt_obj.rel_dir)
+      end
+
+      Dir.exist?(working_dir) ? working_dir : base_dir
+    rescue
+      base_dir
+    end
+
     def git_root_of(dir)
       root = `git -C #{Shellwords.shellescape(dir)} rev-parse --show-toplevel 2>/dev/null`.strip
       root.empty? ? dir : root
@@ -567,6 +594,18 @@ class Hiiro
             script_path = "#{base}.sh"
             File.write(prompt_path, fm_lines.join("\n"))
 
+            # Resolve task base dir and chdir so the new pane inherits it
+            task_base_dir = nil
+            if ti
+              env = Environment.current rescue nil
+              if env && ti[:tree_name]
+                tree = env.find_tree(ti[:tree_name])
+                task_base_dir = tree&.path || File.join(Hiiro::WORK_DIR, ti[:tree_name])
+                task_base_dir = nil unless task_base_dir && Dir.exist?(task_base_dir)
+              end
+            end
+            Dir.chdir(task_base_dir) if task_base_dir
+
             orig_pane  = `tmux display-message -p '\#{pane_id}'`.strip
             split_flag = split == :hsplit ? '-v' : '-h'
             claude_cmd = opts.ignore ? 'claude -p' : 'claude'
@@ -574,10 +613,14 @@ class Hiiro
 
             File.write(script_path, <<~SH)
               #!/usr/bin/env bash
-              ${EDITOR:-vim} #{Shellwords.shellescape(prompt_path)}
+              _PROMPT=#{Shellwords.shellescape(prompt_path)}
+              _BASE_DIR="$(pwd)"
+              ${EDITOR:-vim} "$_PROMPT"
               tmux select-pane -t #{Shellwords.shellescape(orig_pane)}
-              if [ -s #{Shellwords.shellescape(prompt_path)} ]; then
-                cat #{Shellwords.shellescape(prompt_path)} | #{claude_cmd}
+              if [ -s "$_PROMPT" ]; then
+                _WD="$(h queue pane-dir "$_PROMPT" "$_BASE_DIR" 2>/dev/null)"
+                [ -n "$_WD" ] && [ -d "$_WD" ] && cd "$_WD"
+                cat "$_PROMPT" | #{claude_cmd}
               fi
               rm -f #{Shellwords.shellescape(prompt_path)} #{Shellwords.shellescape(script_path)}
               #{shell_line}
@@ -789,6 +832,12 @@ class Hiiro
         h.add_subcmd(:dir) {
           q.queue_dirs
           puts DIR
+        }
+
+        # Internal: resolve working directory for a pane-launched prompt after editing.
+        # Used by the cadd/hadd/vadd shell scripts: cd $(h queue pane-dir $file $base)
+        h.add_subcmd(:'pane-dir') { |prompt_path = nil, base_dir = Dir.pwd|
+          print q.resolve_pane_dir(prompt_path.to_s, base_dir.to_s)
         }
 
         h.add_subcmd(:migrate) {
