@@ -523,6 +523,15 @@ class Hiiro
       hiiro.fuzzyfind_from_map(name_map)
     end
 
+    def send_cd(path)
+      pane = ENV['TMUX_PANE']
+      if pane
+        system('tmux', 'send-keys', '-t', pane, "cd #{path}\n")
+      else
+        system('tmux', 'send-keys', "cd #{path}\n")
+      end
+    end
+
     # --- Private helpers ---
 
     private
@@ -589,15 +598,6 @@ class Hiiro
       end
       puts "Applying sparse checkout (groups: #{group_names.join(', ')})..."
       Hiiro::Git.new(nil, path).sparse_checkout(path, dirs)
-    end
-
-    def send_cd(path)
-      pane = ENV['TMUX_PANE']
-      if pane
-        system('tmux', 'send-keys', '-t', pane, "cd #{path}\n")
-      else
-        system('tmux', 'send-keys', "cd #{path}\n")
-      end
     end
 
     def capture_tmux_windows(session)
@@ -708,6 +708,32 @@ class Hiiro
   module Tasks
     def self.build_hiiro(parent_hiiro, tm)
       task_hiiro = parent_hiiro.make_child do |h|
+
+        # Shared task resolver: given parsed opts and remaining positional args,
+        # returns [task, remaining_positional]. First positional arg is treated as
+        # a task name (prefix-matched) if no -f/-t flag is given; falls back to
+        # current task if no match.
+        resolve_task = lambda do |opts, positional|
+          if opts.find
+            sel = tm.select_task_interactive
+            next [nil, positional] unless sel
+            task = sel.is_a?(Hiiro::Task) ? sel : nil
+            [task, positional]
+          elsif opts.task
+            [tm.task_by_name(opts.task), positional]
+          elsif positional.any?
+            found = tm.task_by_name(positional.first)
+            found ? [found, positional[1..]] : [tm.current_task, positional]
+          else
+            [tm.current_task, positional]
+          end
+        end
+
+        task_opts_block = proc {
+          option(:task, short: :t, desc: 'Task name')
+          flag(:find,   short: :f, desc: 'Choose task interactively')
+        }
+
         h.add_subcmd(:list) do |*args|
           opts = Hiiro::Options.parse(args) { option(:tag, short: 't', desc: 'filter by tag (OR when multiple)', multi: true) }
           tm.list(tags_filter: Array(opts.tag).reject(&:empty?))
@@ -903,12 +929,61 @@ class Hiiro
 
         h.add_subcmd(:apps) { tm.list_apps }
 
-        h.add_subcmd(:cd) do |app_name=nil|
-          tm.cd_to_app(app_name)
+        h.add_subcmd(:cd) do |*raw_args|
+          opts = Hiiro::Options.parse(raw_args, &task_opts_block)
+          task, positional = resolve_task.call(opts, opts.args)
+          unless task
+            puts "No task found"
+            next
+          end
+          tree = tm.environment.find_tree(task.tree_name)
+          tree_path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
+          app_name = positional[0]
+          if app_name.nil?
+            tm.send_cd(tree_path)
+          else
+            result = tm.environment.app_matcher.find(app_name)
+            unless result.match?
+              STDERR.puts "App '#{app_name}' not found"
+              next
+            end
+            tm.send_cd(File.join(tree_path, result.first.item.relative_path))
+          end
         end
 
-        h.add_subcmd(:path) do |app_name=nil|
-          tm.app_path(app_name)
+        h.add_subcmd(:path) do |*raw_args|
+          opts = Hiiro::Options.parse(raw_args, &task_opts_block)
+          task, positional = resolve_task.call(opts, opts.args)
+          unless task
+            STDERR.puts "No task found"
+            next
+          end
+          tree = tm.environment.find_tree(task.tree_name)
+          tree_path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
+
+          app_name = positional[0]
+          globs    = positional[1..]
+
+          if app_name.nil?
+            print tree_path
+            next
+          end
+
+          result = tm.environment.app_matcher.find(app_name)
+          unless result.match?
+            STDERR.puts "App '#{app_name}' not found"
+            next
+          end
+          app_path = File.join(tree_path, result.first.item.relative_path)
+
+          if globs.empty?
+            print app_path
+            next
+          end
+
+          globs.each do |pattern|
+            Dir.glob(File.join(app_path, pattern)).sort.each { |f| puts f }
+          end
         end
 
         h.add_subcmd(:branch) do |task_name=nil|
@@ -947,16 +1022,17 @@ class Hiiro
           print task.session_name if task.session_name
         end
 
-        h.add_subcmd(:sh) do |task_name=nil, *args|
-          task = task_name ? tm.task_by_name(task_name) : tm.current_task
+        h.add_subcmd(:sh) do |*raw_args|
+          opts = Hiiro::Options.parse(raw_args, &task_opts_block)
+          task, positional = resolve_task.call(opts, opts.args)
           unless task
-            puts task_name ? "Task '#{task_name}' not found" : "Not in a task session"
+            puts "Not in a task session (use -t or -f to specify)"
             next
           end
           tree = tm.environment.find_tree(task.tree_name)
           path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
           Dir.chdir(path)
-          args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*args)
+          positional.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*positional)
         end
 
         h.add_subcmd(:status) { tm.status }
