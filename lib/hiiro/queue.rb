@@ -594,14 +594,20 @@ class Hiiro
             script_path = "#{base}.sh"
             File.write(prompt_path, fm_lines.join("\n"))
 
-            # Resolve task base dir and chdir so the new pane inherits it
+            # Resolve working dir and chdir so the new pane inherits it
             task_base_dir = nil
             if ti
-              env = Environment.current rescue nil
-              if env && ti[:tree_name]
-                tree = env.find_tree(ti[:tree_name])
-                task_base_dir = tree&.path || File.join(Hiiro::WORK_DIR, ti[:tree_name])
-                task_base_dir = nil unless task_base_dir && Dir.exist?(task_base_dir)
+              if ti[:tree_name]
+                env = Environment.current rescue nil
+                if env
+                  tree = env.find_tree(ti[:tree_name])
+                  task_base_dir = tree&.path || File.join(Hiiro::WORK_DIR, ti[:tree_name])
+                  task_base_dir = nil unless task_base_dir && Dir.exist?(task_base_dir)
+                end
+              elsif ti[:session_name]
+                # Session selected (no task) — use active pane's CWD from that session
+                pane_path = `tmux display-message -t #{Shellwords.shellescape(ti[:session_name])}: -p '\#{pane_current_path}' 2>/dev/null`.strip
+                task_base_dir = pane_path unless pane_path.empty? || !Dir.exist?(pane_path)
               end
             end
             Dir.chdir(task_base_dir) if task_base_dir
