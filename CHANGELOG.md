@@ -1,4 +1,10 @@
 ```markdown
+## Unreleased
+
+### Added
+- `Options#mutual_exclusion(*names)` — star-topology mutual exclusion: first flag is the hub (clears all others when set); any other flag only clears the hub (spokes can coexist freely); last encountered in argv wins
+- `h pr ls`: new `--all`/`-a` flag (show all tracked PRs, no filter); all filter flags are declared mutually exclusive so `-oa`, `-ao`, `--all --active` etc. do the right thing
+
 ## v0.1.290 (2026-03-26)
 
 ### Fixed
