@@ -98,7 +98,8 @@ Hiiro.run(*ARGV, tasks: true) do
     data[session].unshift(entry)
     write_log(data)
 
-    system('terminal-notifier',
+    binpath = `command -v terminal-notifier`
+    system(binpath,
       '-title', @preset[:title],
       '-message', message,
       '-sound', @preset[:sound])

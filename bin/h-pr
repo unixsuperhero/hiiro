@@ -47,10 +47,10 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     if result
       system('say', 'pr good')
-      system('terminal-notifier', '-title', 'PR Good', '-message', "##{pr_num}: #{pr_title}", '-open', pr_url)
+      system('/opt/homebrew/bin/terminal-notifier', '-title', 'PR Good', '-message', "##{pr_num}: #{pr_title}", '-open', pr_url)
     else
       system('say', 'pr bad')
-      system('terminal-notifier', '-title', 'PR Bad', '-message', "##{pr_num}: #{pr_title}", '-open', pr_url)
+      system('/opt/homebrew/bin/terminal-notifier', '-title', 'PR Bad', '-message', "##{pr_num}: #{pr_title}", '-open', pr_url)
     end
   }
 

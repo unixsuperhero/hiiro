@@ -37,7 +37,7 @@ class Hiiro
     def show
       return unless has_cmd?
 
-      cmd = ['terminal-notifier']
+      cmd = [binpath]
       cmd += ['-message', options.message] if options.message
       cmd += ['-title', options.title.tr('()[]', '')] if options.title
       cmd += ['-open', options.link] if options.link
@@ -51,6 +51,10 @@ class Hiiro
       if options.sound && sounds[options.sound]
         Background.run('afplay', sounds[options.sound.downcase])
       end
+    end
+
+    def binpath
+      `command -v terminal-notifier`
     end
 
     def has_cmd?
