@@ -1,1 +1,1 @@
-Done. I've created v0.1.287 as a new release section at the top with today's date (2026-03-26), moved the three recent commits from Unreleased into Added, and kept all existing sections intact.
+Done. CHANGELOG.md updated with v0.1.287 release (2026-03-26) at the top, with the three recent commits grouped into Added/Changed sections.
