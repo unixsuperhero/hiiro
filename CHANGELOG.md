@@ -1,5 +1,5 @@
 ```markdown
-## Unreleased
+## v0.1.291 (2026-03-26)
 
 ### Added
 - `Options#mutual_exclusion(*names)` — star-topology mutual exclusion: first flag is the hub (clears all others when set); any other flag only clears the hub (spokes can coexist freely); last encountered in argv wins
