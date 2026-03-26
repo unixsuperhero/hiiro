@@ -155,27 +155,28 @@ class Hiiro
       tree_root = nil
 
       if prompt_obj
-        if prompt_obj.task
-          target_session = prompt_obj.session_name
-          tree = prompt_obj.task.tree
-          if tree
-            working_dir = tree.path
-            tree_root = tree.path
-          end
-        elsif prompt_obj.session
-          target_session = prompt_obj.session.name
-          working_dir = prompt_obj.session.path || working_dir
-        elsif prompt_obj.session_name
-          # Raw tmux session (not tracked in hiiro environment) — use name directly
-          target_session = prompt_obj.session_name
+        fm = prompt_obj.frontmatter
+
+        # 1. Session: frontmatter session_name wins outright — no env lookup needed
+        raw_session = fm['session_name'].to_s
+        if !raw_session.empty?
+          target_session = raw_session
+          # Seed working_dir from the session's active pane (overridden by tree below if present)
+          pane_path = `tmux display-message -t #{Shellwords.shellescape(raw_session)}: -p '\#{pane_current_path}' 2>/dev/null`.strip
+          working_dir = pane_path if !pane_path.empty? && Dir.exist?(pane_path)
+        elsif prompt_obj.task
+          task_session = prompt_obj.task.session_name
+          target_session = task_session if task_session && !task_session.empty?
         end
 
-        if prompt_obj.tree
-          working_dir = prompt_obj.tree.path
-          tree_root = prompt_obj.tree.path
+        # 2. Tree: sets both working_dir and tree_root (overrides session pane dir)
+        tree = prompt_obj.tree || prompt_obj.task&.tree
+        if tree
+          working_dir = tree.path
+          tree_root = tree.path
         end
 
-        # Resolve app + dir frontmatter on top of whatever tree root we have
+        # 3. App + dir: resolve on top of tree root
         if prompt_obj.app_name
           env = Environment.current rescue nil
           app = env&.find_app(prompt_obj.app_name)
@@ -682,6 +683,8 @@ class Hiiro
 
           if split
             q.launch_in_pane(result[:name], split: split)
+          elsif session
+            q.launch_task(result[:name])
           else
             puts "Created: #{result[:path]}"
           end
