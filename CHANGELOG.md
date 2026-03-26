@@ -1,6 +1,9 @@
 ```markdown
 ## Unreleased
 
+### Fixed
+- **h queue**: When a raw tmux session is selected via fuzzyfinder (`-f`), the task now launches in that session instead of falling back to the default `hq` session. Previously `target_session` was only set when the session was tracked in hiiro's environment model.
+
 ## [0.1.285] - 2026-03-26
 
 ### Fixed

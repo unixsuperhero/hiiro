@@ -165,6 +165,9 @@ class Hiiro
         elsif prompt_obj.session
           target_session = prompt_obj.session.name
           working_dir = prompt_obj.session.path || working_dir
+        elsif prompt_obj.session_name
+          # Raw tmux session (not tracked in hiiro environment) — use name directly
+          target_session = prompt_obj.session_name
         end
 
         if prompt_obj.tree
