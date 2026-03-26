@@ -326,6 +326,13 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:update) do |*update_args|
+    opts = Hiiro::Options.parse(update_args) {
+      flag(:force_update, long: 'force-update', short: 'u', desc: 'force refresh even if recently checked')
+      flag(:all, short: 'a', desc: 'show all tracked PRs (no filter)')
+      instance_eval(&FILTER_OPTS)
+      mutual_exclusion(:all, :active, :merged, :drafts, :red, :green, :pending, :conflicts)
+    }
+
     pinned = pinned_manager.load_pinned
 
     if pinned.empty?
@@ -333,16 +340,13 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    force = update_args.include?('-U') || update_args.include?('--force-update')
-
     puts "Updating status for #{pinned.length} PR(s)..."
-    pinned_manager.refresh_all_status(pinned, force: force)
+    pinned_manager.refresh_all_status(pinned, force: opts.force_update)
     pinned_manager.save_pinned(pinned)
     puts "Done."
 
     puts
-    run_subcmd(:ls)
-
+    run_subcmd(:ls, *opts.original_args)
   end
 
   add_subcmd(:green) do |*green_args|
