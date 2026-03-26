@@ -4,6 +4,8 @@
 ### Fixed
 - `h queue run`/`watch`: frontmatter `session_name` now directly controls which tmux session the task launches in; working directory seeded from that session's active pane when no tree is specified
 - `h queue sadd`: now immediately launches a new tmux window in the target session after adding to queue, consistent with `hadd`/`vadd` behavior (previously just added to pending with no launch)
+- `h pr ls`: revert `statusCheckRollup` contexts limit from 250 back to 100; GitHub's GraphQL API caps connections at 100 — exceeding it silently returns null for the entire field, causing all checks to vanish from the list
+- `h pr update`: paginate beyond the first 100 checks for PRs that hit the limit; show `❓` status for PRs where pagination still couldn't retrieve all checks
 
 ## v0.1.288 (2026-03-26)
 
