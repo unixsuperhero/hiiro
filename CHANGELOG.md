@@ -1,4 +1,9 @@
 ```markdown
+## v0.1.290 (2026-03-26)
+
+### Fixed
+- `h pr ls`/`h pr update`: revert `statusCheckRollup` contexts limit to 100 and add pagination to retrieve all checks beyond the first 100; GitHub's GraphQL API silently returns null when limit is exceeded, causing all checks to vanish
+
 ## v0.1.289 (2026-03-26)
 
 ### Fixed
