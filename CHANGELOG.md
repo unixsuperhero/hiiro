@@ -1,4 +1,5 @@
-## Unreleased
+```markdown
+## v0.1.289 (2026-03-26)
 
 ### Fixed
 - `h queue run`/`watch`: frontmatter `session_name` now directly controls which tmux session the task launches in; working directory seeded from that session's active pane when no tree is specified
@@ -17,3 +18,4 @@
 
 ### Changed
 - PR list now shows pending indicator alongside failures
+```
