@@ -238,7 +238,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       flag(:verbose,  short: 'v', desc: 'multi-line output per PR')
       flag(:checks,   short: 'C', desc: 'show individual check run details')
       flag(:diff,     short: 'd', desc: 'open diff for selected PR')
+      flag(:all,      short: 'a', desc: 'show all tracked PRs (no filter)')
       instance_eval(&FILTER_OPTS)
+      mutual_exclusion(:all, :active, :merged, :drafts, :red, :green, :pending, :conflicts)
     }
 
     if opts.help
