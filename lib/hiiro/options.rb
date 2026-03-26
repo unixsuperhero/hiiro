@@ -63,6 +63,19 @@ class Hiiro
       self
     end
 
+    # Declare a mutual exclusion group with star topology.
+    # The first name is the hub; the rest are spokes.
+    #   Setting the hub   clears all spokes.
+    #   Setting a spoke   clears only the hub.
+    #   Spokes can still be combined with each other freely.
+    # Two-member groups are fully symmetric (hub == spoke).
+    # Last flag encountered in argv always wins.
+    def mutual_exclusion(*names)
+      @mutex_groups ||= []
+      @mutex_groups << names.map(&:to_sym)
+      self
+    end
+
     private
 
     def deconflict_short(short)
@@ -82,7 +95,7 @@ class Hiiro
     end
 
     def parse(args)
-      Args.new(@definitions, args.flatten.compact)
+      Args.new(@definitions, args.flatten.compact, mutex_groups: @mutex_groups || [])
     end
 
     def parse!(args)
@@ -93,8 +106,9 @@ class Hiiro
       attr_reader :remaining_args, :original_args
       alias args remaining_args
 
-      def initialize(definitions, raw_args)
+      def initialize(definitions, raw_args, mutex_groups: [])
         @definitions = definitions
+        @mutex_groups = mutex_groups
         @original_args = raw_args.dup.freeze
         @values = {}
         @remaining_args = []
@@ -182,7 +196,7 @@ class Hiiro
         return unless defn
 
         if defn.flag? || defn.flag_active?(@values)
-          @values[defn.name] = !defn.default
+          set_flag(defn, !defn.default)
         else
           value ||= args.shift
           store_value(defn, value)
@@ -197,7 +211,7 @@ class Hiiro
           next unless defn
 
           if defn.flag? || defn.flag_active?(@values)
-            @values[defn.name] = !defn.default
+            set_flag(defn, !defn.default)
           elsif idx == chars.length - 1
             store_value(defn, args.shift)
           else
@@ -205,6 +219,28 @@ class Hiiro
             break
           end
         end
+      end
+
+      def set_flag(defn, value)
+        # Star topology: group[0] is the hub.
+        #   Setting the hub   → clears all spokes (group[1..])
+        #   Setting a spoke   → clears only the hub (group[0])
+        # This lets spokes coexist with each other (e.g. --red --drafts is fine)
+        # while still preventing any spoke from combining with the hub (--all).
+        @mutex_groups.each do |group|
+          next unless group.include?(defn.name)
+          hub, *spokes = group
+          if defn.name == hub
+            spokes.each do |spoke|
+              spoke_defn = @definitions[spoke]
+              @values[spoke] = spoke_defn.default if spoke_defn
+            end
+          else
+            hub_defn = @definitions[hub]
+            @values[hub] = hub_defn.default if hub_defn
+          end
+        end
+        @values[defn.name] = value
       end
 
       def store_value(defn, value)
