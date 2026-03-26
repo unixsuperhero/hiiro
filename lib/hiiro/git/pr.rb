@@ -106,7 +106,8 @@ class Hiiro
 
       # Summarizes raw statusCheckRollup contexts into { total, success, pending, failed, frozen }.
       # frozen = number of failed contexts that are specifically the ISC code freeze check.
-      def self.summarize_checks(rollup)
+      # truncated: true is added when pagination couldn't retrieve all checks.
+      def self.summarize_checks(rollup, truncated: false)
         return nil unless rollup
 
         contexts = rollup.is_a?(Array) ? rollup : []
@@ -126,7 +127,9 @@ class Hiiro
             (FAILED_CONCLUSIONS.include?(c['conclusion']) || %w[FAILURE ERROR].include?(c['state']))
         end
 
-        { 'total' => total, 'success' => success, 'pending' => pending, 'failed' => failed, 'frozen' => frozen }
+        result = { 'total' => total, 'success' => success, 'pending' => pending, 'failed' => failed, 'frozen' => frozen }
+        result['truncated'] = true if truncated
+        result
       end
 
       # Summarizes raw review nodes into { approved, changes_requested, commented, reviewers }.

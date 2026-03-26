@@ -262,7 +262,7 @@ class Hiiro
         pr.state           = info['state']
         pr.title           = info['title']
         pr.check_runs      = rollup
-        pr.checks          = Hiiro::Git::Pr.summarize_checks(rollup)
+        pr.checks          = Hiiro::Git::Pr.summarize_checks(rollup, truncated: info['checksTruncated'])
         pr.reviews         = Hiiro::Git::Pr.summarize_reviews(info['reviews'])
         pr.review_decision = info['reviewDecision']
         pr.is_draft        = info['isDraft']
@@ -317,6 +317,8 @@ class Hiiro
             only_frozen ? "　❄️" : "　❌"
           elsif has_pending
             "⏳　"
+          elsif c['truncated']
+            "　❓"
           else
             "　✅"
           end
@@ -494,44 +496,24 @@ class Hiiro
     def fetch_batch_for_repo(owner, name, pr_numbers)
       return {} if pr_numbers.empty?
 
+      context_fragment = <<~GRAPHQL.strip
+        __typename
+        ... on CheckRun { __typename name conclusion status detailsUrl }
+        ... on StatusContext { __typename context state targetUrl }
+      GRAPHQL
+
       pr_queries = pr_numbers.map.with_index do |num, idx|
         <<~GRAPHQL.strip
           pr#{idx}: pullRequest(number: #{num}) {
-            number
-            title
-            url
-            headRefName
-            state
-            isDraft
-            mergeable
-            reviewDecision
+            number title url headRefName state isDraft mergeable reviewDecision
             statusCheckRollup {
-              contexts(last: 250) {
-                nodes {
-                  ... on CheckRun {
-                    __typename
-                    name
-                    conclusion
-                    status
-                    detailsUrl
-                  }
-                  ... on StatusContext {
-                    __typename
-                    context
-                    state
-                    targetUrl
-                  }
-                }
+              contexts(last: 100) {
+                totalCount
+                pageInfo { hasPreviousPage startCursor }
+                nodes { #{context_fragment} }
               }
             }
-            reviews(last: 50) {
-              nodes {
-                author {
-                  login
-                }
-                state
-              }
-            }
+            reviews(last: 50) { nodes { author { login } state } }
           }
         GRAPHQL
       end
@@ -557,24 +539,69 @@ class Hiiro
         pr_data = repo_data["pr#{idx}"]
         next unless pr_data
 
+        contexts_data = pr_data.dig('statusCheckRollup', 'contexts')
+        nodes       = contexts_data&.[]('nodes') || []
+        total_count = contexts_data&.[]('totalCount').to_i
+        page_info   = contexts_data&.[]('pageInfo') || {}
+
+        # Paginate backwards to collect all checks beyond the first 100
+        all_nodes = nodes.dup
+        cursor = page_info['startCursor']
+        while page_info['hasPreviousPage'] && cursor
+          extra_nodes, page_info = fetch_contexts_page(owner, name, num, cursor, context_fragment)
+          break unless extra_nodes
+          all_nodes = extra_nodes + all_nodes
+          cursor = page_info&.[]('startCursor')
+        end
+
+        truncated = total_count > 0 && all_nodes.length < total_count
+
         pr_info_by_key[[num, repo_path]] = {
-          'number' => pr_data['number'],
-          'title' => pr_data['title'],
-          'url' => pr_data['url'],
-          'headRefName' => pr_data['headRefName'],
-          'state' => pr_data['state'],
-          'isDraft' => pr_data['isDraft'],
-          'mergeable' => pr_data['mergeable'],
-          'reviewDecision' => pr_data['reviewDecision'],
-          'statusCheckRollup' => pr_data.dig('statusCheckRollup', 'contexts', 'nodes'),
-          'reviews' => pr_data.dig('reviews', 'nodes') || [],
-          'repo' => repo_path
+          'number'           => pr_data['number'],
+          'title'            => pr_data['title'],
+          'url'              => pr_data['url'],
+          'headRefName'      => pr_data['headRefName'],
+          'state'            => pr_data['state'],
+          'isDraft'          => pr_data['isDraft'],
+          'mergeable'        => pr_data['mergeable'],
+          'reviewDecision'   => pr_data['reviewDecision'],
+          'statusCheckRollup'=> all_nodes.any? ? all_nodes : nil,
+          'checksTruncated'  => truncated,
+          'reviews'          => pr_data.dig('reviews', 'nodes') || [],
+          'repo'             => repo_path
         }
       end
 
       pr_info_by_key
     rescue JSON::ParserError, StandardError
       {}
+    end
+
+    def fetch_contexts_page(owner, name, pr_number, before_cursor, context_fragment)
+      query = <<~GRAPHQL
+        query {
+          repository(owner: "#{owner}", name: "#{name}") {
+            pullRequest(number: #{pr_number}) {
+              statusCheckRollup {
+                contexts(last: 100, before: "#{before_cursor}") {
+                  pageInfo { hasPreviousPage startCursor }
+                  nodes { #{context_fragment} }
+                }
+              }
+            }
+          }
+        }
+      GRAPHQL
+
+      result = `gh api graphql -f query='#{query.gsub("'", "'\\''")}' 2>/dev/null`
+      return [nil, nil] if result.empty?
+
+      contexts = JSON.parse(result).dig('data', 'repository', 'pullRequest', 'statusCheckRollup', 'contexts')
+      return [nil, nil] unless contexts
+
+      [contexts['nodes'] || [], contexts['pageInfo'] || {}]
+    rescue JSON::ParserError, StandardError
+      [nil, nil]
     end
 
     def check_run_emoji(conclusion, status)
