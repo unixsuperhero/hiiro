@@ -1,4 +1,9 @@
 ```markdown
+## v0.1.292 (2026-03-26)
+
+### Added
+- `h pr update`: now accepts filter flags (`--active`, `--failing`, `--ready`, `--all`) to control which PRs are refreshed and displayed after update
+
 ## v0.1.291 (2026-03-26)
 
 ### Added
