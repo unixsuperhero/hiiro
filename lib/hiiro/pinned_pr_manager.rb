@@ -506,7 +506,7 @@ class Hiiro
             mergeable
             reviewDecision
             statusCheckRollup {
-              contexts(last: 100) {
+              contexts(last: 250) {
                 nodes {
                   ... on CheckRun {
                     __typename
