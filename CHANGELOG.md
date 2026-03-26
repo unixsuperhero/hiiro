@@ -1,6 +1,9 @@
 ```markdown
 ## Unreleased
 
+- feat(pr): `h pr status` now shows current branch PR — number, title, state, check summary, url
+- feat(todo): fuzzyfinder fallback when no ID given for `start`, `done`, `skip`, `reset`, `rm`, `change`
+
 ## [0.1.286] - 2026-03-26
 
 ### Fixed
