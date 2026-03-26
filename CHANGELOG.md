@@ -1,7 +1,11 @@
+```markdown
 ## Unreleased
 
+## [0.1.285] - 2026-03-26
+
 ### Fixed
-- **h queue cadd/hadd/vadd/sadd**: Auto-detect current task from environment when no explicit `-f`/`-t` flag given, so frontmatter is populated without needing to pass a flag when already in a task session
+- **h notify**: Resolve terminal-notifier path dynamically instead of hardcoding, improving portability across different system configurations
+- **h queue sadd**: Auto-detect current task from environment when no explicit `-f`/`-t` flag given, so frontmatter is populated without needing to pass a flag when already in a task session
 - **h queue sadd**: Fixed task context being lost — was using `exec` which replaced the process; now calls `do_add` directly so `task_info` closure is preserved
 
 ## [0.1.284] - 2026-03-25
@@ -24,3 +28,4 @@
 - **TaskManager#send_cd**: Promoted from private to public method
 
 ## [0.1.281] - Previous release
+```
