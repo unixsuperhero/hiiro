@@ -55,12 +55,24 @@ class Hiiro
       end
     end
 
-    def pr_repo(pr)
-      pr.repo || Hiiro::Git::Pr.repo_from_url(pr.url)
-    end
-
     def initialize
       ensure_file
+    end
+
+    def add_options(opts)
+      opts.flag(:red,       short: 'r', desc: 'filter: failing checks')
+      opts.flag(:green,     short: 'g', desc: 'filter: passing checks')
+      opts.flag(:conflicts, short: 'c', desc: 'filter: merge conflicts')
+      opts.flag(:drafts,    short: 'D', desc: 'filter: draft PRs')
+      opts.flag(:pending,   short: 'p', desc: 'filter: pending checks')
+      opts.flag(:merged,    short: 'm', desc: 'filter: merged PRs')
+      opts.flag(:active,    short: 'o', desc: 'filter: open (non-merged) PRs')
+      opts.flag(:numbers,   short: 'n', desc: 'output PR numbers only (no #)')
+      opts.option(:tag,     short: 't', desc: 'filter by tag (OR when multiple; AND with flag filters)', multi: true)
+    end
+
+    def pr_repo(pr)
+      pr.repo || Hiiro::Git::Pr.repo_from_url(pr.url)
     end
 
     def ensure_file

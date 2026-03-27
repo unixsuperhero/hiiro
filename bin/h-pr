@@ -7,20 +7,8 @@ require "yaml"
 require "json"
 require "tempfile"
 
-FILTER_OPTS = Proc.new {
-  flag(:red,       short: 'r', desc: 'filter: failing checks')
-  flag(:green,     short: 'g', desc: 'filter: passing checks')
-  flag(:conflicts, short: 'c', desc: 'filter: merge conflicts')
-  flag(:drafts,    short: 'D', desc: 'filter: draft PRs')
-  flag(:pending,   short: 'p', desc: 'filter: pending checks')
-  flag(:merged,    short: 'm', desc: 'filter: merged PRs')
-  flag(:active,    short: 'o', desc: 'filter: open (non-merged) PRs')
-  flag(:numbers,   short: 'n', desc: 'output PR numbers only (no #)')
-  option(:tag,     short: 't', desc: 'filter by tag (OR when multiple; AND with flag filters)', multi: true)
-}
-
 Hiiro.run(*ARGV, plugins: [Pins]) do
-  pinned_manager = Hiiro::PinnedPRManager.new
+  pm = pinned_manager = Hiiro::PinnedPRManager.new
   Hiiro::PinnedPRManager.add_resolvers(self)
 
   watch_block = ->(original_pr_number=nil, *watch_args) {
@@ -239,7 +227,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       flag(:checks,   short: 'C', desc: 'show individual check run details')
       flag(:diff,     short: 'd', desc: 'open diff for selected PR')
       flag(:all,      short: 'a', desc: 'show all tracked PRs (no filter)')
-      instance_eval(&FILTER_OPTS)
+      pm.add_options(self)
       mutual_exclusion(:all, :active, :merged, :drafts, :red, :green, :pending, :conflicts)
     }
 
@@ -329,7 +317,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     opts = Hiiro::Options.parse(update_args) {
       flag(:force_update, long: 'force-update', short: 'u', desc: 'force refresh even if recently checked')
       flag(:all, short: 'a', desc: 'show all tracked PRs (no filter)')
-      instance_eval(&FILTER_OPTS)
+      pm.add_options(self)
       mutual_exclusion(:all, :active, :merged, :drafts, :red, :green, :pending, :conflicts)
     }
 
@@ -350,7 +338,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:green) do |*green_args|
-    opts = Hiiro::Options.parse(green_args, &FILTER_OPTS)
+    opts = Hiiro::Options.parse(green_args) { |o| pm.add_options(o) }
     pinned = pinned_manager.load_pinned
     results = pinned_manager.apply_filters(pinned, opts, forced: [:green])
 
@@ -367,7 +355,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:red) do |*red_args|
-    opts = Hiiro::Options.parse(red_args, &FILTER_OPTS)
+    opts = Hiiro::Options.parse(red_args) { |o| pm.add_options(o) }
     pinned = pinned_manager.load_pinned
     results = pinned_manager.apply_filters(pinned, opts, forced: [:red])
 
@@ -384,7 +372,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:old) do |*old_args|
-    opts = Hiiro::Options.parse(old_args, &FILTER_OPTS)
+    opts = Hiiro::Options.parse(old_args) { |o| pm.add_options(o) }
     pinned = pinned_manager.load_pinned
     results = pinned_manager.apply_filters(pinned, opts, forced: [:merged])
 
@@ -428,7 +416,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:draft) do |*draft_args|
-    opts = Hiiro::Options.parse(draft_args, &FILTER_OPTS)
+    opts = Hiiro::Options.parse(draft_args) { |o| pm.add_options(o) }
     pinned = pinned_manager.load_pinned
     results = pinned_manager.apply_filters(pinned, opts, forced: [:drafts])
 
