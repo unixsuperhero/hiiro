@@ -221,14 +221,14 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:ls) do |*ls_args|
-    opts = Hiiro::Options.parse(ls_args) {
-      flag(:update,   short: 'u', desc: 'update status before listing')
-      flag(:verbose,  short: 'v', desc: 'multi-line output per PR')
-      flag(:checks,   short: 'C', desc: 'show individual check run details')
-      flag(:diff,     short: 'd', desc: 'open diff for selected PR')
-      flag(:all,      short: 'a', desc: 'show all tracked PRs (no filter)')
-      pm.add_options(self)
-      mutual_exclusion(:all, :active, :merged, :drafts, :red, :green, :pending, :conflicts)
+    opts = Hiiro::Options.parse(ls_args) { |o|
+      o.flag(:update,   short: 'u', desc: 'update status before listing')
+      o.flag(:verbose,  short: 'v', desc: 'multi-line output per PR')
+      o.flag(:checks,   short: 'C', desc: 'show individual check run details')
+      o.flag(:diff,     short: 'd', desc: 'open diff for selected PR')
+      o.flag(:all,      short: 'a', desc: 'show all tracked PRs (no filter)')
+      pm.add_options(o)
+      o.mutual_exclusion(:all, :active, :merged, :drafts, :red, :green, :pending, :conflicts)
     }
 
     if opts.help
@@ -314,11 +314,11 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:update) do |*update_args|
-    opts = Hiiro::Options.parse(update_args) {
-      flag(:force_update, long: 'force-update', short: 'u', desc: 'force refresh even if recently checked')
-      flag(:all, short: 'a', desc: 'show all tracked PRs (no filter)')
-      pm.add_options(self)
-      mutual_exclusion(:all, :active, :merged, :drafts, :red, :green, :pending, :conflicts)
+    opts = Hiiro::Options.parse(update_args) { |o|
+      o.flag(:force_update, long: 'force-update', short: 'u', desc: 'force refresh even if recently checked')
+      o.flag(:all, short: 'a', desc: 'show all tracked PRs (no filter)')
+      pm.add_options(o)
+      o.mutual_exclusion(:all, :active, :merged, :drafts, :red, :green, :pending, :conflicts)
     }
 
     pinned = pinned_manager.load_pinned
