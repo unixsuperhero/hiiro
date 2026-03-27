@@ -201,6 +201,33 @@ class Hiiro
       def draft?       = is_draft == true
       def conflicting? = mergeable == 'CONFLICTING'
 
+      # Check-status predicates
+      def red?     = (c = checks) && c['failed'].to_i > 0
+      def green?   = (c = checks) && c['failed'].to_i == 0 && c['pending'].to_i == 0 && c['success'].to_i > 0
+      def pending? = (c = checks) && c['pending'].to_i > 0 && c['failed'].to_i == 0
+
+      # Aliases matching filter option names
+      def active?    = !merged? && !closed?
+      def drafts?    = draft?
+      def conflicts? = conflicting?
+
+      # Filter dimensions. Flags within each group OR together; groups AND together.
+      # e.g. -o -g → (active?) AND (green?), -o -r -g → (active?) AND (red? OR green?)
+      STATE_FILTER_KEYS = %i[active merged drafts conflicts].freeze
+      CHECK_FILTER_KEYS = %i[red green pending].freeze
+
+      # Returns true if this PR satisfies the filter options set in opts.
+      # forced: injects additional filter keys as if the user had set them.
+      def matches_filters?(opts, forced: [])
+        state_active = STATE_FILTER_KEYS.select { |k| forced.include?(k) || (opts.respond_to?(k) && opts.send(k)) }
+        check_active = CHECK_FILTER_KEYS.select { |k| forced.include?(k) || (opts.respond_to?(k) && opts.send(k)) }
+
+        state_match = state_active.empty? || state_active.any? { |k| send(:"#{k}?") }
+        check_match = check_active.empty? || check_active.any? { |k| send(:"#{k}?") }
+
+        state_match && check_match
+      end
+
       def view     = system('gh', 'pr', 'view', number.to_s)
       def checkout = system('gh', 'pr', 'checkout', number.to_s)
 
