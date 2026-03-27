@@ -1,4 +1,10 @@
 ```markdown
+## v0.1.298 (2026-03-27)
+
+### Changed
+- `Hiiro::Config`: now uses `Pathname` to walk up the directory tree instead of string manipulation for better robustness
+- `h cl agents/commands/skills`: now walks from current working directory up to home directory to locate agent/command/skill files
+
 ## v0.1.297 (2026-03-27)
 
 ### Added
