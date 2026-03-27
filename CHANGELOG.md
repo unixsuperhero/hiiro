@@ -1,4 +1,9 @@
 ```markdown
+## v0.1.294 (2026-03-26)
+
+### Fixed
+- `h pr ls`/`h pr update`: filter flags (`-r`, `-g`, `-p`, etc.) from `pm.add_options` now register correctly; switched from `pm.add_options(self)` inside implicit `instance_eval` block to explicit block parameter `|o|` with `pm.add_options(o)`, matching the pattern already used by `h pr green`/`red`/`old`
+
 ## v0.1.293 (2026-03-26)
 
 ### Changed
