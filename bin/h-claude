@@ -3,6 +3,7 @@
 require 'hiiro'
 require 'shellwords'
 require 'tempfile'
+require 'pathname'
 
 opts = Hiiro::Options.setup {
   flag(:danger, short: :d, default: false)
@@ -33,19 +34,12 @@ end
 # Walk from Dir.pwd up through parent directories, stopping before Dir.home.
 # Returns an array of existing .claude directories, closest-first.
 def claude_ancestor_dirs
-  dirs = []
-  current = File.expand_path(Dir.pwd)
-  home    = File.expand_path(Dir.home)
-
-  loop do
-    break if current == home
-    break if File.dirname(current) == current  # filesystem root
-    candidate = File.join(current, '.claude')
-    dirs << candidate if Dir.exist?(candidate)
-    current = File.dirname(current)
-  end
-
-  dirs
+  Pathname(Dir.pwd)
+    .ascend
+    .take_while { |p| p != Pathname(Dir.home) }
+    .map { |p| p / '.claude' }
+    .select(&:directory?)
+    .map(&:to_s)
 end
 
 Hiiro.run(*ARGV, plugins: [Pins]) {
