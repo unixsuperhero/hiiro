@@ -5,24 +5,6 @@ require 'fileutils'
 
 class Hiiro
   class PinnedPRManager
-    FILTER_PREDICATES = {
-      red:       ->(pr) { (c = pr.checks) && c['failed'].to_i > 0 },
-      green:     ->(pr) { (c = pr.checks) && c['failed'].to_i == 0 && c['pending'].to_i == 0 && c['success'].to_i > 0 },
-      conflicts: ->(pr) { pr.conflicting? },
-      drafts:    ->(pr) { pr.draft? },
-      pending:   ->(pr) { (c = pr.checks) && c['pending'].to_i > 0 && c['failed'].to_i == 0 },
-      merged:    ->(pr) { pr.merged? },
-      active:    ->(pr) { !pr.merged? && !pr.closed? },
-    }.freeze
-
-    # Filters are split into two orthogonal dimensions:
-    #   state  — what lifecycle state the PR is in (active, merged, draft, conflicting)
-    #   checks — what the CI check status is (red, green, pending)
-    # Flags within each dimension OR together; dimensions AND together.
-    # e.g. -o -g  →  (active) AND (green checks)
-    #      -o -r -g →  (active) AND (red OR green)
-    STATE_FILTER_KEYS  = %i[active merged drafts conflicts].freeze
-    CHECK_FILTER_KEYS  = %i[red green pending].freeze
 
     def self.add_resolvers(hiiro)
       pm = new
@@ -393,24 +375,14 @@ class Hiiro
     end
 
     def filter_active?(opts)
-      FILTER_PREDICATES.keys.any? { |f| opts.respond_to?(f) && opts.send(f) } ||
+      all_keys = Hiiro::Git::Pr::STATE_FILTER_KEYS + Hiiro::Git::Pr::CHECK_FILTER_KEYS
+      all_keys.any? { |f| opts.respond_to?(f) && opts.send(f) } ||
         (opts.respond_to?(:tag) && Array(opts.tag).any?)
     end
 
     def apply_filters(prs, opts, forced: [])
-      active = FILTER_PREDICATES.keys.select { |f| opts.respond_to?(f) && opts.send(f) }
-      active = (active + forced).uniq
+      results = prs.select { |pr| pr.matches_filters?(opts, forced: forced) }
 
-      state_flags = active & STATE_FILTER_KEYS
-      check_flags = active & CHECK_FILTER_KEYS
-
-      results = prs.select do |pr|
-        state_match = state_flags.empty? || state_flags.any? { |f| FILTER_PREDICATES[f]&.call(pr) }
-        check_match = check_flags.empty? || check_flags.any? { |f| FILTER_PREDICATES[f]&.call(pr) }
-        state_match && check_match
-      end
-
-      # Tags are an AND post-filter; multiple tags are OR'd among themselves
       tag_filter = Array(opts.respond_to?(:tag) ? opts.tag : nil).map(&:to_s).reject(&:empty?)
       unless tag_filter.empty?
         results = results.select { |pr| (Array(pr.tags) & tag_filter).any? }
