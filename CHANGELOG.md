@@ -1,5 +1,10 @@
 
 ```markdown
+## v0.1.295 (2026-03-26)
+
+### Changed
+- `h pr ls`/`h pr update`: filter flags now use AND-across-dimensions logic — state flags (`-o`, `-m`, `-D`, `-c`) OR within their group, check flags (`-r`, `-g`, `-p`) OR within theirs, and the two groups AND together; e.g. `-o -g` shows open PRs with passing checks, `-o -r -g` shows open PRs with failing or passing checks
+
 ## v0.1.294 (2026-03-26)
 
 ### Fixed
