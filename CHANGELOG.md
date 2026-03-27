@@ -1,4 +1,9 @@
 ```markdown
+## v0.1.297 (2026-03-27)
+
+### Added
+- `bin/h-rnext`: new subcommand for navigating to the next Ruby file in the current directory
+
 ## v0.1.296 (2026-03-27)
 
 ### Changed
