@@ -30,6 +30,24 @@ def fire_command(opts)
   ['claude', '-p', permission_flag(opts), *escaped_args].join(' ')
 end
 
+# Walk from Dir.pwd up through parent directories, stopping before Dir.home.
+# Returns an array of existing .claude directories, closest-first.
+def claude_ancestor_dirs
+  dirs = []
+  current = File.expand_path(Dir.pwd)
+  home    = File.expand_path(Dir.home)
+
+  loop do
+    break if current == home
+    break if File.dirname(current) == current  # filesystem root
+    candidate = File.join(current, '.claude')
+    dirs << candidate if Dir.exist?(candidate)
+    current = File.dirname(current)
+  end
+
+  dirs
+end
+
 Hiiro.run(*ARGV, plugins: [Pins]) {
   add_subcmd(:split) { |*args|
     opts = opts.parse(args)
@@ -94,22 +112,33 @@ add_subcmd(:env) { |*args|
   }
 
   add_subcmd(:agents) {
-    dir = File.expand_path('~/.claude/agents')
-    files = Dir.glob("#{dir}/*.md").sort
-    files.each { |f| puts File.basename(f, '.md') }
+    names = []
+    claude_ancestor_dirs.each do |claude_dir|
+      dir = File.join(claude_dir, 'agents')
+      next unless Dir.exist?(dir)
+      Dir.glob("#{dir}/*.md").sort.each { |f| names << File.basename(f, '.md') }
+    end
+    names.uniq.each { |n| puts n }
   }
 
   add_subcmd(:commands) {
-    dir = File.expand_path('~/.claude/commands')
-    files = Dir.glob("#{dir}/*.md").sort
-    files.each { |f| puts File.basename(f, '.md') }
+    names = []
+    claude_ancestor_dirs.each do |claude_dir|
+      dir = File.join(claude_dir, 'commands')
+      next unless Dir.exist?(dir)
+      Dir.glob("#{dir}/*.md").sort.each { |f| names << File.basename(f, '.md') }
+    end
+    names.uniq.each { |n| puts n }
   }
 
   add_subcmd(:skills) {
-    dir = File.expand_path('~/.claude/skills')
-    plugin_dir = File.expand_path('~/.claude/plugins/local/skills')
-    dirs = Dir.glob("{#{dir},#{plugin_dir}}/*/").sort
-    dirs.each { |d| puts File.basename(d) }
+    names = []
+    claude_ancestor_dirs.each do |claude_dir|
+      dir = File.join(claude_dir, 'skills')
+      next unless Dir.exist?(dir)
+      Dir.glob("#{dir}/*/").sort.each { |d| names << File.basename(d) }
+    end
+    names.uniq.each { |n| puts n }
   }
 
   add_subcmd(:new) { |*args|
