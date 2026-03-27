@@ -1,4 +1,10 @@
 ```markdown
+## v0.1.296 (2026-03-26)
+
+### Changed
+- `Hiiro::Git::Pr`: added `red?`, `green?`, `pending?`, `active?`, `drafts?`, `conflicts?` predicate methods and `matches_filters?(opts, forced: [])` — filter logic now lives on the `Pr` object instead of in `PinnedPRManager` lambdas
+- `PinnedPRManager`: removed `FILTER_PREDICATES` constant; `apply_filters` and `filter_active?` now delegate to `Pr#matches_filters?`
+
 ## v0.1.295 (2026-03-26)
 
 ### Changed
