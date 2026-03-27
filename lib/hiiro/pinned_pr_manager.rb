@@ -15,6 +15,15 @@ class Hiiro
       active:    ->(pr) { !pr.merged? && !pr.closed? },
     }.freeze
 
+    # Filters are split into two orthogonal dimensions:
+    #   state  — what lifecycle state the PR is in (active, merged, draft, conflicting)
+    #   checks — what the CI check status is (red, green, pending)
+    # Flags within each dimension OR together; dimensions AND together.
+    # e.g. -o -g  →  (active) AND (green checks)
+    #      -o -r -g →  (active) AND (red OR green)
+    STATE_FILTER_KEYS  = %i[active merged drafts conflicts].freeze
+    CHECK_FILTER_KEYS  = %i[red green pending].freeze
+
     def self.add_resolvers(hiiro)
       pm = new
       hiiro.add_resolver(:pr,
@@ -392,7 +401,14 @@ class Hiiro
       active = FILTER_PREDICATES.keys.select { |f| opts.respond_to?(f) && opts.send(f) }
       active = (active + forced).uniq
 
-      results = active.empty? ? prs : prs.select { |pr| active.any? { |f| FILTER_PREDICATES[f]&.call(pr) } }
+      state_flags = active & STATE_FILTER_KEYS
+      check_flags = active & CHECK_FILTER_KEYS
+
+      results = prs.select do |pr|
+        state_match = state_flags.empty? || state_flags.any? { |f| FILTER_PREDICATES[f]&.call(pr) }
+        check_match = check_flags.empty? || check_flags.any? { |f| FILTER_PREDICATES[f]&.call(pr) }
+        state_match && check_match
+      end
 
       # Tags are an AND post-filter; multiple tags are OR'd among themselves
       tag_filter = Array(opts.respond_to?(:tag) ? opts.tag : nil).map(&:to_s).reject(&:empty?)
