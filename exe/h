@@ -164,4 +164,8 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
     af = Hiiro::AppFiles.new
     Hiiro::AppFiles.build_hiiro(this, af, environment: environment).run
   end
+
+  add_subcmd(:rnext) do |*args|
+    system('git', 'rnext', *args)
+  end
 end
