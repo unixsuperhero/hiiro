@@ -1,4 +1,9 @@
 ```markdown
+## v0.1.293 (2026-03-26)
+
+### Changed
+- `h pr update`: filter options now extracted to `PinnedPRManager` for better code organization and reusability
+
 ## v0.1.292 (2026-03-26)
 
 ### Added
