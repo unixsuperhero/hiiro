@@ -33,13 +33,11 @@ end
 
 # Walk from Dir.pwd up through parent directories, stopping before Dir.home.
 # Returns an array of existing .claude directories, closest-first.
-def claude_ancestor_dirs
+def claude_paths
   Pathname(Dir.pwd)
     .ascend
-    .take_while { |p| p != Pathname(Dir.home) }
     .map { |p| p / '.claude' }
-    .select(&:directory?)
-    .map(&:to_s)
+    .select(&:exist?)
 end
 
 Hiiro.run(*ARGV, plugins: [Pins]) {
@@ -106,33 +104,15 @@ add_subcmd(:env) { |*args|
   }
 
   add_subcmd(:agents) {
-    names = []
-    claude_ancestor_dirs.each do |claude_dir|
-      dir = File.join(claude_dir, 'agents')
-      next unless Dir.exist?(dir)
-      Dir.glob("#{dir}/*.md").sort.each { |f| names << File.basename(f, '.md') }
-    end
-    names.uniq.each { |n| puts n }
+    puts claude_paths.flat_map { |p| p.glob('agents/*.md').map { |f| f.basename('.md') } }
   }
 
   add_subcmd(:commands) {
-    names = []
-    claude_ancestor_dirs.each do |claude_dir|
-      dir = File.join(claude_dir, 'commands')
-      next unless Dir.exist?(dir)
-      Dir.glob("#{dir}/*.md").sort.each { |f| names << File.basename(f, '.md') }
-    end
-    names.uniq.each { |n| puts n }
+    puts claude_paths.flat_map { |p| p.glob('commands/*.md').map { |f| f.basename('.md') } }
   }
 
   add_subcmd(:skills) {
-    names = []
-    claude_ancestor_dirs.each do |claude_dir|
-      dir = File.join(claude_dir, 'skills')
-      next unless Dir.exist?(dir)
-      Dir.glob("#{dir}/*/").sort.each { |d| names << File.basename(d) }
-    end
-    names.uniq.each { |n| puts n }
+    puts claude_paths.flat_map { |p| p.glob('skills/*/').map { |d| d.basename } }
   }
 
   add_subcmd(:new) { |*args|
