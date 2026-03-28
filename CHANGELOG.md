@@ -1,4 +1,12 @@
 ```markdown
+## v0.1.299 (2026-03-27)
+
+### Added
+- `bin/h-pr open`: now supports opening multiple PRs in sequence (e.g., `h pr open 123 456`)
+
+### Changed
+- `bin/h-claude`: simplified directory traversal and file globbing logic for better maintainability
+
 ## v0.1.298 (2026-03-27)
 
 ### Changed
