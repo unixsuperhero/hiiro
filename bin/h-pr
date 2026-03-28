@@ -85,8 +85,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   }
 
   add_subcmd(:edit) { edit_files(__FILE__) }
-  add_subcmd(:open) { |pr_number=nil|
-    if pr_number.nil?
+  add_subcmd(:open) { |*refs|
+    if refs.empty?
       current = pinned_manager.fetch_current_branch_pr
       if current
         pinned = pinned_manager.load_pinned
@@ -96,11 +96,14 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         next
       end
     end
-    pr_number = resolve(:pr, pr_number)
-    next unless pr_number
+    refs = [nil] if refs.empty?
     pinned = pinned_manager.load_pinned
-    pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
-    pr&.url ? system('open', pr.url) : system('gh', 'pr', 'view', pr_number.to_s, '--web')
+    refs.each do |ref|
+      pr_number = resolve(:pr, ref)
+      next unless pr_number
+      pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+      pr&.url ? system('open', pr.url) : system('gh', 'pr', 'view', pr_number.to_s, '--web')
+    end
   }
   add_subcmd(:view) { |pr_number=nil|
     pr_number = resolve(:pr, pr_number)
