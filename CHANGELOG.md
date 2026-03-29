@@ -1,4 +1,10 @@
 ```markdown
+## v0.1.301 (2026-03-29)
+
+### Added
+- `bin/h check_version`: check installed hiiro version per rbenv ruby version (`-a` for all versions)
+- `bin/h delayed_update`: write and background a script that sleeps 5s, runs `h update -a`, then announces result via `say`
+
 ## v0.1.300 (2026-03-29)
 
 ### Added
