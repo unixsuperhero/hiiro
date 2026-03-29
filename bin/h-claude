@@ -15,7 +15,11 @@ opts = Hiiro::Options.setup {
   option(:size, short: :s, default: nil)
 }
 
-def glob_path(glob, *bname)
+def glob_path(glob, bname=nil, filters: nil)
+  bname ||= ''
+  filters ||= []
+  filters = ['.*'] if filters.empty?
+
   claude_paths.map { |path|
     [
       path.split&.first,
@@ -27,7 +31,7 @@ def glob_path(glob, *bname)
     $stderr.puts
     $stderr.puts "PATH: #{path}"
 
-    fs.each do |f|
+    fs.grep(/#{filters.join(?|)}/i).each do |f|
       puts f.basename(*bname)
     end
   end
@@ -121,16 +125,16 @@ add_subcmd(:env) { |*args|
     IO.popen(['claude', '-p'], 'w') { |io| io.write(prompt) }
   }
 
-  add_subcmd(:agents) {
-    glob_path('agents/*.md', '.md')
+  add_subcmd(:agents) { |*args|
+    glob_path('agents/*.md', '.md', filters: args)
   }
 
-  add_subcmd(:commands) {
-    glob_path('commands/*.md', '.md')
+  add_subcmd(:commands) { |*args|
+    glob_path('commands/*.md', '.md', filters: args)
   }
 
-  add_subcmd(:skills) {
-    glob_path('skills/*/')
+  add_subcmd(:skills) { |*args|
+    glob_path('skills/*/', filters: args)
   }
 
   add_subcmd(:new) { |*args|
