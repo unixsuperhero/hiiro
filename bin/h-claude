@@ -15,7 +15,11 @@ opts = Hiiro::Options.setup {
   option(:size, short: :s, default: nil)
 }
 
-def glob_path(glob, bname=nil, filters: nil)
+tool_opts = Hiiro::Options.setup {
+  flag(:full, short: :f, default: false, desc: 'fulltext search - full grep file or dir')
+}
+
+def glob_path(glob, bname=nil, filters: nil, fulltext: false)
   bname ||= ''
   filters ||= []
   filters = ['.*'] if filters.empty?
@@ -31,8 +35,26 @@ def glob_path(glob, bname=nil, filters: nil)
     $stderr.puts
     $stderr.puts "PATH: #{path}"
 
-    fs.grep(/#{filters.join(?|)}/i).each do |f|
-      puts f.basename(*bname)
+    re_s = filters.join(?|)
+    re = Regexp.new(re_s)
+    fs.each do |f|
+      more_args = f.file? ? [] : ['-r']
+      cmd = ['egrep', *more_args, '-m1', re_s, f.to_s]
+      kwcmd = { out: File.open('/dev/null', 'w') }
+      base_f = f.basename(bname)
+
+      matches = 
+        if fulltext
+          system(*cmd, **kwcmd)
+        else
+          base_f.to_s.match?(re)
+        end
+
+      if matches
+        puts base_f
+      else
+        $stderr.puts "SKIPPING #{base_f}"
+      end
     end
   end
 end
@@ -126,15 +148,18 @@ add_subcmd(:env) { |*args|
   }
 
   add_subcmd(:agents) { |*args|
-    glob_path('agents/*.md', '.md', filters: args)
+    opts = tool_opts.parse(args)
+    glob_path('agents/*.md', '.md', filters: opts.args, fulltext: opts.full)
   }
 
   add_subcmd(:commands) { |*args|
-    glob_path('commands/*.md', '.md', filters: args)
+    opts = tool_opts.parse(args)
+    glob_path('commands/*.md', '.md', filters: opts.args, fulltext: opts.full)
   }
 
   add_subcmd(:skills) { |*args|
-    glob_path('skills/*/', filters: args)
+    opts = tool_opts.parse(args)
+    glob_path('skills/*/', filters: opts.args, fulltext: opts.full)
   }
 
   add_subcmd(:new) { |*args|
