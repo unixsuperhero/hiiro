@@ -104,15 +104,49 @@ add_subcmd(:env) { |*args|
   }
 
   add_subcmd(:agents) {
-    puts claude_paths.flat_map { |p| p.glob('agents/*.md').map { |f| f.basename('.md') } }
+    claude_paths.map { |p|
+      p.glob('agents/*.md').map { |f|
+        f.basename('.md')
+      }
+    }.each do |fs|
+      $stderr.puts
+      $stderr.puts "PATH: #{fs.first.dirname.dirname}"
+
+      fs.each do |f|
+        puts f
+      end
+    end
   }
 
   add_subcmd(:commands) {
-    puts claude_paths.flat_map { |p| p.glob('commands/*.md').map { |f| f.basename('.md') } }
+    claude_paths.map { |p|
+      p.glob('commands/*.md').map { |f|
+        f.basename('.md')
+      }
+    }.each do |fs|
+      $stderr.puts
+      $stderr.puts "PATH: #{fs.first.dirname.dirname}"
+
+      fs.each do |f|
+        puts f
+      end
+    end
   }
 
   add_subcmd(:skills) {
-    puts claude_paths.flat_map { |p| p.glob('skills/*/').map { |d| d.basename } }
+    claude_paths.map { |p|
+      p.glob('skills/*/').map { |f|
+        f.basename
+      }
+    }.each do |fs|
+      $stderr.puts
+      $stderr.puts "PATH: #{fs.first.dirname}"
+
+      fs.each do |f|
+        puts f
+      end
+    end
+
   }
 
   add_subcmd(:new) { |*args|
