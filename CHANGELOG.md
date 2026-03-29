@@ -1,4 +1,13 @@
 ```markdown
+## v0.1.300 (2026-03-29)
+
+### Added
+- `bin/h-claude`: fulltext search option for agents, commands, and skills via new search flag
+
+### Changed
+- `bin/h-claude`: agents/commands/skills directory traversal refactored for DRY principle
+- `bin/h-claude`: improved output formatting to display Claude tools organized by type
+
 ## v0.1.299 (2026-03-27)
 
 ### Added
