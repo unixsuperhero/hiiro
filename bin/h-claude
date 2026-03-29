@@ -15,6 +15,24 @@ opts = Hiiro::Options.setup {
   option(:size, short: :s, default: nil)
 }
 
+def glob_path(glob, *bname)
+  claude_paths.map { |path|
+    [
+      path.split&.first,
+      path.glob(glob),
+    ]
+  }.each do |path, fs|
+    next if fs.empty?
+
+    $stderr.puts
+    $stderr.puts "PATH: #{path}"
+
+    fs.each do |f|
+      puts f.basename(*bname)
+    end
+  end
+end
+
 def permission_flag(opts)
   opts.danger ? '--dangerously-skip-permissions' : '--allow-dangerously-skip-permissions'
 end
@@ -104,49 +122,15 @@ add_subcmd(:env) { |*args|
   }
 
   add_subcmd(:agents) {
-    claude_paths.map { |p|
-      p.glob('agents/*.md').map { |f|
-        f.basename('.md')
-      }
-    }.each do |fs|
-      $stderr.puts
-      $stderr.puts "PATH: #{fs.first.dirname.dirname}"
-
-      fs.each do |f|
-        puts f
-      end
-    end
+    glob_path('agents/*.md', '.md')
   }
 
   add_subcmd(:commands) {
-    claude_paths.map { |p|
-      p.glob('commands/*.md').map { |f|
-        f.basename('.md')
-      }
-    }.each do |fs|
-      $stderr.puts
-      $stderr.puts "PATH: #{fs.first.dirname.dirname}"
-
-      fs.each do |f|
-        puts f
-      end
-    end
+    glob_path('commands/*.md', '.md')
   }
 
   add_subcmd(:skills) {
-    claude_paths.map { |p|
-      p.glob('skills/*/').map { |f|
-        f.basename
-      }
-    }.each do |fs|
-      $stderr.puts
-      $stderr.puts "PATH: #{fs.first.dirname}"
-
-      fs.each do |f|
-        puts f
-      end
-    end
-
+    glob_path('skills/*/')
   }
 
   add_subcmd(:new) { |*args|
