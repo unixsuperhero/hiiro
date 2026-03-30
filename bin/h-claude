@@ -17,9 +17,13 @@ opts = Hiiro::Options.setup {
 
 tool_opts = Hiiro::Options.setup {
   flag(:full, short: :f, default: false, desc: 'fulltext search - full grep file or dir')
+  flag(:verbose, short: :v, default: false, desc: 'display claude dirs in stderr')
+  flag(:veryverbose, short: :V, default: false, desc: 'display all stderr messages')
 }
 
-def glob_path(glob, bname=nil, filters: nil, fulltext: false)
+def glob_path(glob, bname=nil, opts:)
+  filters = opts.args
+  fulltext = opts.full
   bname ||= ''
   filters ||= []
   filters = ['.*'] if filters.empty?
@@ -32,8 +36,8 @@ def glob_path(glob, bname=nil, filters: nil, fulltext: false)
   }.each do |path, fs|
     next if fs.empty?
 
-    $stderr.puts
-    $stderr.puts "PATH: #{path}"
+    $stderr.puts if opts.verbose || opts.veryverbose
+    $stderr.puts "PATH: #{path}" if opts.verbose || opts.veryverbose
 
     re_s = filters.join(?|)
     re = Regexp.new(re_s)
@@ -53,7 +57,7 @@ def glob_path(glob, bname=nil, filters: nil, fulltext: false)
       if matches
         puts base_f
       else
-        $stderr.puts "SKIPPING #{base_f}"
+        $stderr.puts "SKIPPING #{base_f}" if opts.veryverbose
       end
     end
   end
@@ -147,19 +151,26 @@ add_subcmd(:env) { |*args|
     IO.popen(['claude', '-p'], 'w') { |io| io.write(prompt) }
   }
 
+  add_subcmd(:all) { |*args|
+    opts = tool_opts.parse(args)
+    glob_path('agents/*.md', '.md', opts: opts)
+    glob_path('commands/*.md', '.md', opts: opts)
+    glob_path('skills/*/', opts: opts)
+  }
+
   add_subcmd(:agents) { |*args|
     opts = tool_opts.parse(args)
-    glob_path('agents/*.md', '.md', filters: opts.args, fulltext: opts.full)
+    glob_path('agents/*.md', '.md', opts: opts)
   }
 
   add_subcmd(:commands) { |*args|
     opts = tool_opts.parse(args)
-    glob_path('commands/*.md', '.md', filters: opts.args, fulltext: opts.full)
+    glob_path('commands/*.md', '.md', opts: opts)
   }
 
   add_subcmd(:skills) { |*args|
     opts = tool_opts.parse(args)
-    glob_path('skills/*/', filters: opts.args, fulltext: opts.full)
+    glob_path('skills/*/', opts: opts)
   }
 
   add_subcmd(:new) { |*args|
