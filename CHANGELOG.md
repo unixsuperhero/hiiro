@@ -1,4 +1,11 @@
+```markdown
 # Changelog
+
+## [0.1.305] - 2026-03-30
+
+### Changed
+- Refactor: use delayed_update subcommand instead of direct update call
+- Improve gem version matching regex in version check
 
 ## [0.1.304] - 2026-03-30
 
@@ -56,3 +63,4 @@
 
 ### Changed
 - Filter logic changes for PR management
+```
