@@ -148,7 +148,10 @@ class Hiiro
 
     def find(id)
       id_int = id.to_i
-      items.find { |item| item.id == id_int }
+      items.find { |item|
+        item.id == id_int ||
+          item.id.to_s.end_with?(id.to_s)
+      }
     end
 
     def find_by_index(index)
