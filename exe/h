@@ -196,7 +196,7 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
     script = <<~RUBY
       #!/usr/bin/env ruby
       expected = #{expected.inspect}
-      sleep 5
+      sleep 15
       system('h', 'update', '-a')
       versions = `rbenv versions --bare`.lines(chomp: true)
       mismatched = versions.reject do |ver|
