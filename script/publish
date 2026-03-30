@@ -200,4 +200,4 @@ else
 end
 
 puts ""
-system('./script/update')
+system('h', 'delayed_update', new_version)

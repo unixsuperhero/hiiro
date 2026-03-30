@@ -1,11 +1,15 @@
 #!/bin/bash
 
+NEW_VERSION=$1
+
 if rbenv which h
 then
   gem update hiiro
-  h update
-
-  h update -a
+  if [ -n "$NEW_VERSION" ]; then
+    h delayed_update "$NEW_VERSION"
+  else
+    h update -a
+  fi
 else
   gem install hiiro
 fi
