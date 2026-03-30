@@ -279,13 +279,15 @@ class Hiiro
       tree_col   = rows.map { |r| r[:tree].length }.max
       branch_col = rows.map { |r| r[:branch].length }.max
 
+      cols = ENV['COLUMNS']&.to_i&.then { |c| c > 0 ? c : nil }
+
       rows.each do |r|
         name_pad = name_col - r[:prefix].length
         tags     = tag_store.get(r[:name])
         tag_str  = tags.any? ? "  " + Hiiro::Tags.badges(tags) : ""
-        print r[:prefix]
-        puts format("%-#{name_pad}s  %-#{tree_col}s  %-#{branch_col}s  %s",
-                    r[:name], r[:tree], r[:branch], r[:session]) + tag_str
+        line = r[:prefix] + format("%-#{name_pad}s  %-#{tree_col}s  %-#{branch_col}s  %s",
+                                   r[:name], r[:tree], r[:branch], r[:session]) + tag_str
+        puts cols ? line[0, cols] : line
       end
 
       available = environment.all_trees.reject { |t|
@@ -297,7 +299,8 @@ class Hiiro
         avail_name_col = [available.map { |t| t.name.length }.max, name_col].max
         available.each do |tree|
           branch_str = tree.branch ? "[#{tree.branch}]" : tree.detached? ? "[(detached)]" : ""
-          puts format("  %-#{avail_name_col}s  (available)  %s", tree.name, branch_str).rstrip
+          line = format("  %-#{avail_name_col}s  (available)  %s", tree.name, branch_str).rstrip
+          puts cols ? line[0, cols] : line
         end
       end
 
@@ -309,7 +312,8 @@ class Hiiro
           extra_name_col = [extra_sessions.map { |s| s.name.length }.max, name_col].max
           extra_sessions.sort_by(&:name).each do |session|
             attach = client_map.key?(session.name) ? "@" : " "
-            puts format(" %s %-#{extra_name_col}s  (tmux session)", attach, session.name)
+            line = format(" %s %-#{extra_name_col}s  (tmux session)", attach, session.name)
+            puts cols ? line[0, cols] : line
           end
         end
       end
