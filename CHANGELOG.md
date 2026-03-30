@@ -1,6 +1,12 @@
 ```markdown
 # Changelog
 
+## [0.1.306] - 2026-03-30
+
+### Changed
+- Increase delayed_update sleep duration from 5s to 15s
+- Add logging for delayed_update invocation in publish script
+
 ## [0.1.305] - 2026-03-30
 
 ### Changed
