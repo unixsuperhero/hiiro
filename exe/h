@@ -201,7 +201,7 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
       versions = `rbenv versions --bare`.lines(chomp: true)
       mismatched = versions.reject do |ver|
         output = `RBENV_VERSION=\#{ver} rbenv exec gem list hiiro --exact 2>/dev/null`
-        output.match?(/hiiro \\(#{Regexp.escape(expected)}\\)/)
+        output.match?(/hiiro \\([^)]*#{Regexp.escape(expected)}/)
       end
       if mismatched.empty?
         system('say', 'hiiro updated')
