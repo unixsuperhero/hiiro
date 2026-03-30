@@ -1,4 +1,11 @@
 ```markdown
+## Unreleased
+
+### Fixed
+- tmux session matching now uses exact name (`=session_name`) in all `has-session`, `switch-client`, and `attach-session` calls, preventing prefix ambiguity (e.g. `oncall` matching `oncall/posoi`)
+- `Environment#find_session` now prefers exact match before prefix fallback
+- `Tmux#find_session` prefix fallback no longer crosses `/` path boundaries
+
 ## v0.1.301 (2026-03-29)
 
 ### Added
