@@ -139,7 +139,7 @@ class Hiiro
 
       Dir.chdir(base_dir)
       # Create the session detached first so colors are applied before the user attaches
-      unless system('tmux', 'has-session', '-t', session_name, err: File::NULL)
+      unless system('tmux', 'has-session', '-t', "=#{session_name}", err: File::NULL)
         system('tmux', 'new-session', '-d', '-s', session_name, '-c', Dir.pwd)
       end
       Hiiro::TaskColors.apply(session_name, color_index)
@@ -158,7 +158,7 @@ class Hiiro
       tree_path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
 
       session_name = task.session_name
-      session_exists = system('tmux', 'has-session', '-t', session_name, err: File::NULL)
+      session_exists = system('tmux', 'has-session', '-t', "=#{session_name}", err: File::NULL)
 
       if session_exists
         session = environment.find_session(session_name)
@@ -178,7 +178,7 @@ class Hiiro
         if Dir.exist?(base_dir)
           Dir.chdir(base_dir)
           # Create detached first so colors are applied before the user attaches
-          unless system('tmux', 'has-session', '-t', session_name, err: File::NULL)
+          unless system('tmux', 'has-session', '-t', "=#{session_name}", err: File::NULL)
             system('tmux', 'new-session', '-d', '-s', session_name, '-c', Dir.pwd)
           end
           Hiiro::TaskColors.apply(session_name, task.color_index) if task.color_index
@@ -1480,7 +1480,7 @@ class Hiiro
 
     def find_session(abbreviated)
       return nil if abbreviated.nil?
-      session_matcher.find(abbreviated).first&.item
+      session_matcher.find(abbreviated).resolved&.item
     end
 
     def find_app(abbreviated)

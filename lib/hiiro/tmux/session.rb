@@ -74,14 +74,14 @@ class Hiiro
 
       def select
         if ENV['TMUX']
-          system('tmux', 'switch-client', '-t', name)
+          system('tmux', 'switch-client', '-t', "=#{name}")
         else
-          system('tmux', 'attach-session', '-t', name)
+          system('tmux', 'attach-session', '-t', "=#{name}")
         end
       end
 
       def attach
-        system('tmux', 'attach-session', '-t', name)
+        system('tmux', 'attach-session', '-t', "=#{name}")
       end
 
       def detach

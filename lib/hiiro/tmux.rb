@@ -108,7 +108,11 @@ class Hiiro
     def find_session(name)
       normalized = name.to_s.tr('.', '_')
       sessions.find { |s| s.name == normalized } ||
-        Matcher.by_prefix(sessions.map(&:name), normalized)&.resolved&.then { |m| sessions.find { |s| s.name == m.item } }
+        Matcher.by_prefix(sessions.map(&:name), normalized)&.resolved&.then do |m|
+          # Don't cross path boundaries: 'oncall' must not match 'oncall/posoi'
+          next nil if m.item.length > normalized.length && m.item[normalized.length] == '/'
+          sessions.find { |s| s.name == m.item }
+        end
     end
 
     def session_exists?(name)
