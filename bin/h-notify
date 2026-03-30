@@ -33,15 +33,26 @@ CLAUDE_NOTIFICATION_CMD = %q(MSG=$(cat | jq -r '.message // "Needs input"'); h a
 CLAUDE_STOP_CMD         = %q(h alert -t 'Claude Code' -m 'Work completed' -s b -c "echo switchc -t '$TMUX_PANE' | pbcopy"; h notify push -t success 'Work completed')
 
 def read_log
-  return {} unless File.exist?(LOG_FILE)
-  YAML.safe_load(File.read(LOG_FILE)) || {}
+  return [] unless File.exist?(LOG_FILE)
+  data = YAML.safe_load(File.read(LOG_FILE))
+  if data.is_a?(Hash)
+    backup = "#{LOG_FILE}.bak.#{Time.now.strftime('%Y%m%d%H%M%S')}"
+    FileUtils.cp(LOG_FILE, backup)
+    $stderr.puts "h notify: migrated log to flat format (backup: #{backup})"
+    migrated = data.values.flatten.compact.sort_by { |e| -(e['timestamp'] || 0) }
+    write_log(migrated)
+    migrated
+  elsif data.is_a?(Array)
+    data
+  else
+    []
+  end
 rescue
-  {}
+  []
 end
 
 def write_log(data)
   FileUtils.mkdir_p(File.dirname(LOG_FILE))
-  data.reject! { |_, entries| entries.nil? || entries.empty? }
   File.write(LOG_FILE, data.to_yaml)
 end
 
@@ -92,10 +103,9 @@ Hiiro.run(*ARGV, tasks: true) do
     }
 
     data = read_log
-    data[session] ||= []
     # One entry per pane — replace existing, newest first
-    data[session].reject! { |e| e['pane_id'] == pane.id }
-    data[session].unshift(entry)
+    data.reject! { |e| e['pane_id'] == pane.id }
+    data.unshift(entry)
     write_log(data)
 
     binpath = `command -v terminal-notifier`
@@ -106,34 +116,21 @@ Hiiro.run(*ARGV, tasks: true) do
   end
 
   add_subcmd(:ls) do
-    ls_opts = Hiiro::Options.parse(@opts.args) do
-      flag(:all, short: 'a', desc: 'Show all sessions')
-    end
+    data = read_log
 
-    data     = read_log
-    sessions = ls_opts.all ? data.keys : [Hiiro::Tmux::Session.current&.name].compact
-
-    any = false
-    sessions.each do |sess|
-      entries = data[sess] || []
-      next if entries.empty?
-
-      puts "=== #{sess} ===" if ls_opts.all
-      entries.each_with_index do |e, i|
+    if data.empty?
+      puts "No notifications."
+    else
+      data.each_with_index do |e, i|
         time_str = Time.at(e['timestamp']).strftime('%H:%M:%S')
         prefix   = TYPE_PRESETS[e['type']]&.dig(:prefix) || '[INFO]'
-        puts "%3d) %s [%s] %s: %s (%s)" % [i, prefix, e['pane_id'], e['pane_cmd'], e['message'], time_str]
+        puts "%3d) %s [%s/%s] %s: %s (%s)" % [i, prefix, e['session'], e['pane_id'], e['pane_cmd'], e['message'], time_str]
       end
-      any = true
     end
-
-    puts "No notifications." unless any
   end
 
   add_subcmd(:menu) do
-    session = Hiiro::Tmux::Session.current&.name
-    data    = read_log
-    entries = data[session] || []
+    entries = read_log
 
     if entries.empty?
       next
@@ -159,20 +156,15 @@ Hiiro.run(*ARGV, tasks: true) do
       next
     end
 
-    index   = index_str.to_i
-    session = Hiiro::Tmux::Session.current&.name
-    data    = read_log
-    entries = data[session] || []
+    index = index_str.to_i
+    data  = read_log
 
-    if index >= entries.length
-      next
-    end
+    next if index >= data.length
 
-    entry = entries[index]
+    entry = data[index]
 
     unless pane_exists?(entry['pane_id'])
-      entries.delete_at(index)
-      data[session] = entries
+      data.delete_at(index)
       write_log(data)
       next
     end
@@ -180,23 +172,19 @@ Hiiro.run(*ARGV, tasks: true) do
     tmux_client.select_window(entry['window_id'])
     tmux_client.select_pane(entry['pane_id'])
 
-    entries.delete_at(index)
-    data[session] = entries
+    data.delete_at(index)
     write_log(data)
   end
 
   add_subcmd(:clear) do
-    session = Hiiro::Tmux::Session.current&.name
-    data    = read_log
-    data.delete(session)
-    write_log(data)
+    write_log([])
   end
 
   # Called by tmux hook: after-kill-pane
   add_subcmd(:remove_pane) do |pane_id = nil|
     next unless pane_id
     data = read_log
-    data.each_value { |entries| entries.reject! { |e| e['pane_id'] == pane_id } }
+    data.reject! { |e| e['pane_id'] == pane_id }
     write_log(data)
   end
 
@@ -204,7 +192,7 @@ Hiiro.run(*ARGV, tasks: true) do
   add_subcmd(:remove_window) do |window_id = nil|
     next unless window_id
     data = read_log
-    data.each_value { |entries| entries.reject! { |e| e['window_id'] == window_id } }
+    data.reject! { |e| e['window_id'] == window_id }
     write_log(data)
   end
 
@@ -212,7 +200,7 @@ Hiiro.run(*ARGV, tasks: true) do
   add_subcmd(:remove_session) do |sess = nil|
     next unless sess
     data = read_log
-    data.delete(sess)
+    data.reject! { |e| e['session'] == sess }
     write_log(data)
   end
 
