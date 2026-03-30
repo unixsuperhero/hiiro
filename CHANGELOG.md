@@ -1,1 +1,17 @@
-Done. Updated CHANGELOG.md to consolidate all changes for v0.1.301 (check_version, delayed_update, h-claude verbose flags and glob_path refactor, and tmux session matching fixes) into a single release entry organized by Added/Changed/Fixed.
+# Changelog
+
+## [0.1.302] - 2026-03-30
+
+### Fixed
+- Truncate output lines to terminal width in tasks plugin
+
+## [0.1.301]
+
+### Added
+- Check version delayed update functionality
+
+### Changed
+- h-claude: add verbose flags and refactor glob_path handling
+
+### Fixed
+- Use exact session matching to prevent tmux prefix ambiguity
