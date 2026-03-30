@@ -200,4 +200,5 @@ else
 end
 
 puts ""
+puts "Running: h delayed_update #{new_version}"
 system('h', 'delayed_update', new_version)
