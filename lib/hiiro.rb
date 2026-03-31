@@ -6,6 +6,9 @@ require "ostruct"
 
 require_relative "hiiro/version"
 require_relative "hiiro/config"
+require_relative "hiiro/effects"
+require_relative "hiiro/db"
+require_relative "hiiro/invocation"
 require_relative "hiiro/background"
 require_relative "hiiro/bins"
 require_relative "hiiro/fuzzyfind"
@@ -16,8 +19,14 @@ require_relative "hiiro/notification"
 require_relative "hiiro/options"
 require_relative "hiiro/input_file"
 require_relative "hiiro/paths"
+require_relative "hiiro/link"
+require_relative "hiiro/branch"
+require_relative "hiiro/tracked_pr"
 require_relative "hiiro/tags"
 require_relative "hiiro/queue"
+require_relative "hiiro/task_record"
+require_relative "hiiro/app_record"
+require_relative "hiiro/assignment"
 require_relative "hiiro/task_colors"
 require_relative "hiiro/tasks"
 require_relative "hiiro/tmux"
@@ -27,8 +36,13 @@ require_relative "hiiro/runner_tool"
 require_relative "hiiro/app_files"
 require_relative "hiiro/rbenv"
 require_relative "hiiro/any_struct"
+require_relative "hiiro/pinned_pr"
 require_relative "hiiro/pinned_pr_manager"
 require_relative "hiiro/projects"
+require_relative "hiiro/project"
+require_relative "hiiro/pane_home"
+require_relative "hiiro/pin_record"
+require_relative "hiiro/reminder"
 
 class String
   def underscore(camel_cased_word=self)
@@ -49,6 +63,7 @@ class Hiiro
 
   def self.init(*oargs, plugins: [], logging: false, tasks: false, task_scope: nil, **values, &block)
     load_env
+    Hiiro::DB.setup!
 
     if values[:args]
       args = values[:args]
@@ -58,6 +73,12 @@ class Hiiro
     end
 
     bin_name = values[:bin_name] || $0
+
+    Hiiro::Invocation.record!(
+      bin: File.basename(bin_name),
+      subcmd: args.first,
+      args: args[1..]
+    ) rescue nil
 
     new(bin_name, *args, logging: logging, tasks: tasks, task_scope: task_scope, **values).tap do |hiiro|
       hiiro.load_plugins(plugins)
