@@ -28,18 +28,15 @@ class BranchManager
     data = load_data
     data['branches'] ||= []
 
-    # Check if this branch is already recorded for this task
     existing = data['branches'].find do |b|
       b['name'] == branch_name && b['task'] == entry[:task]
     end
 
     if existing
-      # Update existing entry
       existing.merge!(entry.transform_keys(&:to_s))
       existing['updated_at'] = Time.now.iso8601
       puts "Updated branch '#{branch_name}' for task '#{entry[:task]}'"
     else
-      # Add new entry
       data['branches'] << entry.transform_keys(&:to_s).merge('created_at' => Time.now.iso8601)
       puts "Saved branch '#{branch_name}' for task '#{entry[:task]}'"
     end
@@ -62,15 +59,73 @@ class BranchManager
     show_entry(entry)
   end
 
+  # Returns entries as uniform hashes: [{name, task, ...}]
+  # all: false → saved branches only; all: true → all local git branches
+  def branch_entries(all: false)
+    if all
+      hiiro.git.branches(sort_by: 'authordate', ignore_case: true)
+        .map { |name| {'name' => name, 'task' => nil} }
+    else
+      load_data['branches'] || []
+    end
+  end
+
+  def branch_names(all: false)
+    branch_entries(all: all).map { |e| e['name'] }
+  end
+
+  def saved_entry(branch_name)
+    (load_data['branches'] || []).find { |b| b['name'] == branch_name }
+  end
+
+  def rename_saved(old_name, new_name)
+    data = load_data
+    changed = false
+    (data['branches'] || []).each do |b|
+      if b['name'] == old_name
+        b['name'] = new_name
+        b['updated_at'] = Time.now.iso8601
+        changed = true
+      end
+    end
+    save_data(data) if changed
+    changed
+  end
+
+  def remove_saved(branch_name)
+    data = load_data
+    before = (data['branches'] || []).length
+    data['branches'] = (data['branches'] || []).reject { |b| b['name'] == branch_name }
+    save_data(data) if data['branches'].length < before
+  end
+
+  def get_note(branch_name = nil)
+    branch_name ||= current_branch
+    saved_entry(branch_name)&.[]('note')
+  end
+
+  def set_note(text, branch_name = nil)
+    branch_name ||= current_branch
+    data = load_data
+    data['branches'] ||= []
+    entry = data['branches'].find { |b| b['name'] == branch_name }
+    unless entry
+      new_entry = build_entry(branch_name).transform_keys(&:to_s).merge('created_at' => Time.now.iso8601)
+      data['branches'] << new_entry
+      entry = data['branches'].last
+    end
+    if text.nil?
+      entry.delete('note')
+    else
+      entry['note'] = text
+    end
+    entry['updated_at'] = Time.now.iso8601
+    save_data(data)
+  end
+
   def load_data
     return {} unless File.exist?(data_file)
     YAML.safe_load_file(data_file) || {}
-  end
-
-  private
-
-  def current_branch
-    hiiro.git.branch
   end
 
   def build_entry(branch_name)
@@ -85,6 +140,12 @@ class BranchManager
       task: current_task&.name,
       tmux: tmux_info
     }
+  end
+
+  private
+
+  def current_branch
+    hiiro.git.branch
   end
 
   def capture_tmux_info
@@ -119,13 +180,34 @@ class BranchManager
   end
 end
 
-BRANCH_TAG_OPTS = Proc.new {
-  option(:tag, short: 't', desc: 'filter by tag (OR when multiple)', multi: true)
+# Helper: find main or master branch name
+FIND_BASE = -> {
+  %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") }
 }
 
 Hiiro.run(*ARGV) do
   manager   = BranchManager.new(self)
   tag_store = Hiiro::Tags.new(:branch)
+
+  # Shared lambda: find a pinned PR by arg (number, URL, or fuzzy select)
+  find_pr_by_arg = ->(arg, pinned) {
+    if arg.nil?
+      return nil if pinned.empty?
+      lines = pinned.each_with_object({}) do |pr, h|
+        h["##{pr.number} [#{pr.head_branch}] #{pr.title}"] = pr
+      end
+      require 'open3'
+      selected, status = Open3.capture2('sk', '--no-sort', stdin_data: lines.keys.join("\n"))
+      return nil unless status.success? && !selected.strip.empty?
+      lines[selected.chomp]
+    elsif arg.to_s =~ %r{/pull/(\d+)}
+      num = $1
+      pinned.find { |pr| pr.number.to_s == num }
+    elsif arg.to_s =~ /^#?(\d+)$/
+      num = $1
+      pinned.find { |pr| pr.number.to_s == num }
+    end
+  }
 
   add_subcmd(:edit) { edit_files(__FILE__) }
   add_subcmd(:save) { |branch_name = nil| manager.save(branch_name) }
@@ -157,29 +239,123 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:current) { print `git branch --show-current` }
-  add_subcmd(:info) { manager.current }
 
-  add_subcmd(:ls) do |*ls_args|
-    opts     = Hiiro::Options.parse(ls_args, &BRANCH_TAG_OPTS)
-    branches = git.branches(sort_by: 'authordate', ignore_case: true)
-    current  = git.branch
-    tags_all = tag_store.all  # { branch_name => [tags] }
-
-    tag_filter = Array(opts.tag).reject(&:empty?)
-    if tag_filter.any?
-      branches = branches.select { |b| (Array(tags_all[b]) & tag_filter).any? }
-    end
-
-    if branches.empty?
-      puts tag_filter.any? ? "No branches match tags: #{tag_filter.join(', ')}" : "No branches found."
+  add_subcmd(:info) do
+    branch_name = git.branch
+    unless branch_name
+      puts "ERROR: Not in a git repository"
       next
     end
 
-    branches.each do |b|
-      marker   = b == current ? "* " : "  "
-      tags     = Array(tags_all[b])
+    entry = manager.build_entry(branch_name)
+    saved = manager.saved_entry(branch_name)
+
+    puts "Current branch info:"
+    puts
+    puts "  Branch:   #{entry[:name]}"
+    puts "  SHA:      #{entry[:sha] || '(unknown)'}"
+    puts "  Task:     #{entry[:task] || '(none)'}"
+    puts "  Worktree: #{entry[:worktree] || '(none)'}"
+    if entry[:tmux]
+      puts "  Tmux session: #{entry[:tmux]['session']}"
+      puts "  Tmux window:  #{entry[:tmux]['window']}"
+      puts "  Tmux pane:    #{entry[:tmux]['pane']}"
+    end
+
+    base = FIND_BASE.call
+    if base
+      ahead  = `git rev-list --count #{base}..HEAD 2>/dev/null`.strip.to_i
+      behind = `git rev-list --count HEAD..#{base} 2>/dev/null`.strip.to_i
+      ahead_str  = ahead  > 0 ? "\e[32m↑#{ahead}\e[0m"  : "↑0"
+      behind_str = behind > 0 ? "\e[31m↓#{behind}\e[0m" : "↓0"
+      puts "  vs #{base}:  #{ahead_str} #{behind_str}"
+    end
+
+    if saved && saved['note']
+      puts "  Note:     #{saved['note']}"
+    end
+
+    begin
+      pinned_prs = Hiiro::PinnedPRManager.new.load_pinned
+      pr = pinned_prs.find { |p| p.head_branch == branch_name }
+      if pr
+        puts "  PR:       ##{pr.number} (#{pr.state}) #{pr.title}"
+        puts "  URL:      #{pr.url}" if pr.url
+      end
+    rescue
+      # silently skip if PR data unavailable
+    end
+  end
+
+  add_subcmd(:ls) do |*ls_args|
+    opts = Hiiro::Options.parse(ls_args) do
+      option(:tag, short: 't', desc: 'filter by tag (OR when multiple)', multi: true)
+      flag(:all, short: 'a', desc: 'Show all local branches instead of just saved')
+    end
+
+    entries  = manager.branch_entries(all: opts.all)
+    current  = git.branch
+    tags_all = tag_store.all
+
+    tag_filter = Array(opts.tag).reject(&:empty?)
+    if tag_filter.any?
+      entries = entries.select { |b| (Array(tags_all[b['name']]) & tag_filter).any? }
+    end
+
+    if entries.empty?
+      msg = if tag_filter.any?
+        "No #{opts.all ? '' : 'saved '}branches match tags: #{tag_filter.join(', ')}"
+      elsif opts.all
+        "No branches found."
+      else
+        "No saved branches. Use 'h branch save' or pass -a for all local branches."
+      end
+      puts msg
+      next
+    end
+
+    entries.each do |b|
+      name     = b['name']
+      marker   = name == current ? "* " : "  "
+      tags     = Array(tags_all[name])
+      task_str = b['task'] ? " \e[90m[#{b['task']}]\e[0m" : ""
       tag_str  = tags.any? ? "  " + Hiiro::Tags.badges(tags) : ""
-      puts "#{marker}#{b}#{tag_str}"
+      puts "#{marker}#{name}#{task_str}#{tag_str}"
+    end
+  end
+
+  add_subcmd(:search) do |*raw_args|
+    opts  = Hiiro::Options.parse(raw_args) { flag(:all, short: 'a', desc: 'Search all local branches') }
+    terms = opts.args
+
+    if terms.empty?
+      puts "Usage: h branch search TERM [TERM2 ...]"
+      next
+    end
+
+    entries  = manager.branch_entries(all: opts.all)
+    current  = git.branch
+    tags_all = tag_store.all
+
+    matched = entries.select do |b|
+      terms.any? { |t|
+        b['name'].match?(/#{Regexp.escape(t)}/i) ||
+          Array(tags_all[b['name']]).any? { |tag| tag.match?(/#{Regexp.escape(t)}/i) }
+      }
+    end
+
+    if matched.empty?
+      puts "No #{opts.all ? '' : 'saved '}branches match: #{terms.join(', ')}"
+      next
+    end
+
+    matched.each do |b|
+      name     = b['name']
+      marker   = name == current ? "* " : "  "
+      tags     = Array(tags_all[name])
+      task_str = b['task'] ? " \e[90m[#{b['task']}]\e[0m" : ""
+      tag_str  = tags.any? ? "  " + Hiiro::Tags.badges(tags) : ""
+      puts "#{marker}#{name}#{task_str}#{tag_str}"
     end
   end
 
@@ -260,14 +436,15 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:select) do |*select_args|
-    branches = git.branches(sort_by: 'authordate', ignore_case: true)
+    opts     = Hiiro::Options.parse(select_args) { flag(:all, short: 'a', desc: 'Select from all local branches') }
+    branches = manager.branch_names(all: opts.all)
 
     lines = branches.each_with_object({}) do |name, h|
       h["  #{name}"] = name
     end
 
-    if select_args.any?
-      lines = hash_matches?(lines, *select_args)
+    if opts.args.any?
+      lines = hash_matches?(lines, *opts.args)
     end
 
     require 'open3'
@@ -279,14 +456,15 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:copy) do |*copy_args|
-    branches = git.branches(sort_by: 'authordate', ignore_case: true)
+    opts     = Hiiro::Options.parse(copy_args) { flag(:all, short: 'a', desc: 'Select from all local branches') }
+    branches = manager.branch_names(all: opts.all)
 
     lines = branches.each_with_object({}) do |name, h|
       h["  #{name}"] = name
     end
 
-    if copy_args.any?
-      lines = hash_matches?(lines, *copy_args)
+    if opts.args.any?
+      lines = hash_matches?(lines, *opts.args)
     end
 
     require 'open3'
@@ -299,10 +477,12 @@ Hiiro.run(*ARGV) do
     end
   end
 
-  add_subcmd(:co, :checkout) { |branch = nil, *checkout_args|
+  add_subcmd(:co, :checkout) do |*co_args|
+    opts   = Hiiro::Options.parse(co_args) { flag(:all, short: 'a', desc: 'Select from all local branches') }
+    branch = opts.args.first
+
     unless branch
-      # Use sk to select a branch
-      branches = git.branches(sort_by: 'authordate', ignore_case: true)
+      branches = manager.branch_names(all: opts.all)
       require 'open3'
       selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: branches.join("\n"))
       unless status.success? && !selected.strip.empty?
@@ -312,13 +492,15 @@ Hiiro.run(*ARGV) do
       branch = selected.strip
     end
 
-    system('git', 'checkout', branch, *checkout_args)
-  }
+    system('git', 'checkout', branch)
+  end
 
-  add_subcmd(:rm, :remove) { |branch = nil, *remove_args|
+  add_subcmd(:rm, :remove) do |*rm_args|
+    opts   = Hiiro::Options.parse(rm_args) { flag(:all, short: 'a', desc: 'Select from all local branches') }
+    branch = opts.args.first
+
     unless branch
-      # Use sk to select a branch
-      branches = git.branches(sort_by: 'authordate', ignore_case: true)
+      branches = manager.branch_names(all: opts.all)
       require 'open3'
       selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: branches.join("\n"))
       unless status.success? && !selected.strip.empty?
@@ -328,8 +510,246 @@ Hiiro.run(*ARGV) do
       branch = selected.strip
     end
 
-    system('git', 'branch', '-d', branch, *remove_args)
-  }
+    system('git', 'branch', '-d', branch)
+  end
+
+  add_subcmd(:rename) do |new_name = nil, old_name = nil|
+    unless new_name
+      puts "Usage: h branch rename <new_name> [old_name]"
+      next
+    end
+
+    old_name ||= git.branch
+
+    unless system('git', 'branch', '-m', old_name, new_name)
+      puts "ERROR: Could not rename branch"
+      next
+    end
+    puts "Renamed '#{old_name}' → '#{new_name}'"
+
+    remote = `git config branch.#{old_name}.remote 2>/dev/null`.strip
+    if !remote.empty?
+      if system('git', 'push', remote, ":#{old_name}", "#{new_name}")
+        system('git', 'branch', '--set-upstream-to', "#{remote}/#{new_name}", new_name)
+        puts "Updated remote #{remote}: deleted #{old_name}, pushed #{new_name}"
+      else
+        puts "WARNING: Could not update remote. Renamed locally only."
+      end
+    end
+
+    if manager.rename_saved(old_name, new_name)
+      puts "Updated saved branch record"
+    end
+  end
+
+  add_subcmd(:status) do |*args|
+    opts    = Hiiro::Options.parse(args) { flag(:all, short: 'a', desc: 'Show all local branches') }
+    entries = manager.branch_entries(all: opts.all)
+    current = git.branch
+    base    = FIND_BASE.call || 'HEAD'
+
+    if entries.empty?
+      puts opts.all ? "No branches found." : "No saved branches. Use -a to show all."
+      next
+    end
+
+    pinned_prs = begin
+      Hiiro::PinnedPRManager.new.load_pinned
+    rescue
+      []
+    end
+    pr_by_branch = pinned_prs.each_with_object({}) { |pr, h| h[pr.head_branch] = pr }
+
+    name_width = [entries.map { |b| b['name'].length }.max, 20].max
+
+    entries.each do |b|
+      name   = b['name']
+      marker = name == current ? "* " : "  "
+
+      ahead  = `git rev-list --count #{base}..#{name} 2>/dev/null`.strip.to_i
+      behind = `git rev-list --count #{name}..#{base} 2>/dev/null`.strip.to_i
+
+      ahead_str  = ahead  > 0 ? "\e[32m↑#{ahead}\e[0m"  : "\e[90m↑0\e[0m"
+      behind_str = behind > 0 ? "\e[31m↓#{behind}\e[0m" : "\e[90m↓0\e[0m"
+
+      pr       = pr_by_branch[name]
+      pr_str   = pr ? " \e[36m##{pr.number} #{pr.state}\e[0m" : ""
+      task_str = b['task'] ? " \e[90m[#{b['task']}]\e[0m" : ""
+
+      puts "#{marker}#{name.ljust(name_width)}  #{ahead_str} #{behind_str}#{pr_str}#{task_str}"
+    end
+  end
+
+  add_subcmd(:merged) do |*args|
+    opts = Hiiro::Options.parse(args) { flag(:all, short: 'a', desc: 'Show all merged branches, not just saved') }
+    base = FIND_BASE.call || 'main'
+
+    all_merged = `git branch --merged #{base} 2>/dev/null`
+      .lines.map { |b| b.strip.sub(/^\* /, '') }
+      .reject { |b| b.empty? || %w[main master].include?(b) }
+
+    if all_merged.empty?
+      puts "No merged branches."
+      next
+    end
+
+    displayed = if opts.all
+      all_merged
+    else
+      saved_names = manager.branch_names.to_set
+      filtered = all_merged.select { |b| saved_names.include?(b) }
+      if filtered.empty?
+        puts "No saved merged branches (use -a to show all)."
+        next
+      end
+      filtered
+    end
+
+    current = git.branch
+    displayed.each do |b|
+      marker = b == current ? "* " : "  "
+      puts "#{marker}#{b}"
+    end
+  end
+
+  add_subcmd(:clean) do |*args|
+    opts = Hiiro::Options.parse(args) do
+      flag(:all,   short: 'a', desc: 'Include all merged branches, not just saved')
+      flag(:force, short: 'f', desc: 'Delete all without confirmation prompt')
+    end
+    base = FIND_BASE.call || 'main'
+
+    all_merged = `git branch --merged #{base} 2>/dev/null`
+      .lines.map { |b| b.strip.sub(/^\* /, '') }
+      .reject { |b| b.empty? || %w[main master].include?(b) }
+
+    to_consider = if opts.all
+      all_merged
+    else
+      saved_names = manager.branch_names.to_set
+      all_merged.select { |b| saved_names.include?(b) }
+    end
+
+    if to_consider.empty?
+      puts "No #{opts.all ? '' : 'saved '}merged branches to clean."
+      next
+    end
+
+    to_delete = if opts.force
+      to_consider
+    else
+      require 'open3'
+      selected, status = Open3.capture2('sk', '--multi', '--no-sort', stdin_data: to_consider.join("\n"))
+      if !status.success? || selected.strip.empty?
+        puts "Nothing selected."
+        next
+      end
+      selected.lines.map(&:strip).reject(&:empty?)
+    end
+
+    to_delete.each do |b|
+      if system('git', 'branch', '-d', b)
+        puts "Deleted #{b}"
+        manager.remove_saved(b)
+      else
+        puts "Could not delete #{b} (may need -D for unmerged; skipping)"
+      end
+    end
+  end
+
+  add_subcmd(:recent) do |n = nil|
+    n = (n || 10).to_i
+
+    recent_branches = `git reflog --format="%D" 2>/dev/null`
+      .lines
+      .flat_map { |line| line.scan(/HEAD -> ([^,\n]+)/) }
+      .flatten
+      .uniq
+      .reject { |b| b.strip.empty? }
+      .first(n)
+
+    if recent_branches.empty?
+      puts "No recent branches found in reflog."
+      next
+    end
+
+    current     = git.branch
+    tags_all    = tag_store.all
+    saved_names = manager.branch_names.to_set
+
+    recent_branches.each do |name|
+      marker     = name == current ? "* " : "  "
+      tags       = Array(tags_all[name])
+      saved_str  = saved_names.include?(name) ? " \e[90m[saved]\e[0m" : ""
+      tag_str    = tags.any? ? "  " + Hiiro::Tags.badges(tags) : ""
+      puts "#{marker}#{name}#{saved_str}#{tag_str}"
+    end
+  end
+
+  add_subcmd(:note) do |*note_args|
+    opts = Hiiro::Options.parse(note_args) { flag(:clear, desc: 'Clear the note for this branch') }
+
+    if opts.clear
+      manager.set_note(nil)
+      puts "Note cleared."
+      next
+    end
+
+    text = opts.args.join(' ')
+
+    if text.empty?
+      note = manager.get_note
+      puts note ? note : "(no note)"
+    else
+      manager.set_note(text)
+      puts "Note saved: #{text}"
+    end
+  end
+
+  add_subcmd(:'for-task') do |task_name = nil|
+    task_name ||= begin
+      Hiiro::Environment.current&.task&.name
+    rescue
+      nil
+    end
+
+    unless task_name
+      puts "Usage: h branch for-task <task_name>"
+      puts "       (or run from a task session to use current task)"
+      next
+    end
+
+    data     = manager.load_data
+    branches = (data['branches'] || []).select { |b| b['task'] == task_name }
+
+    if branches.empty?
+      puts "No saved branches for task '#{task_name}'"
+      next
+    end
+
+    current = git.branch
+    puts "Branches for task '#{task_name}':"
+    branches.each do |b|
+      marker = b['name'] == current ? "* " : "  "
+      puts "#{marker}#{b['name']}"
+    end
+  end
+
+  add_subcmd(:'for-pr', :pr) do |arg = nil|
+    pinned_prs = Hiiro::PinnedPRManager.new.load_pinned rescue []
+    pr = find_pr_by_arg.call(arg, pinned_prs)
+
+    if pr.nil?
+      puts arg ? "No tracked PR found for: #{arg}" : "No PR selected."
+      next
+    end
+
+    if pr.head_branch
+      puts pr.head_branch
+    else
+      puts "PR ##{pr.number} has no branch info"
+    end
+  end
 
   add_subcmd(:duplicate) { |new_name = nil, source = nil|
     unless new_name
@@ -394,14 +814,11 @@ Hiiro.run(*ARGV) do
   add_subcmd(:diff) { |*diff_args|
     case diff_args.length
     when 0
-      # Compare current branch to main/master
       base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
       range = "#{base}..HEAD"
     when 1
-      # Compare current branch to specified ref
       range = "#{diff_args[0]}..HEAD"
     else
-      # Compare two refs (from..to or from...to based on args)
       from, to = diff_args[0..1]
       range = "#{from}..#{to}"
     end
@@ -510,7 +927,6 @@ Hiiro.run(*ARGV) do
     forkpoint = `git merge-base --fork-point #{upstream} #{branch} 2>/dev/null`.strip
 
     if forkpoint.empty?
-      # Fallback to regular merge-base if fork-point fails
       forkpoint = `git merge-base #{upstream} #{branch} 2>/dev/null`.strip
     end
 
@@ -524,7 +940,6 @@ Hiiro.run(*ARGV) do
   add_subcmd(:ancestor) { |*ancestor_args|
     case ancestor_args.length
     when 0
-      # Check if main/master is ancestor of HEAD
       base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") }
       unless base
         puts "Cannot find main or master branch"
@@ -533,7 +948,6 @@ Hiiro.run(*ARGV) do
       ancestor = base
       descendant = 'HEAD'
     when 1
-      # Check if arg is ancestor of HEAD
       ancestor = ancestor_args[0]
       descendant = 'HEAD'
     else
