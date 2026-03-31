@@ -1,6 +1,18 @@
 ```markdown
 # Changelog
 
+## [0.1.308.pre.2] - 2026-03-31
+
+### Added
+- `--pre`/`-p` flag to `h install` and `h update` for installing/updating pre-release versions
+
+### Changed
+- Merge `prs` and `pinned_prs` tables into single `prs` table in SQLite schema
+- Refactor PR storage to use unified table structure
+
+### Fixed
+- YAML migration for todos, prs, pinned_prs, and tags to correctly handle merged schema
+
 ## [0.1.308.pre.1] - 2026-03-31
 
 ### Added
