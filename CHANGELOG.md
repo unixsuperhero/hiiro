@@ -1,6 +1,14 @@
 ```markdown
 # Changelog
 
+## [0.1.308.pre.5] - 2026-03-31
+
+### Added
+- `h-claude vim` subcommand to open all matched files in `$EDITOR`
+
+### Fixed
+- `h branch ls` now sorts oldest-first so most recent branches appear at bottom
+
 ## [0.1.308.pre.4] - 2026-03-31
 
 ### Fixed
