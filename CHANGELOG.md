@@ -1,6 +1,14 @@
 ```markdown
 # Changelog
 
+## [0.1.309] - 2026-03-31
+
+### Added
+- `h link tag` support for tagging links in the link manager
+
+### Fixed
+- Correct argument passing in `run_child` to prevent arg dropping in nested Hiiro instances
+
 ## [0.1.308] - 2026-03-31
 
 ### Added
