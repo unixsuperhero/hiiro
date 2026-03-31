@@ -1,6 +1,14 @@
 ```markdown
 # Changelog
 
+## [0.1.308.pre.3] - 2026-03-31
+
+### Changed
+- Poll RubyGems in `delayed_update` instead of blind sleep for more reliable version detection
+
+### Fixed
+- Per-row rescue in `import_todos` so one bad row doesn't abort the entire batch
+
 ## [0.1.308.pre.2] - 2026-03-31
 
 ### Added
