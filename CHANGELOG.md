@@ -1,6 +1,11 @@
 ```markdown
 # Changelog
 
+## [0.1.308.pre.4] - 2026-03-31
+
+### Fixed
+- Don't pass empty string arg to gem when `--pre` is false
+
 ## [0.1.308.pre.3] - 2026-03-31
 
 ### Changed
