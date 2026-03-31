@@ -1,19 +1,28 @@
 require 'sequel'
 
 class Hiiro
-  class PinnedPr < Sequel::Model(:pinned_prs)
+  class PinnedPr < Sequel::Model(:prs)
     Hiiro::DB.register(self)
 
     def self.create_table!(db)
-      db.create_table?(:pinned_prs) do
+      # Drop the old TrackedPr schema (prs table without head_ref_name) so we can
+      # create the merged schema. TrackedPr rows are migration artifacts only — no
+      # live code reads from them.
+      if db.table_exists?(:prs) && !db.schema(:prs).any? { |col, _| col == :head_ref_name }
+        db.drop_table(:prs)
+      end
+
+      db.create_table?(:prs) do
         primary_key :id
         Integer :number
         String :title
         String :state
         String :url
         String :head_ref_name
+        String :branch             # from old TrackedPr
         String :repo
         Integer :slot
+        TrueClass :pinned          # true = pinned/monitored, false/nil = just tracked
         TrueClass :is_draft
         String :mergeable
         String :review_decision
@@ -23,14 +32,24 @@ class Hiiro
         String :task
         String :worktree
         String :tmux_session
+        String :tmux_json          # from old TrackedPr: JSON { session, window, pane }
         String :tags_json          # JSON array of strings
         TrueClass :assigned
         TrueClass :authored
         String :depends_on_json    # JSON array of PR numbers
         String :last_checked
         String :pinned_at
+        String :created_at
         String :updated_at
       end
+
+      # Migrate data from legacy pinned_prs table if it still exists
+      if db.table_exists?(:pinned_prs) && db[:pinned_prs].count > 0
+        db[:pinned_prs].each do |row|
+          db[:prs].insert(row.reject { |k, _| k == :id }.merge(pinned: true))
+        end
+      end
+      db.drop_table?(:pinned_prs)
     end
 
     # --- JSON virtual accessors ---
@@ -54,11 +73,17 @@ class Hiiro
     # --- Class methods ---
 
     def self.by_slot
-      order(:slot)
+      order(:slot).where(pinned: true)
     end
 
     def self.find_by_number(n)
-      where(number: n).first
+      where(number: n, pinned: true).first
+    end
+
+    # Sync the check_runs table for this PR from the cached check_runs_json blob.
+    def sync_check_runs
+      runs = Hiiro::DB::JSON.load(check_runs_json)
+      Hiiro::CheckRun.upsert_for_pr(number, runs) if number && runs
     end
 
     # Build an in-memory PinnedPr from a Hiiro::Git::Pr (does NOT save).
@@ -71,6 +96,7 @@ class Hiiro
         head_ref_name:   pr.head_branch,
         repo:            pr.repo,
         slot:            pr.slot,
+        pinned:          true,
         is_draft:        pr.is_draft,
         mergeable:       pr.mergeable,
         review_decision: pr.review_decision,

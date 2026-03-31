@@ -89,11 +89,14 @@ class Hiiro
 
     def save_pinned(prs)
       Hiiro::DB.connection.transaction do
-        Hiiro::PinnedPr.dataset.delete
+        Hiiro::PinnedPr.where(pinned: true).delete
         prs.each do |pr|
           pinned = pr.is_a?(Hiiro::PinnedPr) ? pr : Hiiro::PinnedPr.from_git_pr(pr)
           attrs  = pinned.to_hash.reject { |k, _| k == :id }
-          Hiiro::PinnedPr.insert(attrs)
+          attrs[:pinned] = true
+          saved = Hiiro::PinnedPr.new(attrs)
+          saved.save
+          saved.sync_check_runs
         end
       end
       # Dual-write YAML for backward compat
@@ -130,11 +133,14 @@ class Hiiro
         updates[:assigned]        = pr.assigned        unless pr.assigned.nil?
         updates[:authored]        = pr.authored        unless pr.authored.nil?
         existing.update(updates)
+        existing.sync_check_runs if updates.key?(:check_runs_json)
       else
         pinned = pr.is_a?(Hiiro::PinnedPr) ? pr : Hiiro::PinnedPr.from_git_pr(pr)
-        pinned.slot     = Hiiro::PinnedPr.max(:slot).to_i + 1
+        pinned.slot      = Hiiro::PinnedPr.max(:slot).to_i + 1
         pinned.pinned_at = Time.now.iso8601
+        pinned.pinned    = true
         pinned.save
+        pinned.sync_check_runs
       end
 
       # Dual-write YAML
