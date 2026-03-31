@@ -527,7 +527,7 @@ Hiiro.run(*ARGV) do
       branch = selected.strip
     end
 
-    system('git', 'checkout', branch)
+    system('git', 'checkout', branch, *opts.args[1..])
   end
 
   add_subcmd(:rm, :remove) do |*rm_args|
@@ -545,7 +545,7 @@ Hiiro.run(*ARGV) do
       branch = selected.strip
     end
 
-    system('git', 'branch', '-d', branch)
+    system('git', 'branch', '-d', branch, *opts.args[1..])
   end
 
   add_subcmd(:rename) do |new_name = nil, old_name = nil|
