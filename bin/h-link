@@ -8,7 +8,9 @@ require 'tempfile'
 require "hiiro"
 
 opts = Hiiro::Options.setup {
-  option(:shorthand, short: :s)
+  option(:shorthand, short: :s, desc: 'Shorthand alias for the link')
+  option(:tag, short: :t, multi: true, desc: 'Tag for the link (repeatable)')
+  option(:tags, multi: true, desc: 'Tag for the link (alias for --tag, repeatable)')
 }
 
 class LinkManager
@@ -262,7 +264,8 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
 
     url = add_args.shift
     vals = opts.parse!(add_args)
-    description = add_args.join(' ')
+    description = vals.args.join(' ')
+    tags = (Array(vals.tag) + Array(vals.tags)).uniq.reject(&:empty?)
 
     new_link = Hiiro::Link.create(
       url: url,
@@ -270,6 +273,7 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
       shorthand: vals.shorthand,
       created_at: Time.now.iso8601
     )
+    Hiiro::Tag.tag!(new_link, *tags) if tags.any?
     lm.save_yaml_backup
 
     puts "Saved link ##{Hiiro::Link.count}: #{url}"
@@ -470,6 +474,30 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
     end
 
     system('open', url)
+  end
+
+  add_subcmd(:paste) do |*paste_args|
+    url = `pbpaste`.strip
+
+    if url.empty?
+      puts "Clipboard is empty."
+      exit 1
+    end
+
+    vals = opts.parse!(paste_args)
+    description = vals.args.join(' ')
+    tags = (Array(vals.tag) + Array(vals.tags)).uniq.reject(&:empty?)
+
+    new_link = Hiiro::Link.create(
+      url: url,
+      description: description,
+      shorthand: vals.shorthand,
+      created_at: Time.now.iso8601
+    )
+    Hiiro::Tag.tag!(new_link, *tags) if tags.any?
+    lm.save_yaml_backup
+
+    puts "Saved link ##{Hiiro::Link.count}: #{url}"
   end
 
   add_subcmd(:path) do |*path_args|
