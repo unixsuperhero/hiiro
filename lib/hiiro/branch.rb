@@ -24,6 +24,6 @@ class Hiiro
     def self.for_task(task_name)    = where(task: task_name).all
     def self.for_worktree(wt)       = where(worktree: wt).all
     def self.find_by_name(n)        = where(name: n).first
-    def self.ordered                = order(Sequel.desc(:created_at))
+    def self.ordered                = order(Sequel.asc(:created_at))
   end
 end
