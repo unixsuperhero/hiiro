@@ -206,25 +206,21 @@ class Hiiro
       define_singleton_method(name, &block)
     end
 
-    # Initialize Effects doubles for use in tests.
-    # After calling this, use null_tmux and null_git to get instances
-    # with the null executor injected. Access @executor and @fs directly
-    # for assertions.
+    # Initialize Effects doubles. After calling this:
+    #   harness.executor        → NullExecutor (shared by null_tmux + null_git)
+    #   harness.fs              → NullFilesystem
+    #   harness.null_tmux       → Hiiro::Tmux with executor injected
+    #   harness.null_git        → Hiiro::Git  with executor injected
+    #   harness.null_fs         → the same NullFilesystem instance
     def setup_effects
       @executor = Hiiro::Effects::NullExecutor.new
       @fs       = Hiiro::Effects::NullFilesystem.new
     end
 
-    # Returns a Hiiro::Tmux instance with the null executor injected.
-    # Requires setup_effects to be called first.
-    def null_tmux
-      Hiiro::Tmux.new(executor: @executor)
-    end
+    attr_reader :executor, :fs
 
-    # Returns a Hiiro::Git instance with the null executor injected.
-    # Requires setup_effects to be called first.
-    def null_git
-      Hiiro::Git.new(nil, '/fake/root', executor: @executor)
-    end
+    def null_tmux = Hiiro::Tmux.new(executor: @executor)
+    def null_git  = Hiiro::Git.new(nil, '/fake/root', executor: @executor)
+    def null_fs   = @fs
   end
 end

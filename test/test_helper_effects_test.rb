@@ -7,84 +7,64 @@ class TestHarnessEffectsTest < Minitest::Test
   end
 
   def test_null_tmux_returns_tmux_instance
-    tmux = @harness.null_tmux
-    assert_instance_of Hiiro::Tmux, tmux
+    assert_instance_of Hiiro::Tmux, @harness.null_tmux
   end
 
   def test_null_git_returns_git_instance
-    git = @harness.null_git
-    assert_instance_of Hiiro::Git, git
+    assert_instance_of Hiiro::Git, @harness.null_git
   end
 
   def test_executor_records_tmux_calls
-    tmux = @harness.null_tmux
-    # server_running? calls @executor.check('tmux', 'has-session')
-    tmux.server_running?
-    executor = @harness.instance_variable_get(:@executor)
-    assert executor.called?('tmux'), "expected executor to have recorded a tmux call"
-    assert executor.called?('has-session'), "expected executor to have recorded a has-session call"
+    @harness.null_tmux.server_running?
+    assert @harness.executor.called?('tmux')
+    assert @harness.executor.called?('has-session')
   end
 
   def test_executor_records_git_calls
-    git = @harness.null_git
-    # root calls @executor.capture('git', 'rev-parse', '--show-toplevel')
-    git.root
-    executor = @harness.instance_variable_get(:@executor)
-    assert executor.called?('git'), "expected executor to have recorded a git call"
-    assert executor.called?('rev-parse'), "expected executor to have recorded a rev-parse call"
+    @harness.null_git.root
+    assert @harness.executor.called?('git')
+    assert @harness.executor.called?('rev-parse')
   end
 
   def test_null_tmux_run_calls_use_null_executor
-    tmux = @harness.null_tmux
-    tmux.new_window(name: 'mywindow')
-    executor = @harness.instance_variable_get(:@executor)
-    assert executor.called?('new-window'), "expected executor to have recorded a new-window call"
+    @harness.null_tmux.new_window(name: 'mywindow')
+    assert @harness.executor.called?('new-window')
   end
 
   def test_null_filesystem_starts_empty
-    fs = @harness.instance_variable_get(:@fs)
-    refute fs.exist?('/some/path')
+    refute @harness.null_fs.exist?('/some/path')
   end
 
   def test_null_filesystem_write_and_read
-    fs = @harness.instance_variable_get(:@fs)
-    fs.write('/test/file.txt', 'hello')
-    assert fs.exist?('/test/file.txt')
-    assert_equal 'hello', fs.read('/test/file.txt')
+    @harness.null_fs.write('/test/file.txt', 'hello')
+    assert @harness.null_fs.exist?('/test/file.txt')
+    assert_equal 'hello', @harness.null_fs.read('/test/file.txt')
   end
 
   def test_null_filesystem_tracks_writes
-    fs = @harness.instance_variable_get(:@fs)
-    fs.write('/a.txt', 'foo')
-    fs.write('/b.txt', 'bar')
-    assert_includes fs.writes, '/a.txt'
-    assert_includes fs.writes, '/b.txt'
+    @harness.null_fs.write('/a.txt', 'foo')
+    @harness.null_fs.write('/b.txt', 'bar')
+    assert_includes @harness.null_fs.writes, '/a.txt'
+    assert_includes @harness.null_fs.writes, '/b.txt'
   end
 
   def test_null_filesystem_rm_removes_file
-    fs = @harness.instance_variable_get(:@fs)
-    fs.write('/tmp/gone.txt', 'bye')
-    assert fs.exist?('/tmp/gone.txt')
-    fs.rm('/tmp/gone.txt')
-    refute fs.exist?('/tmp/gone.txt')
-    assert_includes fs.deletes, '/tmp/gone.txt'
+    @harness.null_fs.write('/tmp/gone.txt', 'bye')
+    @harness.null_fs.rm('/tmp/gone.txt')
+    refute @harness.null_fs.exist?('/tmp/gone.txt')
+    assert_includes @harness.null_fs.deletes, '/tmp/gone.txt'
   end
 
   def test_executor_reset_clears_calls
-    executor = @harness.instance_variable_get(:@executor)
-    tmux = @harness.null_tmux
-    tmux.server_running?
-    assert executor.called?('tmux')
-    executor.reset!
-    refute executor.called?('tmux'), "expected calls to be cleared after reset!"
+    @harness.null_tmux.server_running?
+    assert @harness.executor.called?('tmux')
+    @harness.executor.reset!
+    refute @harness.executor.called?('tmux')
   end
 
   def test_multiple_null_tmux_instances_share_executor
-    tmux1 = @harness.null_tmux
-    tmux2 = @harness.null_tmux
-    tmux1.server_running?
-    tmux2.new_window(name: 'x')
-    executor = @harness.instance_variable_get(:@executor)
-    assert_equal 2, executor.calls.size
+    @harness.null_tmux.server_running?
+    @harness.null_tmux.new_window(name: 'x')
+    assert_equal 2, @harness.executor.calls.size
   end
 end
