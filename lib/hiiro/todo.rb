@@ -1,39 +1,40 @@
 require 'yaml'
 require 'fileutils'
 require 'tempfile'
+require 'sequel'
 
 class Hiiro
-  class TodoItem
+  class TodoItem < Sequel::Model(:todos)
+    Hiiro::DB.register(self)
+    unrestrict_primary_key
+
     STATUSES = %w[not_started started done skip].freeze
 
-    attr_accessor :id, :text, :status, :tags
-    attr_accessor :task_name, :subtask_name, :tree, :branch, :session
-    attr_accessor :created_at, :updated_at
+    def self.create_table!(db)
+      db.create_table?(:todos) do
+        Integer :id, primary_key: true
+        String :text, null: false
+        String :status, default: 'not_started'
+        String :tags
+        String :task_name
+        String :subtask_name
+        String :tree
+        String :branch
+        String :session
+        String :created_at
+        String :updated_at
+      end
+    end
 
-    def initialize(
-      id: nil,
-      text:,
-      status: 'not_started',
-      tags: nil,
-      task_name: nil,
-      subtask_name: nil,
-      tree: nil,
-      branch: nil,
-      session: nil,
-      created_at: nil,
-      updated_at: nil
-    )
-      @id = id
-      @text = text
-      @status = STATUSES.include?(status) ? status : 'not_started'
-      @tags = tags
-      @task_name = task_name
-      @subtask_name = subtask_name
-      @tree = tree
-      @branch = branch
-      @session = session
-      @created_at = created_at || Time.now.to_s
-      @updated_at = updated_at || @created_at
+    def initialize(values = OPTS)
+      super
+      self.status = STATUSES.include?(status.to_s) ? status : 'not_started'
+      self.created_at ||= Time.now.to_s
+    end
+
+    def before_create
+      self.updated_at ||= created_at
+      super
     end
 
     def tags_list
@@ -49,12 +50,12 @@ class Hiiro
       current = tags_list
       return if current.any? { |t| t.downcase == tag.downcase }
       current << tag
-      @tags = current.join(', ')
+      self.tags = current.join(', ')
     end
 
     def remove_tag(tag)
       current = tags_list.reject { |t| t.downcase == tag.downcase }
-      @tags = current.empty? ? nil : current.join(', ')
+      self.tags = current.empty? ? nil : current.join(', ')
     end
 
     def has_task_info?
@@ -68,8 +69,8 @@ class Hiiro
 
     def update_status(new_status)
       return false unless STATUSES.include?(new_status)
-      @status = new_status
-      @updated_at = Time.now.to_s
+      self.status = new_status
+      self.updated_at = Time.now.to_s
       true
     end
 
@@ -128,10 +129,12 @@ class Hiiro
 
     attr_reader :items, :todo_file
 
-    def initialize(file_path: nil)
+    def initialize(file_path: nil, fs: Hiiro::Effects::Filesystem.new)
+      @fs = fs
       @todo_file = file_path || TODO_FILE
       @file_path = @todo_file
-      @items, @next_id = load_items
+      @items = load_items
+      @next_id = (TodoItem.max(:id) || 0) + 1
     end
 
     def next_id!
@@ -325,18 +328,17 @@ class Hiiro
     end
 
     def load_items
-      return [[], 1] unless File.exist?(@file_path)
-
-      data = YAML.safe_load_file(@file_path) || {}
-      items = (data['todos'] || []).map { |h| TodoItem.from_h(h) }
-      next_id = data['next_id'] || (items.map { |i| i.id.to_i }.max || 0) + 1
-      [items, next_id]
+      TodoItem.order(Sequel.asc(:id)).all
     end
 
     def save
-      FileUtils.mkdir_p(File.dirname(@file_path))
-      data = { 'next_id' => @next_id, 'todos' => items.map(&:to_h) }
-      File.write(@file_path, YAML.dump(data))
+      TodoItem.dataset.delete
+      @items.each { |item| TodoItem.create(item.to_h) }
+
+      if Hiiro::DB.dual_write?
+        data = { 'next_id' => @next_id, 'todos' => @items.map(&:to_h) }
+        @fs.write(@file_path, YAML.dump(data))
+      end
     end
   end
 end

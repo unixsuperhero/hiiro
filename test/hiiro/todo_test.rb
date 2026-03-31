@@ -219,6 +219,8 @@ class TodoManagerTest < Minitest::Test
   def setup
     @temp_dir = Dir.mktmpdir
     @todo_file = File.join(@temp_dir, "todo.yml")
+    # Clear DB between tests since all TodoManagerTests share the same in-memory DB
+    Hiiro::TodoItem.dataset.delete
     @manager = Hiiro::TodoManager.new(file_path: @todo_file)
   end
 
@@ -231,12 +233,8 @@ class TodoManagerTest < Minitest::Test
   end
 
   def test_initialize_loads_existing_items
-    data = {
-      'todos' => [
-        { 'id' => 'abc', 'text' => 'Existing task', 'status' => 'not_started' }
-      ]
-    }
-    File.write(@todo_file, YAML.dump(data))
+    # TodoManager now reads from SQLite (not YAML file), so seed via DB directly
+    Hiiro::TodoItem.create(id: 99, text: 'Existing task', status: 'not_started')
 
     manager = Hiiro::TodoManager.new(file_path: @todo_file)
     assert_equal 1, manager.all.length

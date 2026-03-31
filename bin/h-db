@@ -1,0 +1,284 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'pathname'
+
+def print_table(rows)
+  return puts "(no results)" if rows.empty?
+
+  keys = rows.first.keys
+  col_widths = keys.map { |k|
+    [k.to_s.length, rows.map { |r| r[k].to_s.length }.max].max.clamp(0, 60)
+  }
+
+  header = keys.each_with_index.map { |k, i| k.to_s.ljust(col_widths[i]) }.join("  ")
+  puts header
+  puts "-" * header.length
+  rows.each do |row|
+    puts keys.each_with_index.map { |k, i|
+      val = row[k].to_s
+      val = val[0..57] + "..." if val.length > 60
+      val.ljust(col_widths[i])
+    }.join("  ")
+  end
+  puts "(#{rows.length} rows)"
+end
+
+def run_query(args)
+  opts = Hiiro::Options.parse(args) { flag(:all, short: :a, desc: 'show all rows (no limit)') }
+  query_args = opts.args
+
+  db = Hiiro::DB.connection
+  limit = opts.all ? nil : 50
+
+  if query_args.empty?
+    puts "Usage: h db q <table> [key=value ...] OR h db q \"SQL\""
+    return
+  elsif query_args[0].include?(' ') || query_args[0].upcase =~ /\A(SELECT|INSERT|UPDATE|DELETE|WITH)/
+    sql = query_args.join(' ')
+    rows = db.fetch(sql).all
+    rows = rows.first(limit) if limit
+    print_table(rows)
+  else
+    table = query_args[0]
+    conditions = query_args[1..].each_with_object({}) do |pair, h|
+      k, v = pair.split('=', 2)
+      h[k] = v if k && v
+    end
+    ds = db[table.to_sym]
+    conditions.each { |k, v| ds = ds.where(k.to_sym => v) }
+    ds = ds.limit(limit) if limit
+    rows = ds.all
+    print_table(rows)
+  end
+end
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:status) do
+    db_path = Hiiro::DB::DB_FILE
+    db_size = File.exist?(db_path) ? File.size(db_path) : 0
+    db_size_str = if db_size >= 1_048_576
+      "#{(db_size / 1_048_576.0).round(1)} MB"
+    elsif db_size >= 1024
+      "#{(db_size / 1024.0).round(1)} KB"
+    else
+      "#{db_size} B"
+    end
+
+    puts "DB: #{db_path} (#{db_size_str})"
+
+    migrated = Hiiro::DB.migrated?
+    if migrated
+      ran_at = begin
+        Hiiro::DB.connection[:schema_migrations].where(name: 'yaml_import').first&.[](:ran_at)
+      rescue
+        nil
+      end
+      puts "Migration: complete#{ran_at ? " (#{ran_at})" : ""}"
+    else
+      puts "Migration: not run"
+    end
+
+    puts "Dual-write: #{Hiiro::DB.dual_write? ? 'active' : 'disabled'}"
+    puts
+
+    db = Hiiro::DB.connection
+    tables = db.tables - [:schema_migrations]
+    if tables.any?
+      puts "Table counts:"
+      max_len = tables.map(&:to_s).map(&:length).max
+      tables.sort.each do |t|
+        count = db[t].count rescue '?'
+        puts "  #{t.to_s.ljust(max_len)}  #{count.to_s.rjust(6)}"
+      end
+    end
+
+    config_dir = File.expand_path('~/.config/hiiro')
+    archives = Dir.glob(File.join(config_dir, 'sqlite-migration.*.tar.gz')).sort
+    puts
+    if archives.empty?
+      puts "Backups: (none)"
+    else
+      puts "Backups:"
+      archives.each { |a| puts "  #{a}" }
+    end
+  end
+
+  add_subcmd(:tables) do
+    Hiiro::DB.connection.tables.sort.each { |t| puts t }
+  end
+
+  add_subcmd(:q) { |*args| run_query(args) }
+  add_subcmd(:query) { |*args| run_query(args) }
+
+  add_subcmd(:migrate) do
+    unless Hiiro::DB.migrated?
+      puts "Migration has not run yet. Run `h db status` for details."
+      next
+    end
+
+    unless Hiiro::DB.dual_write?
+      puts "Already fully migrated. Dual-write is already disabled."
+      next
+    end
+
+    print "This will archive and remove all YAML files. Continue? [y/N] "
+    response = $stdin.gets.chomp
+    unless response.downcase == 'y'
+      puts "Aborted."
+      next
+    end
+
+    config_dir = File.expand_path('~/.config/hiiro')
+    timestamp  = Time.now.strftime('%Y%m%d%H%M%S')
+    archive    = File.join(config_dir, "sqlite-migration.#{timestamp}.tar.gz")
+
+    yml_files = Dir.glob(File.join(config_dir, '**/*.yml'))
+                   .reject { |f| f.end_with?('.yml.bak') }
+                   .map { |f| Pathname.new(f).relative_path_from(config_dir).to_s }
+
+    if yml_files.empty?
+      puts "No YAML files found to back up."
+    else
+      puts "Creating backup: #{archive}"
+      Dir.chdir(config_dir) do
+        system('tar', 'cvzf', archive, *yml_files)
+      end
+      puts "\nRemoving YAML files..."
+      yml_files.each do |rel_path|
+        full_path = File.join(config_dir, rel_path)
+        puts "  rm #{full_path}"
+        File.delete(full_path)
+      end
+    end
+
+    Hiiro::DB.disable_dual_write!
+
+    puts
+    puts "Full migration complete."
+    puts "Backup saved: #{archive}"
+    puts
+    puts "To restore YAML files:"
+    puts "  cd #{config_dir}"
+    puts "  tar xvzf #{File.basename(archive)}"
+  end
+
+  add_subcmd(:remigrate) do |*args|
+    opts = Hiiro::Options.parse(args) do
+      option(:only, desc: 'Comma-separated list of tables to remigrate (e.g. todos,tags,pinned_prs)')
+    end
+    tables = opts[:only]&.split(',')&.map(&:strip)
+    Hiiro::DB.remigrate!(only: tables)
+  end
+
+  add_subcmd(:cleanup) do
+    require 'fileutils'
+    db = Hiiro::DB.connection
+    timestamp = Time.now.strftime('%Y%m%d%H%M%S')
+    sql_path = File.expand_path("~/notes/files/hiiro-cleanup-#{timestamp}.sql")
+    FileUtils.mkdir_p(File.dirname(sql_path))
+
+    # Natural unique keys per table — used to detect duplicate groups
+    dedup_keys = {
+      prs:         %w[number],
+      branches:    %w[name],
+      tags:        %w[name taggable_type taggable_id],
+      links:       %w[url],
+      tasks:       %w[name],
+      apps:        %w[name],
+      projects:    %w[name],
+      assignments: %w[worktree],
+      pins:        %w[command key],
+      pane_homes:  %w[name],
+      check_runs:  %w[pr_number name],
+      reminders:   %w[text],
+    }
+
+    lines = []
+    lines << "-- Hiiro DB duplicate cleanup — #{Time.now.iso8601}"
+    lines << "-- Review each statement. Remove lines you do NOT want to run, then:"
+    lines << "--"
+    lines << "--   sqlite3 #{Hiiro::DB::DB_FILE} < #{sql_path}"
+    lines << "--"
+    lines << "-- Or run individual statements with:"
+    lines << "--"
+    lines << "--   h db q \"DELETE FROM ...\""
+    lines << "--"
+    lines << ""
+
+    found_any = false
+
+    dedup_keys.each do |table, keys|
+      next unless db.table_exists?(table)
+      schema_cols = db.schema(table).map { |col, _| col.to_s }
+      next unless (keys - schema_cols).empty?
+      next unless schema_cols.include?('id')
+
+      key_cols_sql = keys.map { |k| "\"#{k}\"" }.join(', ')
+      dupes = db.fetch(<<~SQL).all
+        SELECT #{key_cols_sql}, COUNT(*) AS cnt
+        FROM #{table}
+        GROUP BY #{key_cols_sql}
+        HAVING cnt > 1
+      SQL
+      next if dupes.empty?
+
+      found_any = true
+      lines << "-- ===== #{table}: #{dupes.length} duplicate group#{'s' unless dupes.length == 1} ====="
+      lines << ""
+
+      dupes.each do |row|
+        # Build a Sequel dataset filtered to this duplicate group
+        ds = db[table]
+        keys.each do |k|
+          val = row[k.to_sym]
+          ds = val.nil? ? ds.where(Sequel.lit("\"#{k}\" IS NULL")) : ds.where(k.to_sym => val)
+        end
+
+        all_ids  = ds.select(:id).map(:id).sort
+        keep_id  = all_ids.max
+        drop_ids = all_ids - [keep_id]
+
+        key_desc = keys.map { |k| "#{k}=#{row[k.to_sym].inspect}" }.join(', ')
+        lines << "-- #{table}: #{key_desc}"
+        lines << "-- keeping id=#{keep_id}, dropping id=#{drop_ids.join(', ')}"
+        lines << "DELETE FROM #{table} WHERE id IN (#{drop_ids.join(', ')});"
+        lines << ""
+      end
+    end
+
+    if found_any
+      File.write(sql_path, lines.join("\n"))
+
+      # Update ~/notes/files/INDEX
+      index_path = File.expand_path('~/notes/files/INDEX')
+      File.open(index_path, 'a') { |f| f.puts sql_path }
+
+      edit_files(sql_path)
+
+      puts
+      puts "SQL file: #{sql_path}"
+      puts
+      puts "To apply after editing:"
+      puts "  sqlite3 #{Hiiro::DB::DB_FILE} < #{sql_path}"
+      puts
+      puts "Or run individual statements with:"
+      puts "  h db q \"DELETE FROM ...\""
+    else
+      puts "No duplicates found across tracked tables."
+    end
+  end
+
+  add_subcmd(:restore) do
+    config_dir = File.expand_path('~/.config/hiiro')
+    archives   = Dir.glob(File.join(config_dir, 'sqlite-migration.*.tar.gz')).sort
+    if archives.empty?
+      puts "No backup archives found in #{config_dir}"
+      next
+    end
+    latest = archives.last
+    puts "Restoring from #{File.basename(latest)}..."
+    Dir.chdir(config_dir) { system('tar', 'xvzf', latest) }
+    puts "Done. YAML files restored."
+  end
+end

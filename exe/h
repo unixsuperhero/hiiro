@@ -3,12 +3,12 @@
 require "hiiro"
 require "fileutils"
 
-def update_hiiro(version=nil)
+def update_hiiro(version=nil, pre: false)
   ver = version || Hiiro::Rbenv.current_version
   puts
-  puts "INSTALLING hiiro for RUBY #{ver}"
+  puts "INSTALLING hiiro for RUBY #{ver} #{pre.inspect}"
 
-  Hiiro::Rbenv.install_gem('hiiro', version: ver)
+  Hiiro::Rbenv.install_gem('hiiro', pre: pre, version: ver)
   Hiiro::Rbenv.run('h', 'setup', version: ver)
 end
 
@@ -32,20 +32,21 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
   add_subcmd(:install, :update) { |*args|
     opts = Hiiro::Options.setup {
       flag(:all, short: :a)
+      flag(:pre, short: :p)
     }.parse!(ARGV)
 
     if opts.all
       Hiiro::Rbenv.versions.each do |ver|
         shell_cmd = [
-          "(RBENV_VERSION=#{ver.shellescape} rbenv exec gem update hiiro",
-          "|| RBENV_VERSION=#{ver.shellescape} rbenv exec gem install hiiro)",
+          "(RBENV_VERSION=#{ver.shellescape} rbenv exec gem update hiiro #{opts.pre ? '--pre' : ''}",
+          "|| RBENV_VERSION=#{ver.shellescape} rbenv exec gem install hiiro #{opts.pre ? '--pre' : ''})",
           "&& RBENV_VERSION=#{ver.shellescape} rbenv exec h setup",
         ].join(' ')
         puts "Queuing update for Ruby #{ver}..."
         Hiiro::Background.run('sh', '-c', shell_cmd)
       end
     else
-      update_hiiro
+      update_hiiro(pre: opts.pre)
     end
   }
 
@@ -195,9 +196,43 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
 
     script = <<~RUBY
       #!/usr/bin/env ruby
+      require 'net/http'
+      require 'json'
+
       expected = #{expected.inspect}
-      sleep 15
-      system('h', 'update', '-a')
+      is_pre   = expected.include?('.pre.')
+
+      # Poll RubyGems until the expected version appears (up to ~10 min)
+      found    = false
+      attempts = 0
+      max      = 40
+
+      until found || attempts >= max
+        sleep(attempts == 0 ? 5 : 15)
+        attempts += 1
+        begin
+          uri      = URI('https://rubygems.org/api/v1/versions/hiiro.json')
+          versions = JSON.parse(Net::HTTP.get(uri)).map { |v| v['number'] }
+          if versions.include?(expected)
+            found = true
+            puts "v\#{expected} found on RubyGems after \#{attempts} poll(s). Installing..."
+          else
+            puts "Waiting for v\#{expected} on RubyGems (attempt \#{attempts}/\#{max})..."
+          end
+        rescue => e
+          puts "RubyGems poll error: \#{e.message}"
+        end
+      end
+
+      unless found
+        system('say', 'hiiro publish timed out')
+        exit 1
+      end
+
+      install_args = ['update', '-a']
+      install_args << '--pre' if is_pre
+      system('h', *install_args)
+
       versions = `rbenv versions --bare`.lines(chomp: true)
       mismatched = versions.reject do |ver|
         output = `RBENV_VERSION=\#{ver} rbenv exec gem list hiiro --exact 2>/dev/null`

@@ -87,20 +87,51 @@ module Pins
     def pin_filename = hiiro.bin_name
     def pin_dir = Hiiro::Config.config_dir('pins').tap {|dir| FileUtils.mkdir_p(dir) }
     def pin_file = File.join(pin_dir, pin_filename)
+
+    def load_pins_from_yaml
+      return {} unless File.exist?(pin_file)
+      YAML.safe_load_file(pin_file) || {}
+    end
+
     def pins
       return @pins if @pins
+      @pins = load_pins
+      # Create YAML file on first access if absent (backward compatibility)
+      File.write(pin_file, YAML.dump({}, stringify_names: true)) unless File.exist?(pin_file)
+      @pins
+    end
 
-      unless File.exist?(pin_file)
-        File.write(pin_file, YAML.dump({}, stringify_names: true))
-      end
-
-      @pins = YAML.safe_load_file(pin_file)
+    def load_pins
+      rows = Hiiro::PinRecord.for_command(pin_filename)
+      rows.each_with_object({}) { |r, h| h[r.key] = r.value }
+    rescue => e
+      warn "Pin DB load failed: #{e}"
+      load_pins_from_yaml
     end
 
     def save_pins(pins = nil)
-      pins = pins || @pins || {}
-
+      pins ||= @pins || {}
+      current_keys = pins.keys.map(&:to_s)
+      # Remove records no longer in pins (handles deletes)
+      Hiiro::PinRecord.where(command: pin_filename).exclude(key: current_keys).delete
+      pins.each do |key, value|
+        existing = Hiiro::PinRecord.find_key(pin_filename, key)
+        value_json = value.is_a?(String) ? value : Hiiro::DB::JSON.dump(value)
+        if existing
+          existing.update(value_json: value_json)
+        else
+          Hiiro::PinRecord.create(
+            command: pin_filename,
+            key: key.to_s,
+            value_json: value_json
+          )
+        end
+      end
+      # Dual-write: rewrite per-command YAML file
+      FileUtils.mkdir_p(pin_dir)
       File.write(pin_file, YAML.dump(pins, stringify_names: true))
+    rescue => e
+      warn "Pin DB save failed: #{e}"
     end
 
     def pins!

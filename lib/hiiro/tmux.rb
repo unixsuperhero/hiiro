@@ -55,8 +55,9 @@ class Hiiro
 
     attr_reader :hiiro
 
-    def initialize(hiiro = nil)
+    def initialize(hiiro = nil, executor: Hiiro::Effects::Executor.new)
       @hiiro = hiiro
+      @executor = executor
     end
 
     # Context methods
@@ -368,16 +369,16 @@ class Hiiro
     private
 
     def run_safe(*args)
-      output = `tmux #{args.shelljoin} 2>/dev/null`.strip
+      output = @executor.capture('tmux', *args).strip
       output.empty? ? nil : output
     end
 
     def run_system(*args)
-      system('tmux', *args)
+      @executor.run('tmux', *args)
     end
 
     def run_success?(*args)
-      system('tmux', *args, out: File::NULL, err: File::NULL)
+      @executor.check('tmux', *args)
     end
   end
 end

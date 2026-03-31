@@ -63,6 +63,22 @@ def glob_path(glob, bname=nil, opts:)
   end
 end
 
+# Like glob_path but returns an array of full Pathname objects instead of printing.
+# skill: true → resolve matched directories to <dir>/SKILL.md
+def collect_files(glob, bname=nil, opts:, skill: false)
+  filters = opts.args
+  filters = ['.*'] if filters.empty?
+  re_s    = filters.join(?|)
+  re      = Regexp.new(re_s)
+
+  claude_paths.flat_map { |path| path.glob(glob) }.filter_map do |f|
+    base_f = f.basename(bname.to_s)
+    next unless base_f.to_s.match?(re)
+    target = skill ? f / 'SKILL.md' : f
+    target if target.exist?
+  end
+end
+
 def permission_flag(opts)
   opts.danger ? '--dangerously-skip-permissions' : '--allow-dangerously-skip-permissions'
 end
@@ -171,6 +187,20 @@ add_subcmd(:env) { |*args|
   add_subcmd(:skills) { |*args|
     opts = tool_opts.parse(args)
     glob_path('skills/*/', opts: opts)
+  }
+
+  add_subcmd(:vim) { |*args|
+    opts  = tool_opts.parse(args)
+    files = collect_files('agents/*.md',  '.md', opts: opts) +
+            collect_files('commands/*.md', '.md', opts: opts) +
+            collect_files('skills/*/',           opts: opts, skill: true)
+
+    if files.empty?
+      puts "No matching files found."
+      next
+    end
+
+    edit_files(*files.map(&:to_s))
   }
 
   add_subcmd(:new) { |*args|

@@ -5,6 +5,9 @@ require "fileutils"
 require "tmpdir"
 require "ostruct"
 
+# Use in-memory SQLite for tests so model files load cleanly and no real DB is touched
+ENV['HIIRO_TEST_DB'] = 'sqlite::memory:'
+
 # Stub out plugin loading to avoid side effects during tests
 class Hiiro
   class Config
@@ -17,6 +20,9 @@ class Hiiro
 end
 
 require "hiiro"
+
+# Create tables so Sequel models are usable in tests
+Hiiro::DB.setup!
 
 module TestHelpers
   def with_temp_dir
@@ -68,7 +74,10 @@ class MockHiiro
   end
 end
 
-# Mock for capturing system calls
+# DEPRECATED: Use Hiiro::Effects::NullExecutor instead.
+# SystemCallCapture patches Kernel.system globally and has no awareness
+# of which command type is being called. Prefer injecting NullExecutor
+# via null_tmux / null_git helpers in TestHarness.
 module SystemCallCapture
   def self.included(base)
     base.class_eval do
@@ -180,8 +189,8 @@ class Hiiro
         block = blk
       end
 
-      # Load the bin file (use absolute path)
-      full_path = File.expand_path(bin_path)
+      # Load the bin file — anchor to project root, not Dir.pwd (which may differ)
+      full_path = File.expand_path(bin_path, File.join(__dir__, '..'))
       load full_path
 
       # Restore original Hiiro.run
@@ -196,5 +205,45 @@ class Hiiro
     def stub_method(name, &block)
       define_singleton_method(name, &block)
     end
+
+    # Stubs for Hiiro#add_resolver / #resolve — called by Hiiro::Tmux.add_resolvers during load_bin.
+    def add_resolver(name, current = nil, &lookup)
+      @resolvers ||= {}
+      @resolvers[name.to_sym] = { current:, lookup: }
+    end
+
+    def resolve(name, ref = nil)
+      @resolvers ||= {}
+      r = @resolvers[name.to_sym] or raise "No resolver registered for :#{name}"
+      if ref.nil?
+        c = r[:current]
+        c.respond_to?(:call) ? c.call : c
+      else
+        r[:lookup]&.call(ref)
+      end
+    end
+
+    # Stub for Hiiro#edit_files — routes through system() so system_calls is populated,
+    # matching the real implementation's behavior. Uses $EDITOR or 'vim' as fallback.
+    def edit_files(*files, max_splits: 3)
+      system(ENV['EDITOR'] || 'vim', *files)
+    end
+
+    # Initialize Effects doubles. After calling this:
+    #   harness.executor        → NullExecutor (shared by null_tmux + null_git)
+    #   harness.fs              → NullFilesystem
+    #   harness.null_tmux       → Hiiro::Tmux with executor injected
+    #   harness.null_git        → Hiiro::Git  with executor injected
+    #   harness.null_fs         → the same NullFilesystem instance
+    def setup_effects
+      @executor = Hiiro::Effects::NullExecutor.new
+      @fs       = Hiiro::Effects::NullFilesystem.new
+    end
+
+    attr_reader :executor, :fs
+
+    def null_tmux = Hiiro::Tmux.new(executor: @executor)
+    def null_git  = Hiiro::Git.new(nil, '/fake/root', executor: @executor)
+    def null_fs   = @fs
   end
 end

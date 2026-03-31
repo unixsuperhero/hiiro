@@ -626,29 +626,52 @@ class Hiiro
       end
 
       def apps
-        return [] unless File.exist?(apps_file)
-        data = YAML.safe_load_file(apps_file) || {}
-        data.map { |name, path| App.new(name: name, path: path) }
+        rows = AppRecord.all_as_hash
+        return fallback_load_apps_from_yaml if rows.empty?
+        rows.map { |name, path| App.new(name: name, path: path) }
+      rescue => e
+        warn "Failed to load apps from DB: #{e}. Falling back to YAML."
+        fallback_load_apps_from_yaml
       end
 
       def save_task(task)
-        data = load_tasks
-        data['tasks'] ||= []
-        data['tasks'].reject! { |t| t['name'] == task.name }
-        data['tasks'] << task.to_h.transform_keys(&:to_s)
-        save_tasks(data)
+        TaskRecord.find_or_create(name: task.name) do |r|
+          r.tree = task.tree_name
+          r.session = task.session_name
+          r.app = task.respond_to?(:app) ? task.app : nil
+          r.color_index = task.color_index
+        end.update(
+          tree: task.tree_name,
+          session: task.session_name,
+          app: task.respond_to?(:app) ? task.app : nil,
+          color_index: task.color_index
+        )
+        save_tasks_yaml_backup
+      rescue => e
+        warn "Failed to save task to DB: #{e}"
       end
 
       def remove_task(name)
-        data = load_tasks
-        data['tasks'] ||= []
-        data['tasks'].reject! { |t| t['name'] == name }
-        save_tasks(data)
+        TaskRecord.where(name: name).delete
+        save_tasks_yaml_backup
+      rescue => e
+        warn "Failed to remove task from DB: #{e}"
       end
 
       private
 
       def load_tasks
+        rows = TaskRecord.all_as_list
+        return fallback_load_tasks_from_yaml if rows.empty?
+        { 'tasks' => rows.map { |r|
+          { 'name' => r.name, 'tree' => r.tree, 'session' => r.session, 'app' => r.app, 'color_index' => r.color_index }.compact
+        }}
+      rescue => e
+        warn "Failed to load tasks from DB: #{e}. Falling back to YAML."
+        fallback_load_tasks_from_yaml
+      end
+
+      def fallback_load_tasks_from_yaml
         if File.exist?(tasks_file)
           return YAML.safe_load_file(tasks_file) || { 'tasks' => [] }
         end
@@ -672,25 +695,47 @@ class Hiiro
           return { 'tasks' => tasks }
         end
 
-        assignments_file = File.join(File.dirname(tasks_file), 'assignments.yml')
-        if File.exist?(assignments_file)
-          raw = YAML.safe_load_file(assignments_file) || {}
-          tasks = raw.map do |tree_path, task_name|
-            h = { 'name' => task_name, 'tree' => tree_path }
-            h['session'] = task_name if task_name.include?('/')
+        assignments = load_assignments
+        if assignments.any?
+          tasks = assignments.map do |worktree, branch|
+            h = { 'name' => branch, 'tree' => worktree }
+            h['session'] = branch if branch.include?('/')
             h
           end
           data = { 'tasks' => tasks }
-          save_tasks(data)
+          save_tasks_yaml_backup(data)
           return data
         end
 
         { 'tasks' => [] }
       end
 
-      def save_tasks(data)
+      def load_assignments
+        Assignment.all_as_hash
+      rescue => e
+        warn "Failed to load assignments from DB: #{e}"
+        {}
+      end
+
+      def fallback_load_apps_from_yaml
+        return [] unless File.exist?(apps_file)
+        data = YAML.safe_load_file(apps_file) || {}
+        (data['apps'] || data).map do |name, path|
+          App.new(name: name.to_s, path: path.to_s)
+        end
+      rescue => e
+        warn "apps.yml fallback failed: #{e}"
+        []
+      end
+
+      def save_tasks_yaml_backup(data = nil)
+        data ||= { 'tasks' => TaskRecord.all_as_list.map { |r|
+          { 'name' => r.name, 'tree' => r.tree, 'session' => r.session, 'app' => r.app, 'color_index' => r.color_index }.compact
+        }}
         FileUtils.mkdir_p(File.dirname(tasks_file))
         File.write(tasks_file, YAML.dump(data))
+      rescue => e
+        warn "tasks.yml backup failed: #{e}"
       end
     end
   end

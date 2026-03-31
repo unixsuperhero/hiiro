@@ -1,0 +1,1160 @@
+ ▐▛███▜▌   Claude Code v2.1.88
+▝▜█████▛▘  Sonnet 4.6 · API Usage Billing
+  ▘▘ ▝▝    ~/proj/hiiro2
+
+❯ /mcp 
+  ⎿  MCP dialog dismissed
+
+❯ /reauth-all                                                                   
+
+⏺ Bash(for id in $(curl -s localhost:15245/api/servers | python3 -c "import
+      sys,json; [print(s['id']) for s in json.load(sys.stdin)]"); do curl -sX
+      POST localhost:1524…)
+  ⎿  (No output)
+
+⏺ All MCP servers have been triggered for re-authentication. Browser tabs should
+   have opened for each server that requires it.
+
+❯ /mcp                                                                          
+  ⎿  Reconnected to atlassian.
+
+❯ /mcp                                                                          
+  ⎿  Reconnected to atlas-mcp.
+
+❯ /mcp                                                                          
+  ⎿  Reconnected to buildkite.
+
+❯ /mcp                                                                          
+  ⎿  Authentication successful. Connected to datadog.
+
+❯ /mcp                                                                          
+  ⎿  Authentication successful. Connected to runlayer.
+
+❯ /mcp 
+  ⎿  MCP dialog dismissed
+
+❯ i want to migrate the majority of the .yml files in ~/.config/hiiro to an     
+sqlite3 db saved in the same dir.                                               
+                                                                                
+of course, instead of different files, they would have different tables in the  
+db                                                                              
+
+⏺ Let me first survey the current YAML files and their structures.
+
+  Searched for 1 pattern, listed 1 directory (ctrl+o to expand)
+
+⏺ Bash(for f in apps.yml branches.yml history.yml links.yml pane_homes.yml
+      pinned_prs.yml projects.yml prs.yml reminders.yml services.yml
+      sparse_groups.yml tags.yml to…)
+  ⎿  === apps.yml ===
+     ---
+     partners: partners/partners
+     … +133 lines (ctrl+o to expand)
+
+  Read 3 files (ctrl+o to expand)
+
+⏺ Bash(ls ~/.config/hiiro/pins/ | head -20; echo "---"; ls ~/.config/hiiro/pins/
+       | wc -l; echo "---sample---"; cat ~/.config/hiiro/pins/$(ls
+      ~/.config/hiiro/pins/ | he…)
+  ⎿  h
+     h-branch
+     h-plugin
+     … +11 lines (ctrl+o to expand)
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ Now let me look at how these files are read/written in the codebase.
+
+  Searched for 9 patterns, read 1 file, listed 2 directories (ctrl+o to expand)
+
+⏺ Bash(git log main..sqlite --oneline 2>/dev/null; git diff main..sqlite --stat
+      2>/dev/null | head -30)
+  ⎿  (No output)
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Good — the sqlite branch is a clean slate. Here's a complete picture of what I
+   found:
+
+  ---
+  ★ Insight ─────────────────────────────────────
+  Data shapes matter for SQL design:
+  - List-of-records (history, links, todos, prs, branches) → plain rows, direct
+  mapping
+  - Key-value configs (apps, projects, pane_homes) → two-column table: name, 
+  value
+  - Deeply nested (services.yml, pinned_prs checks, tmux fields) → best stored
+  as a JSON column in SQLite rather than normalized sub-tables, since you're not
+   querying into those nested fields
+  - The pins/ directory is a key-value store per-command — a single
+  pins(command, key, value_json) table replaces 6 files
+  ─────────────────────────────────────────────────
+
+  ---
+  Proposed scope — files I'd migrate to SQLite tables:
+
+  ┌───────────────────────┬─────────────────┬───────────────────────────────┐
+  │       YAML file       │  SQLite table   │             Notes             │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ history.yml           │ history         │ 8576 lines, big win           │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ links.yml             │ links           │                               │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ branches.yml          │ branches        │ tmux as JSON col              │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ prs.yml               │ prs             │ tmux as JSON col              │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ pinned_prs.yml        │ pinned_prs      │ checks, statusCheckRollup as  │
+  │                       │                 │ JSON                          │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ todo.yml              │ todos           │                               │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ reminders.yml         │ reminders       │                               │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ tags.yml              │ tags            │ (namespace, key, tags_json)   │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ tasks/tasks.yml       │ tasks           │                               │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ tasks/task_*.yml      │ merged into     │ 49 files → rows               │
+  │                       │ tasks           │                               │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ tasks/assignments.yml │ assignments     │                               │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ apps.yml              │ apps            │                               │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ projects.yml          │ projects        │                               │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ pane_homes.yml        │ pane_homes      │                               │
+  ├───────────────────────┼─────────────────┼───────────────────────────────┤
+  │ pins/*.yml            │ pins            │ (command, key, value_json)    │
+  └───────────────────────┴─────────────────┴───────────────────────────────┘
+
+  Keep as YAML (human-edited configs, not runtime data):
+  - services.yml — complex nested service config meant to be edited by hand
+  - sparse_groups.yml — hand-curated sparse checkout lists
+  - partners.yml — special command-set format
+
+  DB location: ~/.config/hiiro/hiiro.db
+
+  Before I start: a few decisions that'll shape the implementation:
+⏺ User answered Claude's questions:
+  ⎿  · How should the migration from YAML to SQLite work? → Auto-migrate on 
+     first run (Recommended)
+     · How should reads/writes work while both old YAML and SQLite exist during 
+     transition? → Dual-write for safety
+     · Which gem to use for SQLite access? → can you use `open` to show me the 
+     docs for both gems
+
+⏺ Bash(open https://github.com/sparklemotion/sqlite3-ruby && open
+      https://sequel.jeremyevans.net/rdoc/)
+  ⎿  (No output)
+
+⏺ Take a look at both. Key differences:
+
+  sqlite3 gem — low-level:
+  db = SQLite3::Database.new("hiiro.db")
+  db.execute("SELECT * FROM todos WHERE status = ?", ["active"])
+  # => [["abc123", "fix bug", "not_started", ...]]  (plain arrays)
+
+  sequel gem — higher-level ORM:
+  DB = Sequel.sqlite("hiiro.db")
+  DB[:todos].where(status: "active").all
+  # => [{id: "abc123", text: "fix bug", status: "not_started", ...}]  (hashes)
+
+  Sequel pros for this project: named-column hash results (not positional
+  arrays), chainable queries, schema migrations built-in, no raw SQL for common
+  ops. The sqlite3 gem is its underlying driver anyway.
+
+  Given that we have ~15 tables and complex query patterns (filters, sorts,
+  joins for tasks/branches/PRs), Sequel would meaningfully reduce boilerplate.
+  But it's a heavier dependency.
+
+⏺ User answered Claude's questions:
+  ⎿  · Which gem would you like to use after reviewing the docs? → sequel 
+     (Recommended for this)
+
+⏺ Let me read the key data-access files before designing anything.
+
+  Searched for 1 pattern, read 5 files (ctrl+o to expand)
+
+⏺ Now I have enough context. Let me look at one more key file and then start
+  building.
+
+  Searched for 1 pattern, read 2 files, listed 1 directory (ctrl+o to expand)
+
+⏺ Good. Now I have a complete picture. Let me start building.
+
+  Read 3 files (ctrl+o to expand)
+
+⏺ Good. Now I have a complete picture. Let me set up tasks and start building.
+
+  ★ Insight ─────────────────────────────────────
+  Why Sequel beats raw sqlite3 for this migration:
+  - Sequel's create_table? is idempotent — safe to call on every startup without
+   guards
+  - DB[:todos].where(status: "active") returns hash-keyed rows, no positional
+  column indexing
+  - Sequel migrations have a built-in versioned schema — we can track which
+  YAMLs have been imported without a separate flag file
+  ─────────────────────────────────────────────────
+⏺ Now let's build. Starting with the gems, then the DB foundation.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Update(hiiro.gemspec)
+  ⎿  Added 2 lines
+      29    spec.add_dependency "pry", "~> 0.14"
+      30    spec.add_dependency "front_matter_parser"
+      31    spec.add_dependency "awesome_print"
+      32 +  spec.add_dependency "sqlite3", "~> 2.0"                      
+      33 +  spec.add_dependency "sequel", "~> 5.0"                       
+      34  
+      35    spec.add_development_dependency "minitest", "~> 5.0"
+      36    spec.add_development_dependency "rake", "~> 13.0"
+
+⏺ Bash(bundle install 2>&1 | tail -10)
+  ⎿        versions.
+
+           Further, minitest 6 will be dropping the following:
+     … +7 lines (ctrl+o to expand)
+
+⏺ Bash(bundle install 2>&1 | grep -E "Installing|Using sequel|Using
+      sqlite3|Bundle complete|ERROR")
+  ⎿  Bundle complete! 3 Gemfile dependencies, 14 gems now installed.
+
+⏺ Bash(bundle list | grep -E "sequel|sqlite3")
+  ⎿    * sequel (5.102.0)
+       * sqlite3 (2.9.2)
+
+⏺ Now the core DB file. This is the heart of the migration — schema + YAML
+  importer:
+
+  ★ Insight ─────────────────────────────────────
+  Auto-migration design: Rather than a separate migration command, we track
+  migration state in a schema_migrations table. On first Hiiro::DB.setup!, if
+  that table is empty, we import all YAML files → rename to .yml.bak. The same
+  setup! call also runs create_table? (idempotent) so adding new tables in
+  future is just adding a block — no versioning overhead for this scale.
+  ─────────────────────────────────────────────────
+
+❯ i had you start migrating from yaml files to sqlite.  but i want to do this   
+with different instructions.                                                    
+                                                                                
+first, use /agent-party to do any work in parallel that you can.                
+                                                                                
+i want each value object to be a Sequel::Model if possible, or I at least want  
+any class that has a corresponding table to define it's own structure, etc. so  
+if it's the first time hiiro is being ran, and there's no sqlite db...it knows  
+the structure/query to create it's own table, and when hiiro is first ran, it   
+these classes should add themselves to a registry amd hiiro can loop over them  
+and create the necessary tables.  i think they should also probably have        
+methods                                                                         
+for each of the common queries types, etc.                                      
+                                                                                
+there are some special cases, like Tag or a tags table:                         
+                                                                                
+- i want this table to be setup to basically have the Rails equivalent of a     
+  polymorphic association.  if i assign the tag `oncall` to a branch, and then  
+a                                                                               
+  pr, then...when i say...give me everything with the `oncall` tag, i want the  
+  branch and the pr to both be returned and in the results                      
+                                                                                
+- i also want Environment(s) to be tracked.  so everytime hiiro is called i     
+want                                                                            
+  to track things like task, pwd, worktree, branch, subcmd, args, etc.          
+  - but! i don't really want dupes, so for example:                             
+    - if i run `h branch saved` i imagine it would create 2 records one for:    
+        - { bin: h, subcmd: branch, args: [saved] }                             
+        - { bin: h-branch, subcmd: saved, args: [] }                            
+    - i only want 1 record, which would you recommend?  the first one is        
+closest                                                                         
+      to the shell command actually entered, the last one would be closest to   
+      the actual execution context...or maybe it could be like:                 
+      - command: 'h branch saved', resolutions: [{bin: h, subcmd: branch, args: 
+ [saved]}, { bin: h-branch, subcmd: saved, args: []}, ...]                      
+      - this way...the 2-n executions would just append a resolution to the     
+        Environment record or some table/model with a better name               
+
+⏺ Skill(agent-party)
+  ⎿  Successfully loaded skill
+
+⏺ Before I spin up the team, let me answer the Invocation design question since
+  it shapes the schema:
+
+  ★ Insight ─────────────────────────────────────
+  The HIIRO_INVOCATION_ID pattern is the cleanest way to link dispatch hops
+  across exec() boundaries — bin/h generates an ID and exports it as an env var
+  before exec'ing bin/h-branch, which reads it to attach its resolution to the
+  same parent record. No IPC needed, just a shared env var flowing through the
+  process tree.
+  ─────────────────────────────────────────────────
+
+  My recommendation for the resolution design:
+
+  // Invocation — one per shell command entered
+  { id: "inv_abc", command: "h branch saved", pwd: "/Users/josh/work/oncall",
+    task: "oncall", worktree: "oncall/main", git_branch: "sa-form-...",
+  entered_at: "..." }
+
+  // InvocationResolution — N per invocation, ordered by depth
+  { invocation_id: "inv_abc", depth: 0, bin: "h",        subcmd: "branch", args:
+   ["saved"] }
+  { invocation_id: "inv_abc", depth: 1, bin: "h-branch", subcmd: "saved",  args:
+   []        }
+
+  Why this wins over single-record: you get the human-readable command (h branch
+   saved) for display/search, AND the precise execution context for debugging.
+  depth: 0 always reflects what the user typed.
+
+  Now spinning up the team. The work breaks into 3 parallel waves:
+
+  - Wave 1: DB foundation (everything depends on this interface)
+  - Wave 2: All individual Sequel models (parallel once interface is defined)
+  - Wave 3: Startup wiring + CHANGELOG
+
+  Since all model agents need to agree on the Hiiro::DB interface, I'll define
+  that contract now so wave 2 can run in parallel with wave 1.
+⏺ Now set up dependencies (task 1 must finish before 2-9, all of 2-9 must finish
+   before 10):
+
+⏺ Now spawn the foundation agent first, then all the parallel model agents:
+
+⏺ Agent(DB foundation agent)
+
+⏺ The foundation agent is running. While it works, let me spawn all the parallel
+   model agents — they can read the task descriptions and start writing their
+  model files. They'll need the DB foundation to be done before they can fully
+  integrate, but they can write their model class bodies in parallel.
+
+  ★ Insight ─────────────────────────────────────
+  Why agents can work in parallel here: Each model file is self-contained —
+  Hiiro::Branch, Hiiro::Link, Hiiro::PinnedPr etc. are all independent files.
+  They reference Hiiro::DB.connection and Hiiro::DB.register(self) but don't
+  depend on each other. As long as every agent uses the same interface contract,
+   they can all write simultaneously and the foundation agent's output will fit.
+  ─────────────────────────="────────────────────
+
+⏺ Agent(Todo + Reminder models agent)
+
+⏺ Agent(Tags polymorphic model agent)
+⏺ Agent(PinnedPr model agent)
+
+⏺ Agent(Task + App + Assignment models agent)
+
+⏺ Agent(Branch + TrackedPr models agent)
+
+⏺ Agent(Link model agent)
+
+⏺ Agent(Project + PaneHome + Pin models agent)
+
+⏺ The agents are all running. Let me spawn the Invocation tracking agent which I
+   haven't started yet:
+
+⏺ Agent(Invocation tracking models agent)
+
+⏺ All 8 parallel agents are now running. Here's the current state:
+
+  Running right now (in parallel):
+
+  ┌───────────────┬──────────────────────────────────────────────────────────┐
+  │     Agent     │                        Working on                        │
+  ├───────────────┼──────────────────────────────────────────────────────────┤
+  │ db-foundation │ lib/hiiro/db.rb — connection, registry, YAML migration   │
+  ├───────────────┼──────────────────────────────────────────────────────────┤
+  │ todo-reminder │ lib/hiiro/todo.rb + new lib/hiiro/reminder.rb            │
+  ├───────────────┼──────────────────────────────────────────────────────────┤
+  │ tags-model    │ lib/hiiro/tags.rb — polymorphic Tag model                │
+  ├───────────────┼──────────────────────────────────────────────────────────┤
+  │ pinned-pr     │ lib/hiiro/pinned_pr.rb + updating PinnedPRManager        │
+  ├───────────────┼──────────────────────────────────────────────────────────┤
+  │ task-models   │ lib/hiiro/task_record.rb, app_record.rb, assignment.rb + │
+  │               │  tasks.rb Config                                         │
+  ├───────────────┼──────────────────────────────────────────────────────────┤
+  │ branch-pr     │ lib/hiiro/branch.rb, tracked_pr.rb + bin/h-branch,       │
+  │               │ bin/h-pr                                                 │
+  ├───────────────┼──────────────────────────────────────────────────────────┤
+  │ link-model    │ lib/hiiro/link.rb + bin/h-link                           │
+  ├───────────────┼──────────────────────────────────────────────────────────┤
+  │ small-models  │ project.rb, pane_home.rb, pin_record.rb + projects.rb,   │
+  │               │ h-pane, pins.rb                                          │
+  ├───────────────┼──────────────────────────────────────────────────────────┤
+  │ invocation    │ lib/hiiro/invocation.rb + wiring into lib/hiiro.rb       │
+  └───────────────┴──────────────────────────────────────────────────────────┘
+
+  Blocked (starts after all above finish):
+  - Task #10 — final wiring (requires all models, startup integration,
+  CHANGELOG)
+
+  I'll relay results as each agent reports back. The final wiring agent will
+  kick off automatically once everything else lands.
+
+  ★ Insight ─────────────────────────────────────
+  The HIIRO_INVOCATION_ID pattern is elegant because environment variables are
+  inherited by child processes through exec() — the OS handles the propagation
+  for free. This is the same mechanism used by tools like RACK_ENV, NODE_ENV,
+  etc. to share context across process boundaries without any IPC machinery.
+
+  Sequel::Model's one_to_many + many_to_one associations are declared at the
+  class level and generate query methods like invocation.resolutions and
+  resolution.invocation — similar to Rails' has_many/belongs_to but without the
+  AR global state. Each association is explicit and composable.
+  ─────────────────────────────────────────────────
+
+
+@tags-model❯ Task 3 complete: Tags model done
+
+@db-foundation❯ Task #1 complete — Hiiro::DB foundation built
+
+@todo-reminder❯ Task #2 complete — TodoItem + Reminder models done
+
+⏺ Good progress rolling in. Three agents have checked in:
+
+  Completed so far:
+  - ✅ lib/hiiro/db.rb — DB foundation, full YAML migration, Hiiro::DB.setup!
+  wired into Hiiro.init
+  - ✅ lib/hiiro/tags.rb — polymorphic Hiiro::Tag model with backward-compatible
+   Hiiro::Tags wrapper
+  - ✅ lib/hiiro/todo.rb + new lib/hiiro/reminder.rb — both as Sequel models
+  with dual-write
+
+  ★ Insight ─────────────────────────────────────
+  The before_create hook pattern used in TodoItem is a Sequel lifecycle callback
+   — it fires automatically before any INSERT, so you don't have to remember to
+  set timestamps in every create call. It's equivalent to ActiveRecord's
+  before_create callback but purely opt-in per-model rather than inherited from
+  a base class.
+
+  The delete-all + re-insert save strategy in TodoManager is the simplest
+  correctness guarantee for in-memory lists: you never have stale rows from
+  deleted items. The trade-off vs. upsert-per-row is that it's a heavier write,
+  but for a personal todos list with <1000 items this is irrelevant — SQLite
+  handles it in microseconds.
+  ─────────────────────────────────────────────────
+
+  Still waiting on: pinned-pr, task-models, branch-pr, link-model, small-models,
+   invocation. Once all 6 report back, the final wiring agent fires.
+
+
+@invocation❯ Task #9 complete: Invocation tracking built and wired
+
+⏺ ✅ lib/hiiro/invocation.rb — Invocation + InvocationResolution models wired in
+   with the HIIRO_INVOCATION_ID env var coordination pattern.
+
+  ★ Insight ─────────────────────────────────────
+  rescue nil at the call site vs. rescue inside the method is a deliberate
+  trade-off here: wrapping Invocation.record! in rescue nil in lib/hiiro.rb
+  means the entire tracking system is non-fatal — even an unexpected bug in the
+  model code won't break hiiro startup. The inner rescues inside record! protect
+   against DB/env-var edge cases, but the outer rescue nil is the safety net for
+   the whole subsystem.
+  ─────────────────────────────────────────────────
+
+  Completed: DB foundation, Tags, Todo+Reminder, Invocation (4/9 tasks done)
+
+  Still running: pinned-pr, task-models, branch-pr, link-model, small-models (5
+  agents)
+
+
+⏺ Still waiting on the remaining 5 agents. No action needed — they'll message
+  when done.
+
+
+⏺ Still waiting on pinned-pr, task-models, branch-pr, link-model, and
+  small-models.
+
+
+@link-model❯ Task #7 completed
+
+⏺ ✅ lib/hiiro/link.rb + bin/h-link updated with dual-write. Agent also added
+  the require to lib/hiiro.rb — the final wiring agent will need to avoid
+  duplicating that.
+
+  Completed: 5/9 tasks ✅ (db, tags, todo+reminder, invocation, link)
+
+  Still running: pinned-pr, task-models, branch-pr, small-models
+
+
+⏺ Still waiting on 4 agents. No action needed.
+
+@small-models❯ Task #8 completed
+
+⏺ ✅ project.rb, pane_home.rb, pin_record.rb + updates to projects.rb, h-pane,
+  pins.rb. Agent also fixed some import logic in lib/hiiro/db.rb and added
+  requires to lib/hiiro.rb.
+
+  Completed: 6/9 tasks ✅
+
+  Still running: pinned-pr, task-models, branch-pr
+
+  ★ Insight ─────────────────────────────────────
+  Multiple agents editing the same files (lib/hiiro.rb, lib/hiiro/db.rb) is the
+  main coordination risk in this parallel approach. The final wiring agent (task
+   #10) will need to read the current state of these files and reconcile any
+  gaps or conflicts — that's why we have a dedicated final-wiring phase rather
+  than letting each agent freely modify shared files.
+  ─────────────────────────────────────────────────
+
+
+@task-models❯ Task #5 complete: Task/App/Assignment models + Config update
+
+⏺ ✅ task_record.rb, app_record.rb, assignment.rb + TaskManager::Config updated.
+   Good catch on the Task inner class not having app — the respond_to? guard is
+  the right call.
+
+  Completed: 7/9 tasks ✅
+
+  Still running: pinned-pr, branch-pr
+
+
+⏺ Still waiting on pinned-pr and branch-pr.
+
+
+⏺ Still waiting on pinned-pr and branch-pr.
+
+
+@pinned-pr❯ Task #4 complete — PinnedPr Sequel model done
+
+⏺ ✅ lib/hiiro/pinned_pr.rb + PinnedPRManager updated with transaction-wrapped
+  save, all predicates mirrored.
+
+  Completed: 8/9 tasks ✅
+
+  Last one: branch-pr — once it reports, I'll spawn the final wiring agent.
+
+
+⏺ Still waiting on branch-pr.
+
+
+⏺ Still waiting on branch-pr — it's the last one.
+
+
+@branch-pr❯ Task #6 complete: Branch + TrackedPr models done
+
+⏺ ✅ lib/hiiro/branch.rb + lib/hiiro/tracked_pr.rb done. Good catch on bin/h-pr
+  — prs.yml was already legacy, TrackedPr exists as the DB model for the
+  migrated data but active tracking goes through PinnedPRManager. We can add h 
+  pr track → TrackedPr as a follow-up if useful.
+
+  All 9 model tasks complete! Spawning the final wiring agent now:
+
+⏺ Agent(Final wiring, test run, docs update)
+
+⏺ Let me clean up the task list — the parent tasks are still showing pending
+  even though the sub-work completed:
+⏺ Tasks cleaned up. The final-wiring agent is running — it will audit all the
+  requires in lib/hiiro.rb, run syntax checks + the test suite, and consolidate
+  the CHANGELOG/CLAUDE.md docs. Waiting for it to report back.
+
+❯ what did we decide on for migration...do we dual write?                       
+
+⏺ Yes — dual-write. Every mutation writes to SQLite first (primary store), then
+  rewrites the original YAML file as a backup. The YAML files stay live and in
+  sync, not just renamed.
+
+  The one-time auto-migration on first run (when hiiro.db doesn't exist yet)
+  goes the other direction: it reads the existing YAMLs → imports into SQLite →
+  renames each source to .yml.bak. After that, all subsequent writes go
+  DB-primary + YAML-backup.
+
+  So the flow is:
+
+  First run (no hiiro.db):
+    YAMLs → [import] → hiiro.db
+    YAMLs → renamed to .yml.bak
+
+  Every run after:
+    Reads  ← hiiro.db (primary)
+    Writes → hiiro.db + .yml (dual-write backup)
+
+  The .yml backups let you roll back to YAML-only if something breaks, without
+  losing any data written after migration.
+
+
+⏺ Just idle pings — final-wiring is still running. Nothing to act on.
+
+❯ first, make logical commits for each change.                                  
+                                                                                
+- one for the gemspec change                                                    
+- one for adding lib/hiiro/db.rb                                                
+- one for updating the base lib/hiiro.rb                                        
+- one for each subcmd + lib combo, or whatever makes sense                      
+                                                                                
+                                                                                
+i think we should have a `h db` command.                                        
+                                                                                
+it should have a subcmd that lets us decide when to fully migrate or stop       
+dual-writing.                                                                   
+                                                                                
+other cmds likt `h pr` or `h branch` should either have a `db` cmd with like a  
+`q`/`query` subcmd that let's us write our own queries/filters.  it doesn't     
+have to be super complicated at this point.                                     
+                                                                                
+                                                                                
+                                                                                
+when we decide to fully migrate and stop dual-writing, a few things should      
+happen:                                                                         
+                                                                                
+- make a tar.gz file of all the current yml files that is saved in              
+  ~/.config/hiiro/ and it should be structured in a way that all we have to do  
+  is `tar xvzf backup.tar.gz` and the files will be placed in the proper        
+  destinations                                                                  
+  - for example: `tasks/tasks.yml` should untar into the ~/.config/hiiro/tasks/ 
+ folder                                                                         
+  - basically:                                                                  
+                                                                                
+```sh                                                                           
+# backup                                                                        
+                                                                                
+cd ~/.config/hiiro                                                              
+tar cvzf sqlite-migration.YYYYmmddHHMMSS.tar.gz **/*.yml                        
+rm -v **/*.yml                                                                  
+                                                                                
+                                                                                
+# restore                                                                       
+                                                                                
+cd ~/.config/hiiro                                                              
+tar xvzf sqlite-migration.YYYYmmddHHMMSS.tar.gz                                 
+ls -1 **/*.yml                                                                  
+```                                                                             
+                                                                                
+with these cmds: `rm -v` and `ls -1` should ideally have the same output        
+except for maybe the order the files are listed in                              
+
+⏺ Got it. Two parallel workstreams from here:
+
+  1. Commits — wait for final-wiring to finish, then make logical commits
+  2. h db command + dual_write? flag + per-command q subcommands — can start now
+   since it's new files
+
+  Let me start on bin/h-db and the dual-write control system while final-wiring
+  wraps up.
+
+  ★ Insight ─────────────────────────────────────
+  The dual_write? flag needs to live in the DB itself (a row in
+  schema_migrations) rather than a config file — that way it survives across
+  sessions, doesn't need a separate file, and is already in the right place
+  since Hiiro::DB is always available. Hiiro::DB.dual_write? returns true until
+  a full_migration row is inserted.
+
+  The tar archive structure works because tar cvzf with relative paths (after cd
+   ~/.config/hiiro) stores tasks/tasks.yml not
+  /Users/josh/.config/hiiro/tasks/tasks.yml, so tar xvzf from the same directory
+   puts files back exactly where they were.
+  ─────────────────────────────────────────────────
+
+⏺ Agent(h-db command + dual-write control)
+
+⏺ Once final-wiring reports back and hdb-command finishes, I'll spawn a commit
+  agent to make the logical commits. Here's the planned commit structure:
+
+  ┌─────────────────────────────┬───────────────────────────────────────────┐
+  │           Commit            │                   Files                   │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: add sequel + sqlite3  │ hiiro.gemspec, Gemfile.lock               │
+  │ deps                        │                                           │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: add Hiiro::DB         │ lib/hiiro/db.rb                           │
+  │ foundation                  │                                           │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: wire SQLite startup   │ lib/hiiro.rb                              │
+  │ into lib/hiiro.rb           │                                           │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: migrate TodoItem +    │ lib/hiiro/todo.rb, lib/hiiro/reminder.rb  │
+  │ Reminder to Sequel::Model   │                                           │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: add polymorphic Tag   │ lib/hiiro/tags.rb                         │
+  │ model                       │                                           │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: migrate PinnedPr to   │ lib/hiiro/pinned_pr.rb,                   │
+  │ Sequel::Model               │ lib/hiiro/pinned_pr_manager.rb            │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: migrate               │ lib/hiiro/task_record.rb, app_record.rb,  │
+  │ Task/App/Assignment to      │ assignment.rb, tasks.rb                   │
+  │ Sequel::Model               │                                           │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: migrate Branch +      │ lib/hiiro/branch.rb, tracked_pr.rb,       │
+  │ TrackedPr to Sequel::Model  │ bin/h-branch                              │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: migrate Link to       │ lib/hiiro/link.rb, bin/h-link             │
+  │ Sequel::Model               │                                           │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: migrate Project +     │ lib/hiiro/project.rb, pane_home.rb,       │
+  │ PaneHome + Pin to           │ pin_record.rb, projects.rb, h-pane,       │
+  │ Sequel::Model               │ pins.rb                                   │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: add Invocation        │ lib/hiiro/invocation.rb                   │
+  │ tracking                    │                                           │
+  ├─────────────────────────────┼───────────────────────────────────────────┤
+  │ feat: add h-db command with │ bin/h-db                                  │
+  │  migrate/status/query       │                                           │
+  └─────────────────────────────┴───────────────────────────────────────────┘
+
+❯ our test suite hasn't been kept up-to-date.  part of the reason is that       
+claude has constantly mixed presentation logic with application/domain logic.   
+another part is that the majority of what hiiro is doing is heavily side-effect 
+ focused                                                                        
+
+⏺ This is a real architectural problem, and it's worth being direct about it.
+
+  The root issue: hiiro's bin files are doing 4 different jobs at once —
+
+  bin/h-branch:
+    1. Parse args               ← orchestration
+    2. Query git / tmux state   ← side effects
+    3. Transform / decide       ← domain logic
+    4. Print output             ← presentation
+    5. Write to files/DB        ← persistence
+
+  When all 5 are interleaved in one block, there's nothing to test that doesn't
+  also require a terminal, a tmux session, or a real git repo.
+
+  The SQLite migration actually helps here — the models are now the cleanest
+  layer in the codebase and are trivially testable:
+
+  # test setup — in-memory DB, no files, no fixtures
+  def setup
+    @db = Sequel.sqlite
+    Hiiro::DB.instance_variable_set(:@connection, @db)
+    Hiiro::TodoItem.create_table!(@db)
+  end
+
+  def test_active_todos
+    Hiiro::TodoItem.create(text: "Fix bug",    status: "not_started")
+    Hiiro::TodoItem.create(text: "Ship thing", status: "done")
+    assert_equal 1, Hiiro::TodoItem.where(status: "not_started").count
+  end
+
+  No YAML, no filesystem, runs in microseconds.
+
+  The presentation mixing is the harder problem. Something like
+  PinnedPRManager#display_pinned is 60 lines of ANSI/formatting logic —
+  completely untestable and it lives right next to the query logic.
+
+  A few options for how to handle this going forward:
+
+  Option A — Incrementally extract presenters as we touch files
+  When a file gets a Sequel model anyway, also extract its display methods into
+  a Presenter class. No big-bang refactor, just enforce the rule going forward.
+
+  Option B — Write tests only for the model/domain layer, skip bin files
+  Accept that bin files are thin orchestrators and only test what's actually
+  testable — the Sequel models, matchers, option parsing. Stop trying to test
+  the side-effect-heavy bin files.
+
+  Option C — Define a Hiiro::Effects interface
+  Create an injectable adapter for side effects (tmux calls, git calls, exec).
+  Bin files get effects: injected; tests pass a double. Most invasive but gives
+  full coverage.
+
+  Given that the test suite is already out of date and hiiro is a personal CLI
+  tool, I'd suggest Option B as baseline + Option A opportunistically. Write
+  solid tests for the model layer (which is now genuinely clean), and extract
+  presenters when you're already editing a file for another reason.
+
+  Do you want to:
+  1. Tackle the test architecture as part of this branch before committing?
+  2. Just get the SQLite work committed and come back to tests separately?
+  3. Something else — like establishing a testing convention and letting the
+  models be the starting point?
+
+
+@hdb-command❯ h-db agent work complete
+
+⏺ ✅ bin/h-db done — status, tables, q/query, migrate (with tar backup),
+  restore. Also added q/query to bin/h-branch and bin/h-pr.
+
+  Still waiting on final-wiring to finish auditing the requires, running syntax
+  checks, and consolidating the CHANGELOG. Once it reports back I'll kick off
+  the commit agent.
+
+  On the test question — no pressure to decide now. The model layer is ready to
+  be tested cleanly whenever you want to start. The commits come first.
+
+
+⏺ Still waiting on final-wiring.
+❯ i like the Option B + Option A suggestion.  could you also write an           
+implementation plan and save it in plans/ for Option C                          
+
+⏺ Let me explore the codebase to understand the full scope of side effects
+  before designing the plan.
+
+⏺ Explore(Explore side-effect patterns in hiiro)
+  ⎿  Done (42 tool uses · 147.6k tokens · 1m 45s)
+  (ctrl+o to expand)
+
+⏺ Good — the explorer found that Hiiro::Tmux and Hiiro::Git already have the
+  adapter pattern internally (run_safe/run_system/run_success?). The missing
+  piece is making those execution methods injectable rather than hardcoded. That
+   significantly reduces the scope.
+
+  Let me write the plan now.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ User approved Claude's plan
+  ⎿  Plan saved to: ~/.claude/plans/shiny-cooking-zephyr.md · /plan to edit
+     Option C: Hiiro::Effects Injectable Interface
+
+     Context
+
+     Hiiro's test suite is hard to maintain because side effects (tmux, git,
+     filesystem, process exec) are
+     interleaved with domain and presentation logic in bin files and manager
+     classes. Claude has repeatedly
+     mixed these concerns, making tests brittle or impossible to write.
+
+     The good news: Hiiro::Tmux and Hiiro::Git already have an internal adapter
+     pattern — they route
+     all calls through three private methods: run_safe (backtick), run_system
+     (system), run_success?
+     (silent system). The gap is that these aren't injectable, so tests can't
+     substitute them.
+
+     Goal: Make side effects injectable via a Hiiro::Effects namespace. Real
+     code gets real
+     implementations; tests get lightweight doubles. No new abstraction layers —
+      just expose and inject
+     what already exists.
+
+     Not a big-bang rewrite. This is incremental: start with Tmux and Git
+     (highest test value), then
+     add Filesystem and Process. Each step is independently useful.
+
+     ---
+     What Already Exists (reuse, don't rebuild)
+
+     ┌─────────────────────┬──────────────────────────────────┬─────────────────
+     ┐
+     │   Existing class    │               Role               │       Gap
+     │
+     ├─────────────────────┼──────────────────────────────────┼─────────────────
+     ┤
+     │ lib/hiiro/tmux.rb   │ Routes all tmux calls through    │ Private — can't
+     │
+     │                     │ run_safe/run_system/run_success? │  inject
+     │
+     ├─────────────────────┼──────────────────────────────────┼─────────────────
+     ┤
+     │ lib/hiiro/git.rb    │ Same pattern for git calls       │ Private — can't
+     │
+     │                     │                                  │  inject
+     │
+     ├─────────────────────┼──────────────────────────────────┼─────────────────
+     ┤
+     │ lib/hiiro/shell.rb  │ Open3.capture2 wrapper — already │ Not injected
+     │
+     │                     │  clean                           │ into callers
+     │
+     ├─────────────────────┼──────────────────────────────────┼─────────────────
+     ┤
+     │ test/test_helper.rb │                                  │ Coarse-grained,
+     │
+     │  SystemCallCapture  │ Patches Kernel.system globally   │  no tmux/git
+     │
+     │                     │                                  │ awareness
+     │
+     └─────────────────────┴──────────────────────────────────┴─────────────────
+     ┘
+
+     ---
+     Design
+
+     Step 1: Define the Effects interfaces (lib/hiiro/effects.rb)
+
+     Three interfaces, each with a real implementation and a test double:
+
+     module Hiiro
+       module Effects
+         # Wraps backtick + system calls for tmux and git
+         class Executor
+           def capture(*args)  = `#{args.shelljoin} 2>/dev/null`
+           def run(*args)      = system(*args)
+           def check(*args)    = system(*args, out: File::NULL, err: File::NULL)
+         end
+
+         # Test double — records calls, returns configured stubs
+         class NullExecutor
+           attr_reader :calls
+
+           def initialize
+             @calls   = []
+             @stubs   = {}
+           end
+
+           def stub(pattern, output)
+             @stubs[pattern] = output
+           end
+
+           def capture(*args)
+             @calls << { method: :capture, args: args }
+             find_stub(args) || ""
+           end
+
+           def run(*args)
+             @calls << { method: :run, args: args }
+             find_stub(args).nil? ? true : find_stub(args)
+           end
+
+           def check(*args)
+             @calls << { method: :check, args: args }
+             find_stub(args).nil? ? true : !!find_stub(args)
+           end
+
+           def called?(pattern)
+             @calls.any? { |c| c[:args].any? { |a| a.to_s.include?(pattern.to_s)
+      } }
+           end
+
+           private
+
+           def find_stub(args)
+             key = args.map(&:to_s).join(' ')
+             @stubs.find { |pat, _| key.include?(pat.to_s) }&.last
+           end
+         end
+
+         # Filesystem effects (read/write/delete)
+         class Filesystem
+           def write(path, content)    = (FileUtils.mkdir_p(File.dirname(path));
+      File.write(path, content))
+           def read(path)              = File.read(path)
+           def exist?(path)            = File.exist?(path)
+           def mkdir_p(path)           = FileUtils.mkdir_p(path)
+           def rm(path)                = File.delete(path) if File.exist?(path)
+           def mv(src, dst)            = FileUtils.mv(src, dst)
+           def glob(pattern)           = Dir.glob(pattern)
+         end
+
+         class NullFilesystem
+           attr_reader :writes, :deletes
+
+           def initialize
+             @store   = {}
+             @writes  = []
+             @deletes = []
+           end
+
+           def write(path, content)    = @writes  << path and @store[path] =
+     content
+           def read(path)              = @store[path] || raise(Errno::ENOENT,
+     path)
+           def exist?(path)            = @store.key?(path)
+           def mkdir_p(path)           = nil
+           def rm(path)                = @deletes << path and
+     @store.delete(path)
+           def mv(src, dst)            = @store[dst] = @store.delete(src)
+           def glob(pattern)           = @store.keys.select { |k|
+     File.fnmatch(pattern, k) }
+         end
+       end
+     end
+
+     Step 2: Make Hiiro::Tmux injectable (lib/hiiro/tmux.rb)
+
+     Change the three private methods to delegate to an @executor:
+
+     class Hiiro::Tmux
+       # Before: private methods hardcoded to backtick/system
+       # After:  constructor accepts executor:
+
+       def initialize(executor: Hiiro::Effects::Executor.new)
+         @executor = executor
+       end
+
+       private
+
+       def run_safe(*args)    = @executor.capture('tmux', *args)
+       def run_system(*args)  = @executor.run('tmux', *args)
+       def run_success?(*args)= @executor.check('tmux', *args)
+     end
+
+     The public API of Hiiro::Tmux is unchanged. All subclasses (Session,
+     Window, Pane, etc.) that
+     receive a tmux instance already route through it, so they get injectable
+     behavior for free.
+
+     Files to change: lib/hiiro/tmux.rb — constructor only. No other tmux files
+     change.
+
+     Step 3: Make Hiiro::Git injectable (lib/hiiro/git.rb)
+
+     Same pattern:
+
+     class Hiiro::Git
+       def initialize(hiiro=nil, path=nil, executor: 
+     Hiiro::Effects::Executor.new)
+         @hiiro    = hiiro
+         @path     = path
+         @executor = executor
+       end
+
+       private
+
+       def run_safe(*args)    = @executor.capture('git', '-C', root, *args)
+       def run_system(*args)  = @executor.run('git', '-C', root, *args)
+       def run_success?(*args)= @executor.check('git', '-C', root, *args)
+     end
+
+     Files to change: lib/hiiro/git.rb — constructor + three private methods
+     only.
+
+     Step 4: Inject filesystem effects into high-value managers
+
+     Managers that write config files get an optional fs: keyword arg defaulting
+      to Effects::Filesystem.new:
+
+     class Hiiro::TodoManager
+       def initialize(file_path: nil, fs: Hiiro::Effects::Filesystem.new)
+         @fs = fs
+         # ...
+       end
+
+       def save
+         # DB write (already done)
+         @fs.write(TODO_FILE, YAML.dump(data)) if Hiiro::DB.dual_write?
+       end
+     end
+
+     Start with: TodoManager, PinnedPRManager, Tags, Projects.
+     The filesystem injection is lower priority than Tmux/Git but completes the
+     picture.
+
+     Step 5: Update TestHarness
+
+     Replace the coarse Kernel.system patch with per-instance injection:
+
+     # test/test_helper.rb
+     module Hiiro
+       class TestHarness
+         def setup_effects
+           @executor = Hiiro::Effects::NullExecutor.new
+           @fs       = Hiiro::Effects::NullFilesystem.new
+         end
+
+         def null_tmux = Hiiro::Tmux.new(executor: @executor)
+         def null_git  = Hiiro::Git.new(nil, '/fake/root', executor: @executor)
+       end
+     end
+
+     Tests then assert on recorded calls:
+
+     def test_switch_to_task_creates_window
+       tmux = null_tmux
+       @executor.stub('new-window', '')
+
+       manager.switch_to_task(task, tmux: tmux)
+
+       assert @executor.called?('new-window')
+       assert @executor.called?('oncall')  # session name in the call
+     end
+
+     ---
+     Migration Path (incremental, not big-bang)
+
+     Each step is independently shippable:
+
+     1. Phase 1 — lib/hiiro/effects.rb with Executor + NullExecutor (no callers
+     yet)
+     2. Phase 2 — Inject into Hiiro::Tmux + write tmux-heavy tests (h-session,
+     h-window)
+     3. Phase 3 — Inject into Hiiro::Git + write git-heavy tests (h-branch,
+     TaskManager)
+     4. Phase 4 — NullFilesystem + inject into TodoManager, PinnedPRManager,
+     Tags, Projects
+     5. Phase 5 — Update TestHarness to use Effects doubles; deprecate
+     SystemCallCapture
+
+     Estimate: Phase 1+2 are ~1 day. Phase 3+4 are another day. Phase 5 is
+     cleanup.
+
+     ---
+     Critical Files to Modify
+
+     ┌────────────────────────────────┬─────────────────────────────────────────
+     ┐
+     │              File              │                 Change
+     │
+     ├────────────────────────────────┼─────────────────────────────────────────
+     ┤
+     │ lib/hiiro/effects.rb           │ New file — Executor, NullExecutor,
+     │
+     │                                │ Filesystem, NullFilesystem
+     │
+     ├────────────────────────────────┼─────────────────────────────────────────
+     ┤
+     │ lib/hiiro/tmux.rb              │ Add executor: kwarg to constructor;
+     │
+     │                                │ delegate run_* methods to it
+     │
+     ├────────────────────────────────┼─────────────────────────────────────────
+     ┤
+     │ lib/hiiro/git.rb               │ Add executor: kwarg to constructor;
+     │
+     │                                │ delegate run_* methods to it
+     │
+     ├────────────────────────────────┼─────────────────────────────────────────
+     ┤
+     │ lib/hiiro/todo.rb              │ Add fs: kwarg to TodoManager; use
+     │
+     │                                │ @fs.write in save
+     │
+     ├────────────────────────────────┼─────────────────────────────────────────
+     ┤
+     │ lib/hiiro/pinned_pr_manager.rb │ Add fs: kwarg; use @fs.write in
+     │
+     │                                │ save_pinned
+     │
+     ├────────────────────────────────┼─────────────────────────────────────────
+     ┤
+     │ lib/hiiro/tags.rb              │ Add fs: kwarg to Tags; use @fs.write in
+     │
+     │                                │  save_yaml_backup
+     │
+     ├────────────────────────────────┼─────────────────────────────────────────
+     ┤
+     │ lib/hiiro/projects.rb          │ Add fs: kwarg; use in save
+     │
+     ├────────────────────────────────┼─────────────────────────────────────────
+     ┤
+     │ test/test_helper.rb            │ Add setup_effects, null_tmux, null_git
+     │
+     │                                │ helpers
+     │
+     └────────────────────────────────┴─────────────────────────────────────────
+     ┘
+
+     ---
+     What Becomes Testable
+
+     ┌──────────────────────────────────────────────────┬──────────────────────┐
+     │               Currently untestable               │ Testable after Phase │
+     ├──────────────────────────────────────────────────┼──────────────────────┤
+     │ h session start foo creates a tmux session       │ Phase 2              │
+     ├──────────────────────────────────────────────────┼──────────────────────┤
+     │ h task start adds a git worktree                 │ Phase 3              │
+     ├──────────────────────────────────────────────────┼──────────────────────┤
+     │ h branch save records the branch + writes YAML   │ Phase 3 + 4          │
+     ├──────────────────────────────────────────────────┼──────────────────────┤
+     │ TodoManager#save writes correct YAML format      │ Phase 4              │
+     ├──────────────────────────────────────────────────┼──────────────────────┤
+     │ Tags dual-write generates correct YAML structure │ Phase 4              │
+     └──────────────────────────────────────────────────┴──────────────────────┘
+
+     ---
+     What This Does NOT Solve
+
+     - Bin files that mix presentation + domain (still need Option A — extract
+     presenters separately)
+     - Tests for interactive flows (fuzzyfind, editor invocation) — those stay
+     integration-only
+     - The Sequel model tests (those are already testable today with in-memory
+     SQLite — no Effects needed)
+
+⏺ Plan saved and approved. The CLAUDE.md was already updated by the final-wiring
+   agent as part of that work.
+
+  Now implementing Option C. Phase 1 (effects.rb) must land before the injection
+   work, then Phases 2-4 run in parallel.
+
+⏺ Agent(Create Hiiro::Effects — Executor + Filesystem + doubles)

@@ -26,9 +26,10 @@ class Hiiro
 
     attr_reader :hiiro, :pwd
 
-    def initialize(hiiro, pwd=Dir.pwd)
-      @hiiro = hiiro
-      @pwd = pwd
+    def initialize(hiiro = nil, pwd = Dir.pwd, executor: Hiiro::Effects::Executor.new)
+      @hiiro    = hiiro
+      @pwd      = pwd
+      @executor = executor
     end
 
     # Query methods
@@ -213,16 +214,16 @@ class Hiiro
     private
 
     def run_safe(*args)
-      result = `git #{args.shelljoin} 2>/dev/null`.strip
+      result = @executor.capture('git', *args).strip
       result.empty? ? nil : result
     end
 
     def run_system(*args)
-      system('git', *args)
+      @executor.run('git', *args)
     end
 
     def run_success?(*args)
-      system('git', *args, out: File::NULL, err: File::NULL)
+      @executor.check('git', *args)
     end
   end
 end

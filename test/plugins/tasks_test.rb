@@ -88,7 +88,10 @@ class TmuxSessionTest < Minitest::Test
   end
 end
 
+Tree = Hiiro::Tree
+
 class TreeTest < Minitest::Test
+  WORK_DIR = Hiiro::WORK_DIR
   def test_tree_initialization
     tree = Tree.new(path: "/home/user/work/feature", head: "abc123", branch: "feature")
 
@@ -151,6 +154,8 @@ class TreeTest < Minitest::Test
     assert_equal tree.name, tree.to_s
   end
 end
+
+Task = Hiiro::Task
 
 class TaskTest < Minitest::Test
   def test_task_initialization
@@ -221,6 +226,8 @@ class TaskTest < Minitest::Test
   end
 end
 
+App = Hiiro::App
+
 class AppTest < Minitest::Test
   def test_app_initialization
     app = App.new(name: "frontend", path: "apps/frontend")
@@ -252,6 +259,8 @@ class AppTest < Minitest::Test
     assert_equal "my-app", app.to_s
   end
 end
+
+Environment = Hiiro::Environment
 
 class EnvironmentTest < Minitest::Test
   include TestHelpers
@@ -397,8 +406,16 @@ class EnvironmentTest < Minitest::Test
   end
 end
 
+TaskManager = Hiiro::TaskManager
+
 class TaskManagerConfigTest < Minitest::Test
   include TestHelpers
+
+  def setup
+    # Clear SQLite task/app data so tests that pass explicit YAML files get clean results
+    Hiiro::TaskRecord.dataset.delete
+    Hiiro::AppRecord.dataset.delete
+  end
 
   def test_config_apps_from_yaml
     with_temp_dir do |dir|

@@ -206,6 +206,11 @@ class Hiiro
       def parse_short_options(arg, args)
         chars = arg.sub(/^-/, '').chars
 
+        unless chars.any? { |c| @definitions.values.find { |d| d.short == c } }
+          @remaining_args << arg
+          return
+        end
+
         chars.each_with_index do |char, idx|
           defn = @definitions.values.find { |d| d.short == char }
           next unless defn

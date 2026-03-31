@@ -25,23 +25,20 @@ class BranchManager
       puts "WARNING: Not in a task session, saving without task info"
     end
 
-    data = load_data
-    data['branches'] ||= []
-
-    existing = data['branches'].find do |b|
-      b['name'] == branch_name && b['task'] == entry[:task]
-    end
-
+    existing = Hiiro::Branch.find_by_name(branch_name)
     if existing
-      existing.merge!(entry.transform_keys(&:to_s))
-      existing['updated_at'] = Time.now.iso8601
       puts "Updated branch '#{branch_name}' for task '#{entry[:task]}'"
     else
-      data['branches'] << entry.transform_keys(&:to_s).merge('created_at' => Time.now.iso8601)
       puts "Saved branch '#{branch_name}' for task '#{entry[:task]}'"
     end
 
-    save_data(data)
+    save_branch(
+      name:     entry[:name],
+      worktree: entry[:worktree],
+      task:     entry[:task],
+      tmux:     entry[:tmux],
+      sha:      entry[:sha]
+    )
     show_entry(entry)
     true
   end
@@ -79,53 +76,58 @@ class BranchManager
   end
 
   def rename_saved(old_name, new_name)
-    data = load_data
-    changed = false
-    (data['branches'] || []).each do |b|
-      if b['name'] == old_name
-        b['name'] = new_name
-        b['updated_at'] = Time.now.iso8601
-        changed = true
-      end
-    end
-    save_data(data) if changed
-    changed
+    branch = Hiiro::Branch.find_by_name(old_name)
+    return false unless branch
+    branch.update(name: new_name, updated_at: Time.now.iso8601)
+    save_yaml_backup
+    true
   end
 
   def remove_saved(branch_name)
-    data = load_data
-    before = (data['branches'] || []).length
-    data['branches'] = (data['branches'] || []).reject { |b| b['name'] == branch_name }
-    save_data(data) if data['branches'].length < before
+    branch = Hiiro::Branch.find_by_name(branch_name)
+    return unless branch
+    branch.destroy
+    save_yaml_backup
   end
 
   def get_note(branch_name = nil)
     branch_name ||= current_branch
-    saved_entry(branch_name)&.[]('note')
+    Hiiro::Branch.find_by_name(branch_name)&.note
   end
 
   def set_note(text, branch_name = nil)
     branch_name ||= current_branch
-    data = load_data
-    data['branches'] ||= []
-    entry = data['branches'].find { |b| b['name'] == branch_name }
-    unless entry
-      new_entry = build_entry(branch_name).transform_keys(&:to_s).merge('created_at' => Time.now.iso8601)
-      data['branches'] << new_entry
-      entry = data['branches'].last
+    branch = Hiiro::Branch.find_by_name(branch_name)
+    unless branch
+      entry = build_entry(branch_name)
+      branch = Hiiro::Branch.create(
+        name:       branch_name,
+        worktree:   entry[:worktree],
+        task:       entry[:task],
+        tmux_json:  Hiiro::DB::JSON.dump(entry[:tmux]),
+        sha:        entry[:sha],
+        created_at: Time.now.iso8601
+      )
     end
-    if text.nil?
-      entry.delete('note')
-    else
-      entry['note'] = text
-    end
-    entry['updated_at'] = Time.now.iso8601
-    save_data(data)
+    branch.update(note: text, updated_at: Time.now.iso8601)
+    save_yaml_backup
   end
 
   def load_data
-    return {} unless File.exist?(data_file)
-    YAML.safe_load_file(data_file) || {}
+    Hiiro::Branch.ordered.all.each_with_object({ 'branches' => [] }) do |b, data|
+      data['branches'] << {
+        'name'       => b.name,
+        'worktree'   => b.worktree,
+        'task'       => b.task,
+        'tmux'       => b.tmux.empty? ? nil : b.tmux,
+        'sha'        => b.sha,
+        'note'       => b.note,
+        'created_at' => b.created_at
+      }.compact
+    end
+  rescue => e
+    warn "Branch DB read failed: #{e}"
+    load_yaml_fallback
   end
 
   def build_entry(branch_name)
@@ -134,11 +136,11 @@ class BranchManager
     sha = `git rev-parse HEAD 2>/dev/null`.strip
 
     {
-      name: branch_name,
-      sha: sha.empty? ? nil : sha,
+      name:     branch_name,
+      sha:      sha.empty? ? nil : sha,
       worktree: current_task&.tree_name,
-      task: current_task&.name,
-      tmux: tmux_info
+      task:     current_task&.name,
+      tmux:     tmux_info
     }
   end
 
@@ -153,8 +155,8 @@ class BranchManager
 
     {
       'session' => `tmux display-message -p '#S'`.strip,
-      'window' => `tmux display-message -p '#W'`.strip,
-      'pane' => ENV['TMUX_PANE']
+      'window'  => `tmux display-message -p '#W'`.strip,
+      'pane'    => ENV['TMUX_PANE']
     }
   end
 
@@ -170,13 +172,46 @@ class BranchManager
     end
   end
 
-  def data_file
-    File.join(Dir.home, '.config', 'hiiro', 'branches.yml')
+  def save_branch(name:, worktree:, task:, tmux: nil, sha: nil)
+    existing = Hiiro::Branch.find_by_name(name)
+    if existing
+      existing.update(
+        worktree:   worktree,
+        task:       task,
+        tmux_json:  Hiiro::DB::JSON.dump(tmux),
+        sha:        sha,
+        updated_at: Time.now.iso8601
+      )
+    else
+      Hiiro::Branch.create(
+        name:       name,
+        worktree:   worktree,
+        task:       task,
+        tmux_json:  Hiiro::DB::JSON.dump(tmux),
+        sha:        sha,
+        created_at: Time.now.iso8601
+      )
+    end
+    save_yaml_backup
   end
 
-  def save_data(data)
+  def save_yaml_backup
+    data = load_data
     FileUtils.mkdir_p(File.dirname(data_file))
     File.write(data_file, YAML.dump(data))
+  rescue => e
+    warn "Branch YAML backup failed: #{e}"
+  end
+
+  def load_yaml_fallback
+    return {} unless File.exist?(data_file)
+    YAML.safe_load_file(data_file) || {}
+  rescue
+    {}
+  end
+
+  def data_file
+    File.join(Dir.home, '.config', 'hiiro', 'branches.yml')
   end
 end
 
@@ -492,7 +527,7 @@ Hiiro.run(*ARGV) do
       branch = selected.strip
     end
 
-    system('git', 'checkout', branch)
+    system('git', 'checkout', branch, *opts.args[1..])
   end
 
   add_subcmd(:rm, :remove) do |*rm_args|
@@ -510,7 +545,7 @@ Hiiro.run(*ARGV) do
       branch = selected.strip
     end
 
-    system('git', 'branch', '-d', branch)
+    system('git', 'branch', '-d', branch, *opts.args[1..])
   end
 
   add_subcmd(:rename) do |new_name = nil, old_name = nil|
@@ -911,6 +946,48 @@ Hiiro.run(*ARGV) do
     end
 
     system('git', 'log', '--oneline', '--decorate', "#{forkpoint}..HEAD")
+  }
+
+  add_subcmd(:q, :query) { |*args|
+    def branch_query(args)
+      opts = Hiiro::Options.parse(args) { flag(:all, short: :a, desc: 'show all rows (no limit)') }
+      query_args = opts.args
+      db = Hiiro::DB.connection
+      limit = opts.all ? nil : 50
+
+      if query_args.empty?
+        ds = db[:branches]
+        ds = ds.limit(limit) if limit
+        rows = ds.all
+      elsif query_args[0].include?(' ') || query_args[0].upcase =~ /\A(SELECT|INSERT|UPDATE|DELETE|WITH)/
+        sql = query_args.join(' ')
+        rows = db.fetch(sql).all
+        rows = rows.first(limit) if limit
+      else
+        conditions = query_args.each_with_object({}) do |pair, h|
+          k, v = pair.split('=', 2)
+          h[k] = v if k && v
+        end
+        ds = db[:branches]
+        conditions.each { |k, v| ds = ds.where(k.to_sym => v) }
+        ds = ds.limit(limit) if limit
+        rows = ds.all
+      end
+
+      return puts "(no results)" if rows.empty?
+      keys = rows.first.keys
+      col_widths = keys.map { |k| [k.to_s.length, rows.map { |r| r[k].to_s.length }.max].max.clamp(0, 60) }
+      header = keys.each_with_index.map { |k, i| k.to_s.ljust(col_widths[i]) }.join("  ")
+      puts header
+      puts "-" * header.length
+      rows.each do |row|
+        puts keys.each_with_index.map { |k, i|
+          val = row[k].to_s; val = val[0..57] + "..." if val.length > 60; val.ljust(col_widths[i])
+        }.join("  ")
+      end
+      puts "(#{rows.length} rows)"
+    end
+    branch_query(args)
   }
 
   add_subcmd(:forkpoint) { |upstream = nil, branch = nil|

@@ -4,7 +4,7 @@ require "net/http"
 require "json"
 
 # Parse -t flag for pre-release
-pre_release = ARGV.include?('-t')
+pre_release = ARGV.include?('-t') || `git branch --show-current`.strip != 'main'
 
 # Check for uncommitted changes before we modify anything
 has_pending_changes = !`git status --porcelain`.strip.empty?
