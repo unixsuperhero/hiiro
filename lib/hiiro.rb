@@ -229,7 +229,7 @@ class Hiiro
       block.arity == 1 ? block.call(h) : h.instance_eval(&block) if block
     end
 
-    Hiiro.init(bin_name: child_bin_name, args: child_args, **kwargs, &wrapper)
+    Hiiro.init(child_bin_name, *child_args, **kwargs, &wrapper)
   end
 
   def run_child(custom_subcmd=nil, custom_args=nil, **kwargs, &block)
