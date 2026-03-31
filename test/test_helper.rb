@@ -5,6 +5,9 @@ require "fileutils"
 require "tmpdir"
 require "ostruct"
 
+# Use in-memory SQLite for tests so model files load cleanly and no real DB is touched
+ENV['HIIRO_TEST_DB'] = 'sqlite::memory:'
+
 # Stub out plugin loading to avoid side effects during tests
 class Hiiro
   class Config
@@ -17,6 +20,9 @@ class Hiiro
 end
 
 require "hiiro"
+
+# Create tables so Sequel models are usable in tests
+Hiiro::DB.setup!
 
 module TestHelpers
   def with_temp_dir
