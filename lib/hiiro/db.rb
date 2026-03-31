@@ -155,7 +155,9 @@ class Hiiro
             'updated_at'   => r['updated_at']&.to_s,
           }.compact
           record['id'] = r['id'].to_i if r['id']
-          connection[:todos].insert(record)
+          connection[:todos].insert_conflict.insert(record)
+        rescue => e
+          warn "Hiiro::DB: skipping todo row (#{e.class}: #{e.message.lines.first&.strip})"
         end
         bak(path)
       rescue => e
