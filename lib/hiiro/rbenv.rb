@@ -70,10 +70,11 @@ class Hiiro
 
       # Install or update a gem in the given version.
       def install_gem(gem_name, version: current_version, pre: false)
+        pre_flag = pre ? ['--pre'] : []
         if gem_installed?(gem_name, version: version)
-          run('gem', 'update', gem_name, pre ? '--pre' : '', version: version)
+          run('gem', 'update', gem_name, *pre_flag, version: version)
         else
-          run('gem', 'install', gem_name, pre ? '--pre' : '', version: version)
+          run('gem', 'install', gem_name, *pre_flag, version: version)
         end
       end
 
