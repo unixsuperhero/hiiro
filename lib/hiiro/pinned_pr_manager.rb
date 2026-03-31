@@ -46,7 +46,8 @@ class Hiiro
       end
     end
 
-    def initialize
+    def initialize(fs: Hiiro::Effects::Filesystem.new)
+      @fs = fs
       ensure_file
     end
 
@@ -67,72 +68,93 @@ class Hiiro
     end
 
     def ensure_file
+      return unless Hiiro::DB.dual_write?
       dir = File.dirname(Hiiro::Git::Pr::PINNED_FILE)
       FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
-      File.write(Hiiro::Git::Pr::PINNED_FILE, [].to_yaml) unless File.exist?(Hiiro::Git::Pr::PINNED_FILE)
+      @fs.write(Hiiro::Git::Pr::PINNED_FILE, [].to_yaml) unless File.exist?(Hiiro::Git::Pr::PINNED_FILE)
     end
 
     def load_pinned
-      ensure_file
-      prs = Hiiro::Git::Pr.pinned_prs
+      prs = Hiiro::PinnedPr.by_slot.all
       if prs.any? { |p| p.slot.nil? }
         next_slot = prs.map { |p| p.slot.to_i }.max.to_i
         prs.each do |p|
           next if p.slot
           next_slot += 1
-          p.slot = next_slot
+          p.update(slot: next_slot)
         end
-        save_pinned(prs)
       end
       prs
     end
 
     def save_pinned(prs)
-      ensure_file
-      File.write(Hiiro::Git::Pr::PINNED_FILE, prs.map(&:to_pinned_h).to_yaml)
+      Hiiro::DB.connection.transaction do
+        Hiiro::PinnedPr.dataset.delete
+        prs.each do |pr|
+          pinned = pr.is_a?(Hiiro::PinnedPr) ? pr : Hiiro::PinnedPr.from_git_pr(pr)
+          attrs  = pinned.to_hash.reject { |k, _| k == :id }
+          Hiiro::PinnedPr.insert(attrs)
+        end
+      end
+      # Dual-write YAML for backward compat
+      if Hiiro::DB.dual_write?
+        ensure_file
+        @fs.write(Hiiro::Git::Pr::PINNED_FILE, prs.map(&:to_pinned_h).to_yaml)
+      end
     end
 
     def pin(pr)
       pr.repo ||= Hiiro::Git::Pr.repo_from_url(pr.url)
 
-      pinned = load_pinned
-      existing = pinned.find { |p|
-        p.number == pr.number && pr_repo(p) == pr_repo(pr)
-      }
+      existing = Hiiro::PinnedPr.find_by_number(pr.number)
 
       if existing
-        existing.title           = pr.title           unless pr.title.nil?
-        existing.state           = pr.state           unless pr.state.nil?
-        existing.url             = pr.url             unless pr.url.nil?
-        existing.head_branch     = pr.head_branch     unless pr.head_branch.nil?
-        existing.repo            = pr.repo            unless pr.repo.nil?
-        existing.is_draft        = pr.is_draft        unless pr.is_draft.nil?
-        existing.mergeable       = pr.mergeable       unless pr.mergeable.nil?
-        existing.review_decision = pr.review_decision unless pr.review_decision.nil?
-        existing.check_runs      = pr.check_runs      unless pr.check_runs.nil?
-        existing.checks          = pr.checks          unless pr.checks.nil?
-        existing.reviews         = pr.reviews         unless pr.reviews.nil?
-        existing.task            = pr.task            unless pr.task.nil?
-        existing.worktree        = pr.worktree        unless pr.worktree.nil?
-        existing.tmux_session    = pr.tmux_session    unless pr.tmux_session.nil?
-        existing.tags            = pr.tags            unless pr.tags.nil?
-        existing.assigned        = pr.assigned        unless pr.assigned.nil?
-        existing.authored        = pr.authored        unless pr.authored.nil?
-        existing.updated_at      = Time.now.iso8601
+        updates = {
+          updated_at: Time.now.iso8601,
+        }
+        updates[:title]           = pr.title           unless pr.title.nil?
+        updates[:state]           = pr.state           unless pr.state.nil?
+        updates[:url]             = pr.url             unless pr.url.nil?
+        updates[:head_ref_name]   = pr.head_branch     unless pr.head_branch.nil?
+        updates[:repo]            = pr.repo            unless pr.repo.nil?
+        updates[:is_draft]        = pr.is_draft        unless pr.is_draft.nil?
+        updates[:mergeable]       = pr.mergeable       unless pr.mergeable.nil?
+        updates[:review_decision] = pr.review_decision unless pr.review_decision.nil?
+        updates[:check_runs_json] = Hiiro::DB::JSON.dump(pr.check_runs) unless pr.check_runs.nil?
+        updates[:checks_json]     = Hiiro::DB::JSON.dump(pr.checks)     unless pr.checks.nil?
+        updates[:reviews_json]    = Hiiro::DB::JSON.dump(pr.reviews)    unless pr.reviews.nil?
+        updates[:task]            = pr.task            unless pr.task.nil?
+        updates[:worktree]        = pr.worktree        unless pr.worktree.nil?
+        updates[:tmux_session]    = pr.tmux_session    unless pr.tmux_session.nil?
+        updates[:tags_json]       = Hiiro::DB::JSON.dump(pr.tags) unless pr.tags.nil?
+        updates[:assigned]        = pr.assigned        unless pr.assigned.nil?
+        updates[:authored]        = pr.authored        unless pr.authored.nil?
+        existing.update(updates)
       else
-        pr.slot      = (pinned.map { |p| p.slot.to_i }.max.to_i) + 1
-        pr.pinned_at = Time.now.iso8601
-        pinned << pr
+        pinned = pr.is_a?(Hiiro::PinnedPr) ? pr : Hiiro::PinnedPr.from_git_pr(pr)
+        pinned.slot     = Hiiro::PinnedPr.max(:slot).to_i + 1
+        pinned.pinned_at = Time.now.iso8601
+        pinned.save
       end
 
-      save_pinned(pinned)
+      # Dual-write YAML
+      if Hiiro::DB.dual_write?
+        ensure_file
+        all_prs = Hiiro::PinnedPr.by_slot.all
+        @fs.write(Hiiro::Git::Pr::PINNED_FILE, all_prs.map(&:to_pinned_h).to_yaml)
+      end
+
       pr
     end
 
     def unpin(pr_number)
-      pinned = load_pinned
-      removed = pinned.reject! { |p| p.number.to_s == pr_number.to_s }
-      save_pinned(pinned)
+      removed = Hiiro::PinnedPr.where(number: pr_number.to_i).delete
+      # Dual-write YAML
+      if Hiiro::DB.dual_write?
+        ensure_file
+        all_prs = Hiiro::PinnedPr.by_slot.all
+        @fs.write(Hiiro::Git::Pr::PINNED_FILE, all_prs.map(&:to_pinned_h).to_yaml)
+      end
       removed
     end
 

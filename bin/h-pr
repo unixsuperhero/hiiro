@@ -1438,4 +1438,46 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       end
     end.run
   end
+
+  add_subcmd(:q, :query) { |*args|
+    def pr_query(args)
+      opts = Hiiro::Options.parse(args) { flag(:all, short: :a, desc: 'show all rows (no limit)') }
+      query_args = opts.args
+      db = Hiiro::DB.connection
+      limit = opts.all ? nil : 50
+
+      if query_args.empty?
+        ds = db[:pinned_prs]
+        ds = ds.limit(limit) if limit
+        rows = ds.all
+      elsif query_args[0].include?(' ') || query_args[0].upcase =~ /\A(SELECT|INSERT|UPDATE|DELETE|WITH)/
+        sql = query_args.join(' ')
+        rows = db.fetch(sql).all
+        rows = rows.first(limit) if limit
+      else
+        conditions = query_args.each_with_object({}) do |pair, h|
+          k, v = pair.split('=', 2)
+          h[k] = v if k && v
+        end
+        ds = db[:pinned_prs]
+        conditions.each { |k, v| ds = ds.where(k.to_sym => v) }
+        ds = ds.limit(limit) if limit
+        rows = ds.all
+      end
+
+      return puts "(no results)" if rows.empty?
+      keys = rows.first.keys
+      col_widths = keys.map { |k| [k.to_s.length, rows.map { |r| r[k].to_s.length }.max].max.clamp(0, 60) }
+      header = keys.each_with_index.map { |k, i| k.to_s.ljust(col_widths[i]) }.join("  ")
+      puts header
+      puts "-" * header.length
+      rows.each do |row|
+        puts keys.each_with_index.map { |k, i|
+          val = row[k].to_s; val = val[0..57] + "..." if val.length > 60; val.ljust(col_widths[i])
+        }.join("  ")
+      end
+      puts "(#{rows.length} rows)"
+    end
+    pr_query(args)
+  }
 end
