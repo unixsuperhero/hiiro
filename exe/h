@@ -3,12 +3,12 @@
 require "hiiro"
 require "fileutils"
 
-def update_hiiro(version=nil)
+def update_hiiro(version=nil, pre: false)
   ver = version || Hiiro::Rbenv.current_version
   puts
-  puts "INSTALLING hiiro for RUBY #{ver}"
+  puts "INSTALLING hiiro for RUBY #{ver} #{pre.inspect}"
 
-  Hiiro::Rbenv.install_gem('hiiro', version: ver)
+  Hiiro::Rbenv.install_gem('hiiro', pre: pre, version: ver)
   Hiiro::Rbenv.run('h', 'setup', version: ver)
 end
 
@@ -32,20 +32,21 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
   add_subcmd(:install, :update) { |*args|
     opts = Hiiro::Options.setup {
       flag(:all, short: :a)
+      flag(:pre, short: :p)
     }.parse!(ARGV)
 
     if opts.all
       Hiiro::Rbenv.versions.each do |ver|
         shell_cmd = [
-          "(RBENV_VERSION=#{ver.shellescape} rbenv exec gem update hiiro",
-          "|| RBENV_VERSION=#{ver.shellescape} rbenv exec gem install hiiro)",
+          "(RBENV_VERSION=#{ver.shellescape} rbenv exec gem update hiiro #{opts.pre ? '--pre' : ''}",
+          "|| RBENV_VERSION=#{ver.shellescape} rbenv exec gem install hiiro #{opts.pre ? '--pre' : ''})",
           "&& RBENV_VERSION=#{ver.shellescape} rbenv exec h setup",
         ].join(' ')
         puts "Queuing update for Ruby #{ver}..."
         Hiiro::Background.run('sh', '-c', shell_cmd)
       end
     else
-      update_hiiro
+      update_hiiro(pre: opts.pre)
     end
   }
 

@@ -69,17 +69,17 @@ class Hiiro
       end
 
       # Install or update a gem in the given version.
-      def install_gem(gem_name, version: current_version)
+      def install_gem(gem_name, version: current_version, pre: false)
         if gem_installed?(gem_name, version: version)
-          run('gem', 'update', gem_name, version: version)
+          run('gem', 'update', gem_name, pre ? '--pre' : '', version: version)
         else
-          run('gem', 'install', gem_name, version: version)
+          run('gem', 'install', gem_name, pre ? '--pre' : '', version: version)
         end
       end
 
       # Install or update a gem across all installed versions.
-      def install_gem_in_all(gem_name)
-        versions.each { |ver| install_gem(gem_name, version: ver) }
+      def install_gem_in_all(gem_name, pre: false)
+        versions.each { |ver| install_gem(gem_name, pre: pre, version: ver) }
       end
 
       # --- Path helpers ---
