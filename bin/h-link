@@ -99,6 +99,13 @@ class LinkManager
   end
 
   def load_links
+    Hiiro::Link.ordered
+  rescue => e
+    warn "Link DB read failed: #{e}"
+    load_links_from_yaml
+  end
+
+  def load_links_from_yaml
     ensure_links_file
     links_data = YAML.load_file(@links_file) || []
     links_data.map { |hash| Link.from_hash(hash) }
@@ -108,9 +115,9 @@ class LinkManager
     links_array = if links.nil?
       [LINK_TEMPLATE]
     elsif links.is_a?(Array)
-      links.map { |link| link.is_a?(Link) ? link.to_h : link }
+      links.map { |link| link.respond_to?(:to_h) ? link.to_h : link }
     else
-      [links.is_a?(Link) ? links.to_h : links]
+      [links.respond_to?(:to_h) ? links.to_h : links]
     end
 
     tmpfile = Tempfile.new(['link-edit-', '.yml'])
@@ -128,9 +135,38 @@ class LinkManager
   end
 
   def save_links(links)
+    links.each do |link|
+      attrs = {
+        url:         link.url,
+        description: link.description,
+        shorthand:   link.shorthand,
+        tags_json:   link.respond_to?(:tags_json) ? link.tags_json : nil,
+        created_at:  link.created_at || Time.now.iso8601
+      }
+      existing = Hiiro::Link.where(url: link.url).first
+      if existing
+        existing.update(attrs)
+      else
+        Hiiro::Link.create(attrs)
+      end
+    end
+    save_yaml_backup
+  rescue => e
+    warn "Link DB write failed: #{e}"
+    save_links_to_yaml(links)
+  end
+
+  def save_links_to_yaml(links)
     ensure_links_file
-    links_data = links.map { |link| link.to_h }
-    File.write(@links_file, links_data.to_yaml)
+    File.write(@links_file, links.map(&:to_h).to_yaml)
+  end
+
+  def save_yaml_backup
+    rows = Hiiro::Link.ordered
+    ensure_links_file
+    File.write(@links_file, rows.map(&:to_h).to_yaml)
+  rescue => e
+    warn "Link YAML backup failed: #{e}"
   end
 
   def extract_placeholders(url)
@@ -205,33 +241,38 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
     if add_args.empty?
       new_links = lm.edit_links
 
-      links.concat(new_links)
-      lm.save_links(links)
+      new_links.each do |link|
+        Hiiro::Link.create(
+          url: link.url,
+          description: link.description,
+          shorthand: link.shorthand,
+          created_at: link.created_at || Time.now.iso8601
+        )
+      end
+      lm.save_yaml_backup
 
+      count = Hiiro::Link.count
       if new_links.length == 1
-        puts "Saved link ##{links.length}: #{new_links.first.url}"
+        puts "Saved link ##{count}: #{new_links.first.url}"
       else
-        puts "Saved #{new_links.length} links (#{links.length - new_links.length + 1}-#{links.length})"
+        puts "Saved #{new_links.length} links"
       end
       exit 0
     end
 
     url = add_args.shift
+    vals = opts.parse!(add_args)
     description = add_args.join(' ')
 
-    vals = opts.parse!(add_args)
-
-    new_link = LinkManager::Link.new(
+    new_link = Hiiro::Link.create(
       url: url,
       description: description,
       shorthand: vals.shorthand,
       created_at: Time.now.iso8601
     )
+    lm.save_yaml_backup
 
-    links << new_link
-    lm.save_links(links)
-
-    puts "Saved link ##{links.length}: #{url}"
+    puts "Saved link ##{Hiiro::Link.count}: #{url}"
   end
 
   add_subcmd(:ls) do |*ls_args|
