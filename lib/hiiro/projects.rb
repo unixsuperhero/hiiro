@@ -22,6 +22,10 @@ class Hiiro
       end
     end
 
+    def initialize(fs: Hiiro::Effects::Filesystem.new)
+      @fs = fs
+    end
+
     def dirs
       Dir.glob(File.join(Dir.home, 'proj', '*/')).map { |path|
         [File.basename(path), path]
@@ -29,8 +33,27 @@ class Hiiro
     end
 
     def from_config
+      Project.all_as_hash
+    rescue => e
+      warn "Projects DB load failed: #{e}"
       return {} unless File.exist?(CONFIG_FILE)
       YAML.safe_load_file(CONFIG_FILE) || {}
+    end
+
+    def save_project(name, path)
+      existing = Project.find_by_name(name)
+      if existing
+        existing.update(path: path.to_s)
+      else
+        Project.create(name: name.to_s, path: path.to_s)
+      end
+      # Dual-write: rewrite YAML backup
+      if Hiiro::DB.dual_write?
+        all_projects = Project.all_as_hash
+        @fs.write(CONFIG_FILE, YAML.dump(all_projects, stringify_names: true))
+      end
+    rescue => e
+      warn "Projects DB save failed: #{e}"
     end
 
     def from_config?(name)
