@@ -1,4 +1,26 @@
+```markdown
 # Changelog
+
+## [0.1.308.pre.1] - 2026-03-31
+
+### Added
+- `Hiiro::Effects` injectable interface for testable file system and command execution
+- `null_fs` to `TestHarness` for testing without side effects
+- Effects helpers and accessors to `TestHarness` for controlled effect simulation
+- `Hiiro::Invocation` and `Hiiro::InvocationResolution` tracking in PaneHome SQLite migration
+
+### Changed
+- Refactor effects layer: expose `executor` and `fs` as accessors on `Hiiro::Effects`
+- `h-db` command now includes h-pane in SQLite migration
+- Gem version handling: treat non-main branches as pre-release in publish script
+
+### Fixed
+- `h-branch co` and `h-branch rm` restore extra argument pass-through
+- Test suite: add missing `TestHarness` stubs and fix pre-existing test failures
+- Test fixtures: anchor `load_bin` path to project root instead of `Dir.pwd`
+
+### Deprecated
+- `SystemCallCapture` — use `Hiiro::Effects` helpers in `TestHarness` instead
 
 ## [Unreleased]
 
@@ -98,3 +120,4 @@
 
 ### Changed
 - Filter logic changes for PR management
+```
