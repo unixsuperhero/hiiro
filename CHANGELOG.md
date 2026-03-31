@@ -1,6 +1,14 @@
 ```markdown
 # Changelog
 
+## [0.1.308] - 2026-03-31
+
+### Added
+- `h db cleanup` subcommand to preview and prune duplicate rows from SQLite tables
+
+### Fixed
+- Prevent duplicate pinned_prs during import with `insert_conflict` and per-row rescue
+
 ## [0.1.308.pre.6] - 2026-03-31
 
 ### Fixed
