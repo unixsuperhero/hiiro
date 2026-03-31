@@ -74,7 +74,10 @@ class MockHiiro
   end
 end
 
-# Mock for capturing system calls
+# DEPRECATED: Use Hiiro::Effects::NullExecutor instead.
+# SystemCallCapture patches Kernel.system globally and has no awareness
+# of which command type is being called. Prefer injecting NullExecutor
+# via null_tmux / null_git helpers in TestHarness.
 module SystemCallCapture
   def self.included(base)
     base.class_eval do
@@ -201,6 +204,27 @@ class Hiiro
     # Allow tests to add stub methods to the harness
     def stub_method(name, &block)
       define_singleton_method(name, &block)
+    end
+
+    # Initialize Effects doubles for use in tests.
+    # After calling this, use null_tmux and null_git to get instances
+    # with the null executor injected. Access @executor and @fs directly
+    # for assertions.
+    def setup_effects
+      @executor = Hiiro::Effects::NullExecutor.new
+      @fs       = Hiiro::Effects::NullFilesystem.new
+    end
+
+    # Returns a Hiiro::Tmux instance with the null executor injected.
+    # Requires setup_effects to be called first.
+    def null_tmux
+      Hiiro::Tmux.new(executor: @executor)
+    end
+
+    # Returns a Hiiro::Git instance with the null executor injected.
+    # Requires setup_effects to be called first.
+    def null_git
+      Hiiro::Git.new(nil, '/fake/root', executor: @executor)
     end
   end
 end
