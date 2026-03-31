@@ -189,8 +189,8 @@ class Hiiro
         block = blk
       end
 
-      # Load the bin file (use absolute path)
-      full_path = File.expand_path(bin_path)
+      # Load the bin file — anchor to project root, not Dir.pwd (which may differ)
+      full_path = File.expand_path(bin_path, File.join(__dir__, '..'))
       load full_path
 
       # Restore original Hiiro.run
