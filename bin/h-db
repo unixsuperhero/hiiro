@@ -163,6 +163,14 @@ Hiiro.run(*ARGV) do
     puts "  tar xvzf #{File.basename(archive)}"
   end
 
+  add_subcmd(:remigrate) do |*args|
+    opts = Hiiro::Options.parse(args) do
+      option(:only, desc: 'Comma-separated list of tables to remigrate (e.g. todos,tags,pinned_prs)')
+    end
+    tables = opts[:only]&.split(',')&.map(&:strip)
+    Hiiro::DB.remigrate!(only: tables)
+  end
+
   add_subcmd(:restore) do
     config_dir = File.expand_path('~/.config/hiiro')
     archives   = Dir.glob(File.join(config_dir, 'sqlite-migration.*.tar.gz')).sort

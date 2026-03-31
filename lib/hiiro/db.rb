@@ -69,6 +69,18 @@ class Hiiro
         connection[:schema_migrations].insert_conflict.insert(name: 'full_migration', ran_at: Time.now.iso8601)
       end
 
+      ALL_IMPORTERS = %i[todos links branches prs pinned_prs tasks assignments apps projects pane_homes pins reminders tags].freeze
+
+      # Re-run import for specific tables (or all if none specified).
+      # Useful after a migration that partially failed. The YAML source files must
+      # still exist (they are only renamed to .bak on successful import).
+      def remigrate!(only: nil)
+        base = Hiiro::Config::BASE_DIR
+        targets = only ? Array(only).map(&:to_sym) & ALL_IMPORTERS : ALL_IMPORTERS
+        targets.each { |name| send(:"import_#{name}", base) }
+        puts "Remigration complete: #{targets.join(', ')}"
+      end
+
       private
 
       def migrate_yaml!
@@ -105,6 +117,8 @@ class Hiiro
         File.rename(path, path + '.bak') if File.exist?(path)
       end
 
+      TODO_COLUMNS = %w[id text status tags task_name subtask_name tree branch session created_at updated_at].freeze
+
       def import_todos(base)
         path = File.join(base, 'todo.yml')
         data = load_yaml(path)
@@ -113,7 +127,35 @@ class Hiiro
         todos = data.is_a?(Hash) ? (data['todos'] || []) : []
         todos.each do |row|
           next unless row.is_a?(Hash)
-          connection[:todos].insert(row.transform_keys(&:to_s))
+          r = row.transform_keys(&:to_s)
+
+          # Map legacy boolean started/done fields to status string
+          status = if r['done'] == true || r['status'] == 'done'
+            'done'
+          elsif r['started'] == true || r['status'] == 'started'
+            'started'
+          elsif r['skip'] == true || r['status'] == 'skip'
+            'skip'
+          elsif r['status']
+            r['status'].to_s
+          else
+            'not_started'
+          end
+
+          record = {
+            'text'         => r['text']&.to_s,
+            'status'       => status,
+            'tags'         => r['tags']&.to_s,
+            'task_name'    => r['task_name']&.to_s,
+            'subtask_name' => r['subtask_name']&.to_s,
+            'tree'         => r['tree']&.to_s,
+            'branch'       => r['branch']&.to_s,
+            'session'      => r['session']&.to_s,
+            'created_at'   => r['created_at']&.to_s,
+            'updated_at'   => r['updated_at']&.to_s,
+          }.compact
+          record['id'] = r['id'].to_i if r['id']
+          connection[:todos].insert(record)
         end
         bak(path)
       rescue => e
@@ -153,6 +195,10 @@ class Hiiro
         warn "Hiiro::DB: failed to import branches: #{e}"
       end
 
+      # Old prs.yml from TrackedPr (worktree-tracked PRs, not pinned). Now imported
+      # into the merged :prs table with pinned: false.
+      TRACKED_PR_COLUMNS = %w[number title url branch state worktree task tmux_json created_at updated_at].freeze
+
       def import_prs(base)
         path = File.join(base, 'prs.yml')
         data = load_yaml(path)
@@ -164,12 +210,31 @@ class Hiiro
           normalized = row.transform_keys(&:to_s)
           tmux = normalized.delete('tmux')
           normalized['tmux_json'] = ::JSON.generate(tmux) if tmux
-          connection[:prs].insert(normalized)
+          record = normalized.select { |k, _| TRACKED_PR_COLUMNS.include?(k) }
+          record['pinned'] = false
+          connection[:prs].insert(record) unless record.empty?
         end
         bak(path)
       rescue => e
         warn "Hiiro::DB: failed to import prs: #{e}"
       end
+
+      # Maps YAML camelCase/legacy keys to the merged prs schema column names.
+      PINNED_PR_KEY_MAP = {
+        'headRefName'       => 'head_ref_name',
+        'checks'            => 'checks_json',
+        'statusCheckRollup' => 'check_runs_json',
+        'reviews'           => 'reviews_json',
+        'tags'              => 'tags_json',
+        'depends_on'        => 'depends_on_json',
+      }.freeze
+
+      PINNED_PR_COLUMNS = %w[
+        number title state url head_ref_name branch repo slot pinned is_draft mergeable
+        review_decision checks_json check_runs_json reviews_json task worktree
+        tmux_session tmux_json tags_json assigned authored depends_on_json last_checked
+        pinned_at created_at updated_at
+      ].freeze
 
       def import_pinned_prs(base)
         path = File.join(base, 'pinned_prs.yml')
@@ -177,14 +242,33 @@ class Hiiro
         return unless data
 
         prs = data.is_a?(Array) ? data : []
-        json_fields = %w[checks statusCheckRollup reviews tags depends_on]
         prs.each do |row|
           next unless row.is_a?(Hash)
           normalized = row.transform_keys(&:to_s)
-          json_fields.each do |field|
-            normalized[field] = ::JSON.generate(normalized[field]) if normalized.key?(field)
+
+          # Rename camelCase/legacy keys to schema column names
+          PINNED_PR_KEY_MAP.each do |from, to|
+            normalized[to] = normalized.delete(from) if normalized.key?(from)
           end
-          connection[:pinned_prs].insert(normalized)
+
+          # JSON-encode any complex values in *_json columns
+          %w[checks_json check_runs_json reviews_json tags_json depends_on_json].each do |col|
+            v = normalized[col]
+            normalized[col] = ::JSON.generate(v) if v && !v.is_a?(String)
+          end
+
+          # Filter to known schema columns, mark as pinned
+          record = normalized.select { |k, _| PINNED_PR_COLUMNS.include?(k) }
+          record['pinned'] = true
+          next if record.empty?
+
+          connection[:prs].insert(record)
+
+          # Populate check_runs table from check_runs_json if present
+          if (runs_json = record['check_runs_json'])
+            runs = ::JSON.parse(runs_json) rescue nil
+            Hiiro::CheckRun.upsert_for_pr(record['number'], runs) if runs && record['number']
+          end
         end
         bak(path)
       rescue => e
@@ -321,6 +405,14 @@ class Hiiro
         warn "Hiiro::DB: failed to import reminders: #{e}"
       end
 
+      # Maps old YAML tag namespace to the Sequel model class name used in taggable_type.
+      TAG_NAMESPACE_TO_TYPE = {
+        'branch'  => 'Branch',
+        'pr'      => 'PinnedPr',
+        'link'    => 'Link',
+        'task'    => 'TaskRecord',
+      }.freeze
+
       def import_tags(base)
         path = File.join(base, 'tags.yml')
         data = load_yaml(path)
@@ -328,13 +420,14 @@ class Hiiro
 
         data.each do |namespace, keys|
           next unless keys.is_a?(Hash)
+          taggable_type = TAG_NAMESPACE_TO_TYPE[namespace.to_s] || namespace.to_s.capitalize
           keys.each do |key, tags|
             next unless tags.is_a?(Array)
             tags.each do |tag|
               connection[:tags].insert(
-                'namespace' => namespace.to_s,
-                'key'       => key.to_s,
-                'tag'       => tag.to_s
+                'name'          => tag.to_s,
+                'taggable_type' => taggable_type,
+                'taggable_id'   => key.to_s
               )
             end
           end
