@@ -1,1 +1,100 @@
-Done. CHANGELOG.md has been updated with v0.1.307 entry at the top, documenting the two recent commits.
+# Changelog
+
+## [Unreleased]
+
+### Added
+- `Hiiro::DB` — SQLite foundation via Sequel; `DB.setup!` creates all tables, `DB.connection` establishes connection eagerly at load time; supports `HIIRO_TEST_DB=sqlite::memory:` for tests
+- `lib/hiiro/db.rb` — one-time YAML→SQLite migration (`migrate_yaml!`) guarded by `schema_migrations` table; dual-write mode (`dual_write?` / `disable_dual_write!`) for gradual cutover
+- `lib/hiiro/branch.rb` — `Hiiro::Branch` Sequel model for worktree branch records
+- `lib/hiiro/tracked_pr.rb` — `Hiiro::TrackedPr` Sequel model for tracked PR records (`:prs` table)
+- `lib/hiiro/link.rb` — `Hiiro::Link` Sequel model with `matches?`, `display_string`, `to_h` helpers
+- `lib/hiiro/project.rb` — `Hiiro::Project` Sequel model
+- `lib/hiiro/pane_home.rb` — `Hiiro::PaneHome` Sequel model with `data_json` JSON blob
+- `lib/hiiro/pin_record.rb` — `Hiiro::PinRecord` Sequel model for per-command key-value pin storage
+- `lib/hiiro/task_record.rb` — `Hiiro::TaskRecord` Sequel model for task metadata
+- `lib/hiiro/app_record.rb` — `Hiiro::AppRecord` Sequel model for app directory mappings
+- `lib/hiiro/assignment.rb` — `Hiiro::Assignment` Sequel model for worktree→branch assignments
+- `lib/hiiro/reminder.rb` — `Hiiro::Reminder` Sequel model
+- `lib/hiiro/invocation.rb` — `Hiiro::Invocation` and `Hiiro::InvocationResolution` Sequel models; every CLI invocation is recorded to SQLite for history/analytics
+- `bin/h-db` — new subcommand: `h db status`, `h db tables`, `h db q <sql>`, `h db migrate`, `h db restore`
+
+### Changed
+- `lib/hiiro/todo.rb` — `TodoItem` is now a `Sequel::Model`; `TodoManager` reads/writes via SQLite with YAML dual-write fallback
+- `lib/hiiro/tags.rb` — `Tag` is now a `Sequel::Model`; tag operations persist to SQLite with YAML dual-write fallback
+- `lib/hiiro/pinned_pr_manager.rb` — `PinnedPR` is now a `Sequel::Model` (`lib/hiiro/pinned_pr.rb`); `PinnedPRManager` reads/writes via SQLite with YAML dual-write
+- `lib/hiiro/projects.rb` — `Projects#from_config` reads from `Hiiro::Project` SQLite model with YAML fallback
+- `lib/hiiro/tasks.rb` — `TaskManager::Config` reads/writes tasks and apps via `Hiiro::TaskRecord` and `Hiiro::AppRecord` SQLite models
+- `bin/h-branch` — `BranchManager` reads/writes via `Hiiro::Branch` and `Hiiro::TrackedPr` SQLite models with YAML dual-write fallback; adds `q`/`query` subcommands for raw SQL inspection
+- `bin/h-link` — reads/writes links via `Hiiro::Link` SQLite model with YAML dual-write fallback; adds `q`/`query` subcommands
+- `bin/h-pane` — load/save pane homes via `Hiiro::PaneHome` model with YAML dual-write
+- `bin/h-pr` — adds `q`/`query` subcommands for inspecting PR records via raw SQL
+- `plugins/pins.rb` — `Pin` class reads/writes via `Hiiro::PinRecord` SQLite model with YAML dual-write fallback
+
+## [0.1.306] - 2026-03-30
+
+### Changed
+- Increase delayed_update sleep duration from 5s to 15s
+- Add logging for delayed_update invocation in publish script
+
+## [0.1.305] - 2026-03-30
+
+### Changed
+- Refactor: use delayed_update subcommand instead of direct update call
+- Improve gem version matching regex in version check
+
+## [0.1.304] - 2026-03-30
+
+### Changed
+- h-notify: use universal log instead of per-session logging
+- Todo output simplified
+
+## [0.1.302] - 2026-03-30
+
+### Fixed
+- Truncate output lines to terminal width in tasks plugin
+
+## [0.1.301]
+
+### Added
+- Check version delayed update functionality
+
+### Changed
+- h-claude: add verbose flags and refactor glob_path handling
+
+### Fixed
+- Use exact session matching to prevent tmux prefix ambiguity
+
+## [0.1.300]
+
+### Added
+- h-claude: fulltext search option for agents/commands/skills
+
+### Changed
+- Refactor h-claude directory traversal and file globbing
+
+## [0.1.299]
+
+### Added
+- h-pr open: support opening multiple PRs
+
+## [0.1.298]
+
+### Changed
+- Use Pathname to walk up directory tree
+- h-claude agents/commands/skills walk from pwd up to home
+
+## [0.1.297]
+
+### Added
+- h rnext subcommand
+
+## [0.1.296]
+
+### Changed
+- Refactor PR filter logic to pinned_pr_manager
+- Move PR filter logic to Pr#matches_filters?
+
+## [0.1.295]
+
+### Changed
+- Filter logic changes for PR management

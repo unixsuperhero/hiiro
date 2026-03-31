@@ -221,6 +221,38 @@ git.move_worktree(from, to)       # Rename worktree
 git.current_pr                    # Get current PR info
 ```
 
+### Hiiro::DB (lib/hiiro/db.rb)
+
+SQLite persistence layer backed by Sequel. All data is stored in `~/.config/hiiro/hiiro.db`.
+
+**Setup:** `Hiiro::DB.setup!` is called at startup — creates any missing tables, then runs a one-time YAML→SQLite migration if the DB is new.
+
+**Model registration:** Each Sequel model calls `Hiiro::DB.register(self)` so `setup!` can create its table:
+
+```ruby
+class Hiiro::MyModel < Sequel::Model(:my_table)
+  Hiiro::DB.register(self)
+
+  def self.create_table!(db)
+    db.create_table?(:my_table) do
+      primary_key :id
+      String :name, null: false
+    end
+  end
+end
+```
+
+**Dual-write:** During rollout, models write to both SQLite and YAML. Once migration is stable, call `Hiiro::DB.disable_dual_write!` to stop YAML writes.
+
+**Test isolation:** Set `ENV['HIIRO_TEST_DB'] = 'sqlite::memory:'` before requiring `hiiro` to get a clean in-memory DB per test run. Call `Hiiro::DB.setup!` after require.
+
+**`h db` subcommand:** Inspect and manage the database:
+- `h db status` — show connection info and migration state
+- `h db tables` — list all tables with row counts
+- `h db q <sql>` — run raw SQL and print results
+- `h db migrate` — re-run YAML import (if not yet migrated)
+- `h db restore` — restore YAML files from SQLite data
+
 ### Hiiro::Fuzzyfind (lib/hiiro/fuzzyfind.rb)
 
 Integration with `sk` (skim) or `fzf` fuzzy finders:
@@ -244,6 +276,26 @@ tm.start(0)                       # Mark item as started
 tm.done(0)                        # Mark item as done
 tm.active                         # Items not done/skipped
 tm.filter_by_task("feature")      # Items for specific task
+```
+
+### Invocation Tracking (lib/hiiro/invocation.rb)
+
+Every CLI invocation is automatically recorded to SQLite via `Hiiro::Invocation` and `Hiiro::InvocationResolution`. This happens in `Hiiro.init` — no extra setup needed.
+
+**Schema:**
+- `Hiiro::Invocation` — records `bin_name`, `argv_json`, `cwd`, `invoked_at`
+- `Hiiro::InvocationResolution` — linked to an invocation; records `resolved_name`, `resolution_type` (exact/prefix/abbreviated), `subcmd`
+
+**Query recent invocations:**
+```ruby
+Hiiro::Invocation.order(Sequel.desc(:invoked_at)).limit(20).each do |inv|
+  puts "#{inv.invoked_at}  #{inv.bin_name} #{JSON.parse(inv.argv_json).join(' ')}"
+end
+```
+
+Or via `h db q`:
+```bash
+h db q "SELECT bin_name, argv_json, invoked_at FROM invocations ORDER BY invoked_at DESC LIMIT 10"
 ```
 
 ### Hiiro::Shell (lib/hiiro/shell.rb)
