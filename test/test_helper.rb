@@ -206,6 +206,29 @@ class Hiiro
       define_singleton_method(name, &block)
     end
 
+    # Stubs for Hiiro#add_resolver / #resolve — called by Hiiro::Tmux.add_resolvers during load_bin.
+    def add_resolver(name, current = nil, &lookup)
+      @resolvers ||= {}
+      @resolvers[name.to_sym] = { current:, lookup: }
+    end
+
+    def resolve(name, ref = nil)
+      @resolvers ||= {}
+      r = @resolvers[name.to_sym] or raise "No resolver registered for :#{name}"
+      if ref.nil?
+        c = r[:current]
+        c.respond_to?(:call) ? c.call : c
+      else
+        r[:lookup]&.call(ref)
+      end
+    end
+
+    # Stub for Hiiro#edit_files — routes through system() so system_calls is populated,
+    # matching the real implementation's behavior. Uses $EDITOR or 'vim' as fallback.
+    def edit_files(*files, max_splits: 3)
+      system(ENV['EDITOR'] || 'vim', *files)
+    end
+
     # Initialize Effects doubles. After calling this:
     #   harness.executor        → NullExecutor (shared by null_tmux + null_git)
     #   harness.fs              → NullFilesystem

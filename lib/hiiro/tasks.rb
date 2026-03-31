@@ -626,10 +626,12 @@ class Hiiro
       end
 
       def apps
-        AppRecord.all_as_hash.map { |name, path| App.new(name: name, path: path) }
+        rows = AppRecord.all_as_hash
+        return fallback_load_apps_from_yaml if rows.empty?
+        rows.map { |name, path| App.new(name: name, path: path) }
       rescue => e
-        warn "Failed to load apps from DB: #{e}"
-        []
+        warn "Failed to load apps from DB: #{e}. Falling back to YAML."
+        fallback_load_apps_from_yaml
       end
 
       def save_task(task)
@@ -713,6 +715,17 @@ class Hiiro
       rescue => e
         warn "Failed to load assignments from DB: #{e}"
         {}
+      end
+
+      def fallback_load_apps_from_yaml
+        return [] unless File.exist?(apps_file)
+        data = YAML.safe_load_file(apps_file) || {}
+        (data['apps'] || data).map do |name, path|
+          App.new(name: name.to_s, path: path.to_s)
+        end
+      rescue => e
+        warn "apps.yml fallback failed: #{e}"
+        []
       end
 
       def save_tasks_yaml_backup(data = nil)
