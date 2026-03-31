@@ -829,6 +829,31 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   # === PR List by Context ===
 
+  add_subcmd(:branch) do |arg = nil|
+    pr_arg = if arg.to_s =~ %r{/pull/(\d+)}
+      $1
+    else
+      arg
+    end
+
+    pr_number = resolve(:pr, pr_arg)
+    next unless pr_number
+
+    pinned = pinned_manager.load_pinned
+    pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+
+    unless pr
+      puts "PR ##{pr_number} not in tracked list"
+      next
+    end
+
+    if pr.head_branch
+      puts pr.head_branch
+    else
+      puts "PR ##{pr.number} has no branch info"
+    end
+  end
+
   add_subcmd(:'for-task') do |task_name = nil|
     tracked = pinned_manager.load_pinned
 
