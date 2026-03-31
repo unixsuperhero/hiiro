@@ -10,12 +10,35 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   home_config_path = Hiiro::Config.path('pane_homes.yml')
 
   load_homes = -> {
-    return {} unless File.exist?(home_config_path)
-    YAML.load_file(home_config_path) || {}
+    begin
+      PaneHome.all_as_hash
+    rescue => e
+      warn "PaneHome DB load failed: #{e}"
+      next({}) unless File.exist?(home_config_path)
+      YAML.load_file(home_config_path) || {}
+    end
   }
 
   save_homes = ->(config) {
-    File.write(home_config_path, config.to_yaml)
+    begin
+      config.each do |name, data|
+        existing = PaneHome.find_by_name(name)
+        if existing
+          existing.update(data_json: Hiiro::DB::JSON.dump(data))
+        else
+          ph = PaneHome.new(name: name.to_s)
+          ph.data = data
+          ph.save
+        end
+      end
+      # Remove deleted entries
+      PaneHome.where(Sequel.~(name: config.keys.map(&:to_s))).delete
+      # Dual-write: rewrite YAML backup
+      File.write(home_config_path, config.to_yaml)
+    rescue => e
+      warn "PaneHome DB save failed: #{e}"
+      File.write(home_config_path, config.to_yaml)
+    end
   }
 
   add_subcmd(:ls) { |*args|
