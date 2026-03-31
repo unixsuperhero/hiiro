@@ -264,12 +264,16 @@ class Hiiro
           record['pinned'] = true
           next if record.empty?
 
-          connection[:prs].insert(record)
+          begin
+            connection[:prs].insert_conflict(target: :number).insert(record)
 
-          # Populate check_runs table from check_runs_json if present
-          if (runs_json = record['check_runs_json'])
-            runs = ::JSON.parse(runs_json) rescue nil
-            Hiiro::CheckRun.upsert_for_pr(record['number'], runs) if runs && record['number']
+            # Populate check_runs table from check_runs_json if present
+            if (runs_json = record['check_runs_json'])
+              runs = ::JSON.parse(runs_json) rescue nil
+              Hiiro::CheckRun.upsert_for_pr(record['number'], runs) if runs && record['number']
+            end
+          rescue => e
+            warn "Hiiro::DB: skipping pinned_pr #{record['number']} (#{e.class}: #{e.message.lines.first&.strip})"
           end
         end
         bak(path)
