@@ -3,6 +3,7 @@ require "yaml"
 require "shellwords"
 require "pry"
 require "ostruct"
+require 'awesome_print'
 
 require_relative "hiiro/version"
 require_relative "hiiro/config"
@@ -65,12 +66,11 @@ class Hiiro
     load_env
     Hiiro::DB.setup!
 
-    ap(oargs: oargs, values: values)
+
     h_bin = values[:bin_name] || $0
     h_args = oargs
     h_args = ARGV if h_args.empty?
     h_args = values[:args] if values.key?(:args)
-    ap(h_bin: h_bin, h_args: h_args)
 
     # if values[:args]
     #   args = values[:args]
