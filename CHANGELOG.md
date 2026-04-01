@@ -1,5 +1,9 @@
-```markdown
 # Changelog
+
+## [0.1.314] - 2026-04-01
+
+### Fixed
+- Rename `Gem` class to `RubyGem` in publish script to avoid conflict with Ruby stdlib
 
 ## [0.1.313] - 2026-04-01
 
@@ -195,4 +199,3 @@
 
 ### Changed
 - Filter logic changes for PR management
-```
