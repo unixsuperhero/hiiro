@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.318] - 2026-04-01
+
+### Added
+- `registry_pick` helper method for interactive registry entry selection via fuzzyfinder
+
+### Changed
+- Simplify gem installation logic: always use `gem install -u` instead of checking installation state and branching between `gem install` and `gem update`
+- Remove `--clear-sources` and `--source` flags in favor of gem's built-in source cache handling
+- Improve gem version regex in publish script to match only the first (latest) version from `gem list` output
+
+### Fixed
+- Ensure gem installation works reliably across all rbenv Ruby versions by using `-u` flag for consistent update behavior
+
 ## [0.1.317] - 2026-04-01
 
 ### Changed
