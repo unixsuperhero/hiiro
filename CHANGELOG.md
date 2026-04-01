@@ -1,6 +1,11 @@
 ```markdown
 # Changelog
 
+## [0.1.311] - 2026-04-01
+
+### Changed
+- Add `ap()` inspection for bin/args initialization in debug mode
+
 ## [0.1.310] - 2026-04-01
 
 ### Fixed
