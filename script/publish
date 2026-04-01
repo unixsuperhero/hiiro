@@ -14,6 +14,7 @@ class RubyGems
     require "hiiro"
     [Hiiro::VERSION]
   end
+  def self.cli_version = `gem search -r hiiro`.lines.map(&:strip).select{|ln| ln.match?(/\d\.\d/) }.first&.[](/(?:[(])\d[^)]+/)
 
   def self.wait_for(gem_name, version, max_attempts: 40)
     attempts = 0
@@ -21,7 +22,7 @@ class RubyGems
       sleep(attempts == 0 ? 5 : 15)
       attempts += 1
       versions = published_versions(gem_name)
-      return true if versions.include?(version)
+      return true if versions.include?(version) && cli_version && cli_version == version
       puts "Waiting for v#{version} on RubyGems (attempt #{attempts}/#{max_attempts})..."
       return false if attempts >= max_attempts
     end
@@ -185,6 +186,7 @@ class RubyGem
   end
 end
 
+exit 0
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 pre_release    = ARGV.include?("-t") || Git.current_branch != "main"
@@ -216,7 +218,6 @@ if pending_before
 end
 
 File.write("CHANGELOG.md", release.changelog) if release.changelog && !release.changelog.strip.empty?
-
 File.write("lib/hiiro/version.rb", "class Hiiro\n  VERSION = #{new_version.inspect}\nend\n")
 
 RubyGem.build(new_version)

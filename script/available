@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+
+require "net/http"
+require "json"
+require "pry"
+
+# ─── RubyGems API ────────────────────────────────────────────────────────────
+
+class RubyGems
+  def self.published_versions(gem_name)
+    uri = URI("https://rubygems.org/api/v1/versions/#{gem_name}.json")
+    json_version = JSON.parse(Net::HTTP.get(uri)).map { |v| v["number"] }
+  rescue => e
+    puts "Warning: could not fetch versions from RubyGems (#{e.message}), falling back to local"
+    require "hiiro"
+    [Hiiro::VERSION]
+  end
+
+  def self.wait_for(gem_name, version, max_attempts: 40)
+    attempts = 0
+    loop do
+      sleep(attempts == 0 ? 5 : 15)
+      attempts += 1
+      versions = published_versions(gem_name)
+      return true if versions.include?(version)
+      puts "Waiting for v#{version} on RubyGems (attempt #{attempts}/#{max_attempts})..."
+      return false if attempts >= max_attempts
+    end
+  rescue => e
+    puts "RubyGems poll error: #{e.message}"
+    false
+  end
+end
+
+class HiiroSetup
+  def self.latest_version1 = RubyGems.published_versions('hiiro').first
+  def self.latest_version2 = `gem search -r hiiro`.lines.map(&:strip).select{|ln| ln.match?(/\d\.\d/) }.first[/\d+\.\d+[^)]+/]
+end
+
+json_version = HiiroSetup.latest_version1
+cli_version = HiiroSetup.latest_version2
+
+puts
+puts(json_version:,cli_version:)
+puts
+
+puts 'done'
+
