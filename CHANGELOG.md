@@ -1,6 +1,12 @@
 ```markdown
 # Changelog
 
+## [0.1.313] - 2026-04-01
+
+### Fixed
+- Remove `awesome_print` dependency
+- Do not splice values into subcommand constructor; pass them as keyword arguments to prevent arg leakage
+
 ## [0.1.312] - 2026-04-01
 
 ### Fixed
