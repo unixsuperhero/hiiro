@@ -239,27 +239,25 @@ unless RubyGems.wait_for("hiiro", new_version)
 end
 
 puts "v#{new_version} available — installing across all Ruby versions...\n\n"
-source_flags = ["--clear-sources", "--source", "https://rubygems.org"]
-pre_flag      = pre_release ? ["--pre"] : []
-mu            = Mutex.new
+pre_flag = pre_release ? ["--pre"] : []
+mu       = Mutex.new
 
 rbenv_versions = `rbenv versions --bare`.lines(chomp: true)
 threads = rbenv_versions.map do |ver|
   Thread.new do
     env = { "RBENV_VERSION" => ver }
 
-    # update or install
-    installed = !`RBENV_VERSION=#{ver.shellescape} rbenv exec gem list hiiro --exact 2>/dev/null`.strip.empty?
-    cmd = installed ? ["gem", "update", "hiiro", *source_flags, *pre_flag]
-                    : ["gem", "install", "hiiro", *source_flags, *pre_flag]
-    system(env, "rbenv", "exec", *cmd, out: File::NULL, err: File::NULL)
+    # Always use gem install — it picks up the latest version whether or not
+    # an older one is installed, and handles the source cache reliably.
+    system(env, "rbenv", "exec",
+           "gem", "install", "hiiro", "-u", *pre_flag,
+           out: File::NULL, err: File::NULL)
 
-    # run setup for the new version
     system(env, "rbenv", "exec", "h", "setup", out: File::NULL, err: File::NULL)
 
-    # report installed version
+    # gem list returns "hiiro (0.1.317, 0.1.316, ...)" — grab only the first (latest)
     hiiro_ver = `RBENV_VERSION=#{ver.shellescape} rbenv exec gem list hiiro --exact 2>/dev/null`
-                  .match(/hiiro \(([^)]+)\)/)&.[](1) || "?"
+                  .match(/hiiro \(([^,)]+)/)&.[](1) || "?"
     mu.synchronize { puts "  ruby #{ver}  →  hiiro #{hiiro_ver}" }
   end
 end

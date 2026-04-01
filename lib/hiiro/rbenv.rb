@@ -69,15 +69,11 @@ class Hiiro
       end
 
       # Install or update a gem in the given version.
-      # Passes --clear-sources --source rubygems.org to bypass the local index cache.
+      # Always uses gem install (handles both fresh installs and updates to the latest
+      # version) and pins to rubygems.org to bypass the local source cache.
       def install_gem(gem_name, version: current_version, pre: false)
-        source_flags = ['--clear-sources', '--source', 'https://rubygems.org']
-        pre_flag     = pre ? ['--pre'] : []
-        if gem_installed?(gem_name, version: version)
-          run('gem', 'update', gem_name, *source_flags, *pre_flag, version: version)
-        else
-          run('gem', 'install', gem_name, *source_flags, *pre_flag, version: version)
-        end
+        pre_flag = pre ? ['--pre'] : []
+        run('gem', 'install', gem_name, '-u', *pre_flag, version: version)
       end
 
       # Install or update a gem across all installed versions.
