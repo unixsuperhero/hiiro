@@ -2,6 +2,8 @@
 
 require "net/http"
 require "json"
+require "open3"
+require "shellwords"
 
 # ─── RubyGems API ────────────────────────────────────────────────────────────
 
@@ -231,11 +233,36 @@ Git.tag(new_version)
 Git.push
 
 puts "\nWaiting for v#{new_version} to appear on RubyGems..."
-if RubyGems.wait_for("hiiro", new_version)
-  puts "v#{new_version} available — running h update -a"
-  update_args = ["update", "-a"]
-  update_args << "--pre" if pre_release
-  system("h", *update_args)
-else
+unless RubyGems.wait_for("hiiro", new_version)
   puts "WARNING: timed out waiting for v#{new_version} on RubyGems — run `h update -a` manually"
+  exit 1
 end
+
+puts "v#{new_version} available — installing across all Ruby versions...\n\n"
+source_flags = ["--clear-sources", "--source", "https://rubygems.org"]
+pre_flag      = pre_release ? ["--pre"] : []
+mu            = Mutex.new
+
+rbenv_versions = `rbenv versions --bare`.lines(chomp: true)
+threads = rbenv_versions.map do |ver|
+  Thread.new do
+    env = { "RBENV_VERSION" => ver }
+
+    # update or install
+    installed = !`RBENV_VERSION=#{ver.shellescape} rbenv exec gem list hiiro --exact 2>/dev/null`.strip.empty?
+    cmd = installed ? ["gem", "update", "hiiro", *source_flags, *pre_flag]
+                    : ["gem", "install", "hiiro", *source_flags, *pre_flag]
+    system(env, "rbenv", "exec", *cmd, out: File::NULL, err: File::NULL)
+
+    # run setup for the new version
+    system(env, "rbenv", "exec", "h", "setup", out: File::NULL, err: File::NULL)
+
+    # report installed version
+    hiiro_ver = `RBENV_VERSION=#{ver.shellescape} rbenv exec gem list hiiro --exact 2>/dev/null`
+                  .match(/hiiro \(([^)]+)\)/)&.[](1) || "?"
+    mu.synchronize { puts "  ruby #{ver}  →  hiiro #{hiiro_ver}" }
+  end
+end
+
+threads.each(&:join)
+puts "\nDone."
