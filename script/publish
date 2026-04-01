@@ -14,7 +14,7 @@ class RubyGems
     require "hiiro"
     [Hiiro::VERSION]
   end
-  def self.cli_version = `gem search -r hiiro`.lines.map(&:strip).select{|ln| ln.match?(/\d\.\d/) }.first&.[](/(?:[(])\d[^)]+/)
+  def self.cli_version = `gem search -r hiiro`.lines.map(&:strip).select{|ln| ln.match?(/\d\.\d/) }.first&.[](/\d+\.\d+[^)]+/)
 
   def self.wait_for(gem_name, version, max_attempts: 40)
     attempts = 0
@@ -22,6 +22,7 @@ class RubyGems
       sleep(attempts == 0 ? 5 : 15)
       attempts += 1
       versions = published_versions(gem_name)
+      puts(latest_json_version: versions.first, cli_version: cli_version)
       return true if versions.include?(version) && cli_version && cli_version == version
       puts "Waiting for v#{version} on RubyGems (attempt #{attempts}/#{max_attempts})..."
       return false if attempts >= max_attempts
