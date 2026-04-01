@@ -172,7 +172,12 @@ class Hiiro
         links = data.is_a?(Array) ? data : []
         links.each do |row|
           next unless row.is_a?(Hash)
-          connection[:links].insert(row.transform_keys(&:to_s))
+          normalized = row.transform_keys(&:to_s)
+          url = normalized['url'].to_s
+          next if url.empty? || connection[:links].where(url: url).count > 0
+          connection[:links].insert(normalized)
+        rescue => e
+          warn "Hiiro::DB: skipping link row (#{e.class}: #{e.message.lines.first&.strip})"
         end
         bak(path)
       rescue => e
