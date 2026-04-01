@@ -3,202 +3,210 @@
 require "net/http"
 require "json"
 
-# Parse -t flag for pre-release
-pre_release = ARGV.include?('-t') || `git branch --show-current`.strip != 'main'
+# ─── RubyGems API ────────────────────────────────────────────────────────────
 
-# Check for uncommitted changes before we modify anything
-has_pending_changes = !`git status --porcelain`.strip.empty?
-
-# Ensure local branch is up to date with remote
-system('git', 'fetch', 'origin')
-behind = `git rev-list HEAD..origin/main --count`.strip.to_i
-if behind > 0
-  puts "ERROR: Local branch is #{behind} commit(s) behind origin/main. Pull before publishing."
-  exit 1
-end
-
-puts ""
-# Fetch all published versions from RubyGems
-def fetch_versions
-  uri = URI("https://rubygems.org/api/v1/versions/hiiro.json")
-  response = Net::HTTP.get(uri)
-  JSON.parse(response).map { |v| v["number"] }
-rescue => e
-  puts "Warning: Could not fetch versions from RubyGems: #{e.message}"
-  puts "Falling back to local version"
-  require "hiiro"
-  [Hiiro::VERSION]
-end
-
-# Parse version string into comparable components
-def parse_version(version)
-  parts = version.split(?.)
-  is_pre = parts.length >= 5 && parts[-2] == 'pre'
-  if is_pre
-    { major: parts[0].to_i, minor: parts[1].to_i, patch: parts[2].to_i, pre: true, pre_num: parts[-1].to_i }
-  else
-    { major: parts[0].to_i, minor: parts[1].to_i, patch: parts[2].to_i, pre: false, pre_num: 0 }
-  end
-end
-
-# Find the latest version (prioritize release over pre for same patch)
-def latest_version(versions)
-  versions.max_by do |v|
-    p = parse_version(v)
-    # Sort by major, minor, patch, then non-pre before pre, then pre_num
-    [p[:major], p[:minor], p[:patch], p[:pre] ? 0 : 1, p[:pre_num]]
-  end
-end
-
-versions = fetch_versions
-current = latest_version(versions)
-puts "Latest published version: #{current}"
-
-parts = current.split(?.)
-is_pre = parts.length >= 5 && parts[-2] == 'pre'
-
-if is_pre
-  major, minor, patch = parts[0..2]
-  pre_num = parts[-1].to_i
-  if pre_release
-    # pre -> pre: increment pre number
-    new_version = [major, minor, patch, 'pre', pre_num + 1].join(?.)
-  else
-    # pre -> release: remove pre, keep same version number
-    new_version = [major, minor, patch].join(?.)
-  end
-else
-  major, minor, patch = parts[0..2]
-  if pre_release
-    # release -> pre: increment patch and add pre.1
-    new_version = [major, minor, patch.to_i + 1, 'pre', 1].join(?.)
-  else
-    # release -> release: increment patch
-    new_version = [major, minor, patch.to_i + 1].join(?.)
-  end
-end
-
-puts "New version: #{new_version}"
-
-if has_pending_changes
-  puts ""
-  puts "Generating commit plan for pending changes..."
-
-  diff   = `git diff HEAD`
-  status = `git status --short`
-
-  commit_prompt = <<~PROMPT
-    Analyze these git changes and create a logical commit plan.
-
-    git status:
-    #{status.strip}
-
-    git diff:
-    #{diff.strip}
-
-    Group related changes into logical commits. Output a JSON array only, no explanation, no markdown fences:
-    [
-      {"message": "commit message", "files": ["path/to/file"]},
-      ...
-    ]
-
-    Use conventional commit format (feat:, fix:, chore:, refactor:, docs:, etc.).
-    Only include files that appear in the status output above.
-  PROMPT
-
-  response = IO.popen(['claude', '-p', '--model', 'claude-haiku-4-5-20251001'], 'r+') { |io|
-    io.write(commit_prompt)
-    io.close_write
-    io.read
-  }
-
-  begin
-    json_str = response.strip.gsub(/\A```(?:json)?\n?/, '').gsub(/\n?```\z/, '')
-    commits  = JSON.parse(json_str)
-
-    system('git', 'add', '--all')
-    commits.each do |commit|
-      system('git', 'reset', 'HEAD')
-      commit['files'].each { |f| system('git', 'add', '--', f) }
-      system('git', 'commit', '-m', commit['message'])
-      puts "  → #{commit['message']}"
-    end
+class RubyGems
+  def self.published_versions(gem_name)
+    uri = URI("https://rubygems.org/api/v1/versions/#{gem_name}.json")
+    JSON.parse(Net::HTTP.get(uri)).map { |v| v["number"] }
   rescue => e
-    puts "Warning: could not parse claude commit plan (#{e.message}), committing all as one"
-    system('git', 'add', '--all')
-    system('git', 'commit', '-m', 'chore: pre-publish changes')
+    puts "Warning: could not fetch versions from RubyGems (#{e.message}), falling back to local"
+    require "hiiro"
+    [Hiiro::VERSION]
   end
 end
 
-puts ""
-puts "Generating CHANGELOG.md..."
-last_tag = `git describe --tags --abbrev=0 2>/dev/null`.strip
-commit_log = last_tag.empty? ? `git log --oneline` : `git log #{last_tag}..HEAD --oneline`
-existing_changelog = File.exist?('CHANGELOG.md') ? File.read('CHANGELOG.md') : ''
+# ─── Version bumping ─────────────────────────────────────────────────────────
 
-changelog_prompt = <<~PROMPT
-  Update or create a CHANGELOG.md for the Ruby gem "hiiro" version #{new_version}.
+class Version
+  attr_reader :major, :minor, :patch, :pre, :pre_num
 
-  Recent commits (since #{last_tag.empty? ? 'the beginning' : last_tag}):
-  #{commit_log.strip}
-
-  Existing CHANGELOG.md:
-  #{existing_changelog.empty? ? '(none)' : existing_changelog}
-
-  Write the complete updated CHANGELOG.md. Add a new section for v#{new_version} at the top
-  with today's date. Group changes into Added, Changed, Fixed, Removed where appropriate.
-  Be concise. Output only the file content, no explanation.
-PROMPT
-
-new_changelog = IO.popen(['claude', '-p', '--model', 'claude-haiku-4-5-20251001'], 'r+') { |io|
-  io.write(changelog_prompt)
-  io.close_write
-  io.read
-}
-
-if new_changelog && !new_changelog.strip.empty?
-  File.write('CHANGELOG.md', new_changelog)
-  puts "Updated CHANGELOG.md"
-else
-  puts "Warning: could not generate CHANGELOG.md"
-end
-
-puts ""
-File.open('lib/hiiro/version.rb', 'w+') do |f|
-  f.puts 'class Hiiro'
-  f.puts "  VERSION = #{new_version.inspect}"
-  f.puts 'end'
-end
-
-built = system('gem', 'build', 'hiiro.gemspec')
-puts "\nERROR: unable to build gem\n" unless built
-
-puts ""
-pushed = system('gem', 'push', "hiiro-#{new_version}.gem")
-puts "\nERROR: unable to push\n" unless pushed
-
-puts ""
-system 'git', 'add', '--all'
-system 'git', 'commit', '-m', "publishing v#{new_version}"
-
-system 'git', 'tag', '-a', "v#{new_version}", '-m', "v#{new_version}"
-puts "Tagged v#{new_version}"
-
-puts ""
-# Try to push to origin main (tags follow via push.followTags), fallback to a branch if needed
-if system('git', 'push', 'origin', 'main', '--follow-tags')
-  puts "Pushed to origin/main"
-else
-  branch_name = "publish-v#{new_version}"
-  system 'git', 'checkout', '-b', branch_name
-  if system('git', 'push', 'origin', branch_name, '--follow-tags')
-    puts "Push to main failed. Pushed to origin/#{branch_name} instead"
-  else
-    puts "\nERROR: unable to push to origin\n"
+  def self.parse(str)
+    parts = str.split(".")
+    pre   = parts.length >= 5 && parts[-2] == "pre"
+    new(parts[0].to_i, parts[1].to_i, parts[2].to_i, pre, pre ? parts[-1].to_i : 0)
   end
-  system 'git', 'checkout', 'main'
+
+  def self.latest(versions)
+    versions.max_by { |v| parse(v).sort_key }
+  end
+
+  def self.bump(current_str, pre_release:)
+    v = parse(current_str)
+    if v.pre
+      pre_release ? "#{v.major}.#{v.minor}.#{v.patch}.pre.#{v.pre_num + 1}"
+                  : "#{v.major}.#{v.minor}.#{v.patch}"
+    else
+      pre_release ? "#{v.major}.#{v.minor}.#{v.patch + 1}.pre.1"
+                  : "#{v.major}.#{v.minor}.#{v.patch + 1}"
+    end
+  end
+
+  def initialize(major, minor, patch, pre, pre_num)
+    @major, @minor, @patch, @pre, @pre_num = major, minor, patch, pre, pre_num
+  end
+
+  def sort_key = [major, minor, patch, pre ? 0 : 1, pre_num]
 end
 
-puts ""
-puts "Running: h delayed_update #{new_version}"
-system('h', 'delayed_update', new_version)
+# ─── Git ─────────────────────────────────────────────────────────────────────
+
+class Git
+  def self.current_branch  = `git branch --show-current`.strip
+  def self.pending_changes? = !`git status --porcelain`.strip.empty?
+  def self.diff             = `git diff HEAD`
+  def self.status           = `git status --short`
+
+  def self.ensure_up_to_date!
+    system("git", "fetch", "origin")
+    behind = `git rev-list HEAD..origin/main --count`.strip.to_i
+    if behind > 0
+      puts "ERROR: #{behind} commit(s) behind origin/main — pull before publishing."
+      exit 1
+    end
+  end
+
+  def self.commits_since_last_tag
+    last_tag = `git describe --tags --abbrev=0 2>/dev/null`.strip
+    last_tag.empty? ? `git log --oneline` : `git log #{last_tag}..HEAD --oneline`
+  end
+
+  def self.stage_and_commit(files, message)
+    system("git", "reset", "HEAD")
+    files.each { |f| system("git", "add", "--", f) }
+    system("git", "commit", "-m", message)
+    puts "  → #{message}"
+  end
+
+  def self.commit_all(message)
+    system("git", "add", "--all")
+    system("git", "commit", "-m", message)
+  end
+
+  def self.tag(version)
+    system("git", "tag", "-a", "v#{version}", "-m", "v#{version}")
+    puts "Tagged v#{version}"
+  end
+
+  def self.push
+    if system("git", "push", "origin", "main", "--follow-tags")
+      puts "Pushed to origin/main"
+    else
+      branch = "publish-v#{version}"
+      system("git", "checkout", "-b", branch)
+      system("git", "push", "origin", branch, "--follow-tags") \
+        ? puts("Push to main failed — pushed to origin/#{branch} instead")
+        : puts("ERROR: unable to push to origin")
+      system("git", "checkout", "main")
+    end
+  end
+end
+
+# ─── Claude AI calls ─────────────────────────────────────────────────────────
+
+class Claude
+  MODEL = "claude-haiku-4-5-20251001"
+
+  def self.call(prompt)
+    IO.popen(["claude", "-p", "--model", MODEL], "r+") { |io|
+      io.write(prompt)
+      io.close_write
+      io.read
+    }
+  end
+
+  def self.commit_plan(diff:, status:)
+    prompt = <<~PROMPT
+      Analyze these git changes and create a logical commit plan.
+
+      git status:
+      #{status.strip}
+
+      git diff:
+      #{diff.strip}
+
+      Group related changes into logical commits. Output a JSON array only, no explanation, no markdown fences:
+      [
+        {"message": "commit message", "files": ["path/to/file"]},
+        ...
+      ]
+
+      Use conventional commit format (feat:, fix:, chore:, refactor:, docs:, etc.).
+      Only include files that appear in the status output above.
+    PROMPT
+
+    raw = call(prompt).strip.gsub(/\A```(?:json)?\n?/, "").gsub(/\n?```\z/, "")
+    JSON.parse(raw)
+  end
+
+  def self.changelog(version:, commits:, existing:)
+    call(<<~PROMPT)
+      Update or create a CHANGELOG.md for the Ruby gem "hiiro" version #{version}.
+
+      Recent commits:
+      #{commits.strip}
+
+      Existing CHANGELOG.md:
+      #{existing.empty? ? "(none)" : existing}
+
+      Write the complete updated CHANGELOG.md. Add a new section for v#{version} at the top
+      with today's date. Group changes into Added, Changed, Fixed, Removed where appropriate.
+      Be concise. Output only the file content, no explanation.
+    PROMPT
+  end
+end
+
+# ─── Gem publishing ──────────────────────────────────────────────────────────
+
+class Gem
+  def self.build(version)
+    system("gem", "build", "hiiro.gemspec") || abort("ERROR: gem build failed")
+  end
+
+  def self.push(version)
+    system("gem", "push", "hiiro-#{version}.gem") || abort("ERROR: gem push failed")
+  end
+end
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
+
+pre_release    = ARGV.include?("-t") || Git.current_branch != "main"
+pending_before = Git.pending_changes?
+
+Git.ensure_up_to_date!
+
+current_version = Version.latest(RubyGems.published_versions("hiiro"))
+new_version     = Version.bump(current_version, pre_release: pre_release)
+puts "Latest: #{current_version}  →  New: #{new_version}"
+
+if pending_before
+  puts "\nGenerating commit plan for pending changes..."
+  begin
+    commits = Claude.commit_plan(diff: Git.diff, status: Git.status)
+    system("git", "add", "--all")
+    commits.each { |c| Git.stage_and_commit(c["files"], c["message"]) }
+  rescue => e
+    puts "Warning: could not parse Claude commit plan (#{e.message}) — committing all as one"
+    Git.commit_all("chore: pre-publish changes")
+  end
+end
+
+puts "\nGenerating CHANGELOG.md..."
+changelog = Claude.changelog(
+  version:  new_version,
+  commits:  Git.commits_since_last_tag,
+  existing: File.exist?("CHANGELOG.md") ? File.read("CHANGELOG.md") : ""
+)
+File.write("CHANGELOG.md", changelog) if changelog && !changelog.strip.empty?
+
+File.write("lib/hiiro/version.rb", "class Hiiro\n  VERSION = #{new_version.inspect}\nend\n")
+
+Gem.build(new_version)
+Gem.push(new_version)
+
+Git.commit_all("publishing v#{new_version}")
+Git.tag(new_version)
+Git.push
+
+puts "\nRunning: h delayed_update #{new_version}"
+system("h", "delayed_update", new_version)

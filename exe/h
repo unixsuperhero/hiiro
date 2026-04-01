@@ -225,7 +225,7 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
       end
 
       unless found
-        system('say', 'hiiro publish timed out')
+        system('terminal-notifier', '-title', 'hiiro publish', '-message', 'Timed out waiting for RubyGems')
         exit 1
       end
 
@@ -239,11 +239,11 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
         output.match?(/hiiro \\([^)]*#{Regexp.escape(expected)}/)
       end
       if mismatched.empty?
-        system('say', 'hiiro updated')
+        system('terminal-notifier', '-title', 'hiiro updated', '-message', "v\#{expected} installed across all rbenv versions")
       elsif mismatched.size == versions.size
-        system('say', 'no versions updated')
+        system('terminal-notifier', '-title', 'hiiro update failed', '-message', "v\#{expected} not installed in any rbenv version")
       else
-        system('say', "\#{mismatched.size} version\#{mismatched.size == 1 ? '' : 's'} not updated")
+        system('terminal-notifier', '-title', 'hiiro updated', '-message', "v\#{expected} installed — \#{mismatched.size} version\#{mismatched.size == 1 ? '' : 's'} skipped")
       end
     RUBY
 
