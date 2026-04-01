@@ -65,20 +65,30 @@ class Hiiro
     load_env
     Hiiro::DB.setup!
 
-    if values[:args]
-      args = values[:args]
-    else
-      args ||= oargs
-      args = ARGV if args.empty?
+    h_bin, *h_args = oargs
+    h_bin ||= values[:bin_name] || $0
+    h_args = ARGV if h_args.empty?
+    h_args = values[:args] if values.key?(:args)
+
+    # if values[:args]
+    #   args = values[:args]
+    # else
+    #   args ||= oargs
+    #   args = ARGV if args.empty?
+    # end
+    #
+    # bin_name = values[:bin_name] || $0
+
+    begin
+      Hiiro::Invocation.record!(
+        bin: File.basename(h_bin),
+        subcmd: h_args.first,
+        args: h_args[1..]
+      )
+    rescue => e
+      puts " ... ERROR ... there shouldn't be any reason for this to fail...unless sqlite is broken"
+      binding.pry
     end
-
-    bin_name = values[:bin_name] || $0
-
-    Hiiro::Invocation.record!(
-      bin: File.basename(bin_name),
-      subcmd: args.first,
-      args: args[1..]
-    ) rescue nil
 
     new(bin_name, *args, logging: logging, tasks: tasks, task_scope: task_scope, **values).tap do |hiiro|
       hiiro.load_plugins(plugins)
@@ -229,7 +239,7 @@ class Hiiro
       block.arity == 1 ? block.call(h) : h.instance_eval(&block) if block
     end
 
-    Hiiro.init(child_bin_name, *child_args, **kwargs, &wrapper)
+    Hiiro.init(bin_name: child_bin_name, args: child_args, **kwargs, &wrapper)
   end
 
   def run_child(custom_subcmd=nil, custom_args=nil, **kwargs, &block)
