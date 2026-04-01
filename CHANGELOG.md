@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.321] - 2026-04-01
+
+### Changed
+- Extract `open_config` to `Hiiro::Config.open` singleton method; simplify parameter order from `dir:, file:` to positional `file, dir: nil`
+- Update all config subcommands to use new `Hiiro::Config.open` interface
+
 ## [0.1.320] - 2026-04-01
 
 ### Changed
