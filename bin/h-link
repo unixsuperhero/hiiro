@@ -238,9 +238,16 @@ lm = LinkManager.new
 
 Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
   add_subcmd(:add) do |*add_args|
-    links = lm.load_links
+    vals = opts.parse!(add_args)
 
-    if add_args.empty?
+    if vals.help?
+      puts "Usage: h link add [<url>] [description] [--shorthand <alias>] [--tag <tag> ...]"
+      puts
+      puts opts.help_text
+      exit 0
+    end
+
+    if vals.args.empty?
       new_links = lm.edit_links
 
       new_links.each do |link|
@@ -262,8 +269,7 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
       exit 0
     end
 
-    url = add_args.shift
-    vals = opts.parse!(add_args)
+    url = vals.args.shift
     description = vals.args.join(' ')
     tags = (Array(vals.tag) + Array(vals.tags)).uniq.reject(&:empty?)
 
@@ -419,6 +425,51 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
     end
   end
 
+  add_subcmd(:rm) do |*rm_args|
+    links = lm.load_links
+
+    if links.empty?
+      puts "No links saved."
+      exit 0
+    end
+
+    if rm_args.empty?
+      lines = lm.load_link_hash(links)
+      selected = fuzzyfind(lines.keys)
+      next if selected.nil? || selected.strip.empty?
+      link = lines[selected.strip]
+      next unless link
+      Hiiro::Link.where(url: link.url).delete
+      lm.save_yaml_backup
+      puts "Removed: #{link.url}"
+    else
+      rm_args.each do |ref|
+        idx, link = lm.find_link_by_ref(ref, links)
+        if link.nil?
+          # Try URL substring match
+          matches = lm.search_links(links, ref)
+          if matches.length == 1
+            link = matches.first
+          elsif matches.length > 1
+            puts "Ambiguous: #{matches.length} links match '#{ref}'. Use a number or shorthand."
+            matches.each_with_index { |l, i| puts "  #{l.display_string(i)}" }
+            next
+          else
+            puts "Link not found: #{ref}"
+            next
+          end
+        end
+        Hiiro::Link.where(url: link.url).delete
+        lm.save_yaml_backup
+        puts "Removed: #{link.url}"
+      end
+    end
+  end
+
+  add_subcmd(:remove) do |*remove_args|
+    run_subcmd(:rm, *remove_args)
+  end
+
   add_subcmd(:open) do |*open_args|
     links = lm.load_links
 
@@ -474,6 +525,39 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
     end
 
     system('open', url)
+  end
+
+  add_subcmd(:tags) do |*tag_args|
+    all_known = Hiiro::Tag.where(taggable_type: 'Link').distinct.pluck(:name).sort
+
+    if tag_args.empty?
+      if all_known.empty?
+        puts "No tags found."
+      else
+        all_known.each { |t| puts t }
+      end
+      next
+    end
+
+    # Prefix-match the given args against known tags
+    matched_tags = tag_args.flat_map { |arg|
+      all_known.select { |t| t.start_with?(arg) }
+    }.uniq
+
+    if matched_tags.empty?
+      puts "No tags match: #{tag_args.join(', ')}"
+      next
+    end
+
+    # Batch-load all link tags to avoid N+1
+    tagged_ids = Hiiro::Tag.where(taggable_type: 'Link', name: matched_tags).map { |t| t.taggable_id.to_i }.uniq
+    links = lm.load_links.select { |link| tagged_ids.include?(link.id) }
+
+    if links.empty?
+      puts "No links tagged with: #{matched_tags.join(', ')}"
+    else
+      links.each_with_index { |link, idx| puts link.display_string(idx) }
+    end
   end
 
   add_subcmd(:paste) do |*paste_args|

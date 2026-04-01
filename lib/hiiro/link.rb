@@ -7,7 +7,7 @@ class Hiiro
     def self.create_table!(db)
       db.create_table?(:links) do
         primary_key :id
-        String :url, null: false
+        String :url, null: false, unique: true
         String :description
         String :shorthand
         String :tags_json   # JSON array of tag strings
@@ -15,7 +15,7 @@ class Hiiro
       end
     end
 
-    def tags     = Hiiro::DB::JSON.load(tags_json) || []
+    def tags     = Hiiro::Tag.for(self).map(&:name)
     def tags=(v) ; self.tags_json = Hiiro::DB::JSON.dump(v); end
 
     def self.find_by_shorthand(s)
@@ -44,7 +44,9 @@ class Hiiro
       num = index ? "#{(index + 1).to_s.rjust(3)}." : ""
       shorthand_str = shorthand ? " [#{shorthand}]" : ""
       desc_str = description.to_s.empty? ? "" : " - #{description}"
-      "#{num}#{shorthand_str} #{url}#{desc_str}".strip
+      link_tags = tags
+      tags_str = link_tags.any? ? " \e[30;104m#{link_tags.join(' ')}\e[0m" : ""
+      "#{num}#{shorthand_str} #{url}#{desc_str}#{tags_str}".strip
     end
 
     def to_h
