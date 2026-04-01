@@ -14,6 +14,21 @@ class RubyGems
     require "hiiro"
     [Hiiro::VERSION]
   end
+
+  def self.wait_for(gem_name, version, max_attempts: 40)
+    attempts = 0
+    loop do
+      sleep(attempts == 0 ? 5 : 15)
+      attempts += 1
+      versions = published_versions(gem_name)
+      return true if versions.include?(version)
+      puts "Waiting for v#{version} on RubyGems (attempt #{attempts}/#{max_attempts})..."
+      return false if attempts >= max_attempts
+    end
+  rescue => e
+    puts "RubyGems poll error: #{e.message}"
+    false
+  end
 end
 
 # ─── Version bumping ─────────────────────────────────────────────────────────
@@ -164,7 +179,7 @@ class Gem
   end
 
   def self.push(version)
-    system("gem", "push", "hiiro-#{version}.gem") || abort("ERROR: gem push failed")
+    system("gem", "push", "hiiro-#{version}.gem")
   end
 end
 
@@ -202,11 +217,21 @@ File.write("CHANGELOG.md", changelog) if changelog && !changelog.strip.empty?
 File.write("lib/hiiro/version.rb", "class Hiiro\n  VERSION = #{new_version.inspect}\nend\n")
 
 Gem.build(new_version)
-Gem.push(new_version)
+
+unless Gem.push(new_version)
+  abort("ERROR: gem push failed — skipping git commit, tag, and push")
+end
 
 Git.commit_all("publishing v#{new_version}")
 Git.tag(new_version)
 Git.push
 
-puts "\nRunning: h delayed_update #{new_version}"
-system("h", "delayed_update", new_version)
+puts "\nWaiting for v#{new_version} to appear on RubyGems..."
+if RubyGems.wait_for("hiiro", new_version)
+  puts "v#{new_version} available — running h update -a"
+  update_args = ["update", "-a"]
+  update_args << "--pre" if pre_release
+  system("h", *update_args)
+else
+  puts "WARNING: timed out waiting for v#{new_version} on RubyGems — run `h update -a` manually"
+end
