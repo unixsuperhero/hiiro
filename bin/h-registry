@@ -1,0 +1,128 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'hiiro/registry'
+
+Hiiro.run(*ARGV, tasks: true) do
+
+  # h registry ls [type]
+  add_subcmd(:ls, :list) do |type = nil|
+    entries = type ? Hiiro::RegistryEntry.of_type(type) : Hiiro::RegistryEntry.all_ordered
+    if entries.empty?
+      puts type ? "No entries for type '#{type}'." : "Registry is empty."
+      next
+    end
+
+    current_type = nil
+    entries.each do |e|
+      if e.resource_type != current_type
+        current_type = e.resource_type
+        puts "\n#{current_type}"
+        puts '─' * 40
+      end
+      alias_col = e.short_name ? "[#{e.short_name}]".ljust(18) : ' ' * 18
+      desc_col  = e.description ? "  # #{e.description}" : ''
+      puts "  #{alias_col} #{e.name}#{desc_col}"
+    end
+    puts
+  end
+
+  # h registry types
+  add_subcmd(:types) do
+    types = Hiiro::RegistryEntry.known_types
+    puts types.empty? ? "No types registered yet." : types.join("\n")
+  end
+
+  # h registry add <type> <name> [--alias <short>] [--desc <description>]
+  add_subcmd(:add) do |type, name, *rest|
+    unless type && name
+      puts "Usage: h registry add <type> <name> [--alias <short>] [--desc <text>]"
+      next
+    end
+    opts = Hiiro::Options.setup {
+      option(:alias, short: :a, desc: 'Short alias')
+      option(:desc,  short: :d, desc: 'Description')
+    }.parse(rest)
+
+    existing = Hiiro::RegistryEntry.find_by_ref(name, type: type)
+    if existing
+      puts "Already registered: #{existing.display}"
+      next
+    end
+
+    entry = Hiiro::RegistryEntry.create(
+      resource_type: type,
+      name:          name,
+      short_name:    opts.alias,
+      description:   opts.desc,
+      created_at:    Time.now.iso8601
+    )
+    puts "Added:\n#{entry.display}"
+  end
+
+  # h registry rm <name_or_alias> [type]
+  add_subcmd(:rm, :remove) do |ref, type = nil|
+    unless ref
+      puts "Usage: h registry rm <name_or_alias> [type]"
+      next
+    end
+    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type ? type.to_s : nil)
+    unless entry
+      puts "Not found: #{ref}#{type ? " (type: #{type})" : ''}"
+      next
+    end
+    puts "Removing: #{entry.display}"
+    entry.destroy
+    puts "Done."
+  end
+
+  # h registry get <name_or_alias> [type] — prints canonical name (scriptable)
+  add_subcmd(:get) do |ref, type = nil|
+    unless ref
+      puts "Usage: h registry get <name_or_alias> [type]"
+      next
+    end
+    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type ? type.to_s : nil)
+    entry ? puts(entry.name) : exit(1)
+  end
+
+  # h registry show <name_or_alias> [type] — human-readable detail
+  add_subcmd(:show) do |ref, type = nil|
+    unless ref
+      puts "Usage: h registry show <name_or_alias> [type]"
+      next
+    end
+    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type ? type.to_s : nil)
+    entry ? puts(entry.display) : (puts "Not found: #{ref}"; exit 1)
+  end
+
+  # h registry select [type] — fuzzyfinder, prints canonical name
+  add_subcmd(:select) do |type = nil|
+    lines = Hiiro::RegistryEntry.fuzzy_lines(type: type)
+    if lines.empty?
+      puts type ? "No entries for type '#{type}'." : "Registry is empty."
+      next
+    end
+    chosen = fuzzyfind(lines)
+    next unless chosen
+    # Extract name from "type  short  name  # desc" — name is the 3rd word
+    name = chosen.strip.split(/\s{2,}/)[2]
+    puts name
+  end
+
+  # h registry set-alias <name_or_alias> <new_alias> [type]
+  add_subcmd(:'set-alias') do |ref, new_alias, type = nil|
+    unless ref && new_alias
+      puts "Usage: h registry set-alias <name_or_alias> <new_alias> [type]"
+      next
+    end
+    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type ? type.to_s : nil)
+    unless entry
+      puts "Not found: #{ref}"
+      next
+    end
+    entry.update(short_name: new_alias)
+    puts entry.display
+  end
+
+end

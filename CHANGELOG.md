@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.316] - 2026-04-01
+
+### Added
+- Parallelize hiiro gem updates across Ruby versions with thread pool for faster multi-version updates
+- Optional `dir:` parameter to `Hiiro::Background.run` for working directory support
+
+### Changed
+- Improve gem version regex pattern in publish script for more reliable version matching
+
+### Fixed
+- Bypass rubygems local cache with `--clear-sources --source https://rubygems.org` flags in `install_gem` to ensure fresh gem installation
+- Add debug output for version polling in publish script
+- Convert `sa` symlink from absolute to relative path
+
 ## [0.1.315] - 2026-04-01
 
 ### Fixed
