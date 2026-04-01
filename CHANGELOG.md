@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `h queue ls [STATUS]` — filter by status with prefix matching (e.g. `h queue ls run` → running tasks); composable with existing `-s` flag
+- `h session sh <session> [cmd...]` — open a new window in another tmux session (runs shell or given command there, then switches)
+- `h task sh -s SESSION [cmd...]` — run task shell/command in a new window in a specific tmux session
+- `h link tags` — list all known link tags; `h link tags tag1 tag2...` filters links by tags (prefix matching)
+- `h link ls` now shows tags inline with colored badges
+- `h link rm` / `h link remove` subcommand — remove links by number, shorthand, or fuzzy select
+
+### Fixed
+- `h pr update` and `h pr ls -u` skip closed/merged PRs — only active PRs are refreshed
+- `h link add -h` now shows help instead of adding `-h` as a URL
+- `h db remigrate` no longer imports duplicate links — skips rows with an already-existing URL
+
 ## [0.1.318] - 2026-04-01
 
 ### Added
