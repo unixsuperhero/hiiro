@@ -471,7 +471,16 @@ class Hiiro
             flag(:all,    short: :a, desc: 'Show all tasks without limit; use pager if output exceeds terminal height')
             option(:status, short: :s, desc: "Filter by status (#{Queue::STATUSES.join(', ')}); repeat for multiple", multi: true)
           end
-          lines = q.list_lines(all: opts.all, statuses: opts.status)
+          statuses = Array(opts.status)
+          opts.args.each do |arg|
+            matched = Queue::STATUSES.select { |s| s.start_with?(arg) }
+            if matched.empty?
+              puts "Unknown status: '#{arg}' (valid: #{Queue::STATUSES.join(', ')})"
+              next
+            end
+            statuses.concat(matched)
+          end
+          lines = q.list_lines(all: opts.all, statuses: statuses.uniq)
           if lines.empty?
             puts "No tasks"
             next
