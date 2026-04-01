@@ -1,7 +1,7 @@
 ```markdown
 # Changelog
 
-## [Unreleased]
+## [0.1.310] - 2026-04-01
 
 ### Fixed
 - `make_child` now passes `bin_name:` and `args:` as keyword args to `Hiiro.init`, fixing subcommand dispatch for all `h task`, `h queue`, `h service`, and `h run` child hierarchies — previously `child_bin_name` leaked into `oargs` and became the subcmd, so every child hiiro showed help instead of dispatching
@@ -81,7 +81,7 @@
 ### Deprecated
 - `SystemCallCapture` — use `Hiiro::Effects` helpers in `TestHarness` instead
 
-## [Unreleased]
+## [0.1.307]
 
 ### Added
 - `Hiiro::DB` — SQLite foundation via Sequel; `DB.setup!` creates all tables, `DB.connection` establishes connection eagerly at load time; supports `HIIRO_TEST_DB=sqlite::memory:` for tests
