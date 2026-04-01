@@ -40,11 +40,11 @@ class Hiiro
       terms.all? { |term| searchable.include?(term.downcase) }
     end
 
-    def display_string(index = nil)
+    def display_string(index = nil, exclude_tags: [])
       num = index ? "#{(index + 1).to_s.rjust(3)}." : ""
       shorthand_str = shorthand ? " [#{shorthand}]" : ""
       desc_str = description.to_s.empty? ? "" : " - #{description}"
-      link_tags = tags
+      link_tags = tags - Array(exclude_tags)
       tags_str = link_tags.any? ? " \e[30;104m#{link_tags.join(' ')}\e[0m" : ""
       "#{num}#{shorthand_str} #{url}#{desc_str}#{tags_str}".strip
     end
