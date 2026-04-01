@@ -122,17 +122,18 @@ end
 class Claude
   MODEL = "claude-haiku-4-5-20251001"
 
-  def self.call(prompt)
-    IO.popen(["claude", "-p", "--model", MODEL], "r+") { |io|
-      io.write(prompt)
-      io.close_write
-      io.read
-    }
-  end
+  Result = Struct.new(:commits, :changelog)
 
-  def self.commit_plan(diff:, status:)
+  # Single call: returns a Result with commit plan + updated changelog
+  def self.prepare_release(version:, diff:, status:, git_log:, existing_changelog:)
     prompt = <<~PROMPT
-      Analyze these git changes and create a logical commit plan.
+      You are preparing a release for the Ruby gem "hiiro" version #{version}.
+      Do two things and return them as a single JSON object — no explanation, no markdown fences.
+
+      ## 1. Commit plan
+      Analyze the pending git changes below and group them into logical commits.
+      Use conventional commit format (feat:, fix:, chore:, refactor:, docs:, etc.).
+      Only include files that appear in the git status output.
 
       git status:
       #{status.strip}
@@ -140,34 +141,35 @@ class Claude
       git diff:
       #{diff.strip}
 
-      Group related changes into logical commits. Output a JSON array only, no explanation, no markdown fences:
-      [
-        {"message": "commit message", "files": ["path/to/file"]},
-        ...
-      ]
+      ## 2. Changelog
+      Write a complete updated CHANGELOG.md. Add a new section for v#{version} at the top
+      with today's date. Group changes into Added, Changed, Fixed, Removed where appropriate.
+      Be concise.
 
-      Use conventional commit format (feat:, fix:, chore:, refactor:, docs:, etc.).
-      Only include files that appear in the status output above.
-    PROMPT
-
-    raw = call(prompt).strip.gsub(/\A```(?:json)?\n?/, "").gsub(/\n?```\z/, "")
-    JSON.parse(raw)
-  end
-
-  def self.changelog(version:, commits:, existing:)
-    call(<<~PROMPT)
-      Update or create a CHANGELOG.md for the Ruby gem "hiiro" version #{version}.
-
-      Recent commits:
-      #{commits.strip}
+      Recent commits (for changelog context):
+      #{git_log.strip}
 
       Existing CHANGELOG.md:
-      #{existing.empty? ? "(none)" : existing}
+      #{existing_changelog.empty? ? "(none)" : existing_changelog}
 
-      Write the complete updated CHANGELOG.md. Add a new section for v#{version} at the top
-      with today's date. Group changes into Added, Changed, Fixed, Removed where appropriate.
-      Be concise. Output only the file content, no explanation.
+      ## Output format (JSON only, no extra text)
+      {
+        "commits": [
+          {"message": "commit message", "files": ["path/to/file"]},
+          ...
+        ],
+        "changelog": "full CHANGELOG.md content here"
+      }
     PROMPT
+
+    raw = IO.popen(["claude", "-p", "--model", MODEL], "r+") { |io|
+      io.write(prompt)
+      io.close_write
+      io.read
+    }.strip.gsub(/\A```(?:json)?\n?/, "").gsub(/\n?```\z/, "")
+
+    parsed = JSON.parse(raw)
+    Result.new(parsed["commits"], parsed["changelog"])
   end
 end
 
@@ -194,25 +196,26 @@ current_version = Version.latest(RubyGems.published_versions("hiiro"))
 new_version     = Version.bump(current_version, pre_release: pre_release)
 puts "Latest: #{current_version}  →  New: #{new_version}"
 
+puts "\nAsking Claude to plan commits and generate changelog..."
+release = Claude.prepare_release(
+  version:            new_version,
+  diff:               pending_before ? Git.diff   : "",
+  status:             pending_before ? Git.status : "",
+  git_log:            Git.commits_since_last_tag,
+  existing_changelog: File.exist?("CHANGELOG.md") ? File.read("CHANGELOG.md") : ""
+)
+
 if pending_before
-  puts "\nGenerating commit plan for pending changes..."
   begin
-    commits = Claude.commit_plan(diff: Git.diff, status: Git.status)
     system("git", "add", "--all")
-    commits.each { |c| Git.stage_and_commit(c["files"], c["message"]) }
+    release.commits.each { |c| Git.stage_and_commit(c["files"], c["message"]) }
   rescue => e
-    puts "Warning: could not parse Claude commit plan (#{e.message}) — committing all as one"
+    puts "Warning: could not apply Claude commit plan (#{e.message}) — committing all as one"
     Git.commit_all("chore: pre-publish changes")
   end
 end
 
-puts "\nGenerating CHANGELOG.md..."
-changelog = Claude.changelog(
-  version:  new_version,
-  commits:  Git.commits_since_last_tag,
-  existing: File.exist?("CHANGELOG.md") ? File.read("CHANGELOG.md") : ""
-)
-File.write("CHANGELOG.md", changelog) if changelog && !changelog.strip.empty?
+File.write("CHANGELOG.md", release.changelog) if release.changelog && !release.changelog.strip.empty?
 
 File.write("lib/hiiro/version.rb", "class Hiiro\n  VERSION = #{new_version.inspect}\nend\n")
 
