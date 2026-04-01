@@ -528,40 +528,21 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
   end
 
   add_subcmd(:tags) do |*tag_args|
-    all_known = Hiiro::Tag.where(taggable_type: 'Link').distinct.map(:name).sort
+    all_known = Hiiro::Tag.tags_by_type('Link')
+    filtered = all_known.select{|t|
+      tag_args.any?{|ta| t.start_with?(ta) }
+    }
 
-    if tag_args.empty?
-      if all_known.empty?
-        puts "No tags found."
-      else
-        all_known.each do |tag_name|
-          tagged_ids = Hiiro::Tag.where(taggable_type: 'Link', name: tag_name).map { |t| t.taggable_id.to_i }
-          links = lm.load_links.select { |link| tagged_ids.include?(link.id) }
-          puts "#{tag_name}:"
-          links.each { |link| puts "  #{link.display_string(exclude_tags: [tag_name])}" }
-        end
-      end
-      next
-    end
-
-    # Prefix-match the given args against known tags
-    matched_tags = tag_args.flat_map { |arg|
-      all_known.select { |t| t.start_with?(arg) }
-    }.uniq
-
-    if matched_tags.empty?
-      puts "No tags match: #{tag_args.join(', ')}"
-      next
-    end
-
-    # Batch-load all link tags to avoid N+1
-    tagged_ids = Hiiro::Tag.where(taggable_type: 'Link', name: matched_tags).map { |t| t.taggable_id.to_i }.uniq
-    links = lm.load_links.select { |link| tagged_ids.include?(link.id) }
-
-    if links.empty?
-      puts "No links tagged with: #{matched_tags.join(', ')}"
+    if filtered.empty?
+      puts "No tags found."
     else
-      links.each_with_index { |link, idx| puts link.display_string(idx) }
+      filtered.each do |tag_name|
+        ids = Hiiro::Tag.where(taggable_type: 'Link', name: tag_name).select(:taggable_id).map(&:taggable_id).map(&:to_i)
+        # links = lm.load_links.select  |link| tagged_ids.include?(link.id) }
+        links = Hiiro::Link.where(id: ids)
+        puts "#{tag_name}:"
+        links.each { |link| puts "  #{link.display_string(exclude_tags: [tag_name])}" }
+      end
     end
   end
 
