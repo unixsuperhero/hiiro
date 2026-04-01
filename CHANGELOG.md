@@ -1,6 +1,11 @@
 ```markdown
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- `make_child` now passes `bin_name:` and `args:` as keyword args to `Hiiro.init`, fixing subcommand dispatch for all `h task`, `h queue`, `h service`, and `h run` child hierarchies — previously `child_bin_name` leaked into `oargs` and became the subcmd, so every child hiiro showed help instead of dispatching
+
 ## [0.1.309] - 2026-03-31
 
 ### Added
