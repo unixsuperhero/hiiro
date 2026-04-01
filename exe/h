@@ -17,8 +17,9 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
 
   add_cmd(:version, opts: %i[all]) { |*args|
     if @opts.all
-      Hiiro::Rbenv.run_in_all('h', 'version') do |ver, _|
-        # version output printed by the subprocess
+      Hiiro::Rbenv.versions.each do |ver|
+        output = Hiiro::Rbenv.capture('h', 'version', version: ver).strip
+        puts "ruby v#{ver} => #{output}"
       end
     else
       puts Hiiro::VERSION
