@@ -36,15 +36,22 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
     }.parse!(ARGV)
 
     if opts.all
-      Hiiro::Rbenv.versions.each do |ver|
-        shell_cmd = [
-          "(RBENV_VERSION=#{ver.shellescape} rbenv exec gem update hiiro #{opts.pre ? '--pre' : ''}",
-          "|| RBENV_VERSION=#{ver.shellescape} rbenv exec gem install hiiro #{opts.pre ? '--pre' : ''})",
-          "&& RBENV_VERSION=#{ver.shellescape} rbenv exec h setup",
-        ].join(' ')
-        puts "Queuing update for Ruby #{ver}..."
-        Hiiro::Background.run('sh', '-c', shell_cmd)
+      versions = Hiiro::Rbenv.versions
+      puts "Updating hiiro across #{versions.size} Ruby version(s)...\n\n"
+      mu = Mutex.new
+
+      threads = versions.map do |ver|
+        Thread.new do
+          Hiiro::Rbenv.install_gem('hiiro', pre: opts.pre, version: ver)
+          Hiiro::Rbenv.run('h', 'setup', version: ver)
+          hiiro_ver = Hiiro::Rbenv.capture('gem', 'list', 'hiiro', '--exact', version: ver)
+                        .match(/hiiro \(([^)]+)\)/)&.[](1) || '?'
+          mu.synchronize { puts "  ruby #{ver}  →  hiiro #{hiiro_ver}" }
+        end
       end
+
+      threads.each(&:join)
+      puts "\nDone."
     else
       update_hiiro(pre: opts.pre)
     end
