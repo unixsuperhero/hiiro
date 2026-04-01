@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.317] - 2026-04-01
+
+### Changed
+- Parallelize gem installation across all rbenv Ruby versions using thread pool for faster multi-version deployment
+- Refactor publish script to install/update hiiro gem across all Ruby versions instead of just current version
+
+### Fixed
+- Handle both gem install and update cases based on existing installation state
+- Run `h setup` after installation in each Ruby version to initialize version-specific configuration
+- Suppress gem installation output to reduce log noise during parallel installs
+
 ## [0.1.316] - 2026-04-01
 
 ### Added
