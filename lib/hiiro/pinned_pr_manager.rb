@@ -272,7 +272,7 @@ class Hiiro
     end
 
     def refresh_all_status(prs, force: false)
-      prs_to_refresh = prs.select { |pr| needs_refresh?(pr, force: force) }
+      prs_to_refresh = prs.select { |pr| pr.active? && needs_refresh?(pr, force: force) }
 
       if prs_to_refresh.empty?
         puts "All PRs recently checked (within last 2 minutes). Use -U to force update." unless force
