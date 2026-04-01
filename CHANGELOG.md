@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.320] - 2026-04-01
+
+### Changed
+- Extract `open_config` helper to Hiiro instance method for reuse across config subcommands
+- Refactor `h version --all` to use `Hiiro::Rbenv.capture` with clearer output formatting
+- Add `to_s` method to `Hiiro::Tmux::Session` for string representation; rename existing `display` method for consistency
+- Extract `project_dirs` and `projects_from_config` to singleton methods in Project plugin for testability
+
 ## [0.1.319] - 2026-04-01
 
 ### Added
