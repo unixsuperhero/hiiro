@@ -66,8 +66,8 @@ class Hiiro
     Hiiro::DB.setup!
 
     ap(oargs: oargs, values: values)
-    h_bin, *h_args = oargs
-    h_bin ||= values[:bin_name] || $0
+    h_bin = values[:bin_name] || $0
+    h_args = oargs
     h_args = ARGV if h_args.empty?
     h_args = values[:args] if values.key?(:args)
     ap(h_bin: h_bin, h_args: h_args)
