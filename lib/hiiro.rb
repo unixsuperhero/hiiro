@@ -44,6 +44,7 @@ require_relative "hiiro/project"
 require_relative "hiiro/pane_home"
 require_relative "hiiro/pin_record"
 require_relative "hiiro/reminder"
+require_relative 'hiiro/registry'
 
 class String
   def underscore(camel_cased_word=self)
