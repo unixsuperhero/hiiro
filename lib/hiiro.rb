@@ -570,7 +570,7 @@ class Hiiro
         bin_name,
         :DEFAULT,
         handler,
-        **values
+        values
       )
     end
 
