@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.315] - 2026-04-01
+
+### Fixed
+- Remove redundant `exit 0` statement from publish script
+
 ## [0.1.314] - 2026-04-01
 
 ### Fixed
