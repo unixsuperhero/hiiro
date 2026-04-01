@@ -64,3 +64,17 @@ class Hiiro
     end
   end
 end
+
+class Hiiro
+  # Pick a registry entry by fuzzyfinder. Returns the canonical name string, or nil.
+  # Usage inside a subcommand block:
+  #   task = opts.task || registry_pick('isc_task')
+  def registry_pick(type = nil)
+    lines = Hiiro::RegistryEntry.fuzzy_lines(type: type)
+    return nil if lines.empty?
+    chosen = fuzzyfind(lines)
+    return nil unless chosen
+    # fuzzy_line format: "type  short  name  # desc" — name is 3rd column
+    chosen.strip.split(/\s{2,}/)[2]
+  end
+end
