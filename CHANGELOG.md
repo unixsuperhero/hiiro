@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.322] - 2026-04-01
+
+### Changed
+- Refactor `h link tags` filtering logic to use new `Hiiro::Tag.tags_by_type` helper
+- Simplify tag query to use `Hiiro::Link.where(id:)` instead of manual filtering
+- Extract `tags_by_type(type)` singleton method to `Hiiro::Tag` for code reuse
+
 ## [0.1.321] - 2026-04-01
 
 ### Changed
