@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.319] - 2026-04-01
 
 ### Added
 - `h queue ls [STATUS]` — filter by status with prefix matching (e.g. `h queue ls run` → running tasks); composable with existing `-s` flag
@@ -14,6 +14,7 @@
 - `h pr update` and `h pr ls -u` skip closed/merged PRs — only active PRs are refreshed
 - `h link add -h` now shows help instead of adding `-h` as a URL
 - `h db remigrate` no longer imports duplicate links — skips rows with an already-existing URL
+- Add unique constraint on `links.url` to prevent duplicates at database level
 
 ## [0.1.318] - 2026-04-01
 
