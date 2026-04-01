@@ -101,6 +101,10 @@ class Hiiro
       end
 
       def to_s
+        name
+      end
+
+      def display
         "#{name} (#{windows} windows#{attached? ? ', attached' : ''})"
       end
     end
