@@ -22,6 +22,11 @@ class Hiiro
     end
 
     # Returns all Tag rows for a given object
+    def self.tags_by_type(type)
+      where(taggable_type: type.to_s).select(:name).distinct.map(&:name).sort
+    end
+
+    # Returns all Tag rows for a given object
     def self.for(obj)
       t = obj.class.name.split('::').last
       where(taggable_type: t, taggable_id: obj.id.to_s)
