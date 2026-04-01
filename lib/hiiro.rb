@@ -221,10 +221,8 @@ class Hiiro
     end
   end
 
-  def open_config(dir:, file:)
-    full_path = File.expand_path(File.join(dir, file))
-    Dir.chdir(File.expand_path(dir))
-    edit_files(full_path)
+  def open_config(file, dir: nil)
+    Hiiro::Config.open(file, dir: dir)
   end
 
   def tmux_client

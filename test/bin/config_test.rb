@@ -5,8 +5,8 @@ class ConfigTest < Minitest::Test
     @harness = Hiiro::TestHarness.load_bin("bin/h-config") do
       # Stub open_config to capture calls instead of actually opening editor
       @open_config_calls = []
-      define_singleton_method(:open_config) do |dir:, file:|
-        @open_config_calls << { dir: dir, file: file }
+      define_singleton_method(:open_config) do |file, dir: nil|
+        @open_config_calls << { file: file, dir: dir }
       end
 
       # Stub make_child for nested subcommands

@@ -4,6 +4,13 @@ class Hiiro
     DATA_DIR = File.join(Dir.home, '.local/share/hiiro')
 
     class << self
+      def open(file, dir: nil)
+        dir_path = File.expand_path(dir || '~')
+        full_path = File.expand_path(file, dir_path)
+        Dir.chdir(dir_path)
+        system(ENV['EDITOR'] || 'vim', full_path)
+      end
+
       def path(relpath='')
         File.join(BASE_DIR, relpath)
       end
