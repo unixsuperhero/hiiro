@@ -65,10 +65,12 @@ class Hiiro
     load_env
     Hiiro::DB.setup!
 
+    ap(oargs: oargs, values: values)
     h_bin, *h_args = oargs
     h_bin ||= values[:bin_name] || $0
     h_args = ARGV if h_args.empty?
     h_args = values[:args] if values.key?(:args)
+    ap(h_bin: h_bin, h_args: h_args)
 
     # if values[:args]
     #   args = values[:args]
@@ -90,7 +92,7 @@ class Hiiro
       binding.pry
     end
 
-    new(bin_name, *args, logging: logging, tasks: tasks, task_scope: task_scope, **values).tap do |hiiro|
+    new(h_bin, *h_args, logging: logging, tasks: tasks, task_scope: task_scope, **values).tap do |hiiro|
       hiiro.load_plugins(plugins)
 
       hiiro.add_subcommand(:pry) { |*args|
@@ -239,7 +241,11 @@ class Hiiro
       block.arity == 1 ? block.call(h) : h.instance_eval(&block) if block
     end
 
-    Hiiro.init(bin_name: child_bin_name, args: child_args, **kwargs, &wrapper)
+    begin
+      Hiiro.init(bin_name: child_bin_name, args: child_args, **kwargs, &wrapper)
+    rescue => e
+      binding.pry
+    end
   end
 
   def run_child(custom_subcmd=nil, custom_args=nil, **kwargs, &block)
