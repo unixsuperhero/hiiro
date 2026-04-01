@@ -1,6 +1,11 @@
 ```markdown
 # Changelog
 
+## [0.1.312] - 2026-04-01
+
+### Fixed
+- Separate `bin_name` and `args` initialization in `Hiiro.init` to prevent argument confusion in nested Hiiro instances
+
 ## [0.1.311] - 2026-04-01
 
 ### Changed
