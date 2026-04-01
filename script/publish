@@ -175,7 +175,7 @@ end
 
 # ─── Gem publishing ──────────────────────────────────────────────────────────
 
-class Gem
+class RubyGem
   def self.build(version)
     system("gem", "build", "hiiro.gemspec") || abort("ERROR: gem build failed")
   end
@@ -219,9 +219,9 @@ File.write("CHANGELOG.md", release.changelog) if release.changelog && !release.c
 
 File.write("lib/hiiro/version.rb", "class Hiiro\n  VERSION = #{new_version.inspect}\nend\n")
 
-Gem.build(new_version)
+RubyGem.build(new_version)
 
-unless Gem.push(new_version)
+unless RubyGem.push(new_version)
   abort("ERROR: gem push failed — skipping git commit, tag, and push")
 end
 
