@@ -1072,7 +1072,12 @@ class Hiiro
         end
 
         h.add_subcmd(:sh) do |*raw_args|
-          opts = Hiiro::Options.parse(raw_args, &task_opts_block)
+          require 'shellwords'
+          sh_opts_block = proc {
+            instance_exec(&task_opts_block)
+            option(:session, short: :s, desc: 'Run in a new window in this tmux session')
+          }
+          opts = Hiiro::Options.parse(raw_args, &sh_opts_block)
           task, positional = resolve_task.call(opts, opts.args)
           unless task
             puts "Not in a task session (use -t or -f to specify)"
@@ -1080,8 +1085,17 @@ class Hiiro
           end
           tree = tm.environment.find_tree(task.tree_name)
           path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
-          Dir.chdir(path)
-          positional.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*positional)
+
+          if opts.session
+            session_name = opts.session
+            window_args = ['tmux', 'new-window', '-t', session_name, '-c', path]
+            window_args << positional.shelljoin unless positional.empty?
+            system(*window_args)
+            tmux_client.open_session(session_name)
+          else
+            Dir.chdir(path)
+            positional.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*positional)
+          end
         end
 
         h.add_subcmd(:status) { tm.status }

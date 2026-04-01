@@ -97,6 +97,23 @@ Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
     tmux.open_session(name)
   }
 
+  add_subcmd(:sh) { |session_name=nil, *cmd|
+    require 'shellwords'
+    session_name = resolve(:session, session_name)
+    unless session_name
+      puts "Usage: h session sh <session> [cmd...]"
+      next
+    end
+    unless tmux.session_exists?(session_name)
+      puts "Session '#{session_name}' does not exist"
+      next
+    end
+    window_args = ['tmux', 'new-window', '-t', session_name]
+    window_args << cmd.shelljoin unless cmd.empty?
+    system(*window_args)
+    tmux.open_session(session_name)
+  }
+
   add_subcmd(:select) do
     selected = resolve(:session)
     print selected if selected
