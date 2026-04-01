@@ -2,7 +2,25 @@
 
 module Project
   def self.load(hiiro)
+    attach_methods(hiiro)
     add_subcommands(hiiro)
+  end
+
+  def self.attach_methods(hiiro)
+    hiiro.define_singleton_method(:project_dirs) do
+      proj = File.join(Dir.home, 'proj')
+      return {} unless Dir.exist?(proj)
+      Dir.children(proj)
+        .select { |name| File.directory?(File.join(proj, name)) }
+        .each_with_object({}) { |name, h| h[name] = File.join(proj, name) }
+    end
+
+    hiiro.define_singleton_method(:projects_from_config) do
+      path = File.join(Dir.home, '.config', 'hiiro', 'projects.yml')
+      return {} unless File.exist?(path)
+      require 'yaml'
+      YAML.safe_load_file(path) || {}
+    end
   end
 
   def self.add_subcommands(hiiro)
