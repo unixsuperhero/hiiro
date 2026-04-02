@@ -1,90 +1,134 @@
 # h-pane
 
-Tmux pane management.
-
-[← Back to docs](README.md) | [← Back to main README](../README.md)
+Manage tmux panes — list, split, kill, zoom, capture, resize, and configure named home panes.
 
 ## Usage
 
-```sh
-h pane <subcommand> [args...]
+```
+h pane <subcommand> [args]
 ```
 
 ## Subcommands
 
-| Command | Description | Tmux equivalent |
-|---------|-------------|-----------------|
-| `ls` | List panes in current window | `tmux list-panes` |
-| `lsa` | List all panes in all sessions | `tmux list-panes -a` |
-| `split` | Split pane (default: vertical) | `tmux split-window` |
-| `splitv` | Split pane vertically | `tmux split-window -v` |
-| `splith` | Split pane horizontally | `tmux split-window -h` |
-| `kill` | Kill a pane (fuzzy select if no target) | `tmux kill-pane` |
-| `swap` | Swap panes | `tmux swap-pane` |
-| `zoom` | Toggle pane zoom | `tmux resize-pane -Z` |
-| `capture` | Capture pane contents | `tmux capture-pane` |
-| `select` | Select a pane with fuzzy finder | - |
-| `copy` | Copy pane identifier to clipboard | `pbcopy` |
-| `sw`, `switch` | Switch to a pane | `tmux switch-client` |
-| `move` | Move pane to another window | `tmux move-pane` |
-| `break` | Break pane into new window | `tmux break-pane` |
-| `join` | Join pane from another window | `tmux join-pane` |
-| `resize` | Resize pane | `tmux resize-pane` |
-| `width` | Set pane width | `tmux resize-pane -x` |
-| `height` | Set pane height | `tmux resize-pane -y` |
-| `info` | Show pane information | - |
+### `ls`
 
-## Examples
+List panes in the current window. Extra args passed to `tmux list-panes`.
 
-```sh
-# List panes in current window
-h pane ls
+**Args:** `[tmux_args...]`
 
-# Split horizontally (side by side)
-h pane splith
+### `lsa`
 
-# Split vertically (top/bottom)
-h pane splitv
+List all panes across all sessions.
 
-# Toggle zoom on current pane
-h pane zoom
+**Args:** `[tmux_args...]`
 
-# Kill current pane (or select one)
-h pane kill
+### `split`
 
-# Select a pane interactively
-h pane select
+Split the current window. All args passed to `tmux split-window`.
 
-# Copy pane identifier to clipboard
-h pane copy
+**Args:** `[tmux_args...]`
 
-# Switch to a different pane
-h pane switch
+### `splitv`
 
-# Swap with the next pane
-h pane swap -D
+Split vertically.
 
-# Set pane width/height
-h pane width 80
-h pane height 20
+**Args:** `[tmux_args...]`
 
-# Resize current pane
-h pane resize -D 10    # Grow down by 10 lines
-h pane resize -R 20    # Grow right by 20 columns
+### `splith`
 
-# Show info about current pane
-h pane info
+Split horizontally.
 
-# Break current pane into a new window
-h pane break
+**Args:** `[tmux_args...]`
 
-# Join pane from window 3 into current window
-h pane join -s :3
-```
+### `kill`
 
-## Notes
+Kill a pane (fuzzy-select if no target given).
 
-- Pane indices start at 0
-- Use `-t` to target specific panes (e.g., `-t 0`, `-t :.1`)
-- All subcommands pass additional arguments directly to the underlying tmux command
-- The `select`, `copy`, `kill`, and `switch` commands use fuzzy finding when no target is specified
+**Args:** `[target]`
+
+### `swap`
+
+Swap panes. Args passed to `tmux swap-pane`.
+
+**Args:** `[tmux_args...]`
+
+### `zoom`
+
+Toggle zoom on a pane.
+
+**Args:** `[target]`
+
+### `capture`
+
+Capture the current pane's output. Args passed to `tmux capture-pane`.
+
+**Args:** `[tmux_args...]`
+
+### `select`
+
+Fuzzy-select a pane ID and print it.
+
+**Args:** `[target]`
+
+### `copy`
+
+Fuzzy-select a pane ID and copy it to clipboard.
+
+**Args:** `[target]`
+
+### `sw` [alias: `switch`]
+
+Switch to a pane (fuzzy-select if no target).
+
+**Args:** `[target]`
+
+### `home`
+
+Manage named home panes. Nested subcommands:
+
+- `h pane home ls` — List configured home panes
+- `h pane home add <name> <session> [path]` — Add a home pane mapping
+- `h pane home rm <name>` — Remove a home pane
+- `h pane home switch [name]` — Switch to a home pane (fuzzy-select if no name); creates the session/window if needed
+
+### `move`
+
+Move a pane. Args passed to `tmux move-pane`.
+
+**Args:** `[tmux_args...]`
+
+### `break`
+
+Break a pane out into its own window.
+
+**Args:** `[tmux_args...]`
+
+### `join`
+
+Join a pane into the current window. Args passed to `tmux join-pane`.
+
+**Args:** `[tmux_args...]`
+
+### `resize`
+
+Resize a pane. Args passed to `tmux resize-pane`.
+
+**Args:** `[tmux_args...]`
+
+### `width`
+
+Set the pane width to a specific size.
+
+**Args:** `<size> [target]`
+
+### `height`
+
+Set the pane height to a specific size.
+
+**Args:** `<size> [target]`
+
+### `info`
+
+Show details for the current (or target) pane: size, command, and path.
+
+**Args:** `[target]`

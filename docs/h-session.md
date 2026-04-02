@@ -1,78 +1,93 @@
 # h-session
 
-Tmux session management.
-
-[← Back to docs](README.md) | [← Back to main README](../README.md)
+Manage tmux sessions — list, create, kill, attach, rename, switch, and detect orphans.
 
 ## Usage
 
-```sh
-h session <subcommand> [args...]
+```
+h session <subcommand> [args]
 ```
 
 ## Subcommands
 
-| Command | Description | Tmux equivalent |
-|---------|-------------|-----------------|
-| `ls`, `list` | List all sessions | `tmux list-sessions` |
-| `new` | Create a new session | `tmux new-session` |
-| `kill` | Kill a session (fuzzy select if no name) | `tmux kill-session` |
-| `attach` | Attach to a session (fuzzy select if no name) | `tmux attach-session` |
-| `rename` | Rename a session | `tmux rename-session` |
-| `switch` | Switch to another session (fuzzy select) | `tmux switch-client` |
-| `detach` | Detach from current session | `tmux detach-client` |
-| `has` | Check if session exists | `tmux has-session` |
-| `info` | Show current session info | `tmux display-message` |
-| `open` | Open/switch to a session by name | - |
-| `select` | Select a session with fuzzy finder | - |
-| `copy` | Copy session name to clipboard | `pbcopy` |
+### `ls` [alias: `list`]
 
-## Examples
+List all tmux sessions. Extra args passed to `tmux list-sessions`.
 
-```sh
-# List all sessions
-h session ls
+**Args:** `[tmux_args...]`
 
-# Create a new session named "work"
-h session new work
+### `new`
 
-# Create detached session
-h session new -d -s background
+Create a new tmux session.
 
-# Attach to a session (select if no name given)
-h session attach
-h session attach work
+**Args:** `[name] [tmux_args...]`
 
-# Kill a session (select if no name given)
-h session kill
-h session kill old-session
+### `kill`
 
-# Rename current session
-h session rename newname
+Kill a session (fuzzy-select if no name given).
 
-# Switch to another session (interactive)
-h session switch
+**Args:** `[name]`
 
-# Select a session and print its name
-h session select
+### `attach`
 
-# Copy session name to clipboard
-h session copy
+Attach to a session (fuzzy-select if no name given).
 
-# Open a session (create if doesn't exist)
-h session open myproject
+**Args:** `[name]`
 
-# Check if session exists (useful in scripts)
-h session has mysession && echo "exists"
+### `rename`
 
-# Show current session info
-h session info
-# => mysession: 5 windows, attached
-```
+Rename a session.
 
-## Notes
+**Args:** `[old_name] <new_name>`
 
-- Use `-t` to target specific sessions
-- All subcommands pass additional arguments directly to the underlying tmux command
-- The `info` command shows session name, window count, and attach status
-- The `kill`, `attach`, `switch`, `select`, and `copy` commands use fuzzy finding when no name is provided
+### `switch`
+
+Switch the current client to a session (fuzzy-select if no name).
+
+**Args:** `[name]`
+
+### `detach`
+
+Detach the current client from its session.
+
+**Args:** `[tmux_args...]`
+
+### `has`
+
+Check whether a session exists (exits 0 or 1).
+
+**Args:** `[name]`
+
+### `info`
+
+Show basic info about the current (or named) session: name, window count, attached status.
+
+**Args:** `[name]`
+
+### `open`
+
+Switch to or attach to a named session.
+
+**Args:** `<name>`
+
+### `sh`
+
+Open a new window in a session and switch to it. Optionally run a command in the new window.
+
+**Args:** `<session_name> [cmd...]`
+
+### `select`
+
+Fuzzy-select a session name and print it.
+
+### `copy`
+
+Fuzzy-select a session name and copy it to clipboard.
+
+### `orphans`
+
+List sessions that have no associated hiiro task.
+
+### `okill`
+
+Open a YAML editor pre-filled with orphan session names; delete all sessions you leave in the file.

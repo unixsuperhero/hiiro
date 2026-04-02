@@ -1,52 +1,78 @@
-# Hiiro Documentation
+# Hiiro Bin Reference
 
-This directory contains detailed documentation for all Hiiro subcommands.
+Quick-reference index of all `h-*` executables and the main `h` entry point.
 
-[← Back to main README](../README.md)
-
-## Subcommands
+## Main entry point
 
 | Command | Description |
 |---------|-------------|
-| h-app | Manage app directories within tasks/projects |
-| h-branch | Git branch management with fuzzy selection and copy |
-| [h-buffer](h-buffer.md) | Tmux paste buffer management |
-| h-claude | Claude CLI wrapper with tmux split support |
-| h-commit | Select commits using fuzzy finder |
-| h-config | Open config files (vim, git, tmux, zsh, starship, claude) |
-| h-link | Manage saved links with URL, description, and shorthand |
-| [h-pane](h-pane.md) | Tmux pane management |
-| [h-plugin](h-plugin.md) | Manage hiiro plugins (list, edit, search) |
-| h-pr | GitHub PR management via gh CLI |
-| h-project | Project navigation with tmux session management |
-| [h-session](h-session.md) | Tmux session management |
-| h-sha | Extract short SHA from git log |
-| h-todo | Todo list management with tags and task association |
-| [h-window](h-window.md) | Tmux window management |
-| h-wtree | Git worktree management |
+| [h](h.md) | Install, update, setup, and dispatch to all subcommands |
 
-## Base Commands
-
-The main `h` command includes these built-in subcommands:
+## Git
 
 | Command | Description |
 |---------|-------------|
-| `h version` | Display the Hiiro version |
-| `h ping` | Simple test command (returns "pong") |
-| `h setup` | Install plugins and subcommands to system paths |
-| `h edit` | Open the h script in your editor |
-| `h alert` | macOS desktop notifications via terminal-notifier |
-| `h task` | Task management across git worktrees (via Tasks plugin) |
-| `h subtask` | Subtask management within tasks (via Tasks plugin) |
+| [h-branch](h-branch.md) | Manage, tag, search, and inspect git branches with task and PR associations |
+| [h-commit](h-commit.md) | Fuzzy-select a git commit SHA from the recent log |
+| [h-sha](h-sha.md) | Fuzzy-select, show, and copy git commit SHAs |
+| [h-sparse](h-sparse.md) | Manage named git sparse-checkout path groups |
+| [h-wtree](h-wtree.md) | Manage git worktrees with fuzzy selection and tmux session switching |
 
-## Plugins
+## GitHub
 
-| Plugin | Description |
-|--------|-------------|
-| Pins | Per-command YAML key-value storage |
-| Project | Project directory navigation with tmux session management |
-| Tasks | Task lifecycle management across git worktrees with subtask support |
-| Notify | macOS desktop notifications via terminal-notifier |
+| Command | Description |
+|---------|-------------|
+| [h-cpr](h-cpr.md) | Proxy `h pr` subcommands to the PR for the current branch |
+| [h-pr](h-pr.md) | Track, update, view, and act on GitHub pull requests |
+| [h-pr-monitor](h-pr-monitor.md) | Poll `gh pr status` and send notifications on status changes |
+
+## Tmux
+
+| Command | Description |
+|---------|-------------|
+| [h-buffer](h-buffer.md) | Manage tmux paste buffers |
+| [h-jumplist](h-jumplist.md) | Vim-style tmux navigation history (back/forward through pane focus) |
+| [h-notify](h-notify.md) | Push and manage in-pane notifications with tmux menu |
+| [h-pane](h-pane.md) | Manage tmux panes — split, kill, zoom, resize, home panes |
+| [h-session](h-session.md) | Manage tmux sessions — create, kill, attach, rename, orphan detection |
+| [h-title](h-title.md) | Update terminal tab title from the current hiiro task name |
+| [h-window](h-window.md) | Manage tmux windows — list, create, kill, navigate, layout |
+
+## Claude / AI
+
+| Command | Description |
+|---------|-------------|
+| [h-claude](h-claude.md) | Launch Claude sessions in tmux splits, search `.claude` dirs, run inline prompts |
+| [h-pm](h-pm.md) | Queue `/project-manager` skill prompts via `h queue add` |
+
+## App / Project Management
+
+| Command | Description |
+|---------|-------------|
+| [h-app](h-app.md) | Manage named application subdirectories within a git repo |
+| [h-project](h-project.md) | Manage project directories and start tmux sessions |
+
+## Data / Config
+
+| Command | Description |
+|---------|-------------|
+| [h-bin](h-bin.md) | List and edit hiiro bin scripts in PATH |
+| [h-config](h-config.md) | Open common configuration files in your editor |
+| [h-db](h-db.md) | Inspect and manage the hiiro SQLite database |
+| [h-link](h-link.md) | Store, search, tag, and open saved URLs |
+| [h-plugin](h-plugin.md) | List, edit, and search hiiro plugin files |
+| [h-registry](h-registry.md) | Store and look up named resources by type with short aliases |
+| [h-tags](h-tags.md) | Query tags grouped by taggable type |
+| [h-todo](h-todo.md) | Manage a personal todo list with statuses, tags, and task associations |
+
+## Utilities
+
+| Command | Description |
+|---------|-------------|
+| [h-bg](h-bg.md) | Run commands in background tmux windows with history tracking |
+| [h-img](h-img.md) | Save or base64-encode images from clipboard or file |
+| [h-misc](h-misc.md) | Miscellaneous utilities (symlink destination reporting) |
+| [h-sha](h-sha.md) | Fuzzy-select, show, and copy git commit SHAs |
 
 ## Abbreviations
 
@@ -55,5 +81,6 @@ All commands support prefix abbreviation:
 ```sh
 h buf ls      # h buffer ls
 h ses ls      # h session ls
-h win         # h window
+h win new     # h window new
+h br save     # h branch save
 ```

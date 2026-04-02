@@ -1,58 +1,37 @@
 # h-plugin
 
-Hiiro plugin management and exploration.
-
-[← Back to docs](README.md) | [← Back to main README](../README.md)
+List, edit, and search hiiro plugin files in `~/.config/hiiro/plugins/`.
 
 ## Usage
 
-```sh
-h plugin <subcommand> [args...]
+```
+h plugin <subcommand> [args]
 ```
 
 ## Subcommands
 
-| Command | Description |
-|---------|-------------|
-| `path` | Print the plugins directory path |
-| `ls` | List all plugin files |
-| `edit` | Edit plugin file(s) in your editor |
-| `rg` | Search plugin code (smart-case) |
-| `rgall` | Search plugin code (include VCS-ignored files) |
+### `path`
 
-## Examples
+Print the plugin directory path (`~/.config/hiiro/plugins`).
 
-```sh
-# Get the plugins directory
-h plugin path
-# => ~/.config/hiiro/plugins
+### `ls`
 
-# List all plugins
-h plugin ls
+Print the paths of all files in the plugin directory.
 
-# Edit the h-plugin script itself
-h plugin edit
+### `edit`
 
-# Edit specific plugin(s) by prefix
-h plugin edit pins          # Edit pins.rb
-h plugin edit task project  # Edit task.rb and project.rb
+Open plugin files in your editor. With no args, opens `h-plugin` itself. With name args, prefix-matches plugin filenames and opens the matches.
 
-# Search for a method across all plugins
-h plugin rg "def load"
+**Args:** `[plugin_name...]`
 
-# Search with regex
-h plugin rg "add_subcmd.*:session"
+### `rg`
 
-# Include normally-ignored files
-h plugin rgall "TODO"
-```
+Run `rg -S` (case-smart ripgrep) inside the plugin directory.
 
-## Plugin Location
+**Args:** `[rg_args...]`
 
-Plugins are stored in `~/.config/hiiro/plugins/`. Files in this directory are automatically loaded by Hiiro.
+### `rgall`
 
-## Notes
+Run `rg -S --no-ignore-vcs` inside the plugin directory (includes VCS-ignored files).
 
-- The `rg` command uses ripgrep with smart-case matching (`-S`)
-- The `edit` command uses `$EDITOR` or falls back to `safe_nvim`
-- Plugin names are matched by prefix, so `h plugin edit pi` would match `pins.rb`
+**Args:** `[rg_args...]`

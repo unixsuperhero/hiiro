@@ -1,87 +1,121 @@
 # h-window
 
-Tmux window management.
-
-[← Back to docs](README.md) | [← Back to main README](../README.md)
+Manage tmux windows — list, create, kill, rename, swap, navigate, and change layout.
 
 ## Usage
 
-```sh
-h window <subcommand> [args...]
+```
+h window <subcommand> [args]
 ```
 
 ## Subcommands
 
-| Command | Description | Tmux equivalent |
-|---------|-------------|-----------------|
-| `ls` | List windows in current session | `tmux list-windows` |
-| `lsa` | List all windows in all sessions | `tmux list-windows -a` |
-| `new` | Create a new window | `tmux new-window` |
-| `kill` | Kill a window (fuzzy select if no target) | `tmux kill-window` |
-| `rename` | Rename current window | `tmux rename-window` |
-| `swap` | Swap windows | `tmux swap-window` |
-| `move` | Move window | `tmux move-window` |
-| `select` | Select a window with fuzzy finder | - |
-| `copy` | Copy window identifier to clipboard | `pbcopy` |
-| `sw`, `switch` | Switch to a window | `tmux select-window` |
-| `next` | Go to next window | `tmux next-window` |
-| `prev` | Go to previous window | `tmux previous-window` |
-| `last` | Go to last active window | `tmux last-window` |
-| `link` | Link window to another session | `tmux link-window` |
-| `unlink` | Unlink window from session | `tmux unlink-window` |
-| `info` | Show window information | - |
+### `ls`
 
-## Examples
+List windows in the current session. Extra args passed to `tmux list-windows`.
 
-```sh
-# List windows in current session
-h window ls
+**Args:** `[tmux_args...]`
 
-# List all windows across all sessions
-h window lsa
+### `lsa`
 
-# Create a new window
-h window new
+List all windows across all sessions.
 
-# Create window with a name
-h window new editor
+**Args:** `[tmux_args...]`
 
-# Kill window (select if no target)
-h window kill
+### `new`
 
-# Rename current window
-h window rename mywindow
+Create a new window with an optional name.
 
-# Select a window interactively
-h window select
+**Args:** `[name] [tmux_args...]`
 
-# Copy window identifier to clipboard
-h window copy
+### `kill`
 
-# Switch to a window (interactive)
-h window switch
+Kill a window (fuzzy-select if no target given).
 
-# Navigate windows
-h window next
-h window prev
-h window last
+**Args:** `[target]`
 
-# Show info about a window
-h window info
+### `rename`
 
-# Swap current window with window 1
-h window swap -t 1
+Rename the current window. Args passed to `tmux rename-window`.
 
-# Move window to index 5
-h window move -t 5
+**Args:** `[tmux_args...]`
 
-# Link window 2 to session "other"
-h window link -s :2 -t other:
-```
+### `swap`
 
-## Notes
+Swap windows. Args passed to `tmux swap-window`.
 
-- Window indices typically start at 0 or 1 depending on `base-index` setting
-- Use `-t` to target specific windows (e.g., `-t 0`, `-t :2`, `-t session:window`)
-- All subcommands pass additional arguments directly to the underlying tmux command
-- The `select`, `copy`, `kill`, and `switch` commands use fuzzy finding when no target is specified
+**Args:** `[tmux_args...]`
+
+### `move`
+
+Move window. Args passed to `tmux move-window`.
+
+**Args:** `[tmux_args...]`
+
+### `select`
+
+Fuzzy-select a window target and print it.
+
+**Args:** `[target]`
+
+### `copy`
+
+Fuzzy-select a window target and copy it to clipboard.
+
+**Args:** `[target]`
+
+### `sw` [alias: `switch`]
+
+Switch to a window (fuzzy-select if no target).
+
+**Args:** `[target]`
+
+### `next`
+
+Go to the next window.
+
+**Args:** `[tmux_args...]`
+
+### `prev`
+
+Go to the previous window.
+
+**Args:** `[tmux_args...]`
+
+### `last`
+
+Go to the last active window.
+
+**Args:** `[tmux_args...]`
+
+### `link`
+
+Link a window to another session. Args passed to `tmux link-window`.
+
+**Args:** `[tmux_args...]`
+
+### `unlink`
+
+Unlink a window from its session.
+
+**Args:** `[target]`
+
+### `info`
+
+Show info about the current (or target) window.
+
+**Args:** `[target]`
+
+### `vsplit`
+
+Apply `even-horizontal` layout to the current window (side-by-side panes).
+
+### `hsplit`
+
+Apply `even-vertical` layout to the current window (top/bottom panes).
+
+### `layout`
+
+Select a tmux layout by fuzzy name. Accepted names map to tmux layout strings (e.g., `horizontal`, `vertical`, `tiled`, `main_horizontal`, `main_vertical`, etc.).
+
+**Args:** `[layout_name]`

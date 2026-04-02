@@ -1,61 +1,73 @@
 # h-buffer
 
-Tmux paste buffer management.
-
-[← Back to docs](README.md) | [← Back to main README](../README.md)
+Manage tmux paste buffers — list, show, copy to clipboard, save, load, paste, and delete.
 
 ## Usage
 
-```sh
-h buffer <subcommand> [args...]
+```
+h buffer <subcommand> [args]
 ```
 
 ## Subcommands
 
-| Command | Description | Tmux equivalent |
-|---------|-------------|-----------------|
-| `ls` | List all paste buffers | `tmux list-buffers` |
-| `show` | Display buffer contents | `tmux show-buffer` |
-| `save` | Save buffer to file | `tmux save-buffer` |
-| `load` | Load buffer from file | `tmux load-buffer` |
-| `set` | Set buffer contents | `tmux set-buffer` |
-| `paste` | Paste buffer into pane | `tmux paste-buffer` |
-| `delete` | Delete a buffer | `tmux delete-buffer` |
-| `choose` | Interactive buffer selection | `tmux choose-buffer` |
-| `clear` | Delete all buffers | (loops through all buffers) |
-| `select` | Select a buffer with fuzzy finder | - |
-| `copy` | Copy buffer contents to clipboard | `pbcopy` |
+### `ls`
 
-## Examples
+List all tmux buffers. Extra args are passed directly to `tmux list-buffers`.
 
-```sh
-# List all buffers
-h buffer ls
+**Args:** `[tmux_args...]`
 
-# Show the most recent buffer (or select one)
-h buffer show
+### `show`
 
-# Copy buffer to system clipboard
-h buffer copy
+Print the contents of a buffer (fuzzy-select if no name given).
 
-# Save buffer to a file
-h buffer save ~/clipboard.txt
+**Args:** `[buffer_name] [tmux_args...]`
 
-# Load file into buffer
-h buffer load ~/mytext.txt
+### `copy`
 
-# Paste buffer into current pane
-h buffer paste
+Copy a buffer's contents to the macOS clipboard via `pbcopy` (fuzzy-select if no name).
 
-# Select a buffer interactively
-h buffer select
+**Args:** `[buffer_name]`
 
-# Clear all buffers
-h buffer clear
-```
+### `save`
 
-## Notes
+Save a buffer's contents to a file (fuzzy-select buffer if name not given).
 
-- All subcommands pass additional arguments directly to the underlying tmux command
-- The `select` and `copy` commands use fuzzy finding (`sk` or `fzf`) when no buffer is specified
-- Use `tmux list-buffers -F '#{buffer_name}: #{buffer_sample}'` for more detailed output
+**Args:** `<path> [buffer_name] [tmux_args...]`
+
+### `load`
+
+Load a file into the tmux buffer stack.
+
+**Args:** `<path> [tmux_args...]`
+
+### `set`
+
+Set buffer contents; all args passed directly to `tmux set-buffer`.
+
+**Args:** `[tmux_args...]`
+
+### `paste`
+
+Paste a buffer into the current pane.
+
+**Args:** `[buffer_name] [tmux_args...]`
+
+### `delete`
+
+Delete a buffer (fuzzy-select if no name given).
+
+**Args:** `[buffer_name]`
+
+### `choose`
+
+Open the tmux buffer chooser UI.
+
+**Args:** `[tmux_args...]`
+
+### `clear`
+
+Delete all tmux buffers.
+
+### `select`
+
+Fuzzy-select a buffer name and print it.
