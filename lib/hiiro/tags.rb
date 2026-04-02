@@ -4,70 +4,88 @@ class Hiiro
   class Tag < Sequel::Model(:tags)
     Hiiro::DB.register(self)
 
-    def self.create_table!(db)
-      db.create_table?(:tags) do
-        primary_key :id
-        String :name, null: false           # tag value, e.g. "oncall"
-        String :taggable_type, null: false  # e.g. "Branch", "PinnedPr", "Task"
-        String :taggable_id, null: false    # string id of tagged object
-        String :created_at
-        unique [:name, :taggable_type, :taggable_id]
+    class << self
+      def create_table!(db)
+        db.create_table?(:tags) do
+          primary_key :id
+          String :name, null: false           # tag value, e.g. "oncall"
+          String :taggable_type, null: false  # e.g. "Branch", "PinnedPr", "Task"
+          String :taggable_id, null: false    # string id of tagged object
+          String :created_at
+          unique [:name, :taggable_type, :taggable_id]
+        end
       end
-    end
 
-    # Returns all Tag rows for a given object
-    def self.tags_by_type(type)
-      where(taggable_type: type.to_s).select(:name).distinct.map(&:name).sort
-    end
+      def all_tags
+        select(:name).distinct
+      end
 
-    # Returns all Tag rows for a given object
-    def self.for(obj)
-      t = obj.class.name.split('::').last
-      where(taggable_type: t, taggable_id: obj.id.to_s)
-    end
+      def filter(terms, tags=all_tags)
+        tags.select{|tag|
+          terms.any?{|term| tag.start_with?(term) }
+        }
+      end
 
-    # Returns all Tag rows with a given name
-    def self.named(tag_name)
-      where(name: tag_name.to_s)
-    end
+      def search(*terms, type: nil)
+          filter(terms.flatten, tags_by_type(type))
+      end
 
-    def tagged_by_type(tag, type)
-      where(name: tag, taggable_type: type).map(&:taggable)
-    end
+      # Returns all Tag rows for a given object
+      def tags_by_type(type=nil)
+        return all_tags if type.nil?
 
-    # Returns all tagged objects across all types for a tag name
-    def self.everything_tagged(tag_name)
-      named(tag_name).map(&:taggable).compact
-    end
+        where(taggable_type: type.to_s).select(:name).distinct.map(&:name).sort
+      end
 
-    # Idempotent tag assignment
-    def self.tag!(obj, *tag_names)
-      t = obj.class.name.split('::').last
-      tag_names.each do |name|
-        find_or_create(
-          name: name.to_s,
+      # Returns all Tag rows for a given object
+      def for(obj)
+        t = obj.class.name.split('::').last
+        where(taggable_type: t, taggable_id: obj.id.to_s)
+      end
+
+      # Returns all Tag rows with a given name
+      def named(tag_name)
+        where(name: tag_name.to_s)
+      end
+
+      def tagged_by_type(tag, type)
+        where(name: tag, taggable_type: type).map(&:taggable)
+      end
+
+      # Returns all tagged objects across all types for a tag name
+      def everything_tagged(tag_name)
+        named(tag_name).map(&:taggable).compact
+      end
+
+      # Idempotent tag assignment
+      def tag!(obj, *tag_names)
+        t = obj.class.name.split('::').last
+        tag_names.each do |name|
+          find_or_create(
+            name: name.to_s,
+            taggable_type: t,
+            taggable_id: obj.id.to_s
+          ) { |tag| tag.created_at = Time.now.iso8601 }
+        end
+      end
+
+      # Remove tags from an object
+      def untag!(obj, *tag_names)
+        t = obj.class.name.split('::').last
+        where(
           taggable_type: t,
-          taggable_id: obj.id.to_s
-        ) { |tag| tag.created_at = Time.now.iso8601 }
+          taggable_id: obj.id.to_s,
+          name: tag_names.map(&:to_s)
+        ).delete
       end
     end
-
-    # Remove tags from an object
-    def self.untag!(obj, *tag_names)
-      t = obj.class.name.split('::').last
-      where(
-        taggable_type: t,
-        taggable_id: obj.id.to_s,
-        name: tag_names.map(&:to_s)
-      ).delete
-    end
-  end
 
     # Polymorphic accessor — returns the tagged object
     def taggable
       klass = Hiiro.const_get(taggable_type) rescue nil
       klass&.[](taggable_id)
     end
+  end
 
   # Shared tag store, keyed by namespace (e.g. :branch, :task).
   # Delegates to Hiiro::Tag internally; maintains tags.yml as a backup.
