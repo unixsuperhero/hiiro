@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.323] - 2026-04-01
+
+### Changed
+- Simplify `h pr ls` status refresh logic: always call `refresh_all_status` with `force:` parameter instead of conditional block
+- Add optional `verbose:` parameter to `refresh_all_status` to control "already checked" message output
+- Update `h pr update` to pass `verbose: true` when refreshing active PR status
+
 ## [0.1.322] - 2026-04-01
 
 ### Changed
