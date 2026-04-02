@@ -3,7 +3,7 @@
 require 'hiiro'
 require 'shellwords'
 
-Hiiro.run(*ARGV) do
+Hiiro.run(*ARGV, cwd: Dir.pwd) do
   add_subcmd(:ls)  { |*args| system('git', 'worktree', 'list', *args) }
   add_subcmd(:list)  { |*args| run_subcmd(:ls, *args) }
   add_subcmd(:add)  { |*args| system('git', 'worktree', 'add', *args) }
@@ -65,6 +65,35 @@ Hiiro.run(*ARGV) do
       path, *rest = line.split
       size = `du -sh #{Shellwords.escape(path)} 2>/dev/null`.split.first || "?"
       puts "#{size}\t#{path} #{rest.join(' ')}"
+    end
+  end
+
+  add_subcmd(:branch) do |*paths|
+    if paths.empty?
+      # No paths given — print branch for each worktree
+      output = `git worktree list`.strip
+      if output.empty?
+        STDERR.puts "No worktrees found"
+        next
+      end
+      output.split("\n").each do |line|
+        parts = line.split
+        path = parts[0]
+        branch = parts[2]&.gsub(/[\[\]]/, '') || parts[1]
+        puts "#{path}\t#{branch}"
+      end
+    else
+      # Resolve each given path and print its branch
+      cwd = get_value(:cwd) || Dir.pwd
+      paths.each do |path|
+        resolved = File.expand_path(path, cwd)
+        branch = Dir.chdir(resolved) { `git rev-parse --abbrev-ref HEAD`.strip } rescue nil
+        if branch
+          puts paths.size > 1 ? "#{resolved}\t#{branch}" : branch
+        else
+          STDERR.puts "#{resolved}: not a git worktree or error reading branch"
+        end
+      end
     end
   end
 
