@@ -45,7 +45,7 @@ class Hiiro
       shorthand_str = shorthand ? " [#{shorthand}]" : ""
       desc_str = description.to_s.empty? ? "" : " - #{description}"
       link_tags = tags - Array(exclude_tags)
-      tags_str = link_tags.any? ? " \e[30;104m#{link_tags.join(' ')}\e[0m" : ""
+      tags_str = link_tags.any? ? " " + link_tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') : ""
       "#{num}#{shorthand_str} #{url}#{desc_str}#{tags_str}".strip
     end
 
