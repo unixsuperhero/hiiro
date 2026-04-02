@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.326] - 2026-04-02
+
+### Changed
+- Improve tag display formatting in link output by mapping individual tags to colored badges
+- Refactor `h link tags` filtering logic to use `Hiiro::Tag` helpers for cleaner code
+- Relocate `taggable` accessor method in `Hiiro::Tag` model
+
+### Added
+- `Hiiro::Tag.tagged_by_type` helper method to query tagged objects by tag name and type
+
 ## [0.1.325] - 2026-04-02
 
 ### Fixed
