@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.327] - 2026-04-02
+
+### Added
+- `h branch save --tag <tag>` (repeatable) — apply tags to branches during save operation
+
 ## [0.1.326] - 2026-04-02
 
 ### Changed
