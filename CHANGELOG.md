@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.325] - 2026-04-02
+
+### Fixed
+- Allow custom primary keys in `Hiiro::Invocation` model via `unrestrict_primary_key` for SQLite compatibility
+
 ## [0.1.324] - 2026-04-02
 
 ### Added
