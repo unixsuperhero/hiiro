@@ -242,13 +242,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    if opts.update
-      active = pinned.select(&:active?)
-      puts "Updating status for #{active.length} active PR(s)..."
-      pinned_manager.refresh_all_status(pinned, force: true)
-      pinned_manager.save_pinned(pinned)
-      puts
-    end
+    pinned_manager.refresh_all_status(pinned, force: opts.update)
+    pinned_manager.save_pinned(pinned)
 
     results = pinned_manager.apply_filters(pinned, opts)
 
@@ -334,7 +329,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     active = pinned.select(&:active?)
     puts "Updating status for #{active.length} active PR(s) (#{pinned.length - active.length} closed/merged skipped)..."
-    pinned_manager.refresh_all_status(pinned, force: opts.force_update)
+    pinned_manager.refresh_all_status(pinned, force: opts.force_update, verbose: true)
     pinned_manager.save_pinned(pinned)
     puts "Done."
 
