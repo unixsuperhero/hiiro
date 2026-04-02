@@ -15,12 +15,6 @@ class Hiiro
       end
     end
 
-    # Polymorphic accessor — returns the tagged object
-    def taggable
-      klass = Hiiro.const_get(taggable_type) rescue nil
-      klass&.[](taggable_id)
-    end
-
     # Returns all Tag rows for a given object
     def self.tags_by_type(type)
       where(taggable_type: type.to_s).select(:name).distinct.map(&:name).sort
@@ -35,6 +29,10 @@ class Hiiro
     # Returns all Tag rows with a given name
     def self.named(tag_name)
       where(name: tag_name.to_s)
+    end
+
+    def tagged_by_type(tag, type)
+      where(name: tag, taggable_type: type).map(&:taggable)
     end
 
     # Returns all tagged objects across all types for a tag name
@@ -64,6 +62,12 @@ class Hiiro
       ).delete
     end
   end
+
+    # Polymorphic accessor — returns the tagged object
+    def taggable
+      klass = Hiiro.const_get(taggable_type) rescue nil
+      klass&.[](taggable_id)
+    end
 
   # Shared tag store, keyed by namespace (e.g. :branch, :task).
   # Delegates to Hiiro::Tag internally; maintains tags.yml as a backup.
