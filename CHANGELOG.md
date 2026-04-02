@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.328] - 2026-04-02
+
+### Changed
+- Update command documentation
+
 ## [0.1.327] - 2026-04-02
 
 ### Added
