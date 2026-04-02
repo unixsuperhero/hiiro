@@ -1,0 +1,67 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'base64'
+require 'tempfile'
+
+MIME_TYPES = {
+  'jpg'  => 'image/jpeg',
+  'jpeg' => 'image/jpeg',
+  'gif'  => 'image/gif',
+  'webp' => 'image/webp',
+  'png'  => 'image/png',
+}.freeze
+
+def mime_for(path)
+  MIME_TYPES.fetch(File.extname(path).downcase.delete('.'), 'image/png')
+end
+
+def clipboard_image_to_tempfile
+  tmp = Tempfile.new(['h-img-', '.png'])
+  tmp.close
+  unless system('pngpaste', tmp.path, out: File::NULL, err: File::NULL)
+    tmp.unlink
+    return nil
+  end
+  tmp
+end
+
+Hiiro.run(*ARGV) {
+  add_subcmd(:save) { |outpath=nil|
+    unless outpath
+      puts "Usage: h img save <outpath>"
+      exit 1
+    end
+
+    tmp = clipboard_image_to_tempfile
+    unless tmp
+      puts "No image in clipboard (pngpaste failed)"
+      exit 1
+    end
+
+    FileUtils.mv(tmp.path, outpath)
+    puts "Saved to #{outpath}"
+  }
+
+  add_subcmd(:b64) { |path=nil|
+    if path
+      unless File.exist?(path)
+        puts "File not found: #{path}"
+        exit 1
+      end
+      data = File.binread(path)
+      mime = mime_for(path)
+    else
+      tmp = clipboard_image_to_tempfile
+      unless tmp
+        puts "No image in clipboard (pngpaste failed)"
+        exit 1
+      end
+      data = File.binread(tmp.path)
+      mime = 'image/png'
+      tmp.unlink
+    end
+
+    puts "data:#{mime};base64,#{Base64.strict_encode64(data)}"
+  }
+}

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.324] - 2026-04-02
+
+### Added
+- `h pr status [ref...]` — query multiple PRs or pinned PRs; outputs number, title, state, check summary, and URL for each
+- `h wtree branch [paths...]` — show branch for each worktree, or query specific worktree paths; resolves relative paths using task context
+
+### Changed
+- Pass `cwd` context to `h-wtree` via `Hiiro.run` for proper path resolution in nested environments
+
 ## [0.1.323] - 2026-04-01
 
 ### Changed
