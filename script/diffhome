@@ -2,5 +2,7 @@
 
 diff_bin = File.join(__dir__, 'diff')
 
+puts(diff_bin:,ARGV:)
+
 system(diff_bin, *ARGV)
 
