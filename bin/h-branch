@@ -245,7 +245,17 @@ Hiiro.run(*ARGV) do
   }
 
   add_subcmd(:edit) { edit_files(__FILE__) }
-  add_subcmd(:save) { |branch_name = nil| manager.save(branch_name) }
+  add_subcmd(:save) do |*save_args|
+    opts        = Hiiro::Options.parse(save_args) { option(:tag, short: 't', desc: 'Tag to apply (repeatable)', multi: true) }
+    branch_name = opts.args.first
+    manager.save(branch_name)
+    tags = Array(opts.tag).reject(&:empty?)
+    if tags.any?
+      branch_name ||= git.branch
+      tag_store.add(branch_name, *tags)
+      puts "Tagged with: #{tags.join(', ')}"
+    end
+  end
 
   add_subcmd(:saved) do |*saved_args|
     data = manager.load_data
