@@ -282,34 +282,44 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   end
 
   add_subcmd(:status) do |*status_args|
-    raw = `gh pr view --json 'number,title,state,url,statusCheckRollup' 2>&1`
-    if $?.exitstatus != 0
-      puts raw.strip
-      next
+    refs = status_args.empty? ? [nil] : status_args
+    pinned = pinned_manager.load_pinned
+
+    refs.each do |ref|
+      pr_number = ref ? resolve(:pr, ref) : nil
+
+      cmd = ['gh', 'pr', 'view', '--json', 'number,title,state,url,statusCheckRollup']
+      cmd << pr_number.to_s if pr_number
+      raw = `#{cmd.join(' ')} 2>&1`
+      if $?.exitstatus != 0
+        puts raw.strip
+        next
+      end
+
+      pr = JSON.parse(raw)
+      checks = pr['statusCheckRollup'] || []
+
+      counts = Hash.new(0)
+      checks.each do |c|
+        result = c['__typename'] == 'CheckRun' ? (c['conclusion'] || c['status']) : c['state']
+        counts[result.to_s.upcase] += 1
+      end
+
+      if counts.empty?
+        summary = 'no checks'
+      else
+        order = %w[FAILURE ERROR TIMED_OUT CANCELLED ACTION_REQUIRED PENDING IN_PROGRESS QUEUED SUCCESS SKIPPED NEUTRAL]
+        parts = order.filter_map { |s| "#{counts[s]} #{s.downcase}" if counts[s] > 0 }
+        summary = parts.join(', ')
+      end
+
+      puts "##{pr['number']}"
+      puts pr['title']
+      puts pr['state'].downcase
+      puts summary
+      puts pr['url']
+      puts if refs.length > 1
     end
-
-    pr = JSON.parse(raw)
-    checks = pr['statusCheckRollup'] || []
-
-    counts = Hash.new(0)
-    checks.each do |c|
-      result = c['__typename'] == 'CheckRun' ? (c['conclusion'] || c['status']) : c['state']
-      counts[result.to_s.upcase] += 1
-    end
-
-    if counts.empty?
-      summary = 'no checks'
-    else
-      order = ['FAILURE', 'ERROR', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED', 'PENDING', 'IN_PROGRESS', 'QUEUED', 'SUCCESS', 'SKIPPED', 'NEUTRAL']
-      parts = order.filter_map { |s| "#{counts[s]} #{s.downcase}" if counts[s] > 0 }
-      summary = parts.join(', ')
-    end
-
-    puts "##{pr['number']}"
-    puts pr['title']
-    puts pr['state'].downcase
-    puts summary
-    puts pr['url']
   end
 
   add_subcmd(:update) do |*update_args|
