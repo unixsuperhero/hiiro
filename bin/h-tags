@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run do
+  add_subcmd(:tags_by_type) do |*args|
+    # use options to determine if we want a tag or the object?
+    tags = Hiiro::Tag.tags_by_type(args)
+    puts tags
+
+    tagged = tags.flat_map{|tag|
+      Hiiro::Tag.tagged_by_type(tag, args)
+    }
+    puts tagged
+    binding.pry
+  end
+end
+

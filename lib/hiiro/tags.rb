@@ -21,9 +21,16 @@ class Hiiro
       end
 
       def filter(terms, tags=all_tags)
-        tags.select{|tag|
-          terms.any?{|term| tag.start_with?(term) }
-        }
+        $stderr.puts("tags class: #{tags.class}")
+        $stderr.puts("terms count: #{terms.count}")
+        return tags if terms.empty?
+
+        conditions = terms.map{|q| Sequel.like(:name, "%#{q}%") }
+        tags.where(Sequel.|(*conditions)).all
+
+        # tags.select{|tag|
+        #   terms.any?{|term| tag.start_with?(term) }
+        # }
       end
 
       def search(*terms, type: nil)
@@ -34,7 +41,7 @@ class Hiiro
       def tags_by_type(type=nil)
         return all_tags if type.nil?
 
-        where(taggable_type: type.to_s).select(:name).distinct.map(&:name).sort
+        where(taggable_type: type).select(:name).distinct.map(&:name).sort
       end
 
       # Returns all Tag rows for a given object

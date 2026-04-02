@@ -528,25 +528,11 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
   end
 
   add_subcmd(:tags) do |*tag_args|
-    all_known = Hiiro::Tag.tags_by_type('Link')
-
-    if tag_args.empty?
-      all_known.map do |tag|
-        links = Hiiro::Tag.tagged_by_type(tag, 'Link')
-        puts "#{tag_name}:"
-        links.each { |link| puts "  #{link.display_string(exclude_tags: [tag_name])}" }
-      end
-    else
-      all_known.select{ |tag|
-        tag_args.any?{ |arg|
-          tag.start_with?(arg)
-        }
-      }.map do |tag|
-        links = Hiiro::Tag.tagged_by_type(tag_name, 'Link')
-        puts "#{tag_name}:"
-        links.each { |link| puts "  #{link.display_string(exclude_tags: [tag_name])}" }
-      end
-    end
+    Hiiro::Tag.search(tag_args, type: 'Link').each do |tag|
+      links = Hiiro::Tag.tagged_by_type(tag, 'Link')
+      puts "#{tag}:"
+      links.each { |link| puts "  #{link.display_string(exclude_tags: [tag])}" }
+    end.empty? && puts("No tags found!")
   end
 
   add_subcmd(:paste) do |*paste_args|
