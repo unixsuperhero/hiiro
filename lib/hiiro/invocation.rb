@@ -4,6 +4,7 @@ require 'securerandom'
 class Hiiro
   class Invocation < Sequel::Model(:invocations)
     Hiiro::DB.register(self)
+    unrestrict_primary_key
 
     def self.create_table!(db)
       db.create_table?(:invocations) do
