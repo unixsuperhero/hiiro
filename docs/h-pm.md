@@ -8,45 +8,125 @@ Queue `/project-manager` skill prompts via `h queue add`.
 h pm [subcommand] [args]
 ```
 
-With no subcommand, fuzzy-selects a project-manager command interactively and queues it.
+## Description
 
-Each subcommand builds a `/project-manager <subcmd> [args]` prompt and passes it to `h queue add` via stdin.
+`h pm` is a launcher that builds `/project-manager` prompts and queues them via `h queue add`. With no subcommand, opens a fuzzy picker of all available commands.
 
 ## Subcommands
 
-| Subcommand | Args | Description |
-|------------|------|-------------|
-| `discover` | `[project]` | Auto-discover projects and tasks from PRs, worktrees, olive runs |
-| `resume` | `<project>` | Show "where was I?" session briefing |
-| `status` | `<project>` | Show project status overview |
-| `add` | `<project> <task>` | Add a new task to a project |
-| `start` | `<project> <task>` | Load context and begin working on a task |
-| `plan` | `<project> <task>` | Generate or update a proposal document |
-| `complete` | `<project> <task>` | Mark a task as complete |
-| `ref` | `<project> [url-or-path]` | Add a reference document (PRD, spec, Figma, etc.) |
-| `impact` | `<project> <task>` | Analyze cascading impact of a task deviation |
-| `archive` | `<project>` | Archive a completed or stale project |
-| `unarchive` | `<project>` | Restore an archived project |
-| `help` | — | Print usage information |
+| Subcommand | Description |
+|------------|-------------|
+| `discover [project]` | Auto-discover projects/tasks from PRs, worktrees, olive runs |
+| `resume <project>` | Show a "where was I?" session briefing |
+| `status <project>` | Show project status overview |
+| `add <project> <task>` | Add a new task to a project |
+| `start <project> <task>` | Load context and begin working on a task |
+| `plan <project> <task>` | Generate/update proposal doc for a task |
+| `complete <project> <task>` | Mark a task as complete |
+| `ref <project> [url-or-path]` | Add a reference document (PRD, spec, Figma, etc.) |
+| `impact <project> <task>` | Analyze cascading impact of task deviation |
+| `archive <project>` | Archive a completed/stale project |
+| `unarchive <project>` | Restore an archived project |
+| `help` | Print usage |
 
-## Examples
+### discover
+
+Queue a prompt to auto-discover untracked work from PRs, worktrees, and olive runs.
+
+**Examples**
 
 ```bash
-# Fuzzy-select a command interactively
-h pm
-
-# Discover untracked work automatically
 h pm discover
+h pm discover my-project
+```
 
-# Start a specific project session briefing
+### resume
+
+Queue a "where was I?" briefing prompt for a project.
+
+**Examples**
+
+```bash
 h pm resume my-project
+```
 
-# Add a new task to a project
-h pm add my-project "Implement OAuth login"
+### status
 
-# Mark a task complete
-h pm complete my-project "Implement OAuth login"
+Queue a project status overview prompt.
 
-# Archive a finished project
-h pm archive my-old-project
+**Examples**
+
+```bash
+h pm status my-project
+```
+
+### add
+
+Queue a prompt to add a new task to a project.
+
+**Examples**
+
+```bash
+h pm add my-project new-task
+```
+
+### start
+
+Queue a prompt to load context and begin working on a task.
+
+**Examples**
+
+```bash
+h pm start my-project my-task
+```
+
+### plan
+
+Queue a prompt to generate or update the proposal doc for a task.
+
+**Examples**
+
+```bash
+h pm plan my-project my-task
+```
+
+### complete
+
+Queue a prompt to mark a task as complete.
+
+**Examples**
+
+```bash
+h pm complete my-project my-task
+```
+
+### ref
+
+Queue a prompt to add a reference document to a project.
+
+**Examples**
+
+```bash
+h pm ref my-project https://docs.example.com/spec
+```
+
+### impact
+
+Queue a prompt to analyze the cascading impact of deviating from a task plan.
+
+**Examples**
+
+```bash
+h pm impact my-project my-task
+```
+
+### archive / unarchive
+
+Queue prompts to archive or restore a project.
+
+**Examples**
+
+```bash
+h pm archive old-project
+h pm unarchive old-project
 ```

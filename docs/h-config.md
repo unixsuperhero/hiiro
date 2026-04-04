@@ -12,31 +12,35 @@ h config <subcommand>
 
 | Subcommand | Description |
 |------------|-------------|
-| `vim` | Open `~/.config/nvim/init.lua` (or `init.vim`) |
-| `git` | Open git config files (nested subcommands) |
+| `vim` | Open Neovim/Vim config (`init.lua` or `init.vim`) |
+| `git` | Git config subcommands |
 | `tmux` | Open `~/.tmux.conf` |
 | `zsh` | Open `~/.zshrc` |
 | `profile` | Open `~/.zprofile` |
 | `starship` | Open `~/.config/starship/starship.toml` |
 | `claude` | Open `~/.claude/settings.json` |
 
-## Subcommand Details
+### vim
 
-### `vim`
+Open `~/.config/nvim/init.lua` (or `init.vim` if lua file doesn't exist).
 
-Opens your Neovim/Vim config. Prefers `~/.config/nvim/init.lua`; falls back to `init.vim` if the lua file does not exist.
+**Examples**
 
 ```bash
 h config vim
 ```
 
-### `git`
+### git
 
-Open git configuration files. Has nested sub-subcommands:
+Open git config files. Nested subcommands:
 
-- `h config git global` — Open `~/.gitconfig`
-- `h config git ignore` — Open `~/.config/git/ignore`
-- `h config git local` — Open `.git/config` in the current repository
+| Subcommand | Description |
+|------------|-------------|
+| `global` | Open `~/.gitconfig` |
+| `ignore` | Open `~/.config/git/ignore` |
+| `local` | Open `.git/config` in the current repo |
+
+**Examples**
 
 ```bash
 h config git global
@@ -44,58 +48,52 @@ h config git ignore
 h config git local
 ```
 
-### `tmux`
+### tmux
 
 Open `~/.tmux.conf`.
+
+**Examples**
 
 ```bash
 h config tmux
 ```
 
-### `zsh`
+### zsh
 
 Open `~/.zshrc`.
+
+**Examples**
 
 ```bash
 h config zsh
 ```
 
-### `profile`
+### profile
 
 Open `~/.zprofile`.
+
+**Examples**
 
 ```bash
 h config profile
 ```
 
-### `starship`
+### starship
 
 Open `~/.config/starship/starship.toml`.
+
+**Examples**
 
 ```bash
 h config starship
 ```
 
-### `claude`
+### claude
 
 Open `~/.claude/settings.json`.
 
-```bash
-h config claude
-```
-
-## Examples
+**Examples**
 
 ```bash
-# Edit vim config
-h config vim
-
-# Add a git alias
-h config git global
-
-# Edit shell config
-h config zsh
-
-# Tweak Claude Code settings
 h config claude
 ```

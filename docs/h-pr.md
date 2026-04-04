@@ -5,193 +5,211 @@ Track, update, view, and act on GitHub pull requests with pinned PR management a
 ## Synopsis
 
 ```bash
-h pr <subcommand> [options] [args]
+h pr <subcommand> [args]
 ```
-
-PRs are tracked in SQLite (`~/.config/hiiro/hiiro.db`, table `prs`) with YAML backup at `~/.config/hiiro/pinned_prs.yml`. Each tracked PR stores its number, title, URL, head branch, state, check status, and review counts.
 
 ## Subcommands
 
 | Subcommand | Description |
 |------------|-------------|
-| `check` | Run `gh pr checks` and send macOS notification |
-| `watch` | Run `gh pr checks --watch` and notify |
-| `fwatch` | Run `gh pr checks --watch --fail-fast` and notify |
+| `track [ref]` | Start tracking a PR |
+| `ls [filters]` | List tracked PRs |
+| `update [filters]` | Refresh PR statuses and list |
+| `status [refs]` | Show check status for a PR |
+| `view [ref]` | Show PR details via `gh pr view` |
+| `open [refs]` | Open PR URL in browser |
 | `number` | Print PR number for current branch |
-| `link` | Print PR URL |
-| `open` | Open PR in browser |
-| `view` | Run `gh pr view` |
-| `select` | Fuzzy-select from open PRs and print number |
+| `link [ref]` | Print PR URL |
+| `select` | Fuzzy-select from your open PRs |
 | `copy` | Fuzzy-select and copy PR number to clipboard |
-| `track` | Start tracking a PR |
-| `ls` | List tracked PRs |
-| `status` | Show check status summary |
-| `update` | Refresh status for all tracked PRs |
+| `diff [ref]` | Show PR diff |
+| `checkout [ref]` | Checkout a PR's branch |
+| `merge [ref]` | Merge a PR |
+| `sync [ref]` | Sync PR with its base branch (rebase, fallback to merge) |
+| `ready [ref]` | Mark a PR as ready for review |
+| `to-draft [ref]` | Convert a PR to draft |
+| `fix [refs]` | Queue `/pr:fix` prompt for failing PRs |
+| `comment [ref]` | Write and post a comment |
+| `templates` | List comment templates |
+| `new-template <name>` | Create a comment template |
+| `from-template [ref]` | Post a comment from a template |
+| `rm [ref]` | Stop tracking a PR |
+| `prune` | Remove all merged/closed PRs from tracking |
+| `check [ref]` | Run `gh pr checks` with notification on completion |
+| `watch [ref]` | Watch PR checks (keeps polling until done) |
+| `fwatch [ref]` | Watch PR checks with `--fail-fast` |
+| `tag <ref> <tags>` | Tag a tracked PR |
+| `untag <ref> [tags]` | Remove tags from a tracked PR |
+| `for-task [task]` | List tracked PRs for a task |
+| `branch [ref]` | Get the head branch for a tracked PR |
+| `attach [ref]` | Checkout a PR's branch in its task's tmux session |
+| `assigned` | List PRs assigned to you |
+| `created` | List PRs authored by you |
+| `missing` | List your untracked PRs |
+| `amissing` | Interactively add untracked PRs to tracking |
 | `green` | List PRs with all checks passing |
 | `red` | List PRs with failing checks |
 | `old` | List merged/closed tracked PRs |
-| `prune` | Remove merged and closed PRs from tracking |
 | `draft` | List draft PRs |
-| `assigned` | List open PRs assigned to you |
-| `created` | List open PRs created by you |
-| `missing` | List your open/assigned PRs not yet tracked |
-| `amissing` | Interactively add untracked PRs |
-| `attach` | Open tmux window for PR's task session |
-| `rm` | Remove a PR from tracking |
-| `ready` | Mark PR as ready for review |
-| `to-draft` | Convert PR to draft |
-| `diff` | Show PR diff |
-| `checkout` | Checkout PR branch |
-| `merge` | Merge a PR |
-| `sync` | Sync PR with base branch |
-| `fix` | Queue `/pr:fix` for failing PRs |
-| `comment` | Add a comment to a PR |
-| `templates` | List comment templates |
-| `new-template` | Create a comment template |
-| `from-template` | Post a template comment to a PR |
-| `branch` | Print head branch for a tracked PR |
-| `for-task` | List PRs for a given task |
-| `tag` | Add tags to a tracked PR |
-| `untag` | Remove tags from a PR |
-| `tags` | Show PRs grouped by tag |
-| `mfix` | Batch fix: YAML editor to queue fix tasks |
-| `mopen` | Batch open PRs in browser |
-| `mmerge` | Batch merge PRs |
-| `mready` | Batch mark PRs as ready |
-| `mto-draft` | Batch convert to draft |
-| `mrm` | Batch remove from tracking |
-| `mcomment` | Batch comment on PRs |
-| `dep` | Manage PR dependency relationships |
-| `config` | Show or edit pinned PRs config |
-| `q` | Query `pinned_prs` SQLite table |
+| `edit` | Edit the `h-pr` bin file |
 
-## Options
+PR references (`ref`) can be a PR number, a URL containing `/pull/<number>`, or omitted to fuzzy-select from tracked PRs.
 
-### `ls`
+### track
 
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--update` | `-u` | Refresh status before listing | false |
-| `--verbose` | `-v` | Multi-line output per PR | false |
-| `--checks` | `-C` | Show individual check run details | false |
-| `--diff` | `-d` | Open diff for fuzzy-selected PR | false |
-| `--all` | `-a` | Show all tracked PRs | false |
+Start tracking a PR. Automatically associates it with the current task/worktree/session if in a task context.
 
-### `update`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--force-update` | `-u` | Force refresh even if recently checked | false |
-| `--all` | `-a` | Show all tracked PRs | false |
-
-### `fix`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--red` | `-r` | Fix all PRs with failing checks | false |
-| `--run` | `-R` | Launch queue tasks immediately | false |
-
-### `tag`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--edit` | `-e` | Open YAML editor for bulk tagging | false |
-
-### `q` / `query`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Show all rows (no 50-row limit) | false |
-
-## Subcommand Details
-
-### `track`
-
-Start tracking a PR. Fetches PR info, tags it with current task/worktree context, and adds it to the pinned store. Pass `-` to read the PR number from stdin.
+**Examples**
 
 ```bash
-h pr track          # detect from current branch
-h pr track 1234
-h pr track -        # read from stdin
+h pr track          # track current branch's PR (or fuzzy-select)
+h pr track 1234     # track by number
 ```
 
-After tracking, always run:
+### ls
 
-```bash
-h pr tag $(h pr number) my-task
-h branch save
-```
+List all tracked PRs with check status, review counts, and tags. Supports filter flags to narrow output.
 
-### `ls`
+**Options**
 
-List tracked PRs with status indicators. Output includes PR number, title, check status, and review counts.
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--update` | `-u` | Refresh status before listing |
+| `--verbose` | `-v` | Multi-line output per PR |
+| `--checks` | `-C` | Show individual check run details |
+| `--diff` | `-d` | Open diff for fuzzy-selected PR |
+| `--all` | `-a` | Show all tracked PRs (no filters) |
+| `--active` | | Only active (open) PRs |
+| `--merged` | | Only merged PRs |
+| `--drafts` | | Only draft PRs |
+| `--red` | | Only PRs with failing checks |
+| `--green` | | Only PRs with all checks passing |
+| `--pending` | | Only PRs with pending checks |
+| `--conflicts` | | Only PRs with merge conflicts |
+| `--numbers` | | Print PR numbers only |
+
+**Examples**
 
 ```bash
 h pr ls
-h pr ls -u          # refresh first
-h pr ls -v          # verbose multi-line format
+h pr ls --update
+h pr ls --red
+h pr ls --verbose --checks
 ```
 
-### `fix`
+### update
 
-Queue a `/pr:fix` skill task for failing PRs. Fuzzy-selects from failing PRs by default; `-r` queues all at once.
+Refresh statuses for all active tracked PRs, then display the list.
+
+**Options**
+
+Same filters as `ls`, plus `--force-update` / `-u` to force refresh even if recently checked.
+
+**Examples**
+
+```bash
+h pr update
+h pr update --red
+h pr update -U
+```
+
+### status
+
+Show check status counts for a PR.
+
+**Examples**
+
+```bash
+h pr status
+h pr status 1234
+```
+
+### check / watch / fwatch
+
+Run `gh pr checks` for a PR. `watch` keeps polling until checks complete. `fwatch` adds `--fail-fast`. On completion, speaks "pr good" or "pr bad" and sends a macOS notification.
+
+**Examples**
+
+```bash
+h pr check
+h pr watch 1234
+h pr fwatch 1234
+```
+
+### fix
+
+Queue a `/pr:fix` skill prompt for failing PRs via `h queue add`. With `-r`, launches tasks immediately.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--red` | `-r` | Fix all PRs with failing checks |
+| `--run` | `-R` | Launch queue tasks immediately |
+
+**Examples**
 
 ```bash
 h pr fix
-h pr fix -r         # fix all failing
-h pr fix -r -R      # fix all and launch immediately
+h pr fix 1234
+h pr fix --red --run
 ```
 
-### `dep`
+### tag / untag
 
-Manage PR dependency relationships:
+Tag or untag a tracked PR. With `-e` on `tag`, opens a YAML editor for bulk-tagging multiple PRs.
 
-- `h pr dep add <pr> <dep1> [dep2...]` — Add dependency PRs
-- `h pr dep rm <pr> [dep1 dep2...]` — Remove dependencies (omit deps to clear all)
-- `h pr dep ls [pr]` — List dependencies for a PR or all PRs with dependencies
+**Examples**
 
 ```bash
-h pr dep add 100 99 98
-h pr dep ls 100
-h pr dep rm 100 99
+h pr tag 1234 urgent needs-rebase
+h pr tag -e
+h pr untag 1234 urgent
+h pr untag 1234           # clear all tags
 ```
 
-### Batch operations (`m*`)
+### attach
 
-All batch operations open a YAML editor pre-filled with relevant PRs. Edit the list and save to apply the action.
+Checkout a PR's branch inside its associated task's tmux session. Creates a WIP commit if there are uncommitted changes before switching.
+
+**Examples**
 
 ```bash
-h pr mfix           # queue fix tasks for selected PRs
-h pr mopen          # open selected PRs in browser
-h pr mmerge         # merge selected PRs with chosen strategy
-h pr mready         # mark selected PRs as ready
+h pr attach
+h pr attach 1234
 ```
 
-## Examples
+### for-task
+
+List tracked PRs associated with a task.
+
+**Examples**
 
 ```bash
-# Track the current branch's PR
-h pr track
+h pr for-task
+h pr for-task my-task
+```
 
-# Check status and open on passing
-h pr check
+### templates / new-template / from-template
 
-# Monitor checks continuously
-h pr watch
+Manage and use PR comment templates stored in `~/.config/hiiro/pr_templates/`.
 
-# Update all tracked PRs and list
-h pr update
+**Examples**
 
-# Find PRs that need attention
-h pr red
-h pr fix -r
+```bash
+h pr templates
+h pr new-template lgtm
+h pr from-template 1234
+```
 
-# Open current PR's diff
-h pr diff
+### rm / prune
 
-# Merge after checks pass
-h pr merge --squash
+`rm` stops tracking a specific PR (fuzzy-select if no ref given). `prune` removes all merged/closed PRs from tracking at once.
 
-# Tag a PR for organization
-h pr tag 1234 my-feature
+**Examples**
+
+```bash
+h pr rm
+h pr rm 1234
+h pr prune
 ```

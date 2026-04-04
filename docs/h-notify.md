@@ -5,147 +5,126 @@ Push and manage in-pane notifications with macOS alerts, tmux menu navigation, a
 ## Synopsis
 
 ```bash
-h notify <subcommand> [options] [args]
+h notify <subcommand> [args]
 ```
-
-Notifications are stored in a flat log at `~/.config/hiiro/data/notify_log.yml` (one entry per pane — newer entries replace older ones for the same pane). Each entry records pane ID, window ID, session, message, type, and timestamp.
-
-## Global Options
-
-Parsed from args before subcommand dispatch:
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--type` | `-t` | Notification type: `success`, `error`, `info`, `warning` | `info` |
-
-Type presets:
-
-| Type | Prefix | Sound | Title |
-|------|--------|-------|-------|
-| `success` | `[OK]` | Glass | Success |
-| `error` | `[ERR]` | Basso | Error |
-| `info` | `[INFO]` | Pop | Info |
-| `warning` | `[WARN]` | Purr | Warning |
 
 ## Subcommands
 
 | Subcommand | Description |
 |------------|-------------|
-| `push` | Push a notification for the current tmux pane |
+| `push [-t type] <message>` | Push a notification for the current pane |
 | `ls` | List all current notifications |
-| `menu` | Open tmux menu showing pending notifications |
-| `jump` | Navigate to a notification's pane by index |
-| `clear` | Remove all notifications |
-| `remove_pane` | Remove notifications for a pane (called by tmux hook) |
-| `remove_window` | Remove notifications for a window (called by tmux hook) |
-| `remove_session` | Remove notifications for a session (called by tmux hook) |
-| `tmux` | Manage tmux hook configuration |
-| `claude` | Manage Claude Code hook integration |
+| `menu` | Show a tmux popup menu of notifications |
+| `jump <index>` | Navigate to a notification's pane and dismiss it |
+| `clear` | Clear all notifications |
+| `remove_pane <pane_id>` | Remove notifications for a pane (called by tmux hook) |
+| `remove_window <window_id>` | Remove notifications for a window (called by tmux hook) |
+| `remove_session <session>` | Remove notifications for a session (called by tmux hook) |
+| `tmux` | tmux setup subcommands |
+| `claude` | Claude Code hook subcommands |
 
-## Subcommand Details
+Notification log is stored at `~/.config/hiiro/data/notify_log.yml`. One entry per pane (new pushes replace the existing entry for that pane).
 
-### `push`
+Notification types:
 
-Push a notification for the current tmux pane. Fires a macOS `terminal-notifier` alert and records the entry in the log.
+| Type | Prefix | Sound | Title |
+|------|--------|-------|-------|
+| `info` | `[INFO]` | Pop | Info |
+| `success` | `[OK]` | Glass | Success |
+| `error` | `[ERR]` | Basso | Error |
+| `warning` | `[WARN]` | Purr | Warning |
+
+### push
+
+Push a notification for the current tmux pane. Fires a `terminal-notifier` macOS alert and stores the entry in the log.
+
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--type` | `-t` | Notification type (`success`, `error`, `info`, `warning`) | `info` |
+
+**Examples**
 
 ```bash
-h notify push "Build finished"
+h notify push "Build complete"
 h notify push -t success "Tests passed"
 h notify push -t error "Deploy failed"
 ```
 
-### `ls`
+### ls
 
-List all current notifications with index, type prefix, session/pane, command, message, and timestamp.
+List all notifications with index, type prefix, session/pane, command, message, and time.
+
+**Examples**
 
 ```bash
 h notify ls
-#   0) [OK]   [main/%12] rails: Tests passed (14:35:02)
-#   1) [ERR]  [work/%8]  jest: Build failed (14:32:11)
 ```
 
-### `menu`
+### menu
 
-Open a `tmux display-menu` showing up to 10 pending notifications. Selecting one switches to that pane and removes the notification from the log. A "Clear all" option is also provided.
+Show a tmux `display-menu` popup listing the last 10 notifications. Each entry lets you jump to that pane. Includes a "Clear all" option at the bottom. Bound to `prefix + N` after `h notify tmux setup`.
+
+**Examples**
 
 ```bash
 h notify menu
-# Or bind to a key: bind-key N run-shell "h notify menu"
 ```
 
-### `jump`
+### jump
 
-Navigate to the pane associated with a notification by its index (from `ls`), and remove it from the log.
+Navigate to the pane for notification at `index` and dismiss it from the log. Dead panes are pruned automatically.
+
+**Examples**
 
 ```bash
 h notify jump 0
 h notify jump 2
 ```
 
-### `clear`
+### clear
 
 Remove all notifications from the log.
+
+**Examples**
 
 ```bash
 h notify clear
 ```
 
-### `remove_pane` / `remove_window` / `remove_session`
+### tmux
 
-Remove all notifications associated with a pane, window, or session. Called automatically by tmux hooks — not typically invoked manually.
+Subcommands for setting up tmux hooks.
 
-```bash
-h notify remove_pane %12
-h notify remove_session mywork
-```
+| Subcommand | Description |
+|------------|-------------|
+| `setup` | Write `~/.config/tmux/h-notify.tmux.conf` with hooks and `prefix+N` binding |
+| `add_hooks` | Append `source-file` to `~/.tmux.conf` and reload |
+| `reset_hooks` | Unset the notify tmux hooks |
+| `load_hooks` | Source `~/.tmux.conf` to reload hooks |
 
-### `tmux`
-
-Manage tmux hook configuration for automatic notification cleanup:
-
-| Sub-subcommand | Description |
-|----------------|-------------|
-| `h notify tmux setup` | Write `~/.config/tmux/h-notify.tmux.conf` with hooks and `prefix+N` keybinding |
-| `h notify tmux add_hooks` | Source the conf file from `~/.tmux.conf` and reload |
-| `h notify tmux reset_hooks` | Unset the managed tmux hooks |
-| `h notify tmux load_hooks` | Reload `~/.tmux.conf` via `tmux source-file` |
+**Examples**
 
 ```bash
 h notify tmux setup
 h notify tmux add_hooks
 ```
 
-### `claude`
+### claude
 
-Manage Claude Code hook integration in `~/.claude/settings.json`:
+Subcommands for integrating with Claude Code notification hooks in `~/.claude/settings.json`.
 
-| Sub-subcommand | Description |
-|----------------|-------------|
-| `h notify claude setup` | Write fresh `Notification` and `Stop` hooks calling `h alert` + `h notify push` |
-| `h notify claude add_hooks` | Inject `h notify push` into existing hooks without overwriting |
-| `h notify claude reset_hooks` | Strip `h notify push` from existing hooks |
-| `h notify claude load_hooks` | Print restart reminder (Claude Code loads settings at startup) |
+| Subcommand | Description |
+|------------|-------------|
+| `setup` | Set `Notification` and `Stop` hooks to use `h alert` + `h notify push` |
+| `add_hooks` | Inject `h notify push` into existing hooks (non-destructive) |
+| `reset_hooks` | Strip `h notify push` from existing hooks |
+| `load_hooks` | Print a reminder to restart claude |
+
+**Examples**
 
 ```bash
 h notify claude setup
 h notify claude add_hooks
-```
-
-## Examples
-
-```bash
-# Initial setup (run once)
-h notify tmux setup
-h notify tmux add_hooks
-h notify claude setup
-
-# Use at end of long-running commands
-bundle exec rails test; h notify push -t success "Tests done"
-./deploy.sh; h notify push -t success "Deployed"
-
-# Check pending notifications
-h notify ls
-
-# Open notification menu in tmux (after setup, press prefix+N)
-h notify menu
 ```

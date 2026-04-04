@@ -8,25 +8,21 @@ Proxy `h pr` subcommands to the PR associated with the current git branch.
 h cpr [subcommand] [args]
 ```
 
-`h-cpr` detects the PR number for the current branch via `gh pr view --json number`, then delegates to [h-pr](h-pr.md). With no subcommand, runs `h pr view <number>`. With a subcommand, runs `h pr <subcommand> <number> [args...]`.
+## Description
 
-Exits with status 1 if there is no open PR for the current branch.
+`h cpr` looks up the PR number for the current branch using `gh pr view`, then delegates to `h pr`. With no arguments it runs `h pr view <number>`. With a subcommand, it runs `h pr <subcommand> <number> [args]`.
+
+Exits with an error if the current branch has no associated PR.
 
 ## Examples
 
 ```bash
-h cpr              # h pr view <current PR number>
-h cpr check        # h pr check <current PR number>
-h cpr open         # h pr open <current PR number>
-h cpr diff         # h pr diff <current PR number>
-h cpr watch        # h pr watch <current PR number>
-h cpr ready        # h pr ready <current PR number>
+h cpr              # same as: h pr view <current pr number>
+h cpr checks       # same as: h pr checks <current pr number>
+h cpr merge        # same as: h pr merge <current pr number>
+h cpr view         # same as: h pr view <current pr number>
 ```
 
-Any subcommand and args valid for `h pr` can be used:
+## See also
 
-```bash
-h cpr status
-h cpr merge --squash
-h cpr tag my-tag
-```
+[h-pr](h-pr.md)

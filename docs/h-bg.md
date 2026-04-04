@@ -8,83 +8,69 @@ Run commands in background tmux windows with command history tracking.
 h bg <subcommand> [args]
 ```
 
-Commands run in a dedicated tmux session named `bg` (managed by `Hiiro::Background`). History is stored in `~/.config/hiiro/bg-history.txt` (max 50 entries).
-
 ## Subcommands
 
-| Subcommand | Aliases | Description |
-|------------|---------|-------------|
-| `popup` | — | Open editor with history, run typed command in background window |
-| `run` | — | Run a command immediately in a new background window |
-| `attach` | `a` | Switch to the background tmux session |
-| `history` | `hist` | Print recent background command history |
-| `setup` | — | Print tmux.conf line for keybinding |
+| Subcommand | Description |
+|------------|-------------|
+| `run <cmd>` | Run a command in a new background tmux window |
+| `popup` | Open an editor to write and launch a background command |
+| `attach` / `a` | Switch to the background tmux session |
+| `history` / `hist` | Show recent background command history |
+| `setup` | Print tmux.conf snippet for a keybinding |
 
-## Subcommand Details
+Background commands run in the `hbg` tmux session (created if it doesn't exist). Each command opens in a new window named after the first word of the command. History is stored in `~/.config/hiiro/bg-history.txt` (last 50 commands).
 
-### `popup`
+### run
 
-Opens your `$EDITOR` with recent command history as comments. Whatever you type (non-comment, non-blank lines) is run in a new background tmux window. History comments are prefixed with `#` so you can uncomment or rewrite them.
+Run a shell command in a new detached background tmux window. The command is appended to the history file.
+
+**Examples**
+
+```bash
+h bg run bundle exec rake test
+h bg run sleep 60
+h bg run ./scripts/long_job.sh
+```
+
+### popup
+
+Open your `$EDITOR` with a template pre-populated from recent history (commented out). Write your command, save, and quit — it runs in the background. Empty or all-comment files are a no-op.
+
+**Examples**
 
 ```bash
 h bg popup
 ```
 
-### `run`
+### attach / a
 
-Run a command immediately in a new background tmux window. The window is named after the first word of the command. The command is appended to history.
+Switch the current tmux client to the `hbg` background session.
 
-```bash
-h bg run bundle exec rails db:migrate
-h bg run npm run build
-h bg run ./scripts/long_running_job.sh
-```
-
-### `attach` / `a`
-
-Switch the current tmux client to the background session.
+**Examples**
 
 ```bash
 h bg attach
 h bg a
 ```
 
-### `history` / `hist`
+### history / hist
 
-Print the recent background command history (up to 50 entries), numbered oldest-first.
+Print recent background command history, one per line with index.
+
+**Examples**
 
 ```bash
 h bg history
-# 1  bundle exec rails db:migrate
-# 2  npm run build
-```
-
-### `setup`
-
-Print the `tmux.conf` line needed to bind `prefix + b` to open the popup. Does not modify any config file automatically.
-
-```bash
-h bg setup
-# bind-key b display-popup -E -w 80% -h 40% "h bg popup"
-```
-
-Add the printed line to `~/.tmux.conf` and reload: `tmux source-file ~/.tmux.conf`.
-
-## Examples
-
-```bash
-# Run a long database migration in background
-h bg run bundle exec rails db:migrate
-
-# Run a build in background
-h bg run npm run build -- --production
-
-# Open interactive popup to pick from history
-h bg popup
-
-# Check what's running in background
-h bg attach
-
-# Review recent commands
 h bg hist
+```
+
+### setup
+
+Print the tmux.conf snippet needed to bind `h bg popup` to a key (prefix + b by default). Add the output to your `~/.tmux.conf`.
+
+**Examples**
+
+```bash
+h bg setup >> ~/.tmux.conf
+tmux source-file ~/.tmux.conf
 ```

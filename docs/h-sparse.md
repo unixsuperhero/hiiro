@@ -8,89 +8,85 @@ Manage named git sparse-checkout path groups stored in `~/.config/hiiro/sparse_g
 h sparse <subcommand> [args]
 ```
 
-Sparse groups are named lists of directory paths. Applying a group sets `git sparse-checkout` to those paths in the current repository. This is useful for large monorepos where you only need a subset of directories checked out.
-
 ## Subcommands
 
-| Subcommand | Aliases | Description |
-|------------|---------|-------------|
-| `config` | — | Open `sparse_groups.yml` in editor |
-| `ls` | `list` | List groups (or paths for a specific group) |
-| `set` | — | Apply a sparse group to the current git repo |
-| `add` | — | Add paths to a named group |
-| `rm` | — | Remove a group or specific paths from a group |
+| Subcommand | Description |
+|------------|-------------|
+| `ls [group]` | List all groups or show paths for a specific group |
+| `list [group]` | Alias for `ls` |
+| `set <group>` | Apply a group's paths as the sparse checkout in the current repo |
+| `add <group> <paths>` | Add paths to a group |
+| `rm <group> [paths]` | Remove paths from a group (or delete entire group) |
+| `config` | Edit the sparse groups config file |
 
-## Subcommand Details
+Groups are matched by exact name first, then prefix, then substring.
 
-### `config`
+### ls
+
+List all configured groups with path counts, or show all paths for a specific group.
+
+**Examples**
+
+```bash
+h sparse ls
+h sparse ls my-group
+```
+
+### set
+
+Apply a group's paths as the git sparse-checkout for the current repository. Uses `git sparse-checkout set --cone --skip-checks`.
+
+**Examples**
+
+```bash
+h sparse set my-group
+h sparse set fe    # prefix match
+```
+
+### add
+
+Add one or more paths to a group. Creates the group if it doesn't exist. Skips paths already in the group.
+
+**Examples**
+
+```bash
+h sparse add my-group packages/api packages/web
+h sparse add frontend packages/ui
+```
+
+### rm
+
+Remove specific paths from a group, or delete the entire group if no paths are given.
+
+**Examples**
+
+```bash
+h sparse rm my-group packages/api
+h sparse rm old-group              # deletes the group
+```
+
+### config
 
 Open `~/.config/hiiro/sparse_groups.yml` in your editor.
+
+**Examples**
 
 ```bash
 h sparse config
 ```
 
-### `ls` / `list`
+## Configuration
 
-Without an arg, list all groups with path counts. With a group name, list that group's paths. Group name matching: exact first, then prefix, then substring.
+`~/.config/hiiro/sparse_groups.yml`:
 
-```bash
-h sparse ls
-# groups:
-#   backend   (3 paths)
-#   frontend  (5 paths)
+```yaml
+backend:
+  - packages/api
+  - packages/workers
+  - packages/shared
 
-h sparse ls backend
-# backend:
-#   services/backend
-#   lib/shared
-#   config
-```
-
-### `set`
-
-Apply a sparse group to the current repository using `git sparse-checkout set --cone`. Leading `/` is stripped from paths before passing to git.
-
-```bash
-h sparse set backend
-h sparse set front    # prefix match
-```
-
-### `add`
-
-Add one or more paths to a named group. Creates the group if it does not exist.
-
-```bash
-h sparse add backend services/backend
-h sparse add backend lib/shared config
-```
-
-### `rm`
-
-Without paths, remove the entire group. With paths, remove specific paths from the group.
-
-```bash
-h sparse rm backend                    # remove entire group
-h sparse rm backend lib/shared         # remove one path
-h sparse rm backend lib/shared config  # remove multiple paths
-```
-
-## Examples
-
-```bash
-# Set up groups for a monorepo
-h sparse add api services/api lib/api
-h sparse add web apps/web lib/web
-
-# Apply the api group to work on the API
-h sparse set api
-
-# See what's in each group
-h sparse ls
-
-# Add a new shared library to the api group
-h sparse add api lib/new-shared
-
-# Apply a different group
-h sparse set web
+frontend:
+  - packages/web
+  - packages/mobile
+  - packages/ui
 ```

@@ -12,130 +12,122 @@ h buffer <subcommand> [args]
 
 | Subcommand | Description |
 |------------|-------------|
-| `ls` | List all tmux buffers |
-| `show` | Print contents of a buffer |
-| `copy` | Copy buffer contents to macOS clipboard |
-| `save` | Save buffer contents to a file |
-| `load` | Load a file into the tmux buffer stack |
-| `set` | Set buffer contents |
-| `paste` | Paste a buffer into the current pane |
-| `delete` | Delete a buffer |
-| `choose` | Open the tmux buffer chooser UI |
-| `clear` | Delete all tmux buffers |
-| `select` | Fuzzy-select a buffer name and print it |
+| `ls [args]` | List all tmux buffers |
+| `show [name]` | Show contents of a buffer |
+| `copy [name]` | Copy buffer contents to clipboard |
+| `save <path> [name]` | Save buffer to a file |
+| `load <path>` | Load a file into a buffer |
+| `set [args]` | Set buffer contents (`tmux set-buffer`) |
+| `paste [name]` | Paste buffer into current pane |
+| `delete [name]` | Delete a buffer |
+| `choose` | Open tmux choose-buffer UI |
+| `clear` | Delete all buffers |
+| `select` | Fuzzy-select a buffer and print its name |
 
-## Subcommand Details
+Buffer names are resolved interactively via fuzzy select when not provided. Extra arguments are forwarded to the underlying `tmux` command.
 
-### `ls`
+### ls
 
-List all tmux buffers. Extra args are passed directly to `tmux list-buffers`.
+List all tmux buffers. Extra arguments are passed to `tmux list-buffers`.
+
+**Examples**
 
 ```bash
 h buffer ls
-h buffer ls -F '#{buffer_name}: #{buffer_size} bytes'
 ```
 
-### `show`
+### show
 
-Print the contents of a buffer. Fuzzy-selects if no buffer name is given.
+Print the contents of a buffer. Fuzzy-select if no name given.
+
+**Examples**
 
 ```bash
 h buffer show
 h buffer show buffer0
 ```
 
-### `copy`
+### copy
 
-Copy a buffer's contents to the macOS clipboard via `pbcopy`. Fuzzy-selects if no name given.
+Copy a buffer's contents to the macOS clipboard via `pbcopy`. Fuzzy-select if no name given.
+
+**Examples**
 
 ```bash
 h buffer copy
 h buffer copy buffer0
 ```
 
-### `save`
+### save
 
-Save a buffer's contents to a file on disk. Fuzzy-selects the buffer if name is not given.
+Save a buffer to a file. Fuzzy-select buffer if no name given.
 
-```bash
-h buffer save /tmp/output.txt
-h buffer save /tmp/output.txt buffer0
-```
-
-### `load`
-
-Load a file into the tmux buffer stack.
+**Examples**
 
 ```bash
-h buffer load /tmp/some-text.txt
+h buffer save ~/notes/snippet.txt
+h buffer save ~/notes/snippet.txt buffer0
 ```
 
-### `set`
+### load
 
-Set buffer contents. All args are passed directly to `tmux set-buffer`.
+Load a file's contents into a new tmux buffer.
+
+**Examples**
 
 ```bash
-h buffer set "hello world"
+h buffer load ~/notes/snippet.txt
 ```
 
-### `paste`
+### paste
 
-Paste a buffer into the current pane.
+Paste a buffer into the current pane. Fuzzy-select if no name given.
+
+**Examples**
 
 ```bash
 h buffer paste
 h buffer paste buffer0
 ```
 
-### `delete`
+### delete
 
-Delete a buffer. Fuzzy-selects if no name given.
+Delete a buffer. Fuzzy-select if no name given.
+
+**Examples**
 
 ```bash
 h buffer delete
 h buffer delete buffer0
 ```
 
-### `choose`
+### choose
 
-Open the tmux buffer chooser UI.
+Open the tmux `choose-buffer` interactive UI.
+
+**Examples**
 
 ```bash
 h buffer choose
 ```
 
-### `clear`
+### clear
 
 Delete all tmux buffers.
 
+**Examples**
+
 ```bash
 h buffer clear
 ```
 
-### `select`
+### select
 
-Fuzzy-select a buffer name and print it (useful in scripts).
+Fuzzy-select a buffer and print its name (useful for scripting).
+
+**Examples**
 
 ```bash
 h buffer select
-selected=$(h buffer select)
-```
-
-## Examples
-
-```bash
-# See what's in the buffers
-h buffer ls
-
-# Show contents of the most recent buffer
-h buffer show
-
-# Copy buffer to clipboard for pasting outside tmux
-h buffer copy
-
-# Save buffer to file for later use
-h buffer save ~/notes/files/output.txt
-
-# Delete old buffers
-h buffer clear
+name=$(h buffer select)
 ```

@@ -5,42 +5,28 @@ Miscellaneous utility subcommands.
 ## Synopsis
 
 ```bash
-h misc <subcommand> [options] [args]
+h misc <subcommand> [args]
 ```
 
 ## Subcommands
 
 | Subcommand | Description |
 |------------|-------------|
-| `symlink_destinations` | List symlinks pointing outside a given directory |
+| `symlink_destinations <dirs>` | List symlinks in directories whose destinations are outside those directories |
 
-## Subcommand Details
+### symlink_destinations
 
-### `symlink_destinations`
+Walk one or more directories and list all symlinks whose destinations fall outside those directories. Useful for auditing symlink layouts in a monorepo or project.
 
-List symlinks under one or more base directories whose targets point outside those directories. Output format is `<dest> => <link_path>`, with paths shown relative to the repository root (or the `--root` option).
-
-**Args:** `<basedir> [basedir2...]`
+**Options**
 
 | Flag | Short | Description | Default |
 |------|-------|-------------|---------|
-| `--root` | `-r` | Root path for relative display | git repo root |
+| `--root` | `-r` | Root path for resolving relative paths | `git rev-parse --show-toplevel` |
+
+**Examples**
 
 ```bash
-h misc symlink_destinations apps/frontend
-h misc symlink_destinations apps/frontend apps/backend
-h misc symlink_destinations apps/frontend -r /Users/josh/work/myrepo
-```
-
-## Examples
-
-```bash
-# Find all symlinks in a directory that point outside it
-h misc symlink_destinations services/api
-
-# Check multiple directories at once
-h misc symlink_destinations apps services packages
-
-# Use a custom root for relative paths in the output
-h misc symlink_destinations apps -r /Users/josh/work/myrepo
+h misc symlink_destinations packages/
+h misc symlink_destinations packages/ apps/ --root /path/to/repo
 ```

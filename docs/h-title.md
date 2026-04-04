@@ -8,48 +8,30 @@ Update the terminal tab title from the current tmux session's associated hiiro t
 h title <subcommand>
 ```
 
-Uses OSC escape sequences to write to the client TTY. If no task is associated with the current session, falls back to the session name as the title.
-
 ## Subcommands
 
 | Subcommand | Description |
 |------------|-------------|
-| `update` | Set the terminal tab title based on the current task |
-| `setup` | Install tmux hooks and append to `~/.tmux.conf` |
+| `update` | Set the terminal tab title to the current task name (or session name) |
+| `setup` | Install tmux hooks to auto-update the title |
 
-## Subcommand Details
+### update
 
-### `update`
+Reads the current tmux session name, finds the associated hiiro task (if any), and sets the terminal tab title via an escape sequence written to the client's TTY. If no task is found, uses the session name as the title. Silent no-op outside of tmux.
 
-Read the current tmux session name, find the associated hiiro task (from `tasks.yml`), and write an OSC escape sequence (`\033]0;<title>\007`) to the client TTY to set the terminal tab title. Silently does nothing if not in tmux or if the TTY write fails.
+**Examples**
 
 ```bash
 h title update
 ```
 
-Normally called automatically by tmux hooks after `setup`.
+### setup
 
-### `setup`
+Writes a tmux config file at `~/.config/tmux/h-title.tmux.conf` with hooks that call `h title update` whenever the session changes. Appends a `source-file` line to `~/.tmux.conf`.
 
-Write `~/.config/tmux/h-title.tmux.conf` with tmux hooks:
-
-- `client-session-changed` — calls `h title update` when switching sessions
-- `after-new-session` — calls `h title update` on new sessions
-
-Also appends a `source-file` line to `~/.tmux.conf`. Reload tmux after setup.
+**Examples**
 
 ```bash
 h title setup
 tmux source-file ~/.tmux.conf
-```
-
-## Examples
-
-```bash
-# Initial setup (run once)
-h title setup
-tmux source-file ~/.tmux.conf
-
-# Manually update the title (e.g., after changing tasks)
-h title update
 ```

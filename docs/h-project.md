@@ -8,109 +8,105 @@ Manage project directories and start tmux sessions for them.
 h project <subcommand> [args]
 ```
 
-Projects are discovered from two sources:
-
-- Directories in `~/proj/`
-- Entries in `~/.config/hiiro/projects.yml`
-
-Config format (`projects.yml`):
-
-```yaml
-my-project: /path/to/my-project
-client-work: /Users/josh/clients/acme
-```
-
 ## Subcommands
 
-| Subcommand | Aliases | Description |
-|------------|---------|-------------|
-| `open` | — | Open a project by name and start/switch to its tmux session |
-| `list` | `ls` | List all known projects with source and path |
-| `config` | — | Print the contents of `projects.yml` |
-| `edit` | — | Open `projects.yml` in editor (creates if missing) |
-| `select` | — | Fuzzy-select a project and print its path |
-| `copy` | — | Fuzzy-select a project and copy path to clipboard |
-| `sh` | — | Open a shell (or run a command) inside a project directory |
-| `help` | — | Print usage information |
+| Subcommand | Description |
+|------------|-------------|
+| `open <name>` | Open a project and start/attach tmux session |
+| `list` / `ls` | List all known projects |
+| `config` | Show the config file contents |
+| `edit` | Edit the config file |
+| `select` | Fuzzy-select a project and print its path |
+| `copy` | Fuzzy-select a project and copy path to clipboard |
+| `sh <name> [cmd]` | Open shell (or run command) in a project directory |
+| `help` | Show usage |
 
-## Subcommand Details
+Projects are discovered from two sources:
 
-### `open`
+1. Directories in `~/proj/`
+2. Entries in `~/.config/hiiro/projects.yml`
 
-Open a project by name (case-insensitive regex match) and start or switch to its tmux session. If multiple regex matches are found, prefers an exact name match. Falls back to `~/proj/` if nothing matches.
+The default subcommand (no subcommand) runs `help`.
+
+### open
+
+Open a project by name and start (or attach to) a tmux session for it. Project names are matched with case-insensitive regex; if exactly one match is found, it's used. If multiple matches are found, an exact match is preferred.
+
+**Examples**
 
 ```bash
 h project open hiiro
-h project open carrot
+h project open my-app
 ```
 
-### `list` / `ls`
+### list / ls
 
-List all known projects showing name, source tag (`[config]` or `[dir]`), and path.
+List all projects with their source (`[config]` or `[dir]`) and path.
+
+**Examples**
 
 ```bash
+h project list
 h project ls
-# Projects:
-#   carrot      [dir]     /Users/josh/work/carrot
-#   hiiro       [dir]     /Users/josh/proj/hiiro
-#   client-work [config]  /Users/josh/clients/acme
 ```
 
-### `config`
+### config
 
 Print the contents of `~/.config/hiiro/projects.yml`.
+
+**Examples**
 
 ```bash
 h project config
 ```
 
-### `edit`
+### edit
 
-Open `~/.config/hiiro/projects.yml` in your editor. Creates the file with a comment header if it does not exist.
+Open `~/.config/hiiro/projects.yml` in your editor. Creates the file with a template comment if it doesn't exist.
+
+**Examples**
 
 ```bash
 h project edit
 ```
 
-### `select`
+### select
 
-Fuzzy-select a project and print its path. Useful in scripts.
+Fuzzy-select a project and print its absolute path.
+
+**Examples**
 
 ```bash
-path=$(h project select)
-cd "$path"
+h project select
+cd $(h project select)
 ```
 
-### `copy`
+### copy
 
-Fuzzy-select a project and copy its path to clipboard.
+Fuzzy-select a project and copy its path to the clipboard.
+
+**Examples**
 
 ```bash
 h project copy
 ```
 
-### `sh`
+### sh
 
-Open a shell (using `$SHELL` or `zsh`) inside the project directory. Extra args run as a command.
+Open a shell in a project directory, or run a command there.
+
+**Examples**
 
 ```bash
 h project sh hiiro
 h project sh hiiro bundle exec rake test
 ```
 
-## Examples
+## Configuration
 
-```bash
-# Open a project and its tmux session
-h project open hiiro
+`~/.config/hiiro/projects.yml`:
 
-# Add a new project to config
-h project edit
-# add: my-project: /path/to/project
-
-# Run tests in a project
-h project sh hiiro bundle exec rake test
-
-# List all projects
-h project ls
+```yaml
+my-app: /Users/me/work/my-app
+hiiro: /Users/me/proj/hiiro
 ```

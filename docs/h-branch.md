@@ -5,201 +5,363 @@ Manage, tag, search, and inspect git branches with task and PR associations stor
 ## Synopsis
 
 ```bash
-h branch <subcommand> [options] [args]
+h branch <subcommand> [args]
 ```
-
-Branch records are stored in `~/.config/hiiro/hiiro.db` (table: `branches`). Each record captures the branch name, associated task, worktree, tmux context, and HEAD SHA at save time.
 
 ## Subcommands
 
-| Subcommand | Aliases | Description |
-|------------|---------|-------------|
-| `save` | — | Save current branch with task/worktree context |
-| `saved` | — | List saved branches |
-| `current` | — | Print current git branch name |
-| `info` | — | Show detailed info about current branch |
-| `ls` | — | List branches with tags and task info |
-| `search` | — | Search branches by name or tag |
-| `tag` | — | Add tags to a branch |
-| `untag` | — | Remove tags from a branch |
-| `tags` | — | Show branches grouped by tag |
-| `select` | — | Fuzzy-select a branch name |
-| `copy` | — | Fuzzy-select a branch and copy name to clipboard |
-| `co` | `checkout` | Checkout a branch |
-| `rm` | `remove` | Delete a branch |
-| `rename` | — | Rename branch locally and on remote |
-| `status` | — | Show ahead/behind and PR state |
-| `merged` | — | List merged branches |
-| `clean` | — | Delete merged branches interactively |
-| `recent` | — | Show N most recently visited branches from reflog |
-| `note` | — | Get or set a freeform note on a branch |
-| `for-task` | — | List branches for a given task |
-| `for-pr` | `pr` | Print head branch for a tracked PR |
-| `duplicate` | — | Create a copy of current branch |
-| `push` | — | Push branch with options |
-| `diff` | — | Show commit log between two refs |
-| `changed` | — | List files changed since upstream fork point |
-| `ahead` | — | Show how many commits ahead of a base |
-| `behind` | — | Show how many commits behind a base |
-| `log` | — | Show commits since upstream fork point |
-| `q` | `query` | Query branches SQLite table directly |
-| `forkpoint` | — | Print merge-base SHA |
-| `ancestor` | — | Check if one ref is ancestor of another |
+| Subcommand | Description |
+|------------|-------------|
+| `save [branch]` | Save branch with task/worktree/tmux metadata |
+| `saved [filter]` | List saved branches |
+| `ls [filter]` | List saved branches with tags |
+| `current` | Print current branch name |
+| `info` | Show full info for current branch |
+| `search <term>` | Search saved branches by name or tag |
+| `status` | Show ahead/behind and PR status for branches |
+| `recent [n]` | Show recently visited branches from reflog |
+| `tag [branch] <tags>` | Tag a branch |
+| `untag [branch] [tags]` | Remove tags from a branch |
+| `tags` | List all tagged branches grouped by tag |
+| `select` | Fuzzy-select a branch and print its name |
+| `copy` | Fuzzy-select a branch and copy to clipboard |
+| `co` / `checkout [branch]` | Fuzzy-select and checkout a branch |
+| `rm` / `remove [branch]` | Delete a branch |
+| `rename <new> [old]` | Rename branch (locally and on remote) |
+| `push [args]` | Push branch to remote |
+| `diff [from] [to]` | Show commits between branches |
+| `changed [upstream]` | Show files changed since fork point |
+| `ahead [base] [branch]` | Show how many commits ahead of base |
+| `behind [base] [branch]` | Show how many commits behind base |
+| `log [upstream]` | Show commits since fork point |
+| `forkpoint [upstream] [branch]` | Print fork point SHA |
+| `ancestor [ancestor] [descendant]` | Test if one commit is an ancestor of another |
+| `merged` | List merged branches |
+| `clean` | Delete merged branches |
+| `duplicate <new> [source]` | Create a copy of a branch |
+| `for-task [task]` | List branches saved for a task |
+| `for-pr` / `pr [ref]` | Get branch name for a PR |
+| `note [text]` | Get or set a note on the current branch |
+| `q` / `query [args]` | Query the branches SQLite table |
+| `edit` | Edit the `h-branch` bin file |
 
-## Options
+### save
 
-### `save`
+Save the current (or named) branch with metadata: task name, worktree, tmux session/window/pane, HEAD SHA. Creates or updates a record in the branches table.
 
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--tag` | `-t` | Tag to apply (repeatable) | — |
+**Options**
 
-### `ls`
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--tag` | `-t` | Tag to apply (repeatable) |
 
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--tag` | `-t` | Filter by tag (OR when multiple, repeatable) | — |
-| `--all` | `-a` | Show all local branches instead of just saved | false |
-
-### `search`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Search all local branches | false |
-
-### `tag`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--edit` | `-e` | Open YAML editor for bulk tagging | false |
-
-### `select` / `copy` / `co` / `rm`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Include all local branches | false |
-
-### `status`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Show all local branches | false |
-
-### `merged`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Show all merged, not just saved | false |
-
-### `clean`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Include all merged branches | false |
-| `--force` | `-f` | Delete all without confirmation | false |
-
-### `push`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--remote` | `-r` | Remote name | `origin` |
-| `--from` | `-f` | Local branch or commit | current branch |
-| `--to` | `-t` | Remote branch name | same as `--from` |
-| `--force` | `-F` | Force push | false |
-| `--set-upstream` | `-u` | Set upstream tracking | false |
-
-### `note`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--clear` | — | Clear the note | false |
-
-### `q` / `query`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Show all rows (no 50-row limit) | false |
-
-## Subcommand Details
-
-### `save`
-
-Save the current (or named) branch to the branch store, capturing current task, worktree, tmux session/window/pane, and HEAD SHA. Updates the record if the branch is already saved.
+**Examples**
 
 ```bash
 h branch save
-h branch save feature/my-branch
-h branch save -t my-task -t experiment
+h branch save my-feature-branch
+h branch save -t important -t wip
 ```
 
-### `info`
+### ls
 
-Show full details for the current branch: SHA, task, worktree, tmux context, ahead/behind vs main, note, and associated PR (if tracked).
+List saved branches with task and tag info. With `-a`, shows all local git branches instead.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Show all local branches |
+| `--tag` | `-t` | Filter by tag (repeatable, OR logic) |
+
+**Examples**
+
+```bash
+h branch ls
+h branch ls --all
+h branch ls -t urgent
+```
+
+### info
+
+Show full metadata for the current branch: SHA, task, worktree, tmux context, commits ahead/behind base, any associated PR, and note.
+
+**Examples**
 
 ```bash
 h branch info
 ```
 
-### `ls`
+### search
 
-List saved branches (or all local with `-a`), with task annotation and tag badges. Filter by tag with `-t`.
+Search saved branches (or all local branches with `-a`) by name substring or tag.
 
-```bash
-h branch ls
-h branch ls -a
-h branch ls -t my-task
-h branch ls -t feature -t experiment
-```
+**Options**
 
-### `tag`
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Search all local branches |
 
-Add tags to a branch. With `-e`, opens a YAML editor for bulk tagging multiple branches at once.
+**Examples**
 
 ```bash
-h branch tag my-feature-branch experiment
-h branch tag -t feature               # tag current branch
-h branch tag -e                       # bulk edit mode
+h branch search my-feature
+h branch search -a refactor
 ```
 
-### `push`
+### status
 
-Push a branch with fine-grained control over remote, refs, force, and upstream tracking.
+Show ahead/behind counts (vs main/master) and associated PR status for saved branches.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Show all local branches |
+
+**Examples**
+
+```bash
+h branch status
+h branch status --all
+```
+
+### recent
+
+Show recently visited branches from `git reflog`. Marks saved branches and shows tags.
+
+**Examples**
+
+```bash
+h branch recent
+h branch recent 20
+```
+
+### tag
+
+Tag a branch. With no branch name, uses the current branch. With `-e`, opens a YAML editor for bulk tagging.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--edit` | `-e` | Bulk-tag mode via YAML editor |
+
+**Examples**
+
+```bash
+h branch tag my-branch important wip
+h branch tag urgent
+h branch tag -e
+```
+
+### untag
+
+Remove tags from a branch. With no tags, clears all tags.
+
+**Examples**
+
+```bash
+h branch untag my-branch urgent
+h branch untag
+```
+
+### select
+
+Fuzzy-select from saved branches (or all with `-a`) and print the name.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Select from all local branches |
+
+**Examples**
+
+```bash
+h branch select
+branch=$(h branch select)
+```
+
+### copy
+
+Fuzzy-select a branch and copy its name to the clipboard.
+
+**Examples**
+
+```bash
+h branch copy
+```
+
+### co / checkout
+
+Fuzzy-select and checkout a branch. Pass a branch name to skip the picker.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Select from all local branches |
+
+**Examples**
+
+```bash
+h branch co
+h branch co my-feature
+```
+
+### rename
+
+Rename a branch locally and on the remote (if configured). Also updates any saved branch record.
+
+**Examples**
+
+```bash
+h branch rename new-name
+h branch rename new-name old-name
+```
+
+### push
+
+Push a branch to a remote.
+
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--remote` | `-r` | Remote name | `origin` |
+| `--from` | `-f` | Local branch or commit to push | current branch |
+| `--to` | `-t` | Remote branch name | same as local |
+| `--force` | `-F` | Force push | false |
+| `--set-upstream` | `-u` | Set upstream tracking | false |
+
+**Examples**
 
 ```bash
 h branch push
-h branch push -F                      # force push current branch
-h branch push -r upstream -t main     # push current to upstream/main
-h branch push -u                      # push and set upstream
+h branch push -r origin -F
+h branch push --from my-branch --to feature/my-branch
 ```
 
-### `q` / `query`
+### diff
 
-Query the branches table directly. Accepts a table name, `key=value` filters, or raw SQL.
+Show commits between two branches. With no arguments, diffs from main/master to HEAD.
+
+**Examples**
+
+```bash
+h branch diff
+h branch diff main
+h branch diff main my-feature
+```
+
+### changed
+
+Show files changed since the fork point from main/master.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Show all changed files (not just relative to cwd) |
+
+**Examples**
+
+```bash
+h branch changed
+h branch changed main
+h branch changed --all
+```
+
+### merged
+
+List branches that have been merged into main/master.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Show all merged branches (not just saved) |
+
+**Examples**
+
+```bash
+h branch merged
+h branch merged --all
+```
+
+### clean
+
+Interactively select merged branches to delete. With `-f`, deletes all without prompting.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Include all merged (not just saved) |
+| `--force` | `-f` | Delete all without confirmation |
+
+**Examples**
+
+```bash
+h branch clean
+h branch clean --all --force
+```
+
+### note
+
+Get or set a short note on the current branch. With `--clear`, removes the note.
+
+**Options**
+
+| Flag | Description |
+|------|-------------|
+| `--clear` | Remove the note |
+
+**Examples**
+
+```bash
+h branch note
+h branch note "waiting for review"
+h branch note --clear
+```
+
+### for-task
+
+List saved branches associated with a task.
+
+**Examples**
+
+```bash
+h branch for-task my-task
+h branch for-task   # uses current task
+```
+
+### for-pr / pr
+
+Get the branch name for a tracked PR. With no arg, uses fuzzy select.
+
+**Examples**
+
+```bash
+h branch for-pr 1234
+h branch pr
+```
+
+### q / query
+
+Query the `branches` SQLite table directly. Pass a SQL string or `key=value` filters.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Show all rows (no 50-row limit) |
+
+**Examples**
 
 ```bash
 h branch q
 h branch q task=my-task
-h branch q "SELECT name, task FROM branches WHERE name LIKE '%feat%'"
-```
-
-## Examples
-
-```bash
-# Save current branch when starting work
-h branch save -t my-new-feature
-
-# Check status of all saved branches
-h branch status
-
-# Find branches for current task
-h branch for-task
-
-# Clean up merged branches interactively
-h branch clean
-
-# Push with force and set upstream
-h branch push -F -u
-
-# Get the branch for PR #42
-h branch for-pr 42
+h branch q "SELECT name, task FROM branches WHERE task IS NOT NULL"
 ```

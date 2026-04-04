@@ -12,64 +12,53 @@ h sha <subcommand> [args]
 
 | Subcommand | Description |
 |------------|-------------|
-| `select` | Fuzzy-select a commit SHA from the last 100 commits |
-| `ls` | List recent commits via `git log --oneline` |
-| `show` | Run `git show` on a SHA |
-| `copy` | Copy a SHA to clipboard |
+| `select` | Fuzzy-select from last 100 commits and print SHA |
+| `ls [args]` | List commits via `git log --oneline` |
+| `show [sha]` | Show a commit (fuzzy-select if no SHA given) |
+| `copy [sha]` | Copy a SHA to clipboard |
 
-## Subcommand Details
+### select
 
-### `select`
+Show the last 100 commits via fuzzy finder and print the selected SHA. Useful for scripting.
 
-Show the last 100 commits via `git log --oneline`, fuzzy-select one, and print its SHA. Extra args are forwarded to `git log`.
+**Examples**
 
 ```bash
 h sha select
-h sha select --author="Josh"
-sha=$(h sha select)
+git show $(h sha select)
+git cherry-pick $(h sha select)
 ```
 
-### `ls`
+### ls
 
-List recent commits via `git log --oneline`. Extra args forwarded to `git log`.
+List commits with `git log --oneline`. Extra arguments are forwarded to git.
+
+**Examples**
 
 ```bash
 h sha ls
-h sha ls -n 50
-h sha ls --since="2 weeks ago"
+h sha ls -20
+h sha ls --all
 ```
 
-### `show`
+### show
 
-Run `git show` on a SHA. If no SHA is given, runs `h sha select` interactively.
+Show a commit's diff and metadata. Fuzzy-selects from recent commits if no SHA given.
+
+**Examples**
 
 ```bash
 h sha show
 h sha show abc1234
-h sha show abc1234 --stat
 ```
 
-### `copy`
+### copy
 
-Copy a SHA to clipboard. If no SHA is given, runs `h sha select` interactively.
+Copy a SHA to the clipboard. Fuzzy-selects from recent commits if no SHA given.
+
+**Examples**
 
 ```bash
 h sha copy
 h sha copy abc1234
-```
-
-## Examples
-
-```bash
-# Select a SHA to cherry-pick
-git cherry-pick $(h sha select)
-
-# Show a selected commit's diff
-h sha show
-
-# Copy a SHA for use elsewhere
-h sha copy
-
-# Find recent commits by author
-h sha ls --author="Josh" | head -20
 ```

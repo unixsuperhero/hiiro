@@ -8,76 +8,65 @@ List, edit, and search hiiro plugin files in `~/.config/hiiro/plugins/`.
 h plugin <subcommand> [args]
 ```
 
-Plugins are Ruby modules auto-loaded from `~/.config/hiiro/plugins/` at startup. They extend the hiiro instance with additional subcommands and helper methods.
-
 ## Subcommands
 
 | Subcommand | Description |
 |------------|-------------|
-| `path` | Print the plugin directory path |
-| `ls` | Print paths of all files in the plugin directory |
-| `edit` | Open plugin files in your editor |
-| `rg` | Run `rg -S` (case-smart ripgrep) inside the plugin directory |
-| `rgall` | Run `rg -S --no-ignore-vcs` inside the plugin directory |
+| `ls` | List all plugin files |
+| `path` | Print the plugins directory path |
+| `edit [names]` | Open matching plugin files in editor |
+| `rg [args]` | Run `rg` in the plugins directory |
+| `rgall [args]` | Run `rg` (ignoring .gitignore) in the plugins directory |
 
-## Subcommand Details
+### ls
 
-### `path`
+List all files in `~/.config/hiiro/plugins/`.
 
-Print the plugin directory path (`~/.config/hiiro/plugins`).
+**Examples**
+
+```bash
+h plugin ls
+```
+
+### path
+
+Print the path to the plugins directory.
+
+**Examples**
 
 ```bash
 h plugin path
-# => /Users/josh/.config/hiiro/plugins
 ```
 
-### `ls`
+### edit
 
-Print the full paths of all files in the plugin directory.
+Open matching plugin files in your editor. With no args, opens the `h-plugin` bin itself. Names are prefix-matched against plugin file basenames.
+
+**Examples**
 
 ```bash
-h plugin ls
+h plugin edit
+h plugin edit pins
+h plugin edit task notify
 ```
 
-### `edit`
+### rg
 
-Open plugin files in your editor. With no args, opens `h-plugin` itself. With name args, prefix-matches plugin filenames and opens the matches.
+Run `rg` with case-insensitive smart-case matching in the plugins directory.
+
+**Examples**
 
 ```bash
-h plugin edit                  # edit h-plugin itself
-h plugin edit tasks            # edit tasks.rb plugin
-h plugin edit not pins         # edit notify.rb and pins.rb
+h plugin rg "def load"
+h plugin rg "add_subcmd"
 ```
 
-### `rg`
+### rgall
 
-Run `rg -S` (case-smart ripgrep) inside the plugin directory. All args are forwarded to `rg`.
+Same as `rg` but also searches files ignored by `.gitignore`.
 
-```bash
-h plugin rg "def add_subcmd"
-h plugin rg "class.*Plugin"
-```
-
-### `rgall`
-
-Same as `rg` but includes VCS-ignored files (`--no-ignore-vcs`).
+**Examples**
 
 ```bash
 h plugin rgall "TODO"
-```
-
-## Examples
-
-```bash
-# See what plugins are installed
-h plugin ls
-
-# Find a method across all plugins
-h plugin rg "def task_path"
-
-# Edit the tasks plugin
-h plugin edit tasks
-
-# Edit multiple plugins at once
-h plugin edit pins project
 ```

@@ -10,111 +10,112 @@ h db <subcommand> [args]
 
 ## Subcommands
 
-| Subcommand | Aliases | Description |
-|------------|---------|-------------|
-| `status` | — | Show DB connection info, migration state, and table row counts |
-| `tables` | — | List all table names |
-| `q` | `query` | Query the database |
-| `migrate` | — | Archive YAML files and disable dual-write |
-| `remigrate` | — | Re-import data from YAML into SQLite |
-| `cleanup` | — | Find and generate SQL to remove duplicate rows |
-| `restore` | — | Restore YAML files from most recent backup archive |
+| Subcommand | Description |
+|------------|-------------|
+| `status` | Show DB path, size, migration state, table counts, and backups |
+| `tables` | List all table names |
+| `q` / `query <args>` | Run a SQL query or table lookup |
+| `migrate` | Archive YAML files and disable dual-write |
+| `remigrate [--only tables]` | Re-run YAML import |
+| `cleanup` | Generate a SQL file to remove duplicate rows |
+| `restore` | Restore YAML files from the latest backup archive |
 
-## Options
+### status
 
-### `q` / `query`
+Show DB file path, size, migration state (complete or not), dual-write status, row counts per table, and any backup archives.
 
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Show all rows (no 50-row limit) | false |
-
-### `remigrate`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--only` | — | Comma-separated list of tables to remigrate | all |
-
-## Subcommand Details
-
-### `status`
-
-Show connection info (path, file size), migration state (complete/not run and timestamp), dual-write status, table row counts, and available backup archives.
+**Examples**
 
 ```bash
 h db status
 ```
 
-### `tables`
+### tables
 
-List all table names in the database, sorted alphabetically.
+List all table names in the database.
+
+**Examples**
 
 ```bash
 h db tables
 ```
 
-### `q` / `query`
+### q / query
 
-Query the database in three modes:
+Query the database. Three modes:
 
-1. **Table name only** — show all rows from the table (up to 50 by default)
-2. **Table name + `key=value` filters** — filter rows by column value
-3. **Raw SQL** — execute a SQL statement directly
+- Pass a SQL string starting with SELECT/INSERT/UPDATE/DELETE/WITH to run it directly.
+- Pass a table name with optional `key=value` filters to query that table.
+- Pass no args to print usage.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Show all rows (default limit: 50) |
+
+**Examples**
 
 ```bash
-h db q branches
+h db q tasks
 h db q branches task=my-task
-h db q "SELECT * FROM branches WHERE name LIKE '%feat%'"
-h db q branches -a       # show all rows, no limit
+h db q "SELECT name, task FROM branches WHERE task IS NOT NULL"
+h db q branches --all
 ```
 
-### `migrate`
+### migrate
 
-Archive all `~/.config/hiiro/**/*.yml` files to a timestamped `.tar.gz` backup, then disable dual-write mode so hiiro writes only to SQLite. Prompts for confirmation before proceeding.
+Complete the YAML-to-SQLite migration:
+
+1. Archives all YAML files in `~/.config/hiiro/` to a `.tar.gz` backup.
+2. Deletes the YAML files.
+3. Disables dual-write mode.
+
+Prompts for confirmation before proceeding.
+
+**Examples**
 
 ```bash
 h db migrate
 ```
 
-### `remigrate`
+### remigrate
 
-Re-import data from YAML sources into SQLite. Useful if the database becomes out of sync. With `--only`, limit to specific tables.
+Re-run the YAML import into SQLite. Useful if data was added to YAML files after initial migration. With `--only`, limits to specific tables.
+
+**Options**
+
+| Flag | Description |
+|------|-------------|
+| `--only <tables>` | Comma-separated table names to remigrate |
+
+**Examples**
 
 ```bash
 h db remigrate
-h db remigrate --only todos,branches
+h db remigrate --only todos,tags
 ```
 
-### `cleanup`
+### cleanup
 
-Scan all tables for duplicate rows (using natural unique keys such as `name`, `url`, `number`), generate a SQL file with `DELETE` statements, open it in your editor, and print instructions for applying it. The SQL file is saved to `~/notes/files/`.
+Scan all tracked tables for duplicate rows (by natural unique keys). Generates a `.sql` file in `~/notes/files/` with `DELETE` statements and opens it in your editor for review. Apply with:
+
+```bash
+sqlite3 ~/.config/hiiro/hiiro.db < ~/notes/files/hiiro-cleanup-<timestamp>.sql
+```
+
+**Examples**
 
 ```bash
 h db cleanup
 ```
 
-### `restore`
+### restore
 
-Restore YAML files from the most recent backup archive found in `~/.config/hiiro/`.
+Restore YAML files from the most recent `.tar.gz` backup in `~/.config/hiiro/`.
+
+**Examples**
 
 ```bash
 h db restore
-```
-
-## Examples
-
-```bash
-# Check database health
-h db status
-
-# Look up branches for a task
-h db q branches task=my-feature
-
-# Run a custom query
-h db q "SELECT name, task FROM branches ORDER BY created_at DESC LIMIT 10"
-
-# Find and clean up duplicate rows
-h db cleanup
-
-# Re-sync after a data issue
-h db remigrate --only branches,prs
 ```

@@ -1,178 +1,173 @@
 # h
 
-The main hiiro entry point — dispatch to all subcommands, install, update, and configure the framework.
+The main entry point for the hiiro CLI framework. Provides self-management commands and dispatches to external subcommands (`h-*` binaries in PATH).
 
 ## Synopsis
 
 ```bash
-h <subcommand> [options] [args]
-h version [-a]
-h install [-a] [-p]
-h setup
+h <subcommand> [args]
 ```
 
 ## Subcommands
 
-| Subcommand | Aliases | Description |
-|------------|---------|-------------|
-| `version` | — | Print the installed hiiro version |
-| `install` | `update` | Install or update the hiiro gem |
-| `setup` | — | Copy bin scripts and plugins to `~/bin/` |
-| `ping` | — | Print `pong` (smoke test) |
-| `alert` | — | Send a macOS notification |
-| `queue` | — | Manage Claude prompt queue |
-| `service` | `svc` | Manage background services |
-| `run` | — | Run linters/formatters on changed files |
-| `file` | — | Manage tracked file lists per app |
-| `check_version` | — | Verify installed hiiro version |
-| `delayed_update` | — | Poll RubyGems and auto-install when a version appears |
-| `rnext` | — | Run `git rnext` |
+| Subcommand | Description |
+|------------|-------------|
+| `version` | Print current hiiro version |
+| `ping` | Health check — prints `pong` |
+| `install` / `update` | Install or update hiiro across rbenv versions |
+| `setup` | Install plugins and bin scripts to `~/bin` |
+| `alert` | Send a macOS notification |
+| `queue` | Manage the Claude prompt queue (delegates to `h queue`) |
+| `service` / `svc` | Manage dev services (delegates to `h service`) |
+| `run` | Run tools against changed files (delegates to `h run`) |
+| `file` | Manage tracked app files (delegates to `h file`) |
+| `task` | Manage tasks and worktrees |
+| `subtask` | Manage subtasks within the current task |
+| `check_version` | Verify installed hiiro version across rbenv versions |
+| `delayed_update` | Poll RubyGems for a new version and install when available |
+| `rnext` | Run `git rnext` (rebase next) |
+| `edit` | Open the `h` bin file in your editor |
+| `pry` | Open a pry REPL in the hiiro context |
 
-## External Subcommands
+All `h-*` executables found in PATH are also available as subcommands. For example, `h branch` dispatches to `h-branch`.
 
-hiiro dispatches to external executables matching `h-*` in PATH. All of these are separate docs:
+## Subcommand resolution
 
-- [h-app](h-app.md) — Named app directories within a git repo
-- [h-bg](h-bg.md) — Background tmux windows with history
-- [h-bin](h-bin.md) — List and edit hiiro bin scripts
-- [h-branch](h-branch.md) — Git branch management with task associations
-- [h-buffer](h-buffer.md) — tmux paste buffer management
-- [h-claude](h-claude.md) — Launch Claude Code sessions in tmux
-- [h-commit](h-commit.md) — Fuzzy-select git commit SHAs
-- [h-config](h-config.md) — Open config files in editor
-- [h-cpr](h-cpr.md) — Proxy `h pr` commands to current branch's PR
-- [h-db](h-db.md) — Inspect and manage the hiiro SQLite database
-- [h-img](h-img.md) — Save/encode clipboard images
-- [h-jumplist](h-jumplist.md) — Vim-style tmux navigation history
-- [h-link](h-link.md) — Store, search, tag, and open URLs
-- [h-misc](h-misc.md) — Miscellaneous utilities
-- [h-notify](h-notify.md) — In-pane notifications with macOS alerts
-- [h-pane](h-pane.md) — tmux pane management
-- [h-plugin](h-plugin.md) — List, edit, and search plugin files
-- [h-pm](h-pm.md) — Queue project-manager skill prompts
-- [h-pr](h-pr.md) — GitHub PR tracking and management
-- [h-pr-monitor](h-pr-monitor.md) — Poll PR checks and notify on status changes
-- [h-project](h-project.md) — Project directory and tmux session management
-- [h-registry](h-registry.md) — Named resource registry
-- [h-session](h-session.md) — tmux session management
-- [h-sha](h-sha.md) — Fuzzy-select and copy git SHAs
-- [h-sparse](h-sparse.md) — Manage git sparse-checkout path groups
-- [h-tags](h-tags.md) — Query tags by taggable type
-- [h-title](h-title.md) — Update terminal tab title from tmux session
-- [h-todo](h-todo.md) — Personal todo list management
-- [h-window](h-window.md) — tmux window management
-- [h-wtree](h-wtree.md) — Git worktree management
+Hiiro supports prefix matching. If a prefix uniquely identifies a subcommand, it runs it:
 
-## Options
+```bash
+h ver     # matches h version
+h br s    # matches h branch save
+```
 
-### `version`
+If a prefix is ambiguous, hiiro lists all matching subcommands.
+
+### version
+
+Print the installed hiiro gem version. With `-a`, check all rbenv Ruby versions.
+
+**Options**
 
 | Flag | Short | Description | Default |
 |------|-------|-------------|---------|
 | `--all` | `-a` | Show version for all rbenv Ruby versions | false |
 
-### `install` / `update`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Update all rbenv Ruby versions in parallel | false |
-| `--pre` | `-p` | Install pre-release version | false |
-
-### `check_version`
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Check all rbenv versions | false |
-
-## Subcommand Details
-
-### `version`
-
-Print the installed hiiro version. With `--all`, prints the version for every rbenv-managed Ruby installation in parallel.
+**Examples**
 
 ```bash
 h version
-h version -a
+h version --all
 ```
 
-### `install` / `update`
+### install / update
 
-Install or update the hiiro gem. Without `--all`, updates only the current rbenv Ruby. With `--all`, updates all rbenv Rubies in parallel threads, printing each result as it completes.
+Install or update the hiiro gem. With `-a`, updates all rbenv Ruby versions in parallel.
+
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--all` | `-a` | Update all rbenv Ruby versions | false |
+| `--pre` | `-p` | Install pre-release version | false |
+
+**Examples**
 
 ```bash
 h install
-h update -a
-h install --pre
+h update --all
+h update --pre
 ```
 
-### `setup`
+### setup
 
-Copy hiiro bin scripts (`bin/h-*`) and plugin files (`plugins/*.rb`) to `~/bin/` and `~/.config/hiiro/plugins/`. Scripts are renamed from `h-*` to match the prefix of the binary that invoked setup (e.g., `hiiro-` if invoked as `hiiro setup`). Warns if `~/bin` is not in `$PATH`.
+Install hiiro plugins and bin scripts to `~/bin`. Renames `h-*` scripts to match the current prefix (e.g. `h-branch` stays `h-branch` for the `h` prefix). Warns if `~/bin` is not in PATH.
+
+**Examples**
 
 ```bash
 h setup
 ```
 
-### `ping`
+### alert
 
-Basic smoke test — prints `pong`.
+Send a macOS notification via `terminal-notifier`. See [h-notify](h-notify.md) for the full notification system.
 
-```bash
-h ping
-# => pong
-```
-
-### `alert`
-
-Send a macOS notification via `terminal-notifier`. Options are passed as inline flags:
+**Options**
 
 | Flag | Description |
 |------|-------------|
-| `-m` | Message text |
+| `-m` | Notification message |
 | `-t` | Notification title |
-| `-l` | URL to open on click |
-| `-c` | Shell command to run on click |
+| `-l` | URL to open when clicked |
+| `-c` | Shell command to run when clicked |
 | `-s` | Sound name |
 
-```bash
-h alert -m "Build finished" -t "CI" -l "https://github.com/..."
-```
-
-### `check_version`
-
-Verify that the installed hiiro version matches an expected version string. Exits 0 if all checked versions match, 1 otherwise.
+**Examples**
 
 ```bash
-h check_version 0.1.42
-h check_version 0.1.42 -a
+h alert -t "Done" -m "Build finished" -s Glass
 ```
 
-### `delayed_update`
+### check_version
 
-Poll RubyGems until a specified version appears (up to ~10 minutes), then run `h install -a` in a background tmux window via `h bg run`. Sends a macOS notification when complete.
+Verify the installed hiiro version matches an expected version across rbenv Ruby versions. Exits non-zero if any version mismatches.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Check all rbenv versions |
+
+**Examples**
 
 ```bash
-h delayed_update 0.1.50
+h check_version 0.1.312
+h check_version 0.1.312 --all
 ```
 
-## Examples
+### delayed_update
+
+Polls RubyGems until a specific version appears (up to ~10 minutes), then installs it via `h update -a`. Runs in a background tmux window via `h bg run`. Sends a macOS notification when complete.
+
+**Examples**
 
 ```bash
-# Check current version
-h version
-
-# Update hiiro across all Ruby versions
-h update -a
-
-# Install a prerelease version
-h install --pre
-
-# Set up after gem install
-h setup
-
-# Verify version on CI
-h check_version 0.1.42 && echo "OK"
-
-# Fire-and-forget update after publishing
-h delayed_update 0.1.50
+h delayed_update 0.1.313
 ```
+
+## External subcommands
+
+These are separate bin files dispatched by `h`:
+
+| Command | Description |
+|---------|-------------|
+| [`h app`](h-app.md) | App directory and sub-tool management |
+| [`h bg`](h-bg.md) | Run commands in background tmux windows |
+| [`h bin`](h-bin.md) | List and edit bin executables |
+| [`h branch`](h-branch.md) | Git branch management |
+| [`h buffer`](h-buffer.md) | tmux buffer management |
+| [`h claude`](h-claude.md) | Claude CLI integration and queue |
+| [`h commit`](h-commit.md) | Interactive commit selection |
+| [`h config`](h-config.md) | Open config files in editor |
+| [`h cpr`](h-cpr.md) | Shortcut to current branch's PR |
+| [`h db`](h-db.md) | SQLite database inspection and management |
+| [`h img`](h-img.md) | Image clipboard utilities |
+| [`h jumplist`](h-jumplist.md) | Vim-style tmux navigation history |
+| [`h link`](h-link.md) | URL bookmark management |
+| [`h misc`](h-misc.md) | Miscellaneous utilities |
+| [`h notify`](h-notify.md) | tmux notification system |
+| [`h pane`](h-pane.md) | tmux pane management |
+| [`h pm`](h-pm.md) | Project manager skill launcher |
+| [`h plugin`](h-plugin.md) | Plugin management |
+| [`h pr`](h-pr.md) | GitHub PR management |
+| [`h pr-monitor`](h-pr-monitor.md) | PR monitoring dashboard |
+| [`h project`](h-project.md) | Project directory and tmux session manager |
+| [`h registry`](h-registry.md) | Generic resource registry |
+| [`h session`](h-session.md) | tmux session management |
+| [`h sha`](h-sha.md) | Interactive git SHA selection |
+| [`h sparse`](h-sparse.md) | Git sparse checkout group management |
+| [`h tags`](h-tags.md) | Tag management |
+| [`h title`](h-title.md) | Terminal tab title management |
+| [`h todo`](h-todo.md) | Todo item management |
+| [`h window`](h-window.md) | tmux window management |
+| [`h wtree`](h-wtree.md) | Git worktree management |

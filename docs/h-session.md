@@ -10,160 +10,132 @@ h session <subcommand> [args]
 
 ## Subcommands
 
-| Subcommand | Aliases | Description |
-|------------|---------|-------------|
-| `ls` | `list` | List all tmux sessions |
-| `new` | — | Create a new tmux session |
-| `kill` | — | Kill a session |
-| `attach` | — | Attach to a session |
-| `rename` | — | Rename a session |
-| `switch` | — | Switch the current client to a session |
-| `detach` | — | Detach the current client |
-| `has` | — | Check whether a session exists |
-| `info` | — | Show basic info about a session |
-| `open` | — | Switch to or attach to a named session |
-| `sh` | — | Open a new window in a session and switch to it |
-| `select` | — | Fuzzy-select a session name and print it |
-| `copy` | — | Fuzzy-select a session name and copy to clipboard |
-| `orphans` | — | List sessions with no associated hiiro task |
-| `okill` | — | Interactively kill orphan sessions |
+| Subcommand | Description |
+|------------|-------------|
+| `ls` / `list [args]` | List all sessions |
+| `new [name]` | Create a new session |
+| `kill [name]` | Kill a session |
+| `attach [name]` | Attach to a session |
+| `rename [old] <new>` | Rename a session |
+| `switch [name]` | Switch to a session |
+| `detach [args]` | Detach the current client |
+| `has [name]` | Check if a session exists |
+| `info [name]` | Show session info |
+| `open [name]` | Open a session (switch if in tmux, attach if not) |
+| `sh <session> [cmd]` | Open a new window in a session (or run a command) |
+| `select` | Fuzzy-select and print a session name |
+| `copy` | Fuzzy-select and copy session name to clipboard |
+| `orphans` | List sessions not associated with any task |
+| `okill` | Interactively kill orphan sessions |
 
-## Subcommand Details
+Session names are resolved interactively when not provided. Extra arguments to passthrough subcommands are forwarded to `tmux`.
 
-### `ls` / `list`
+### ls / list
 
-List all tmux sessions. Extra args are passed to `tmux list-sessions`.
+List all sessions. Extra arguments are forwarded to `tmux list-sessions`.
+
+**Examples**
 
 ```bash
 h session ls
-h session ls -F '#{session_name}: #{session_windows} windows'
+h session list
 ```
 
-### `new`
+### new
 
-Create a new tmux session with an optional name. Extra args are forwarded to `tmux new-session`.
+Create a new session, optionally named.
+
+**Examples**
 
 ```bash
 h session new
-h session new my-work
-h session new my-work -d    # detached
+h session new my-project
 ```
 
-### `kill`
+### kill
 
-Kill a session. Fuzzy-selects if no name given.
+Kill a session. Fuzzy-select if no name given.
+
+**Examples**
 
 ```bash
 h session kill
-h session kill my-work
+h session kill my-project
 ```
 
-### `attach`
+### attach
 
-Attach to a session. Fuzzy-selects if no name given.
+Attach to a session. Fuzzy-select if no name given.
+
+**Examples**
 
 ```bash
 h session attach
-h session attach my-work
+h session attach my-project
 ```
 
-### `rename`
+### rename
 
-Rename a session.
+Rename a session. Fuzzy-selects the old name if not provided.
+
+**Examples**
 
 ```bash
-h session rename old-name new-name
+h session rename my-project new-name
+h session rename new-name   # fuzzy-select old session
 ```
 
-### `switch`
+### switch
 
-Switch the current tmux client to a session. Fuzzy-selects if no name given.
+Switch to a session (stays within tmux). Fuzzy-select if no name given.
+
+**Examples**
 
 ```bash
 h session switch
-h session switch my-work
+h session switch my-project
 ```
 
-### `detach`
+### open
 
-Detach the current client from its session.
+Open a session: switches if already in tmux, attaches if not. Creates the session if it doesn't exist.
+
+**Examples**
 
 ```bash
-h session detach
+h session open my-project
 ```
 
-### `has`
+### sh
 
-Check whether a session exists. Exits 0 if it does, 1 if not.
+Open a new window in a session and optionally run a command. Switches to the session.
+
+**Examples**
 
 ```bash
-h session has my-work && echo "exists"
+h session sh my-project
+h session sh my-project bundle exec rails console
 ```
 
-### `info`
-
-Show basic info about the current (or named) session: name, window count, attached status.
-
-```bash
-h session info
-h session info my-work
-```
-
-### `open`
-
-Switch to (or attach to) a named session.
-
-```bash
-h session open my-work
-```
-
-### `sh`
-
-Open a new tmux window in a session and switch to it. Optionally run a command in the new window.
-
-```bash
-h session sh my-work
-h session sh my-work bundle exec rails console
-```
-
-### `select` / `copy`
+### select / copy
 
 Fuzzy-select a session name and print it or copy to clipboard.
 
+**Examples**
+
 ```bash
-name=$(h session select)
+h session select
+sess=$(h session select)
 h session copy
 ```
 
-### `orphans`
+### orphans / okill
 
-List sessions that have no associated hiiro task (comparing against `tasks.yml`).
+`orphans` lists sessions that have no associated task. `okill` shows those sessions in an editor for you to review, then kills those that remain in the YAML list when you save.
+
+**Examples**
 
 ```bash
 h session orphans
-```
-
-### `okill`
-
-Open a YAML editor pre-filled with orphan session names. Delete the sessions you leave in the file when you save.
-
-```bash
 h session okill
-```
-
-## Examples
-
-```bash
-# Create a session for a new project
-h session new my-feature
-
-# Switch to a session interactively
-h session switch
-
-# Clean up stale sessions
-h session orphans
-h session okill
-
-# Check if a session exists before creating
-h session has my-feature || h session new my-feature
 ```

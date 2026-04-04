@@ -8,33 +8,21 @@ Query tags grouped by taggable type from the hiiro database.
 h tags <subcommand> [args]
 ```
 
-Tags in hiiro can be applied to multiple resource types (branches, PRs, links, etc.) and are stored in the SQLite `tags` table. This command provides utilities for querying tags across types.
-
 ## Subcommands
 
 | Subcommand | Description |
 |------------|-------------|
-| `tags_by_type` | Look up tags filtered by taggable type and print all tagged objects |
+| `tags_by_type [types]` | Show tags and tagged objects, grouped by type |
 
-## Subcommand Details
+Note: this command is currently a low-level utility used for debugging and exploration. For tagging branches and tasks, use the `tag` subcommands on [h-branch](h-branch.md) and [h-pm](h-pm.md).
 
-### `tags_by_type`
+### tags_by_type
 
-Look up tags filtered by one or more taggable type names, then print both the tags and all tagged objects of those types. After printing, drops into a `pry` REPL for interactive exploration.
+List all tags of the given types, then list all objects tagged with those tags.
 
-**Note:** This is primarily a development and debugging utility, not intended for regular use.
+**Examples**
 
 ```bash
 h tags tags_by_type branch
-h tags tags_by_type branch pr
+h tags tags_by_type task branch
 ```
-
-## Notes
-
-For day-to-day tag management, use the `tag` and `tags` subcommands on individual resource commands:
-
-- `h branch tags` — view branches grouped by tag
-- `h branch tag <name> <tag>` — tag a branch
-- `h pr tags` — view PRs grouped by tag
-- `h pr tag <number> <tag>` — tag a PR
-- `h link tags` — view links grouped by tag

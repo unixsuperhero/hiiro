@@ -1,6 +1,6 @@
 # h-app
 
-Manage named application subdirectories within a git repo, with shortcuts to cd, search, and run tools scoped to each app.
+Manage named application subdirectories within a git repo or task worktree. Provides shortcuts to navigate, search, and run tools scoped to each app.
 
 ## Synopsis
 
@@ -8,156 +8,182 @@ Manage named application subdirectories within a git repo, with shortcuts to cd,
 h app <subcommand> [args]
 ```
 
-Apps are stored in SQLite (`~/.config/hiiro/hiiro.db`) and referenced by name. Paths are relative to the repository root. When resolving paths, `h-app` first checks the current git root, then falls back to the current task's tree path.
-
 ## Subcommands
 
-| Subcommand | Aliases | Description |
-|------------|---------|-------------|
-| `config` | — | Open `apps.yml` in editor |
-| `cd` | — | Send `cd <app_dir>` to current tmux pane |
-| `ls` | — | List all configured apps |
-| `path` | — | Print relative path to app from current directory |
-| `abspath` | — | Print absolute filesystem path of app |
-| `add` | — | Register a new app name with its path |
-| `rm` | `remove` | Remove a registered app by name |
-| `fd` | — | Run `fd` inside the app directory |
-| `rg` | — | Run `rg` (ripgrep) inside the app directory |
-| `vim` | — | Open vim inside the app directory |
-| `sh` | — | Open a shell (or run a command) inside the app directory |
-| `service` | — | Delegate to [h service](h.md) subcommands |
-| `run` | — | Delegate to [h run](h.md) subcommands |
-| `file` | — | Delegate to [h file](h.md) subcommands |
+| Subcommand | Description |
+|------------|-------------|
+| `ls` | List all configured apps |
+| `add <name> <path>` | Register a new app |
+| `rm <name>` | Remove an app |
+| `cd [name]` | Send a `cd` to the current tmux pane |
+| `path [name]` | Print relative path to app (from cwd) |
+| `abspath [name]` | Print absolute path to app |
+| `fd <name> [args]` | Run `fd` scoped to an app directory |
+| `rg <name> [args]` | Run `rg` scoped to an app directory |
+| `vim <name> [args]` | Open vim scoped to an app directory |
+| `sh <name> [cmd]` | Open a shell (or run a command) in an app directory |
+| `config` | Edit `~/.config/hiiro/apps.yml` |
+| `service` | Manage services (delegates to `h service`) |
+| `run` | Run tools against changed files (delegates to `h run`) |
+| `file` | Manage tracked app files (delegates to `h file`) |
 
-## Subcommand Details
+### ls
 
-### `config`
+List all configured apps with their relative paths.
 
-Open the `~/.config/hiiro/apps.yml` file in your editor.
+**Examples**
+
+```bash
+h app ls
+```
+
+### add
+
+Register an app with a name and relative path from the repo root.
+
+**Examples**
+
+```bash
+h app add api backend/api
+h app add web frontend/web
+```
+
+### rm / remove
+
+Remove a registered app.
+
+**Examples**
+
+```bash
+h app rm api
+```
+
+### cd
+
+Send a `cd` command to the current tmux pane to navigate to an app directory. Resolves the app path relative to the git repo root or current task tree. With no name, `cd`s to the repo root.
+
+**Examples**
+
+```bash
+h app cd
+h app cd api
+```
+
+### path
+
+Print the relative path (from current directory) to the app. With no name, prints the repo root path.
+
+**Examples**
+
+```bash
+h app path api
+h app path
+```
+
+### abspath
+
+Print the absolute path to the app.
+
+**Examples**
+
+```bash
+h app abspath api
+```
+
+### fd
+
+Run `fd` in the app's directory. All extra arguments are forwarded to `fd`.
+
+**Examples**
+
+```bash
+h app fd api '*.rb'
+h app fd web --type f
+```
+
+### rg
+
+Run `rg` (ripgrep) in the app's directory. All extra arguments are forwarded to `rg`.
+
+**Examples**
+
+```bash
+h app rg api 'def foo'
+```
+
+### vim
+
+Open vim in the app's directory. Extra arguments are forwarded.
+
+**Examples**
+
+```bash
+h app vim api
+h app vim api src/main.rb
+```
+
+### sh
+
+Open a shell in the app's directory. If additional arguments are provided, run them as a command instead.
+
+**Examples**
+
+```bash
+h app sh api
+h app sh api bundle exec rails console
+```
+
+### config
+
+Edit the apps config file (`~/.config/hiiro/apps.yml`) in your editor.
+
+**Examples**
 
 ```bash
 h app config
 ```
 
-### `cd`
+### service
 
-Send a `cd` command to the current tmux pane using `tmux send-keys`. If no app name is given, cd's to the repo root. Uses relative paths.
+Delegate to the `h service` subcommand system, scoped to the current app context. See [h-app.md](h-app.md) service section and `h service` docs.
 
-```bash
-h app cd             # cd to repo root
-h app cd backend     # cd to backend app directory
-```
-
-### `ls`
-
-List all configured apps with their relative paths from the repo root.
+**Examples**
 
 ```bash
-h app ls
-# Configured apps:
-#   backend              => services/backend
-#   frontend             => apps/web
+h app service ls
+h app service start my-rails
 ```
 
-### `path`
+### run
 
-Print the relative path from the current directory to the named app (or repo root if no name given).
+Delegate to the runner tool system for running linters/tests against changed files.
+
+**Examples**
 
 ```bash
-h app path backend
+h app run
+h app run lint ruby
 ```
 
-### `abspath`
+### file
 
-Print the absolute filesystem path of the named app directory.
+Delegate to the app file tracking system.
+
+**Examples**
 
 ```bash
-h app abspath backend
-# => /Users/josh/work/myrepo/services/backend
+h app file ls
+h app file add myapp src/main.rb
 ```
 
-### `add`
+## Configuration
 
-Register a new app name mapped to a path relative to the repo root.
+Apps are stored in `~/.config/hiiro/apps.yml`:
 
-```bash
-h app add backend services/backend
-h app add frontend apps/web
+```yaml
+api: backend/api
+web: frontend/web
+workers: backend/workers
 ```
 
-### `rm` / `remove`
-
-Remove a registered app by name.
-
-```bash
-h app rm backend
-```
-
-### `fd`
-
-Run `fd` inside the named app's directory. Extra arguments are forwarded to `fd`.
-
-```bash
-h app fd backend "*.rb"
-h app fd frontend --type f --extension ts
-```
-
-### `rg`
-
-Run `rg` (ripgrep) inside the named app's directory. Extra arguments are forwarded to `rg`.
-
-```bash
-h app rg backend "def process_payment"
-h app rg frontend "useState" --type ts
-```
-
-### `vim`
-
-Open vim inside the named app's directory. Extra arguments are forwarded to vim.
-
-```bash
-h app vim backend
-h app vim frontend src/index.tsx
-```
-
-### `sh`
-
-Open a shell (using `$SHELL` or `zsh`) inside the app directory. If extra args are given, runs them as a command instead.
-
-```bash
-h app sh backend
-h app sh backend bundle exec rails console
-```
-
-### `service`
-
-Delegate to `Hiiro::ServiceManager` subcommands. See [h service subcommands](h.md) for full details.
-
-### `run`
-
-Delegate to `Hiiro::RunnerTool` subcommands. See [h run subcommands](h.md) for full details.
-
-### `file`
-
-Delegate to `Hiiro::AppFiles` subcommands. See [h file subcommands](h.md) for full details.
-
-## Examples
-
-```bash
-# Register apps for a monorepo
-h app add api services/api
-h app add web apps/frontend
-h app add workers jobs/workers
-
-# Navigate to an app
-h app cd api
-
-# Search for a pattern in the api app
-h app rg api "class.*Controller"
-
-# Open a shell in the web app
-h app sh web
-
-# Run tests for the api app
-h app run api test
-```
+Paths are relative to the git repo root (or current task tree path).
