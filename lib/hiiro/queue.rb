@@ -443,7 +443,7 @@ class Hiiro
           loop do
             loops += 1
             if current_version
-              latest = `gem which hiiro`.sub(/.*hiiro-/, '').sub(/\/.*/, '') rescue nil
+              latest = `gem which hiiro`.sub(/.*hiiro-/, '').sub(/\/.*/, '').strip rescue nil
 
               if latest && latest != current_version
                 puts "New hiiro version detected (#{latest}), restarting..."
