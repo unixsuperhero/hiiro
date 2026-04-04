@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.332] - 2026-04-04
+
+### Changed
+- Extract `hiiro_version` helper method in queue watcher to reduce duplication and improve version detection reliability
+
 ## [0.1.331] - 2026-04-04
 
 ### Fixed
