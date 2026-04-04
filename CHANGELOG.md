@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.330] - 2026-04-04
+
+### Added
+- `h queue add` now supports tmux session name prefix matching as fallback when task name doesn't match
+- Queue editor now opens from the session's active pane directory when adding tasks via session reference
+
+### Changed
+- Extract `session_info_for()` helper to resolve tmux sessions by prefix in queue prompt resolver
+
 ## [0.1.329] - 2026-04-03
 
 ### Changed
