@@ -7,6 +7,10 @@ require_relative 'git/pr'
 
 class Hiiro
   class Git
+    def self.root
+      `git rev-parse --show-toplevel 2>/dev/null`.strip
+    end
+
     def self.add_resolvers(hiiro)
       hiiro.add_resolver(:branch, -> { hiiro.fuzzyfind(Branches.local.names) }) do |name|
         Branches.local.find_by_name(name)&.name || name
