@@ -172,6 +172,16 @@ class Claude
       io.read
     }.strip.gsub(/\A```(?:json)?\n?/, "").gsub(/\n?```\z/, "")
 
+    puts
+    puts 'CLAUDE RESPONSE:'
+    puts 'CLAUDE RESPONSE:'
+    puts
+    puts '------------------------'
+    puts raw
+    puts '------------------------'
+    puts
+
+    File.write('tmp/publish_output/' + Time.now.strftime('%Y%m%d%H%M%S') + '.json', raw)
     parsed = JSON.parse(raw)
     Result.new(parsed["commits"], parsed["changelog"])
   end
@@ -200,16 +210,16 @@ current_version = Version.latest(RubyGems.published_versions("hiiro"))
 new_version     = Version.bump(current_version, pre_release: pre_release)
 puts "Latest: #{current_version}  →  New: #{new_version}"
 
-puts "\nAsking Claude to plan commits and generate changelog..."
-release = Claude.prepare_release(
-  version:            new_version,
-  diff:               pending_before ? Git.diff   : "",
-  status:             pending_before ? Git.status : "",
-  git_log:            Git.commits_since_last_tag,
-  existing_changelog: File.exist?("CHANGELOG.md") ? File.read("CHANGELOG.md") : ""
-)
-
 if pending_before
+  puts "\nAsking Claude to plan commits and generate changelog..."
+  release = Claude.prepare_release(
+    version:            new_version,
+    diff:               Git.diff,
+    status:             Git.status,
+    git_log:            Git.commits_since_last_tag,
+    existing_changelog: File.exist?("CHANGELOG.md") ? File.read("CHANGELOG.md") : ""
+  )
+
   begin
     system("git", "add", "--all")
     release.commits.each { |c| Git.stage_and_commit(c["files"], c["message"]) }
@@ -217,9 +227,11 @@ if pending_before
     puts "Warning: could not apply Claude commit plan (#{e.message}) — committing all as one"
     Git.commit_all("chore: pre-publish changes")
   end
-end
 
-File.write("CHANGELOG.md", release.changelog) if release.changelog && !release.changelog.strip.empty?
+  File.write("CHANGELOG.md", release.changelog) if release.changelog && !release.changelog.strip.empty?
+else
+  puts "\nNo pending changes — skipping Claude."
+end
 File.write("lib/hiiro/version.rb", "class Hiiro\n  VERSION = #{new_version.inspect}\nend\n")
 
 RubyGem.build(new_version)
