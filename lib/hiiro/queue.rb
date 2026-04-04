@@ -430,20 +430,24 @@ class Hiiro
       { name: name, path: path }
     end
 
+    def self.hiiro_version
+      `gem which hiiro`.sub(/.*hiiro-/, '').sub(/\/.*/, '').strip
+    end
+
     def self.build_hiiro(parent_hiiro, q=nil, task_info: nil)
       q ||= current(parent_hiiro)
 
       parent_hiiro.make_child do |h|
         h.add_subcmd(:watch) {
           q.queue_dirs
-          current_version = `gem which hiiro`.sub(/.*hiiro-/, '').sub(/\/.*/, '')
+          current_version = hiiro_version
           puts "Watching #{File.join(DIR, 'pending')} ..."
           puts "Press Ctrl-C to stop"
           loops = 0
           loop do
             loops += 1
             if current_version
-              latest = `gem which hiiro`.sub(/.*hiiro-/, '').sub(/\/.*/, '').strip rescue nil
+              latest = hiiro_version rescue nil
 
               if latest && latest != current_version
                 puts "New hiiro version detected (#{latest}), restarting..."
