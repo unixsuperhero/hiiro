@@ -319,10 +319,22 @@ class Hiiro
           default_task_info
         end
       elsif opts.task.is_a?(String)
-        task_info_for(opts.task)
+        task_info_for(opts.task) || session_info_for(opts.task)
       else
         default_task_info
       end
+    end
+
+    # Prefix-match opts.task against live tmux sessions; return session_name hash or nil.
+    def session_info_for(prefix)
+      sessions = Hiiro::Tmux::Sessions.fetch rescue nil
+      return nil unless sessions
+
+      names   = sessions.names
+      matches = names.select { |n| n.start_with?(prefix) }
+      return nil unless matches.length == 1
+
+      { session_name: matches.first }
     end
 
     def strip_frontmatter(text)
@@ -673,6 +685,12 @@ class Hiiro
             fm_lines << "---"
             fm_lines << ""
             fm_content = fm_lines.join("\n")
+
+            # cd to the session's active pane dir so the editor opens from there
+            if ti&.dig(:session_name) && !ti[:tree_name]
+              pane_path = `tmux display-message -t #{Shellwords.shellescape(ti[:session_name])}: -p '\#{pane_current_path}' 2>/dev/null`.strip
+              Dir.chdir(pane_path) if !pane_path.empty? && Dir.exist?(pane_path)
+            end
 
             input = InputFile.md_file(hiiro: h, content: fm_content, append: !!fm_content, prefix: 'hq-')
             input.edit
