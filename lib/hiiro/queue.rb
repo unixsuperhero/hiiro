@@ -441,7 +441,7 @@ class Hiiro
         h.add_subcmd(:watch) {
           q.queue_dirs
           current_version = hiiro_version
-          puts "Watching #{File.join(DIR, 'pending')} ..."
+          puts "Watching #{File.join(DIR, 'pending')} (v#{current_version}) ..."
           puts "Press Ctrl-C to stop"
           loops = 0
           loop do
