@@ -10,78 +10,89 @@ h window <subcommand> [args]
 
 ## Subcommands
 
-| Subcommand | Aliases | Description |
-|------------|---------|-------------|
-| `ls` | — | List windows in the current session |
-| `lsa` | — | List all windows across all sessions |
-| `new` | — | Create a new window |
-| `kill` | — | Kill a window |
-| `rename` | — | Rename the current window |
-| `swap` | — | Swap windows |
-| `move` | — | Move window |
-| `select` | — | Fuzzy-select a window target and print it |
-| `copy` | — | Fuzzy-select a window and copy target to clipboard |
-| `sw` | `switch` | Switch to a window |
-| `next` | — | Go to the next window |
-| `prev` | — | Go to the previous window |
-| `last` | — | Go to the last active window |
-| `link` | — | Link a window to another session |
-| `unlink` | — | Unlink a window from its session |
-| `info` | — | Show info about a window |
-| `vsplit` | — | Apply `even-horizontal` layout (side-by-side panes) |
-| `hsplit` | — | Apply `even-vertical` layout (top/bottom panes) |
-| `layout` | — | Select a tmux layout by name |
+| Subcommand | Description |
+|------------|-------------|
+| `ls [args]` | List windows in current session |
+| `lsa [args]` | List all windows across all sessions |
+| `new [name]` | Create a new window |
+| `kill [target]` | Kill a window |
+| `rename [args]` | Rename a window |
+| `swap [args]` | Swap windows |
+| `move [args]` | Move a window |
+| `link [args]` | Link a window |
+| `unlink [target]` | Unlink a window |
+| `select [target]` | Print target window ID (fuzzy-select if needed) |
+| `copy [target]` | Copy window target to clipboard |
+| `sw` / `switch [target]` | Switch to a window |
+| `next [args]` | Move to next window |
+| `prev [args]` | Move to previous window |
+| `last [args]` | Move to last window |
+| `info [target]` | Show window info |
+| `vsplit` | Apply even-horizontal layout (side by side panes) |
+| `hsplit` | Apply even-vertical layout (top/bottom panes) |
+| `layout [name]` | Apply a named layout |
 
-## Subcommand Details
+### ls / lsa
 
-### `ls` / `lsa`
+List windows in the current session (`ls`) or all windows across all sessions (`lsa`). Extra arguments are forwarded to `tmux list-windows`.
 
-List windows in the current session, or all windows across all sessions with `lsa`. Extra args forwarded to `tmux list-windows`.
+**Examples**
 
 ```bash
 h window ls
 h window lsa
-h window ls -F '#{window_name}: #{window_panes} panes'
 ```
 
-### `new`
+### new
 
-Create a new window with an optional name.
+Create a new window, optionally named.
+
+**Examples**
 
 ```bash
 h window new
-h window new my-feature
+h window new my-window
 ```
 
-### `kill`
+### kill
 
-Kill a window. Fuzzy-selects if no target given.
+Kill a window. Fuzzy-select if no target given.
+
+**Examples**
 
 ```bash
 h window kill
-h window kill @3
+h window kill :3
 ```
 
-### `rename`
+### select / copy
 
-Rename the current window. Args forwarded to `tmux rename-window`.
+Fuzzy-select a window and print its target ID or copy it to clipboard.
+
+**Examples**
 
 ```bash
-h window rename my-feature
+h window select
+target=$(h window select)
+h window copy
 ```
 
-### `sw` / `switch`
+### sw / switch
 
-Switch to a window. Fuzzy-selects if no target given.
+Switch to a window. Fuzzy-select if no target given.
+
+**Examples**
 
 ```bash
 h window sw
-h window switch @3
+h window switch my-session:my-window
 ```
 
-### `next` / `prev` / `last`
+### next / prev / last
 
-Navigate between windows.
+Navigate to next, previous, or last window.
+
+**Examples**
 
 ```bash
 h window next
@@ -89,58 +100,34 @@ h window prev
 h window last
 ```
 
-### `vsplit` / `hsplit`
+### layout
 
-Apply a layout to the current window:
+Apply a tmux layout. Fuzzy-select from available layouts if no name given. Supported layout names:
 
-- `vsplit` — `even-horizontal` (side-by-side panes)
-- `hsplit` — `even-vertical` (top/bottom panes)
+- `horizontal` / `ehorizontal` — even-vertical (top/bottom panes)
+- `vertical` / `evertical` — even-horizontal (side-by-side panes)
+- `mhorizontal` / `main_horizontal` — main-vertical
+- `mvertical` / `main_vertical` — main-horizontal
+- `tiled` — tiled
+
+**Examples**
+
+```bash
+h window layout
+h window layout horizontal
+h window layout tiled
+```
+
+### vsplit / hsplit
+
+Shortcuts for common layouts:
+
+- `vsplit` — apply `even-horizontal` layout (panes side by side)
+- `hsplit` — apply `even-vertical` layout (panes stacked top/bottom)
+
+**Examples**
 
 ```bash
 h window vsplit
 h window hsplit
-```
-
-### `layout`
-
-Select a tmux layout by name. Fuzzy-selects if no name given. Accepted names (mapped to tmux layout strings):
-
-| Input name | tmux layout |
-|------------|-------------|
-| `horizontal`, `ehorizontal` | `even-vertical` |
-| `vertical`, `evertical` | `even-horizontal` |
-| `main_horizontal`, `mhorizontal` | `main-vertical` |
-| `main_vertical`, `mvertical` | `main-horizontal` |
-| `tiled` | `tiled` |
-
-```bash
-h window layout
-h window layout tiled
-h window layout vertical
-```
-
-### `info`
-
-Show info about the current (or target) window.
-
-```bash
-h window info
-h window info @3
-```
-
-## Examples
-
-```bash
-# Open a new named window
-h window new feature-work
-
-# Switch to a window interactively
-h window sw
-
-# Arrange panes side by side
-h window vsplit
-
-# Go to next/previous window
-h window next
-h window prev
 ```
