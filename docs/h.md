@@ -12,24 +12,24 @@ Subcommands support prefix matching — `h ver` matches `h version`, `h br s` ma
 
 ## Inline subcommands
 
-These subcommands are defined directly in `exe/h` (no separate bin file):
+These subcommands are defined directly in `exe/h` or loaded from `lib/`:
 
-| Subcommand | Description |
-|------------|-------------|
-| [`h queue`](h-queue.md) | Claude prompt queue — create, watch, and run AI prompts in tmux |
-| [`h task`](h-task.md) | Task management — worktree + tmux session pairs for parallel development |
-| [`h subtask`](h-subtask.md) | Subtask management scoped to the current parent task |
-| [`h service`](h-service.md) | Dev service management with tmux, env files, and service groups |
-| `h version` | Print installed hiiro version (`-a` for all rbenv versions) |
-| `h install` / `h update` | Install or update the hiiro gem (`-a` all rbenv versions, `-p` pre-release) |
-| `h setup` | Install plugins and bin scripts to `~/bin` |
-| `h alert` | Send a macOS notification |
-| `h ping` | Health check — prints `pong` |
-| `h check_version` | Verify installed hiiro version across rbenv versions |
-| `h delayed_update` | Poll RubyGems for a new version and install when available |
-| `h rnext` | Run `git rnext` (rebase next) |
-| `h edit` | Open the `h` bin file in your editor |
-| `h pry` | Open a pry REPL in the hiiro context |
+| Subcommand | Description | Source |
+|------------|-------------|--------|
+| `h alert` | Send a macOS notification | `exe/h` |
+| `h check_version` | Verify installed hiiro version across rbenv versions | `exe/h` |
+| `h delayed_update` | Poll RubyGems for a new version and install when available | `exe/h` |
+| `h edit` | Open the `h` bin file in your editor | `exe/h` |
+| `h install` / `h update` | Install or update the hiiro gem (`-a` all rbenv versions, `-p` pre-release) | `exe/h` |
+| `h ping` | Health check — prints `pong` | `exe/h` |
+| `h pry` | Open a pry REPL in the hiiro context | `exe/h` |
+| [`h queue`](h-queue.md) | Claude prompt queue — create, watch, and run AI prompts in tmux | `lib/hiiro/queue.rb` |
+| `h rnext` | Run `git rnext` (rebase next) | `exe/h` |
+| [`h service`](h-service.md) | Dev service management with tmux, env files, and service groups | `lib/hiiro/service_manager.rb` |
+| `h setup` | Install plugins and bin scripts to `~/bin` | `exe/h` |
+| [`h subtask`](h-subtask.md) | Subtask management scoped to the current parent task | `lib/hiiro/tasks.rb` |
+| [`h task`](h-task.md) | Task management — worktree + tmux session pairs for parallel development | `lib/hiiro/tasks.rb` |
+| `h version` | Print installed hiiro version (`-a` for all rbenv versions) | `exe/h` |
 
 ## External subcommands
 
