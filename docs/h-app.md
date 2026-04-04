@@ -145,7 +145,7 @@ h app config
 
 ### service
 
-Delegate to the `h service` subcommand system, scoped to the current app context. See [h-app.md](h-app.md) service section and `h service` docs.
+Delegate to the `h service` subcommand system, scoped to the current app context. All `h service` subcommands (`ls`, `start`, `stop`, `attach`, `open`, `url`, `port`, `status`, `add`, `rm`, `config`, `groups`, `env`) are available.
 
 **Examples**
 
