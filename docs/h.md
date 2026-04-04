@@ -135,6 +135,142 @@ Polls RubyGems until a specific version appears (up to ~10 minutes), then instal
 h delayed_update 0.1.313
 ```
 
+## h task and h subtask
+
+`h task` manages top-level tasks (worktree + tmux session pairs). `h subtask` manages subtasks scoped to the current parent task. Both share the same subcommands.
+
+### task / subtask subcommands
+
+| Subcommand | Description |
+|------------|-------------|
+| `ls` / `list` | List tasks (and subtasks) |
+| `start <name> [app]` | Create or switch to a task |
+| `switch [name] [app]` | Switch to a task's tmux session |
+| `stop [name]` | Stop a task (preserves worktree) |
+| `resume [tree]` | Resume a task from an available worktree |
+| `current` | Print current task name |
+| `status` / `st` | Show current task details |
+| `branch [task]` | Print branch name for a task |
+| `tree [task]` | Print worktree name for a task |
+| `session [task]` | Print session name for a task |
+| `cd [task] [app]` | Send `cd` to current pane |
+| `path [task] [app]` | Print path to task/app directory |
+| `app [name]` | Open an app in a new tmux window |
+| `apps` | List configured apps |
+| `tag [task] <tags>` | Tag a task |
+| `untag [task] [tags]` | Remove tags |
+| `tags` | List tagged tasks |
+| `sparse [groups]` | Apply sparse checkout groups to current task |
+| `color` | Set or pick a display color for the current task |
+| `save` | Save current task's tmux window state |
+| `edit` | Open the tasks YAML file |
+| `todo [args]` | Manage todos for the current task |
+| `queue [args]` | Claude queue scoped to current task (see `h queue`) |
+| `service [args]` | Service manager scoped to current task |
+| `run [args]` | Run tools for current task |
+| `file [args]` | App file tracking for current task |
+| `prs [args]` | List PRs for current task |
+| `branches [args]` | List branches for current task |
+| `wtrees [args]` | List worktrees for current task |
+
+**Examples**
+
+```bash
+h task ls
+h task start my-feature
+h task start my-feature api
+h task switch
+h task switch my-feature
+h task current
+h task cd
+h task cd my-feature api
+h task path my-feature
+h task branch
+h task stop my-feature
+h subtask ls
+h subtask start auth
+h subtask switch
+```
+
+## h queue
+
+`h queue` manages the Claude prompt queue — a directory-based task system that runs prompts through the `claude` CLI in tmux windows.
+
+Queue directories live in `~/.config/hiiro/data/queue/{wip,pending,running,done,failed}/`.
+
+| Subcommand | Description |
+|------------|-------------|
+| `ls` / `list` | List all tasks with status and elapsed time |
+| `status` | Detailed status with working directory info |
+| `add [args]` | Create a new pending prompt |
+| `hadd [args]` | Add and launch in a horizontal tmux split |
+| `vadd [args]` | Add and launch in a vertical tmux split |
+| `cadd [args]` | Add and run in current tmux split |
+| `sadd [args]` | Add scoped to current tmux session |
+| `wip [name]` | Create or edit a work-in-progress prompt |
+| `ready [name]` | Move wip prompt to pending |
+| `run [name]` | Launch pending task(s) in tmux windows |
+| `watch` | Continuously poll and launch pending tasks |
+| `attach [name]` | Switch to a running task's tmux window |
+| `session` | Open the queue tmux session |
+| `kill [name]` | Kill a running task |
+| `retry [name]` | Move failed/done task back to pending |
+| `clean` | Remove all done/failed task files |
+| `dir` | Print queue directory path |
+
+**add options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--task` | `-t` | Task name to associate |
+| `--name` | `-n` | Base filename for the task |
+| `--find` | `-f` | Choose task interactively |
+| `--horizontal` | `-h` | Launch in horizontal split |
+| `--vertical` | `-v` | Launch in vertical split |
+| `--session` | `-s` | Use current tmux session |
+| `--ignore` | `-i` | Fire-and-forget (no persistent shell) |
+
+**ls options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--all` | `-a` | Show all tasks (with pager if needed) |
+| `--status` | `-s` | Filter by status (repeatable) |
+
+**Prompt frontmatter**
+
+Prompts are Markdown files with optional YAML frontmatter:
+
+```markdown
+---
+task_name: my-task
+tree_name: my-task/main
+session_name: my-task
+app: api
+dir: packages/api
+ignore: true
+---
+Your prompt text here.
+```
+
+**Examples**
+
+```bash
+h queue ls
+h queue add
+h queue add "Fix the login bug"
+h queue add -t my-task "Refactor the auth module"
+h queue hadd
+h queue wip my-draft
+h queue ready
+h queue run
+h queue watch
+h queue attach
+h queue kill my-task
+h queue retry failed-task
+h queue clean
+```
+
 ## External subcommands
 
 These are separate bin files dispatched by `h`:
