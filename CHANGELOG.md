@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.333] - 2026-04-04
+
+### Changed
+- Display hiiro version in queue watch output for better visibility during task monitoring
+
 ## [0.1.332] - 2026-04-04
 
 ### Changed
