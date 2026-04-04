@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.331] - 2026-04-04
+
+### Fixed
+- Strip whitespace from gem version output in queue watcher to prevent version comparison failures
+
 ## [0.1.330] - 2026-04-04
 
 ### Added
