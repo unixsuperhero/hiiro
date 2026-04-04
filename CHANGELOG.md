@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.329] - 2026-04-03
+
+### Changed
+- Add debug output and temporary JSON logging to publish script for troubleshooting Claude API responses
+
 ## [0.1.328] - 2026-04-02
 
 ### Changed
