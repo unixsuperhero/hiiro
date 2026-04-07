@@ -1,11 +1,16 @@
 require 'sequel'
 
 class Hiiro
-  class RegistryEntry < Sequel::Model(:registry_entries)
+  class RegistryEntry < Sequel::Model(:registry)
     Hiiro::DB.register(self)
 
     def self.create_table!(db)
-      db.create_table?(:registry_entries) do
+      # Rename old table if it exists
+      if db.table_exists?(:registry_entries) && !db.table_exists?(:registry)
+        db.rename_table(:registry_entries, :registry)
+      end
+      
+      db.create_table?(:registry) do
         primary_key :id
         String :resource_type, null: false   # e.g. "service", "queue", "worker"
         String :name,          null: false   # canonical identifier
@@ -21,8 +26,8 @@ class Hiiro
 
     def self.migrate!(db)
       # Add value column if missing (migration for existing DBs)
-      unless db.schema(:registry_entries).any? { |col, _| col == :value }
-        db.alter_table(:registry_entries) { add_column :value, String }
+      unless db.schema(:registry).any? { |col, _| col == :value }
+        db.alter_table(:registry) { add_column :value, String }
       end
     end
 
