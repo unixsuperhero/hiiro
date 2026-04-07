@@ -37,6 +37,8 @@ class Hiiro
 
         MODELS.each do |cls|
           cls.create_table!(conn)
+          # Run model-specific migrations (e.g., adding columns to existing tables)
+          cls.migrate!(conn) if cls.respond_to?(:migrate!)
           # Clear all schema-related caches on the model and its anonymous Sequel
           # parent class. When require_valid_table=false and the table didn't exist
           # at class-definition time, Sequel caches empty results for @db_schema,

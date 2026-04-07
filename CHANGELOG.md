@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `RegistryEntry.value` column - registry entries can now store a value in addition to name
+- `h registry set <type> <name> <value>` - update or create entry with value
+- `h registry get` supports prefix matching (and `--substring` for substring match)
+- `h registry get` prints all matching values when multiple entries match
+- Automatic migration adds `value` column to existing databases
+
+### Changed
+- `h registry add <type> <name> [value]` - now accepts optional value as third positional argument
+- `h registry get` - returns stored value (if set), falls back to name
+- `h registry ls` - displays values in listing
+
 ## [0.1.337] - 2026-04-06
 
 ### Changed

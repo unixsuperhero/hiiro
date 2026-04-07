@@ -21,8 +21,9 @@ Hiiro.run(*ARGV, tasks: true) do
         puts '─' * 40
       end
       alias_col = e.short_name ? "[#{e.short_name}]".ljust(18) : ' ' * 18
+      value_col = e.value ? " = #{e.value}" : ''
       desc_col  = e.description ? "  # #{e.description}" : ''
-      puts "  #{alias_col} #{e.name}#{desc_col}"
+      puts "  #{alias_col} #{e.name}#{value_col}#{desc_col}"
     end
     puts
   end
@@ -33,16 +34,19 @@ Hiiro.run(*ARGV, tasks: true) do
     puts types.empty? ? "No types registered yet." : types.join("\n")
   end
 
-  # h registry add <type> <name> [--alias <short>] [--desc <description>]
+  # h registry add <type> <name> [value] [--alias <short>] [--desc <description>]
   add_subcmd(:add) do |type, name, *rest|
     unless type && name
-      puts "Usage: h registry add <type> <name> [--alias <short>] [--desc <text>]"
+      puts "Usage: h registry add <type> <name> [value] [--alias <short>] [--desc <text>]"
       next
     end
     opts = Hiiro::Options.setup {
       option(:alias, short: :a, desc: 'Short alias')
       option(:desc,  short: :d, desc: 'Description')
     }.parse(rest)
+
+    # First positional arg after name is the value
+    value = opts.args.first
 
     existing = Hiiro::RegistryEntry.find_by_ref(name, type: type)
     if existing
@@ -53,6 +57,7 @@ Hiiro.run(*ARGV, tasks: true) do
     entry = Hiiro::RegistryEntry.create(
       resource_type: type,
       name:          name,
+      value:         value,
       short_name:    opts.alias,
       description:   opts.desc,
       created_at:    Time.now.iso8601
@@ -60,15 +65,26 @@ Hiiro.run(*ARGV, tasks: true) do
     puts "Added:\n#{entry.display}"
   end
 
-  # h registry rm <name_or_alias> [type]
-  add_subcmd(:rm, :remove) do |ref, type = nil|
+  # h registry rm <name_or_alias> [type] [-s]
+  add_subcmd(:rm, :remove) do |*args|
+    opts = Hiiro::Options.setup {
+      option(:substring, short: :s, type: :flag, desc: 'Match substring anywhere in name')
+    }.parse(args)
+    
+    ref, type = opts.args
     unless ref
-      puts "Usage: h registry rm <name_or_alias> [type]"
+      puts "Usage: h registry rm <name_or_alias> [type] [-s]"
       next
     end
-    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type ? type.to_s : nil)
+    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type&.to_s, substring: opts.substring)
     unless entry
-      puts "Not found: #{ref}#{type ? " (type: #{type})" : ''}"
+      matches = Hiiro::RegistryEntry.find_all_by_ref(ref, type: type&.to_s, substring: opts.substring)
+      if matches.any?
+        puts "Ambiguous match '#{ref}' - #{matches.size} entries:"
+        matches.each { |e| puts "  #{e.resource_type}/#{e.name}" }
+      else
+        puts "Not found: #{ref}#{type ? " (type: #{type})" : ''}"
+      end
       next
     end
     puts "Removing: #{entry.display}"
@@ -76,24 +92,52 @@ Hiiro.run(*ARGV, tasks: true) do
     puts "Done."
   end
 
-  # h registry get <name_or_alias> [type] — prints canonical name (scriptable)
-  add_subcmd(:get) do |ref, type = nil|
+  # h registry get <name_or_alias> [type] [-s] — prints value (or name if no value)
+  # Supports prefix matching; use -s/--substring for substring match
+  # Prints all matching values (one per line) if multiple matches
+  add_subcmd(:get) do |*args|
+    opts = Hiiro::Options.setup {
+      option(:substring, short: :s, type: :flag, desc: 'Match substring anywhere in name')
+    }.parse(args)
+    
+    ref, type = opts.args
     unless ref
-      puts "Usage: h registry get <name_or_alias> [type]"
+      puts "Usage: h registry get <name_or_alias> [type] [-s]"
       next
     end
-    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type ? type.to_s : nil)
-    entry ? puts(entry.name) : exit(1)
+    
+    matches = Hiiro::RegistryEntry.find_all_by_ref(ref, type: type&.to_s, substring: opts.substring)
+    if matches.empty?
+      exit(1)
+    else
+      matches.each { |e| puts(e.value || e.name) }
+    end
   end
 
-  # h registry show <name_or_alias> [type] — human-readable detail
-  add_subcmd(:show) do |ref, type = nil|
+  # h registry show <name_or_alias> [type] [-s] — human-readable detail
+  add_subcmd(:show) do |*args|
+    opts = Hiiro::Options.setup {
+      option(:substring, short: :s, type: :flag, desc: 'Match substring anywhere in name')
+    }.parse(args)
+    
+    ref, type = opts.args
     unless ref
-      puts "Usage: h registry show <name_or_alias> [type]"
+      puts "Usage: h registry show <name_or_alias> [type] [-s]"
       next
     end
-    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type ? type.to_s : nil)
-    entry ? puts(entry.display) : (puts "Not found: #{ref}"; exit 1)
+    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type&.to_s, substring: opts.substring)
+    if entry
+      puts entry.display
+    else
+      matches = Hiiro::RegistryEntry.find_all_by_ref(ref, type: type&.to_s, substring: opts.substring)
+      if matches.any?
+        puts "Ambiguous match '#{ref}' - #{matches.size} entries:"
+        matches.each { |e| puts "  #{e.resource_type}/#{e.name}" }
+      else
+        puts "Not found: #{ref}"
+      end
+      exit 1
+    end
   end
 
   # h registry select [type] — fuzzyfinder, prints canonical name
@@ -110,18 +154,49 @@ Hiiro.run(*ARGV, tasks: true) do
     puts name
   end
 
-  # h registry set-alias <name_or_alias> <new_alias> [type]
-  add_subcmd(:'set-alias') do |ref, new_alias, type = nil|
+  # h registry set-alias <name_or_alias> <new_alias> [type] [-s]
+  add_subcmd(:'set-alias') do |*args|
+    opts = Hiiro::Options.setup {
+      option(:substring, short: :s, type: :flag, desc: 'Match substring anywhere in name')
+    }.parse(args)
+    
+    ref, new_alias, type = opts.args
     unless ref && new_alias
-      puts "Usage: h registry set-alias <name_or_alias> <new_alias> [type]"
+      puts "Usage: h registry set-alias <name_or_alias> <new_alias> [type] [-s]"
       next
     end
-    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type ? type.to_s : nil)
+    entry = Hiiro::RegistryEntry.find_by_ref(ref, type: type&.to_s, substring: opts.substring)
     unless entry
-      puts "Not found: #{ref}"
+      matches = Hiiro::RegistryEntry.find_all_by_ref(ref, type: type&.to_s, substring: opts.substring)
+      if matches.any?
+        puts "Ambiguous match '#{ref}' - #{matches.size} entries:"
+        matches.each { |e| puts "  #{e.resource_type}/#{e.name}" }
+      else
+        puts "Not found: #{ref}"
+      end
       next
     end
     entry.update(short_name: new_alias)
+    puts entry.display
+  end
+
+  # h registry set <type> <name> <value> — update value of existing entry (or create)
+  add_subcmd(:set, :update) do |type, name, value = nil|
+    unless type && name
+      puts "Usage: h registry set <type> <name> <value>"
+      next
+    end
+    entry = Hiiro::RegistryEntry.find_by_ref(name, type: type)
+    if entry
+      entry.update(value: value)
+    else
+      entry = Hiiro::RegistryEntry.create(
+        resource_type: type,
+        name:          name,
+        value:         value,
+        created_at:    Time.now.iso8601
+      )
+    end
     puts entry.display
   end
 
