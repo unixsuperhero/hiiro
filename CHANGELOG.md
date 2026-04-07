@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.336] - 2026-04-06
+
+### Fixed
+- `PsProcess#ports` now uses `lsof -a` to AND conditions (was showing all system ports)
+
 ## [0.1.335] - 2026-04-07
 
 ### Added
@@ -13,9 +18,6 @@
 
 ### Changed
 - Refactored `h-ps` to use `PsProcess` class instead of raw `ps` parsing
-
-### Fixed
-- `PsProcess#ports` now uses `lsof -a` to AND conditions (was showing all system ports)
 
 ## [0.1.334] - 2026-04-07
 
