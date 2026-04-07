@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.337] - 2026-04-06
+
+### Changed
+- Refactor `PsProcess#files` and `PsProcess#ports` to use `filter_map` instead of `map + compact` for cleaner code
+
 ## [0.1.336] - 2026-04-06
 
 ### Fixed
