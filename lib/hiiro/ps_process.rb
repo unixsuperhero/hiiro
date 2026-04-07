@@ -54,6 +54,22 @@ class Hiiro::PsProcess
     all.find { |p| p.pid == pid.to_s }
   end
 
+  # Find processes listening on given port numbers
+  def self.by_port(*ports)
+    pids = Set.new
+    ports.each do |port|
+      lsof_output = `lsof -i :#{port.to_i} 2>/dev/null`.lines[1..]
+      next unless lsof_output
+
+      lsof_output.each do |line|
+        fields = line.split
+        pids << fields[1] if fields[1]
+      end
+    end
+
+    all.select { |p| pids.include?(p.pid) }
+  end
+
   # Find processes with files open in given directories
   def self.in_dirs(*paths)
     pids = Set.new

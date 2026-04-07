@@ -20,6 +20,21 @@ Hiiro.run(*ARGV) do
     end
   end
 
+  add_subcmd(:byport) { |*ports|
+    if ports.empty?
+      puts "Usage: h ps byport <port> [port2 ...]"
+      next
+    end
+
+    processes = Hiiro::PsProcess.by_port(*ports)
+
+    if processes.empty?
+      puts "No processes found on port(s): #{ports.join(', ')}"
+    else
+      processes.each { |p| puts "#{p.pid}\t#{p.dir || '(unknown)'}" }
+    end
+  }
+
   add_subcmd(:search) { |pattern = nil|
     if pattern.nil?
       puts "Usage: h ps search <pattern>"
