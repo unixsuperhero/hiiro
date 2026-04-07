@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- `h notify jump` now runs `switch-client` before `select-window`/`select-pane` so jumping to a pane in a different session actually works
+- `h notify ls` and `h notify menu` now auto-prune stale entries for panes that no longer exist
+
+### Added
+- `h notify prune` — explicitly remove all notifications for dead panes
+
 ## [0.1.339] - 2026-04-07
 
 ### Added
