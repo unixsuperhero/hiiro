@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.341] - 2026-04-07
+
+### Fixed
+- `h pr view` now defaults to current branch's PR when no PR number is specified
+
+### Changed
+- Update publish script to use `claude-haiku-4-5` model identifier
+
 ## [0.1.340] - 2026-04-07
 
 ### Fixed
