@@ -121,16 +121,37 @@ Hiiro.run(*ARGV, tasks: true) do
     if data.empty?
       puts "No notifications."
     else
-      data.each_with_index do |e, i|
-        time_str = Time.at(e['timestamp']).strftime('%H:%M:%S')
-        prefix   = TYPE_PRESETS[e['type']]&.dig(:prefix) || '[INFO]'
-        puts "%3d) %s [%s/%s] %s: %s (%s)" % [i, prefix, e['session'], e['pane_id'], e['pane_cmd'], e['message'], time_str]
+      live_ids = Hiiro::Tmux::Panes.fetch(all: true).ids.to_set
+      pruned   = data.reject { |e| live_ids.include?(e['pane_id']) }
+      data     = data.select { |e| live_ids.include?(e['pane_id']) }
+      write_log(data) if pruned.any?
+
+      if data.empty?
+        puts "No notifications (#{pruned.size} stale entries removed)."
+      else
+        puts "(#{pruned.size} stale entries removed.)" if pruned.any?
+        data.each_with_index do |e, i|
+          time_str = Time.at(e['timestamp']).strftime('%H:%M:%S')
+          prefix   = TYPE_PRESETS[e['type']]&.dig(:prefix) || '[INFO]'
+          puts "%3d) %s [%s/%s] %s: %s (%s)" % [i, prefix, e['session'], e['pane_id'], e['pane_cmd'], e['message'], time_str]
+        end
       end
     end
   end
 
+  add_subcmd(:prune) do
+    data     = read_log
+    live_ids = Hiiro::Tmux::Panes.fetch(all: true).ids.to_set
+    pruned   = data.reject { |e| live_ids.include?(e['pane_id']) }
+    write_log(data.select { |e| live_ids.include?(e['pane_id']) })
+    puts "Removed #{pruned.size} stale notification(s). #{data.size - pruned.size} remaining."
+  end
+
   add_subcmd(:menu) do
-    entries = read_log
+    data     = read_log
+    live_ids = Hiiro::Tmux::Panes.fetch(all: true).ids.to_set
+    entries  = data.select { |e| live_ids.include?(e['pane_id']) }
+    write_log(entries) if entries.size != data.size
 
     if entries.empty?
       next
@@ -169,8 +190,9 @@ Hiiro.run(*ARGV, tasks: true) do
       next
     end
 
-    tmux_client.select_window(entry['window_id'])
-    tmux_client.select_pane(entry['pane_id'])
+    system('tmux', 'switch-client', '-t', entry['session'])
+    system('tmux', 'select-window', '-t', entry['window_id'])
+    system('tmux', 'select-pane',   '-t', entry['pane_id'])
 
     data.delete_at(index)
     write_log(data)
