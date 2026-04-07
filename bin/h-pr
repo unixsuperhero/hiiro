@@ -11,11 +11,30 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   pm = pinned_manager = Hiiro::PinnedPRManager.new
   Hiiro::PinnedPRManager.add_resolvers(self)
 
-  watch_block = ->(original_pr_number=nil, *watch_args) {
+  watch_block = ->(*all_args) {
+    opts = Hiiro::Options.setup {
+      option(:select, short: :s, type: :flag, desc: 'Select PR via fuzzyfinder')
+    }.parse(all_args)
+    
+    original_pr_number = opts.args.first
+    watch_args = opts.args[1..] || []
     watch = get_value(:watch)
     fail_fast = get_value(:fail_fast)
 
-    pr_number = resolve(:pr, original_pr_number)
+    pr_number = if opts.select
+      resolve(:pr, nil)  # triggers fuzzyfinder
+    elsif original_pr_number
+      resolve(:pr, original_pr_number)
+    else
+      # Default to current branch's PR
+      current_pr = pm.fetch_current_branch_pr
+      if current_pr
+        current_pr.number.to_s
+      else
+        STDERR.puts "No PR for current branch. Use -s to select or provide a PR number."
+        nil
+      end
+    end
     return unless pr_number
 
     base_cmd = %w[gh pr checks]
