@@ -73,18 +73,20 @@ class Hiiro::PsProcess
 
   # Open files for this process
   def files
-    `lsof -p #{pid} 2>/dev/null`.lines[1..].map do |line|
+    lines = `lsof -p #{pid} 2>/dev/null`.lines[1..] || []
+    lines.filter_map do |line|
       parts = line.split
       { fd: parts[3], type: parts[4], name: parts[8] } if parts.size >= 9
-    end.compact
+    end
   end
 
   # Open network ports for this process
   def ports
-    `lsof -a -p #{pid} -i 2>/dev/null`.lines[1..].map do |line|
+    lines = `lsof -a -p #{pid} -i 2>/dev/null`.lines[1..] || []
+    lines.filter_map do |line|
       parts = line.split
       { protocol: parts[7], name: parts[8] } if parts.size >= 9
-    end.compact
+    end
   end
 
   # Current working directory
