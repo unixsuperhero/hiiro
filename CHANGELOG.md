@@ -1,19 +1,9 @@
 # Changelog
 
-## [Unreleased]
-
-### Added
-- `RegistryEntry.value` column - registry entries can now store a value in addition to name
-- `h registry set <type> <name> <value>` - update or create entry with value
-- `h registry get` supports prefix matching (and `--substring` for substring match)
-- `h registry get` prints all matching values when multiple entries match
-- Automatic migration adds `value` column to existing databases
+## [0.1.338] - 2026-04-07
 
 ### Changed
 - Renamed `registry_entries` table to `registry` (auto-migrates existing data)
-- `h registry add <type> <name> [value]` - now accepts optional value as third positional argument
-- `h registry get` - returns stored value (if set), falls back to name
-- `h registry ls` - displays values in listing
 
 ## [0.1.337] - 2026-04-06
 
@@ -327,72 +317,3 @@
 - `bin/h-pane` — load/save pane homes via `Hiiro::PaneHome` model with YAML dual-write
 - `bin/h-pr` — adds `q`/`query` subcommands for inspecting PR records via raw SQL
 - `plugins/pins.rb` — `Pin` class reads/writes via `Hiiro::PinRecord` SQLite model with YAML dual-write fallback
-
-## [0.1.306] - 2026-03-30
-
-### Changed
-- Increase delayed_update sleep duration from 5s to 15s
-- Add logging for delayed_update invocation in publish script
-
-## [0.1.305] - 2026-03-30
-
-### Changed
-- Refactor: use delayed_update subcommand instead of direct update call
-- Improve gem version matching regex in version check
-
-## [0.1.304] - 2026-03-30
-
-### Changed
-- h-notify: use universal log instead of per-session logging
-- Todo output simplified
-
-## [0.1.302] - 2026-03-30
-
-### Fixed
-- Truncate output lines to terminal width in tasks plugin
-
-## [0.1.301]
-
-### Added
-- Check version delayed update functionality
-
-### Changed
-- h-claude: add verbose flags and refactor glob_path handling
-
-### Fixed
-- Use exact session matching to prevent tmux prefix ambiguity
-
-## [0.1.300]
-
-### Added
-- h-claude: fulltext search option for agents/commands/skills
-
-### Changed
-- Refactor h-claude directory traversal and file globbing
-
-## [0.1.299]
-
-### Added
-- h-pr open: support opening multiple PRs
-
-## [0.1.298]
-
-### Changed
-- Use Pathname to walk up directory tree
-- h-claude agents/commands/skills walk from pwd up to home
-
-## [0.1.297]
-
-### Added
-- h rnext subcommand
-
-## [0.1.296]
-
-### Changed
-- Refactor PR filter logic to pinned_pr_manager
-- Move PR filter logic to Pr#matches_filters?
-
-## [0.1.295]
-
-### Changed
-- Filter logic changes for PR management
