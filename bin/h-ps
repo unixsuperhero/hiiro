@@ -1,0 +1,90 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:search) { |pattern = nil|
+    if pattern.nil?
+      puts "Usage: h ps search <pattern>"
+      next
+    end
+
+    output = `ps auxww`.lines
+    header = output.first
+    matches = output[1..].select { |line| line.include?(pattern) }
+
+    if matches.any?
+      puts header
+      matches.each { |line| puts line }
+    else
+      puts "No processes found matching '#{pattern}'"
+    end
+  }
+
+  add_subcmd(:indir) { |*paths|
+    if paths.empty?
+      puts "Usage: h ps indir <path> [path2 ...]"
+      next
+    end
+
+    pids = Set.new
+    paths.each do |path|
+      expanded = File.expand_path(path)
+      lsof_output = `lsof +D #{expanded.shellescape} 2>/dev/null`.lines[1..]
+      next unless lsof_output
+
+      lsof_output.each do |line|
+        fields = line.split
+        pids << fields[1] if fields[1]
+      end
+    end
+
+    if pids.empty?
+      puts "No processes found with files open in: #{paths.join(', ')}"
+      next
+    end
+
+    ps_output = `ps auxww`.lines
+    header = ps_output.first
+    matches = ps_output[1..].select { |line| pids.include?(line.split[1]) }
+
+    puts header
+    matches.each { |line| puts line }
+  }
+
+  add_subcmd(:getdir) { |pattern = nil|
+    if pattern.nil?
+      puts "Usage: h ps getdir <pattern>"
+      next
+    end
+
+    ps_output = `ps auxww`.lines
+    pids = ps_output[1..].select { |line| line.include?(pattern) }.map { |line| line.split[1] }
+
+    if pids.empty?
+      puts "No processes found matching '#{pattern}'"
+      next
+    end
+
+    dirs = {}
+    pids.each do |pid|
+      cwd = `lsof -p #{pid} 2>/dev/null | grep cwd`.strip
+      if cwd && !cwd.empty?
+        # lsof cwd line format: COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
+        dir = cwd.split.last
+        dirs[pid] = dir
+      end
+    end
+
+    if dirs.empty?
+      puts "Could not determine working directories for matching processes"
+      next
+    end
+
+    dirs.each do |pid, dir|
+      process_line = ps_output.find { |l| l.split[1] == pid }
+      cmd = process_line.split[10..].join(' ') rescue '(unknown)'
+      puts "#{pid}\t#{dir}\t#{cmd}"
+    end
+  }
+end

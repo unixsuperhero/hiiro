@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.334] - 2026-04-07
+
+### Added
+- New `h-ps` bin file for process utilities:
+  - `search <pattern>` - find processes matching a substring
+  - `indir <path> [path2 ...]` - list processes with files open in specified paths
+  - `getdir <pattern>` - list working directories of processes matching pattern
+
 ## [0.1.333] - 2026-04-04
 
 ### Changed
