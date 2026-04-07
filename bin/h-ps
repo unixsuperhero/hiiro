@@ -3,19 +3,33 @@
 require "hiiro"
 
 Hiiro.run(*ARGV) do
+  # Resolve argument to list of PsProcess instances
+  # - all digits: find by PID
+  # - valid path: processes with files open in that dir
+  # - otherwise: search by pattern
+  def resolve_processes(arg)
+    return [] if arg.nil?
+
+    if arg.match?(/^\d+$/)
+      p = Hiiro::PsProcess.find(arg)
+      p ? [p] : []
+    elsif File.directory?(File.expand_path(arg))
+      Hiiro::PsProcess.in_dirs(arg)
+    else
+      Hiiro::PsProcess.search(arg)
+    end
+  end
+
   add_subcmd(:search) { |pattern = nil|
     if pattern.nil?
       puts "Usage: h ps search <pattern>"
       next
     end
 
-    output = `ps auxww`.lines
-    header = output.first
-    matches = output[1..].select { |line| line.include?(pattern) }
+    processes = Hiiro::PsProcess.search(pattern)
 
-    if matches.any?
-      puts header
-      matches.each { |line| puts line }
+    if processes.any?
+      processes.each { |p| puts p }
     else
       puts "No processes found matching '#{pattern}'"
     end
@@ -27,29 +41,13 @@ Hiiro.run(*ARGV) do
       next
     end
 
-    pids = Set.new
-    paths.each do |path|
-      expanded = File.expand_path(path)
-      lsof_output = `lsof +D #{expanded.shellescape} 2>/dev/null`.lines[1..]
-      next unless lsof_output
+    processes = Hiiro::PsProcess.in_dirs(*paths)
 
-      lsof_output.each do |line|
-        fields = line.split
-        pids << fields[1] if fields[1]
-      end
-    end
-
-    if pids.empty?
+    if processes.empty?
       puts "No processes found with files open in: #{paths.join(', ')}"
-      next
+    else
+      processes.each { |p| puts p }
     end
-
-    ps_output = `ps auxww`.lines
-    header = ps_output.first
-    matches = ps_output[1..].select { |line| pids.include?(line.split[1]) }
-
-    puts header
-    matches.each { |line| puts line }
   }
 
   add_subcmd(:getdir) { |pattern = nil|
@@ -58,33 +56,104 @@ Hiiro.run(*ARGV) do
       next
     end
 
-    ps_output = `ps auxww`.lines
-    pids = ps_output[1..].select { |line| line.include?(pattern) }.map { |line| line.split[1] }
+    processes = Hiiro::PsProcess.search(pattern)
 
-    if pids.empty?
+    if processes.empty?
       puts "No processes found matching '#{pattern}'"
       next
     end
 
-    dirs = {}
-    pids.each do |pid|
-      cwd = `lsof -p #{pid} 2>/dev/null | grep cwd`.strip
-      if cwd && !cwd.empty?
-        # lsof cwd line format: COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME
-        dir = cwd.split.last
-        dirs[pid] = dir
+    found_any = false
+    processes.each do |p|
+      dir = p.dir
+      if dir
+        found_any = true
+        puts "#{p.pid}\t#{dir}\t#{p.cmd}"
       end
     end
 
-    if dirs.empty?
-      puts "Could not determine working directories for matching processes"
+    puts "Could not determine working directories for matching processes" unless found_any
+  }
+
+  add_subcmd(:info) { |arg = nil|
+    if arg.nil?
+      puts "Usage: h ps info <pid|pattern|path>"
       next
     end
 
-    dirs.each do |pid, dir|
-      process_line = ps_output.find { |l| l.split[1] == pid }
-      cmd = process_line.split[10..].join(' ') rescue '(unknown)'
-      puts "#{pid}\t#{dir}\t#{cmd}"
+    processes = resolve_processes(arg)
+
+    if processes.empty?
+      puts "No processes found for '#{arg}'"
+      next
+    end
+
+    processes.each_with_index do |p, i|
+      puts "---" if i > 0
+      puts "PID:    #{p.pid}"
+      puts "User:   #{p.user}"
+      puts "CPU:    #{p.cpu}%"
+      puts "Mem:    #{p.mem}%"
+      puts "Stat:   #{p.stat}"
+      puts "Dir:    #{p.dir || '(unknown)'}"
+      puts "Cmd:    #{p.cmd}"
+
+      parent = p.parent
+      puts "Parent: #{parent.pid} #{parent.cmd.slice(0, 60)}" if parent
+
+      children = p.children
+      if children.any?
+        puts "Children:"
+        children.each { |c| puts "  #{c.pid}\t#{c.cmd.slice(0, 60)}" }
+      end
+    end
+  }
+
+  add_subcmd(:files) { |arg = nil|
+    if arg.nil?
+      puts "Usage: h ps files <pid|pattern|path>"
+      next
+    end
+
+    processes = resolve_processes(arg)
+
+    if processes.empty?
+      puts "No processes found for '#{arg}'"
+      next
+    end
+
+    processes.each do |p|
+      puts "=== #{p.pid}\t#{p.cmd.slice(0, 60)}" if processes.size > 1
+      files = p.files
+      if files.empty?
+        puts "  (no open files)" if processes.size > 1
+      else
+        files.each { |f| puts "#{f[:fd]}\t#{f[:type]}\t#{f[:name]}" }
+      end
+    end
+  }
+
+  add_subcmd(:ports) { |arg = nil|
+    if arg.nil?
+      puts "Usage: h ps ports <pid|pattern|path>"
+      next
+    end
+
+    processes = resolve_processes(arg)
+
+    if processes.empty?
+      puts "No processes found for '#{arg}'"
+      next
+    end
+
+    processes.each do |p|
+      puts "=== #{p.pid}\t#{p.cmd.slice(0, 60)}" if processes.size > 1
+      ports = p.ports
+      if ports.empty?
+        puts "  (no open ports)" if processes.size > 1
+      else
+        ports.each { |pt| puts "#{pt[:protocol]}\t#{pt[:name]}" }
+      end
     end
   }
 end
