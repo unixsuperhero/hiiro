@@ -10,6 +10,7 @@
 - Automatic migration adds `value` column to existing databases
 
 ### Changed
+- Renamed `registry_entries` table to `registry` (auto-migrates existing data)
 - `h registry add <type> <name> [value]` - now accepts optional value as third positional argument
 - `h registry get` - returns stored value (if set), falls back to name
 - `h registry ls` - displays values in listing
