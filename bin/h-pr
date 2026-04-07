@@ -125,7 +125,12 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   }
   add_subcmd(:view) { |pr_number=nil|
-    pr_number = resolve(:pr, pr_number)
+    if pr_number.nil?
+      current = pm.fetch_current_branch_pr
+      pr_number = current ? current.number.to_s : resolve(:pr, nil)
+    else
+      pr_number = resolve(:pr, pr_number)
+    end
     system('gh', 'pr', 'view', pr_number.to_s) if pr_number
   }
 
