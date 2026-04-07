@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.340] - 2026-04-07
 
 ### Fixed
 - `h notify jump` now runs `switch-client` before `select-window`/`select-pane` so jumping to a pane in a different session actually works
