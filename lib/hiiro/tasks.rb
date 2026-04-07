@@ -964,6 +964,22 @@ class Hiiro
             end
           end
 
+          # If still no task/session found, check ~/proj/* directories by prefix
+          unless task
+            proj_dirs = Dir.glob(File.expand_path('~/proj/*/'))
+            dir_names = proj_dirs.map { |d| File.basename(d) }
+            result = Hiiro::Matcher.by_prefix(dir_names, task_name)
+            if result.one?
+              dir_name = result.first.item
+              h.start_tmux_session(dir_name, start_directory: File.expand_path("~/proj/#{dir_name}"))
+              puts "Switched to ~/proj/#{dir_name}"
+              next
+            elsif result.ambiguous?
+              puts "Ambiguous match for '#{task_name}': #{result.matches.map(&:item).join(', ')}"
+              exit 1
+            end
+          end
+
           tm.switch_to_task(task, app_name: app_name, force: opts.force)
         end
 
