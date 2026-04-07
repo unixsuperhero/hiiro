@@ -3,6 +3,7 @@
 ## [0.1.338] - 2026-04-07
 
 ### Changed
+- `h pr watch`, `h pr fwatch`, `h pr check` now default to current branch's PR (use `-s` to select via fuzzyfinder)
 - Renamed `registry_entries` table to `registry` (auto-migrates existing data)
 
 ## [0.1.337] - 2026-04-06
