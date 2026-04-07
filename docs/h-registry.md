@@ -23,27 +23,6 @@ h registry <subcommand> [args]
 
 References (`ref`) can be the canonical name or the short alias. `type` is optional when names are unique across types.
 
-### ls / list
-
-List all entries grouped by type, showing short alias and description. Optionally filter to a single type.
-
-**Examples**
-
-```bash
-h registry ls
-h registry list service
-```
-
-### types
-
-Print all known resource types.
-
-**Examples**
-
-```bash
-h registry types
-```
-
 ### add
 
 Register a new entry with type and canonical name. Optionally add a short alias and description.
@@ -63,17 +42,6 @@ h registry add service my-rails-app --alias rails --desc "Main Rails API"
 h registry add jira IC-12345 --desc "Fix login bug"
 ```
 
-### rm / remove
-
-Remove an entry by name or alias.
-
-**Examples**
-
-```bash
-h registry rm my-rails-app
-h registry rm rails service
-```
-
 ### get
 
 Print the canonical name for a ref. Exits non-zero if not found. Useful for scripting.
@@ -85,15 +53,26 @@ h registry get rails
 name=$(h registry get rails service)
 ```
 
-### show
+### ls / list
 
-Print full entry details (type, name, alias, description).
+List all entries grouped by type, showing short alias and description. Optionally filter to a single type.
 
 **Examples**
 
 ```bash
-h registry show rails
-h registry show my-rails-app service
+h registry ls
+h registry list service
+```
+
+### rm / remove
+
+Remove an entry by name or alias.
+
+**Examples**
+
+```bash
+h registry rm my-rails-app
+h registry rm rails service
 ```
 
 ### select
@@ -118,3 +97,24 @@ Update the short alias for an existing entry.
 h registry set-alias my-rails-app rails
 h registry set-alias my-rails-app rails service
 ```
+### show
+
+Print full entry details (type, name, alias, description).
+
+**Examples**
+
+```bash
+h registry show rails
+h registry show my-rails-app service
+```
+
+### types
+
+Print all known resource types.
+
+**Examples**
+
+```bash
+h registry types
+```
+

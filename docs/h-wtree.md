@@ -29,47 +29,15 @@ h wtree <subcommand> [args]
 
 All passthrough subcommands (`ls`, `add`, `lock`, etc.) forward extra arguments to `git worktree`.
 
-### ls / list
+### add
 
-List all worktrees via `git worktree list`.
-
-**Examples**
-
-```bash
-h wtree ls
-h wtree list
-```
-
-### switch
-
-Fuzzy-select a worktree and open/create a tmux session named after its directory, starting from that directory.
+Add a new worktree. Arguments are forwarded to `git worktree add`.
 
 **Examples**
 
 ```bash
-h wtree switch
-h wtree switch /path/to/worktree
-```
-
-### select
-
-Fuzzy-select a worktree and print its absolute path.
-
-**Examples**
-
-```bash
-h wtree select
-path=$(h wtree select)
-```
-
-### copy
-
-Fuzzy-select a worktree and copy its path to the clipboard.
-
-**Examples**
-
-```bash
-h wtree copy
+h wtree add /path/to/new-worktree my-feature-branch
+h wtree add -b new-branch /path/to/new-worktree
 ```
 
 ### branch
@@ -83,25 +51,25 @@ h wtree branch
 h wtree branch /path/to/worktree
 ```
 
-### size
+### copy
 
-Show disk usage for each worktree using `du -sh`.
+Fuzzy-select a worktree and copy its path to the clipboard.
 
 **Examples**
 
 ```bash
-h wtree size
+h wtree copy
 ```
 
-### add
+### ls / list
 
-Add a new worktree. Arguments are forwarded to `git worktree add`.
+List all worktrees via `git worktree list`.
 
 **Examples**
 
 ```bash
-h wtree add /path/to/new-worktree my-feature-branch
-h wtree add -b new-branch /path/to/new-worktree
+h wtree ls
+h wtree list
 ```
 
 ### remove / prune
@@ -114,3 +82,35 @@ Remove or prune worktrees. Arguments forwarded to `git worktree`.
 h wtree remove /path/to/worktree
 h wtree prune
 ```
+### select
+
+Fuzzy-select a worktree and print its absolute path.
+
+**Examples**
+
+```bash
+h wtree select
+path=$(h wtree select)
+```
+
+### size
+
+Show disk usage for each worktree using `du -sh`.
+
+**Examples**
+
+```bash
+h wtree size
+```
+
+### switch
+
+Fuzzy-select a worktree and open/create a tmux session named after its directory, starting from that directory.
+
+**Examples**
+
+```bash
+h wtree switch
+h wtree switch /path/to/worktree
+```
+

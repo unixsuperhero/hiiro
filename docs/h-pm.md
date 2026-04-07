@@ -29,37 +29,6 @@ h pm [subcommand] [args]
 | `unarchive <project>` | Restore an archived project |
 | `help` | Print usage |
 
-### discover
-
-Queue a prompt to auto-discover untracked work from PRs, worktrees, and olive runs.
-
-**Examples**
-
-```bash
-h pm discover
-h pm discover my-project
-```
-
-### resume
-
-Queue a "where was I?" briefing prompt for a project.
-
-**Examples**
-
-```bash
-h pm resume my-project
-```
-
-### status
-
-Queue a project status overview prompt.
-
-**Examples**
-
-```bash
-h pm status my-project
-```
-
 ### add
 
 Queue a prompt to add a new task to a project.
@@ -68,56 +37,6 @@ Queue a prompt to add a new task to a project.
 
 ```bash
 h pm add my-project new-task
-```
-
-### start
-
-Queue a prompt to load context and begin working on a task.
-
-**Examples**
-
-```bash
-h pm start my-project my-task
-```
-
-### plan
-
-Queue a prompt to generate or update the proposal doc for a task.
-
-**Examples**
-
-```bash
-h pm plan my-project my-task
-```
-
-### complete
-
-Queue a prompt to mark a task as complete.
-
-**Examples**
-
-```bash
-h pm complete my-project my-task
-```
-
-### ref
-
-Queue a prompt to add a reference document to a project.
-
-**Examples**
-
-```bash
-h pm ref my-project https://docs.example.com/spec
-```
-
-### impact
-
-Queue a prompt to analyze the cascading impact of deviating from a task plan.
-
-**Examples**
-
-```bash
-h pm impact my-project my-task
 ```
 
 ### archive / unarchive
@@ -130,3 +49,84 @@ Queue prompts to archive or restore a project.
 h pm archive old-project
 h pm unarchive old-project
 ```
+### complete
+
+Queue a prompt to mark a task as complete.
+
+**Examples**
+
+```bash
+h pm complete my-project my-task
+```
+
+### discover
+
+Queue a prompt to auto-discover untracked work from PRs, worktrees, and olive runs.
+
+**Examples**
+
+```bash
+h pm discover
+h pm discover my-project
+```
+
+### impact
+
+Queue a prompt to analyze the cascading impact of deviating from a task plan.
+
+**Examples**
+
+```bash
+h pm impact my-project my-task
+```
+
+### plan
+
+Queue a prompt to generate or update the proposal doc for a task.
+
+**Examples**
+
+```bash
+h pm plan my-project my-task
+```
+
+### ref
+
+Queue a prompt to add a reference document to a project.
+
+**Examples**
+
+```bash
+h pm ref my-project https://docs.example.com/spec
+```
+
+### resume
+
+Queue a "where was I?" briefing prompt for a project.
+
+**Examples**
+
+```bash
+h pm resume my-project
+```
+
+### start
+
+Queue a prompt to load context and begin working on a task.
+
+**Examples**
+
+```bash
+h pm start my-project my-task
+```
+
+### status
+
+Queue a project status overview prompt.
+
+**Examples**
+
+```bash
+h pm status my-project
+```
+

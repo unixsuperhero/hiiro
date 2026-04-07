@@ -20,16 +20,15 @@ h config <subcommand>
 | `starship` | Open `~/.config/starship/starship.toml` |
 | `claude` | Open `~/.claude/settings.json` |
 
-### vim
+### claude
 
-Open `~/.config/nvim/init.lua` (or `init.vim` if lua file doesn't exist).
+Open `~/.claude/settings.json`.
 
 **Examples**
 
 ```bash
-h config vim
+h config claude
 ```
-
 ### git
 
 Open git config files. Nested subcommands:
@@ -46,26 +45,6 @@ Open git config files. Nested subcommands:
 h config git global
 h config git ignore
 h config git local
-```
-
-### tmux
-
-Open `~/.tmux.conf`.
-
-**Examples**
-
-```bash
-h config tmux
-```
-
-### zsh
-
-Open `~/.zshrc`.
-
-**Examples**
-
-```bash
-h config zsh
 ```
 
 ### profile
@@ -88,12 +67,33 @@ Open `~/.config/starship/starship.toml`.
 h config starship
 ```
 
-### claude
+### tmux
 
-Open `~/.claude/settings.json`.
+Open `~/.tmux.conf`.
 
 **Examples**
 
 ```bash
-h config claude
+h config tmux
 ```
+
+### vim
+
+Open `~/.config/nvim/init.lua` (or `init.vim` if lua file doesn't exist).
+
+**Examples**
+
+```bash
+h config vim
+```
+
+### zsh
+
+Open `~/.zshrc`.
+
+**Examples**
+
+```bash
+h config zsh
+```
+

@@ -30,6 +30,28 @@ h session <subcommand> [args]
 
 Session names are resolved interactively when not provided. Extra arguments to passthrough subcommands are forwarded to `tmux`.
 
+### attach
+
+Attach to a session. Fuzzy-select if no name given.
+
+**Examples**
+
+```bash
+h session attach
+h session attach my-project
+```
+
+### kill
+
+Kill a session. Fuzzy-select if no name given.
+
+**Examples**
+
+```bash
+h session kill
+h session kill my-project
+```
+
 ### ls / list
 
 List all sessions. Extra arguments are forwarded to `tmux list-sessions`.
@@ -52,50 +74,6 @@ h session new
 h session new my-project
 ```
 
-### kill
-
-Kill a session. Fuzzy-select if no name given.
-
-**Examples**
-
-```bash
-h session kill
-h session kill my-project
-```
-
-### attach
-
-Attach to a session. Fuzzy-select if no name given.
-
-**Examples**
-
-```bash
-h session attach
-h session attach my-project
-```
-
-### rename
-
-Rename a session. Fuzzy-selects the old name if not provided.
-
-**Examples**
-
-```bash
-h session rename my-project new-name
-h session rename new-name   # fuzzy-select old session
-```
-
-### switch
-
-Switch to a session (stays within tmux). Fuzzy-select if no name given.
-
-**Examples**
-
-```bash
-h session switch
-h session switch my-project
-```
-
 ### open
 
 Open a session: switches if already in tmux, attaches if not. Creates the session if it doesn't exist.
@@ -106,15 +84,25 @@ Open a session: switches if already in tmux, attaches if not. Creates the sessio
 h session open my-project
 ```
 
-### sh
+### orphans / okill
 
-Open a new window in a session and optionally run a command. Switches to the session.
+`orphans` lists sessions that have no associated task. `okill` shows those sessions in an editor for you to review, then kills those that remain in the YAML list when you save.
 
 **Examples**
 
 ```bash
-h session sh my-project
-h session sh my-project bundle exec rails console
+h session orphans
+h session okill
+```
+### rename
+
+Rename a session. Fuzzy-selects the old name if not provided.
+
+**Examples**
+
+```bash
+h session rename my-project new-name
+h session rename new-name   # fuzzy-select old session
 ```
 
 ### select / copy
@@ -129,13 +117,25 @@ sess=$(h session select)
 h session copy
 ```
 
-### orphans / okill
+### sh
 
-`orphans` lists sessions that have no associated task. `okill` shows those sessions in an editor for you to review, then kills those that remain in the YAML list when you save.
+Open a new window in a session and optionally run a command. Switches to the session.
 
 **Examples**
 
 ```bash
-h session orphans
-h session okill
+h session sh my-project
+h session sh my-project bundle exec rails console
 ```
+
+### switch
+
+Switch to a session (stays within tmux). Fuzzy-select if no name given.
+
+**Examples**
+
+```bash
+h session switch
+h session switch my-project
+```
+

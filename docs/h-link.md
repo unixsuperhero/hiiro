@@ -49,6 +49,62 @@ h link add https://example.com --shorthand ex --tag reference
 h link add "https://jira.example.com/browse/{ticket}" --tag jira
 ```
 
+### copy
+
+Fuzzy-select a link and copy its URL to the clipboard. Supports placeholder substitution.
+
+**Examples**
+
+```bash
+h link copy
+h link copy github
+```
+
+### edit
+
+Edit a specific link (by index number or shorthand) in a YAML editor.
+
+**Examples**
+
+```bash
+h link edit 3
+h link edit ex
+```
+
+### editall
+
+Open the raw links YAML file in your editor.
+
+**Examples**
+
+```bash
+h link editall
+```
+
+### ls / list
+
+List all saved links with index, shorthand (if any), URL, and description.
+
+**Examples**
+
+```bash
+h link ls
+h link list
+```
+
+### open
+
+Open a link in the browser. With no argument, fuzzy-selects. With a number or shorthand, opens directly. Supports placeholder substitution.
+
+**Examples**
+
+```bash
+h link open
+h link open 3
+h link open ex
+h link open github
+```
+
 ### paste
 
 Add the URL currently in the clipboard as a new link.
@@ -64,15 +120,25 @@ h link paste
 h link paste "PR template" --tag github
 ```
 
-### ls / list
+### path
 
-List all saved links with index, shorthand (if any), URL, and description.
+Print the path to the links YAML file.
 
 **Examples**
 
 ```bash
-h link ls
-h link list
+h link path
+```
+### rm / remove
+
+Remove a link. With no argument, fuzzy-selects. With a number or shorthand, removes directly. Supports substring URL matching.
+
+**Examples**
+
+```bash
+h link rm
+h link rm 3
+h link rm ex
 ```
 
 ### search
@@ -98,63 +164,6 @@ h link select jira
 url=$(h link select)
 ```
 
-### copy
-
-Fuzzy-select a link and copy its URL to the clipboard. Supports placeholder substitution.
-
-**Examples**
-
-```bash
-h link copy
-h link copy github
-```
-
-### open
-
-Open a link in the browser. With no argument, fuzzy-selects. With a number or shorthand, opens directly. Supports placeholder substitution.
-
-**Examples**
-
-```bash
-h link open
-h link open 3
-h link open ex
-h link open github
-```
-
-### edit
-
-Edit a specific link (by index number or shorthand) in a YAML editor.
-
-**Examples**
-
-```bash
-h link edit 3
-h link edit ex
-```
-
-### editall
-
-Open the raw links YAML file in your editor.
-
-**Examples**
-
-```bash
-h link editall
-```
-
-### rm / remove
-
-Remove a link. With no argument, fuzzy-selects. With a number or shorthand, removes directly. Supports substring URL matching.
-
-**Examples**
-
-```bash
-h link rm
-h link rm 3
-h link rm ex
-```
-
 ### tags
 
 List all links grouped by tag.
@@ -165,12 +174,3 @@ List all links grouped by tag.
 h link tags
 ```
 
-### path
-
-Print the path to the links YAML file.
-
-**Examples**
-
-```bash
-h link path
-```

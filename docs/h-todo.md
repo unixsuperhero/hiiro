@@ -31,6 +31,45 @@ Items have a permanent numeric ID (never reused). Statuses: `not_started` (`[ ]`
 
 All `id` arguments accept either the item's ID or its index in the current list. Fuzzy-select is used when no ID is provided.
 
+### add
+
+Add a todo item. With no arguments, opens an editor for YAML input (supports adding multiple items at once). With text, creates the item directly.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--tags` | `-t` | Comma-separated tags |
+
+**Examples**
+
+```bash
+h todo add
+h todo add "Fix the login bug"
+h todo add "Write tests" -t urgent,backend
+```
+
+### change
+
+Modify an item. Fuzzy-selects from active items if no ID given.
+
+**Options**
+
+| Flag | Description |
+|------|-------------|
+| `--text TEXT` | New text |
+| `--tags TAGS` | New tags |
+| `--status STATUS` | New status |
+
+**Examples**
+
+```bash
+h todo change 5 --text "Updated description"
+h todo change 5 --status done
+h todo change 5 --tags urgent,critical
+h todo change 5 "Quick inline text change"
+```
+
 ### ls / list
 
 List todo items. Default: active (not done or skipped) items.
@@ -55,24 +94,16 @@ h todo ls -t urgent
 h todo ls --task my-task
 ```
 
-### add
+### path / editall
 
-Add a todo item. With no arguments, opens an editor for YAML input (supports adding multiple items at once). With text, creates the item directly.
-
-**Options**
-
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--tags` | `-t` | Comma-separated tags |
+`path` prints the todo file path. `editall` opens it directly in your editor.
 
 **Examples**
 
 ```bash
-h todo add
-h todo add "Fix the login bug"
-h todo add "Write tests" -t urgent,backend
+h todo path
+h todo editall
 ```
-
 ### rm / remove
 
 Remove an item. Fuzzy-selects from active items if no ID given.
@@ -84,25 +115,15 @@ h todo rm
 h todo rm 5
 ```
 
-### change
+### search
 
-Modify an item. Fuzzy-selects from active items if no ID given.
-
-**Options**
-
-| Flag | Description |
-|------|-------------|
-| `--text TEXT` | New text |
-| `--tags TAGS` | New tags |
-| `--status STATUS` | New status |
+Search items by text, tags, or task name (case-insensitive substring match).
 
 **Examples**
 
 ```bash
-h todo change 5 --text "Updated description"
-h todo change 5 --status done
-h todo change 5 --tags urgent,critical
-h todo change 5 "Quick inline text change"
+h todo search login
+h todo search urgent
 ```
 
 ### start / done / skip / reset
@@ -119,24 +140,3 @@ h todo skip 5
 h todo reset 5
 ```
 
-### search
-
-Search items by text, tags, or task name (case-insensitive substring match).
-
-**Examples**
-
-```bash
-h todo search login
-h todo search urgent
-```
-
-### path / editall
-
-`path` prints the todo file path. `editall` opens it directly in your editor.
-
-**Examples**
-
-```bash
-h todo path
-h todo editall
-```

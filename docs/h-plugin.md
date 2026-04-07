@@ -18,6 +18,18 @@ h plugin <subcommand> [args]
 | `rg [args]` | Run `rg` in the plugins directory |
 | `rgall [args]` | Run `rg` (ignoring .gitignore) in the plugins directory |
 
+### edit
+
+Open matching plugin files in your editor. With no args, opens the `h-plugin` bin itself. Names are prefix-matched against plugin file basenames.
+
+**Examples**
+
+```bash
+h plugin edit
+h plugin edit pins
+h plugin edit task notify
+```
+
 ### ls
 
 List all files in `~/.config/hiiro/plugins/`.
@@ -36,18 +48,6 @@ Print the path to the plugins directory.
 
 ```bash
 h plugin path
-```
-
-### edit
-
-Open matching plugin files in your editor. With no args, opens the `h-plugin` bin itself. Names are prefix-matched against plugin file basenames.
-
-**Examples**
-
-```bash
-h plugin edit
-h plugin edit pins
-h plugin edit task notify
 ```
 
 ### rg

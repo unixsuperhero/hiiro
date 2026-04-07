@@ -20,24 +20,34 @@ h db <subcommand> [args]
 | `cleanup` | Generate a SQL file to remove duplicate rows |
 | `restore` | Restore YAML files from the latest backup archive |
 
-### status
+### cleanup
 
-Show DB file path, size, migration state (complete or not), dual-write status, row counts per table, and any backup archives.
-
-**Examples**
+Scan all tracked tables for duplicate rows (by natural unique keys). Generates a `.sql` file in `~/notes/files/` with `DELETE` statements and opens it in your editor for review. Apply with:
 
 ```bash
-h db status
+sqlite3 ~/.config/hiiro/hiiro.db < ~/notes/files/hiiro-cleanup-<timestamp>.sql
 ```
 
-### tables
+**Examples**
 
-List all table names in the database.
+```bash
+h db cleanup
+```
+
+### migrate
+
+Complete the YAML-to-SQLite migration:
+
+1. Archives all YAML files in `~/.config/hiiro/` to a `.tar.gz` backup.
+2. Deletes the YAML files.
+3. Disables dual-write mode.
+
+Prompts for confirmation before proceeding.
 
 **Examples**
 
 ```bash
-h db tables
+h db migrate
 ```
 
 ### q / query
@@ -63,22 +73,6 @@ h db q "SELECT name, task FROM branches WHERE task IS NOT NULL"
 h db q branches --all
 ```
 
-### migrate
-
-Complete the YAML-to-SQLite migration:
-
-1. Archives all YAML files in `~/.config/hiiro/` to a `.tar.gz` backup.
-2. Deletes the YAML files.
-3. Disables dual-write mode.
-
-Prompts for confirmation before proceeding.
-
-**Examples**
-
-```bash
-h db migrate
-```
-
 ### remigrate
 
 Re-run the YAML import into SQLite. Useful if data was added to YAML files after initial migration. With `--only`, limits to specific tables.
@@ -96,20 +90,6 @@ h db remigrate
 h db remigrate --only todos,tags
 ```
 
-### cleanup
-
-Scan all tracked tables for duplicate rows (by natural unique keys). Generates a `.sql` file in `~/notes/files/` with `DELETE` statements and opens it in your editor for review. Apply with:
-
-```bash
-sqlite3 ~/.config/hiiro/hiiro.db < ~/notes/files/hiiro-cleanup-<timestamp>.sql
-```
-
-**Examples**
-
-```bash
-h db cleanup
-```
-
 ### restore
 
 Restore YAML files from the most recent `.tar.gz` backup in `~/.config/hiiro/`.
@@ -119,3 +99,23 @@ Restore YAML files from the most recent `.tar.gz` backup in `~/.config/hiiro/`.
 ```bash
 h db restore
 ```
+### status
+
+Show DB file path, size, migration state (complete or not), dual-write status, row counts per table, and any backup archives.
+
+**Examples**
+
+```bash
+h db status
+```
+
+### tables
+
+List all table names in the database.
+
+**Examples**
+
+```bash
+h db tables
+```
+

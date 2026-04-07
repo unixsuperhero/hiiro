@@ -34,22 +34,42 @@ Notification types:
 | `error` | `[ERR]` | Basso | Error |
 | `warning` | `[WARN]` | Purr | Warning |
 
-### push
+### claude
 
-Push a notification for the current tmux pane. Fires a `terminal-notifier` macOS alert and stores the entry in the log.
+Subcommands for integrating with Claude Code notification hooks in `~/.claude/settings.json`.
 
-**Options**
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--type` | `-t` | Notification type (`success`, `error`, `info`, `warning`) | `info` |
+| Subcommand | Description |
+|------------|-------------|
+| `setup` | Set `Notification` and `Stop` hooks to use `h alert` + `h notify push` |
+| `add_hooks` | Inject `h notify push` into existing hooks (non-destructive) |
+| `reset_hooks` | Strip `h notify push` from existing hooks |
+| `load_hooks` | Print a reminder to restart claude |
 
 **Examples**
 
 ```bash
-h notify push "Build complete"
-h notify push -t success "Tests passed"
-h notify push -t error "Deploy failed"
+h notify claude setup
+h notify claude add_hooks
+```
+### clear
+
+Remove all notifications from the log.
+
+**Examples**
+
+```bash
+h notify clear
+```
+
+### jump
+
+Navigate to the pane for notification at `index` and dismiss it from the log. Dead panes are pruned automatically.
+
+**Examples**
+
+```bash
+h notify jump 0
+h notify jump 2
 ```
 
 ### ls
@@ -72,25 +92,22 @@ Show a tmux `display-menu` popup listing the last 10 notifications. Each entry l
 h notify menu
 ```
 
-### jump
+### push
 
-Navigate to the pane for notification at `index` and dismiss it from the log. Dead panes are pruned automatically.
+Push a notification for the current tmux pane. Fires a `terminal-notifier` macOS alert and stores the entry in the log.
 
-**Examples**
+**Options**
 
-```bash
-h notify jump 0
-h notify jump 2
-```
-
-### clear
-
-Remove all notifications from the log.
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--type` | `-t` | Notification type (`success`, `error`, `info`, `warning`) | `info` |
 
 **Examples**
 
 ```bash
-h notify clear
+h notify push "Build complete"
+h notify push -t success "Tests passed"
+h notify push -t error "Deploy failed"
 ```
 
 ### tmux
@@ -111,20 +128,3 @@ h notify tmux setup
 h notify tmux add_hooks
 ```
 
-### claude
-
-Subcommands for integrating with Claude Code notification hooks in `~/.claude/settings.json`.
-
-| Subcommand | Description |
-|------------|-------------|
-| `setup` | Set `Notification` and `Stop` hooks to use `h alert` + `h notify push` |
-| `add_hooks` | Inject `h notify push` into existing hooks (non-destructive) |
-| `reset_hooks` | Strip `h notify push` from existing hooks |
-| `load_hooks` | Print a reminder to restart claude |
-
-**Examples**
-
-```bash
-h notify claude setup
-h notify claude add_hooks
-```

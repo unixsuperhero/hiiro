@@ -55,73 +55,15 @@ h pr <subcommand> [args]
 
 PR references (`ref`) can be a PR number, a URL containing `/pull/<number>`, or omitted to fuzzy-select from tracked PRs.
 
-### track
+### attach
 
-Start tracking a PR. Automatically associates it with the current task/worktree/session if in a task context.
-
-**Examples**
-
-```bash
-h pr track          # track current branch's PR (or fuzzy-select)
-h pr track 1234     # track by number
-```
-
-### ls
-
-List all tracked PRs with check status, review counts, and tags. Supports filter flags to narrow output.
-
-**Options**
-
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--update` | `-u` | Refresh status before listing |
-| `--verbose` | `-v` | Multi-line output per PR |
-| `--checks` | `-C` | Show individual check run details |
-| `--diff` | `-d` | Open diff for fuzzy-selected PR |
-| `--all` | `-a` | Show all tracked PRs (no filters) |
-| `--active` | | Only active (open) PRs |
-| `--merged` | | Only merged PRs |
-| `--drafts` | | Only draft PRs |
-| `--red` | | Only PRs with failing checks |
-| `--green` | | Only PRs with all checks passing |
-| `--pending` | | Only PRs with pending checks |
-| `--conflicts` | | Only PRs with merge conflicts |
-| `--numbers` | | Print PR numbers only |
+Checkout a PR's branch inside its associated task's tmux session. Creates a WIP commit if there are uncommitted changes before switching.
 
 **Examples**
 
 ```bash
-h pr ls
-h pr ls --update
-h pr ls --red
-h pr ls --verbose --checks
-```
-
-### update
-
-Refresh statuses for all active tracked PRs, then display the list.
-
-**Options**
-
-Same filters as `ls`, plus `--force-update` / `-u` to force refresh even if recently checked.
-
-**Examples**
-
-```bash
-h pr update
-h pr update --red
-h pr update -U
-```
-
-### status
-
-Show check status counts for a PR.
-
-**Examples**
-
-```bash
-h pr status
-h pr status 1234
+h pr attach
+h pr attach 1234
 ```
 
 ### check / watch / fwatch
@@ -155,6 +97,70 @@ h pr fix 1234
 h pr fix --red --run
 ```
 
+### for-task
+
+List tracked PRs associated with a task.
+
+**Examples**
+
+```bash
+h pr for-task
+h pr for-task my-task
+```
+
+### ls
+
+List all tracked PRs with check status, review counts, and tags. Supports filter flags to narrow output.
+
+**Options**
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--update` | `-u` | Refresh status before listing |
+| `--verbose` | `-v` | Multi-line output per PR |
+| `--checks` | `-C` | Show individual check run details |
+| `--diff` | `-d` | Open diff for fuzzy-selected PR |
+| `--all` | `-a` | Show all tracked PRs (no filters) |
+| `--active` | | Only active (open) PRs |
+| `--merged` | | Only merged PRs |
+| `--drafts` | | Only draft PRs |
+| `--red` | | Only PRs with failing checks |
+| `--green` | | Only PRs with all checks passing |
+| `--pending` | | Only PRs with pending checks |
+| `--conflicts` | | Only PRs with merge conflicts |
+| `--numbers` | | Print PR numbers only |
+
+**Examples**
+
+```bash
+h pr ls
+h pr ls --update
+h pr ls --red
+h pr ls --verbose --checks
+```
+
+### rm / prune
+
+`rm` stops tracking a specific PR (fuzzy-select if no ref given). `prune` removes all merged/closed PRs from tracking at once.
+
+**Examples**
+
+```bash
+h pr rm
+h pr rm 1234
+h pr prune
+```
+### status
+
+Show check status counts for a PR.
+
+**Examples**
+
+```bash
+h pr status
+h pr status 1234
+```
+
 ### tag / untag
 
 Tag or untag a tracked PR. With `-e` on `tag`, opens a YAML editor for bulk-tagging multiple PRs.
@@ -166,28 +172,6 @@ h pr tag 1234 urgent needs-rebase
 h pr tag -e
 h pr untag 1234 urgent
 h pr untag 1234           # clear all tags
-```
-
-### attach
-
-Checkout a PR's branch inside its associated task's tmux session. Creates a WIP commit if there are uncommitted changes before switching.
-
-**Examples**
-
-```bash
-h pr attach
-h pr attach 1234
-```
-
-### for-task
-
-List tracked PRs associated with a task.
-
-**Examples**
-
-```bash
-h pr for-task
-h pr for-task my-task
 ```
 
 ### templates / new-template / from-template
@@ -202,14 +186,30 @@ h pr new-template lgtm
 h pr from-template 1234
 ```
 
-### rm / prune
+### track
 
-`rm` stops tracking a specific PR (fuzzy-select if no ref given). `prune` removes all merged/closed PRs from tracking at once.
+Start tracking a PR. Automatically associates it with the current task/worktree/session if in a task context.
 
 **Examples**
 
 ```bash
-h pr rm
-h pr rm 1234
-h pr prune
+h pr track          # track current branch's PR (or fuzzy-select)
+h pr track 1234     # track by number
 ```
+
+### update
+
+Refresh statuses for all active tracked PRs, then display the list.
+
+**Options**
+
+Same filters as `ls`, plus `--force-update` / `-u` to force refresh even if recently checked.
+
+**Examples**
+
+```bash
+h pr update
+h pr update --red
+h pr update -U
+```
+

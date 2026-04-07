@@ -33,51 +33,6 @@ h pane <subcommand> [args]
 | `info [target]` | Show pane info (size, command, path) |
 | `home` | Named home pane management |
 
-### ls / lsa
-
-List panes in the current window (`ls`) or all panes across all sessions (`lsa`). Extra arguments are forwarded to `tmux list-panes`.
-
-**Examples**
-
-```bash
-h pane ls
-h pane lsa
-```
-
-### split / splitv / splith
-
-Split the current window. `splitv` splits vertically (side by side), `splith` splits horizontally (top/bottom). Extra args forwarded to `tmux split-window`.
-
-**Examples**
-
-```bash
-h pane split
-h pane splitv
-h pane splith
-```
-
-### kill
-
-Kill a pane. Fuzzy-select if no target given.
-
-**Examples**
-
-```bash
-h pane kill
-h pane kill %3
-```
-
-### zoom
-
-Toggle zoom on a pane. Extra args forwarded to `tmux resize-pane -Z`.
-
-**Examples**
-
-```bash
-h pane zoom
-h pane zoom %3
-```
-
 ### capture
 
 Capture and print the contents of the current pane. Extra args forwarded to `tmux capture-pane`.
@@ -88,17 +43,6 @@ Capture and print the contents of the current pane. Extra args forwarded to `tmu
 h pane capture
 ```
 
-### select
-
-Fuzzy-select a pane and print its ID. Useful for scripting.
-
-**Examples**
-
-```bash
-h pane select
-pane=$(h pane select)
-```
-
 ### copy
 
 Fuzzy-select a pane and copy its ID to the clipboard.
@@ -107,39 +51,6 @@ Fuzzy-select a pane and copy its ID to the clipboard.
 
 ```bash
 h pane copy
-```
-
-### sw / switch
-
-Switch to the session associated with a pane. Fuzzy-select if no target given.
-
-**Examples**
-
-```bash
-h pane sw
-h pane switch %3
-```
-
-### width / height
-
-Set pane width or height in characters. Fuzzy-select target if not provided.
-
-**Examples**
-
-```bash
-h pane width 80
-h pane height 20
-```
-
-### info
-
-Show pane details: size, current command, working path.
-
-**Examples**
-
-```bash
-h pane info
-h pane info %3
 ```
 
 ### home
@@ -167,3 +78,92 @@ h pane home switch work
 h pane home switch
 h pane home rm work
 ```
+### info
+
+Show pane details: size, current command, working path.
+
+**Examples**
+
+```bash
+h pane info
+h pane info %3
+```
+
+### kill
+
+Kill a pane. Fuzzy-select if no target given.
+
+**Examples**
+
+```bash
+h pane kill
+h pane kill %3
+```
+
+### ls / lsa
+
+List panes in the current window (`ls`) or all panes across all sessions (`lsa`). Extra arguments are forwarded to `tmux list-panes`.
+
+**Examples**
+
+```bash
+h pane ls
+h pane lsa
+```
+
+### select
+
+Fuzzy-select a pane and print its ID. Useful for scripting.
+
+**Examples**
+
+```bash
+h pane select
+pane=$(h pane select)
+```
+
+### split / splitv / splith
+
+Split the current window. `splitv` splits vertically (side by side), `splith` splits horizontally (top/bottom). Extra args forwarded to `tmux split-window`.
+
+**Examples**
+
+```bash
+h pane split
+h pane splitv
+h pane splith
+```
+
+### sw / switch
+
+Switch to the session associated with a pane. Fuzzy-select if no target given.
+
+**Examples**
+
+```bash
+h pane sw
+h pane switch %3
+```
+
+### width / height
+
+Set pane width or height in characters. Fuzzy-select target if not provided.
+
+**Examples**
+
+```bash
+h pane width 80
+h pane height 20
+```
+
+### zoom
+
+Toggle zoom on a pane. Extra args forwarded to `tmux resize-pane -Z`.
+
+**Examples**
+
+```bash
+h pane zoom
+h pane zoom %3
+```
+

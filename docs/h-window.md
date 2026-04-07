@@ -32,6 +32,35 @@ h window <subcommand> [args]
 | `hsplit` | Apply even-vertical layout (top/bottom panes) |
 | `layout [name]` | Apply a named layout |
 
+### kill
+
+Kill a window. Fuzzy-select if no target given.
+
+**Examples**
+
+```bash
+h window kill
+h window kill :3
+```
+
+### layout
+
+Apply a tmux layout. Fuzzy-select from available layouts if no name given. Supported layout names:
+
+- `horizontal` / `ehorizontal` — even-vertical (top/bottom panes)
+- `vertical` / `evertical` — even-horizontal (side-by-side panes)
+- `mhorizontal` / `main_horizontal` — main-vertical
+- `mvertical` / `main_vertical` — main-horizontal
+- `tiled` — tiled
+
+**Examples**
+
+```bash
+h window layout
+h window layout horizontal
+h window layout tiled
+```
+
 ### ls / lsa
 
 List windows in the current session (`ls`) or all windows across all sessions (`lsa`). Extra arguments are forwarded to `tmux list-windows`.
@@ -54,15 +83,16 @@ h window new
 h window new my-window
 ```
 
-### kill
+### next / prev / last
 
-Kill a window. Fuzzy-select if no target given.
+Navigate to next, previous, or last window.
 
 **Examples**
 
 ```bash
-h window kill
-h window kill :3
+h window next
+h window prev
+h window last
 ```
 
 ### select / copy
@@ -86,36 +116,6 @@ Switch to a window. Fuzzy-select if no target given.
 ```bash
 h window sw
 h window switch my-session:my-window
-```
-
-### next / prev / last
-
-Navigate to next, previous, or last window.
-
-**Examples**
-
-```bash
-h window next
-h window prev
-h window last
-```
-
-### layout
-
-Apply a tmux layout. Fuzzy-select from available layouts if no name given. Supported layout names:
-
-- `horizontal` / `ehorizontal` — even-vertical (top/bottom panes)
-- `vertical` / `evertical` — even-horizontal (side-by-side panes)
-- `mhorizontal` / `main_horizontal` — main-vertical
-- `mvertical` / `main_vertical` — main-horizontal
-- `tiled` — tiled
-
-**Examples**
-
-```bash
-h window layout
-h window layout horizontal
-h window layout tiled
 ```
 
 ### vsplit / hsplit

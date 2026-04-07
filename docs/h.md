@@ -20,11 +20,13 @@ These subcommands are defined directly in `exe/h` or loaded from `lib/`:
 | `h check_version` | Verify installed hiiro version across rbenv versions | `exe/h` |
 | `h delayed_update` | Poll RubyGems for a new version and install when available | `exe/h` |
 | `h edit` | Open the `h` bin file in your editor | `exe/h` |
+| [`h file`](h-file.md) | Track frequently-used files per app and open them in your editor | `lib/hiiro/app_files.rb` |
 | `h install` / `h update` | Install or update the hiiro gem (`-a` all rbenv versions, `-p` pre-release) | `exe/h` |
 | `h ping` | Health check — prints `pong` | `exe/h` |
 | `h pry` | Open a pry REPL in the hiiro context | `exe/h` |
 | [`h queue`](h-queue.md) | Claude prompt queue — create, watch, and run AI prompts in tmux | `lib/hiiro/queue.rb` |
 | `h rnext` | Run `git rnext` (rebase next) | `exe/h` |
+| [`h run`](h-run.md) | Run dev tools (linters, formatters, tests) against changed files | `lib/hiiro/runner_tool.rb` |
 | [`h service`](h-service.md) | Dev service management with tmux, env files, and service groups | `lib/hiiro/service_manager.rb` |
 | `h setup` | Install plugins and bin scripts to `~/bin` | `exe/h` |
 | [`h subtask`](h-subtask.md) | Subtask management scoped to the current parent task | `lib/hiiro/tasks.rb` |

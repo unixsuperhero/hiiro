@@ -21,28 +21,6 @@ h sparse <subcommand> [args]
 
 Groups are matched by exact name first, then prefix, then substring.
 
-### ls
-
-List all configured groups with path counts, or show all paths for a specific group.
-
-**Examples**
-
-```bash
-h sparse ls
-h sparse ls my-group
-```
-
-### set
-
-Apply a group's paths as the git sparse-checkout for the current repository. Uses `git sparse-checkout set --cone --skip-checks`.
-
-**Examples**
-
-```bash
-h sparse set my-group
-h sparse set fe    # prefix match
-```
-
 ### add
 
 Add one or more paths to a group. Creates the group if it doesn't exist. Skips paths already in the group.
@@ -52,6 +30,27 @@ Add one or more paths to a group. Creates the group if it doesn't exist. Skips p
 ```bash
 h sparse add my-group packages/api packages/web
 h sparse add frontend packages/ui
+```
+
+### config
+
+Open `~/.config/hiiro/sparse_groups.yml` in your editor.
+
+**Examples**
+
+```bash
+h sparse config
+```
+
+### ls
+
+List all configured groups with path counts, or show all paths for a specific group.
+
+**Examples**
+
+```bash
+h sparse ls
+h sparse ls my-group
 ```
 
 ### rm
@@ -65,14 +64,15 @@ h sparse rm my-group packages/api
 h sparse rm old-group              # deletes the group
 ```
 
-### config
+### set
 
-Open `~/.config/hiiro/sparse_groups.yml` in your editor.
+Apply a group's paths as the git sparse-checkout for the current repository. Uses `git sparse-checkout set --cone --skip-checks`.
 
 **Examples**
 
 ```bash
-h sparse config
+h sparse set my-group
+h sparse set fe    # prefix match
 ```
 
 ## Configuration

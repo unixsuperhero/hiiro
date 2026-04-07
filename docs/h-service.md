@@ -12,6 +12,79 @@ h service <subcommand> [args]
 
 ## Subcommands
 
+### add
+
+Add a new service via a YAML editor template. Opens your editor with a pre-filled template; saves on write.
+
+**Examples**
+
+```bash
+h service add
+```
+
+---
+
+### attach
+
+Switch to a running service's tmux window/pane. With no name, opens a fuzzyfind selector.
+
+**Examples**
+
+```bash
+h service attach my-rails
+h service attach
+```
+
+---
+
+### clean
+
+Remove all stale services from the running state (services whose tmux pane no longer exists).
+
+**Examples**
+
+```bash
+h service clean
+```
+
+---
+
+### config
+
+Open the services config file (`~/.config/hiiro/services.yml`) in your editor.
+
+**Examples**
+
+```bash
+h service config
+```
+
+---
+
+### env
+
+Show env file configuration for a service: env files, their base templates, and the available variation values for each env var.
+
+**Examples**
+
+```bash
+h service env my-rails
+```
+
+---
+
+### groups
+
+List all configured service groups and their member services.
+
+**Examples**
+
+```bash
+h service groups
+```
+
+---
+
 ### ls / list
 
 List all configured services and service groups, showing running status, host:port, and the associated task/branch if running.
@@ -21,6 +94,55 @@ List all configured services and service groups, showing running status, host:po
 ```bash
 h service ls
 h service list
+```
+
+---
+
+### open
+
+Open a service's URL in the browser (`open http://host:port`).
+
+**Examples**
+
+```bash
+h service open my-rails
+```
+
+---
+
+### port
+
+Print a service's configured port number.
+
+**Examples**
+
+```bash
+h service port my-rails
+```
+
+---
+
+### reset
+
+Clear a service from the running state without actually stopping the process. Useful when the tmux pane is already dead. With no name, opens a fuzzyfind selector.
+
+**Examples**
+
+```bash
+h service reset my-rails
+```
+
+---
+
+### rm / remove
+
+Remove a service from the config.
+
+**Examples**
+
+```bash
+h service rm my-rails
+h service remove my-rails
 ```
 
 ---
@@ -46,6 +168,19 @@ h service start                   # fuzzyfind selector
 
 ---
 
+### status
+
+Show detailed status for a service: base dir, URL, running state, PID, tmux pane, associated task, and start time. With no name, opens a fuzzyfind selector over running services.
+
+**Examples**
+
+```bash
+h service status my-rails
+h service status
+```
+
+---
+
 ### stop
 
 Stop a running service or group. Sends `C-c` to the tmux pane, or runs the configured `stop` command. With no name, opens a fuzzyfind selector over running services.
@@ -60,55 +195,6 @@ h service stop                    # fuzzyfind selector
 
 ---
 
-### reset
-
-Clear a service from the running state without actually stopping the process. Useful when the tmux pane is already dead. With no name, opens a fuzzyfind selector.
-
-**Examples**
-
-```bash
-h service reset my-rails
-```
-
----
-
-### clean
-
-Remove all stale services from the running state (services whose tmux pane no longer exists).
-
-**Examples**
-
-```bash
-h service clean
-```
-
----
-
-### attach
-
-Switch to a running service's tmux window/pane. With no name, opens a fuzzyfind selector.
-
-**Examples**
-
-```bash
-h service attach my-rails
-h service attach
-```
-
----
-
-### open
-
-Open a service's URL in the browser (`open http://host:port`).
-
-**Examples**
-
-```bash
-h service open my-rails
-```
-
----
-
 ### url
 
 Print a service's URL (`http://host:port`).
@@ -117,92 +203,6 @@ Print a service's URL (`http://host:port`).
 
 ```bash
 h service url my-rails
-```
-
----
-
-### port
-
-Print a service's configured port number.
-
-**Examples**
-
-```bash
-h service port my-rails
-```
-
----
-
-### status
-
-Show detailed status for a service: base dir, URL, running state, PID, tmux pane, associated task, and start time. With no name, opens a fuzzyfind selector over running services.
-
-**Examples**
-
-```bash
-h service status my-rails
-h service status
-```
-
----
-
-### add
-
-Add a new service via a YAML editor template. Opens your editor with a pre-filled template; saves on write.
-
-**Examples**
-
-```bash
-h service add
-```
-
----
-
-### rm / remove
-
-Remove a service from the config.
-
-**Examples**
-
-```bash
-h service rm my-rails
-h service remove my-rails
-```
-
----
-
-### config
-
-Open the services config file (`~/.config/hiiro/services.yml`) in your editor.
-
-**Examples**
-
-```bash
-h service config
-```
-
----
-
-### groups
-
-List all configured service groups and their member services.
-
-**Examples**
-
-```bash
-h service groups
-```
-
----
-
-### env
-
-Show env file configuration for a service: env files, their base templates, and the available variation values for each env var.
-
-**Examples**
-
-```bash
-h service env my-rails
 ```
 
 ---

@@ -20,28 +20,6 @@ h bg <subcommand> [args]
 
 Background commands run in the `hbg` tmux session (created if it doesn't exist). Each command opens in a new window named after the first word of the command. History is stored in `~/.config/hiiro/bg-history.txt` (last 50 commands).
 
-### run
-
-Run a shell command in a new detached background tmux window. The command is appended to the history file.
-
-**Examples**
-
-```bash
-h bg run bundle exec rake test
-h bg run sleep 60
-h bg run ./scripts/long_job.sh
-```
-
-### popup
-
-Open your `$EDITOR` with a template pre-populated from recent history (commented out). Write your command, save, and quit — it runs in the background. Empty or all-comment files are a no-op.
-
-**Examples**
-
-```bash
-h bg popup
-```
-
 ### attach / a
 
 Switch the current tmux client to the `hbg` background session.
@@ -62,6 +40,28 @@ Print recent background command history, one per line with index.
 ```bash
 h bg history
 h bg hist
+```
+
+### popup
+
+Open your `$EDITOR` with a template pre-populated from recent history (commented out). Write your command, save, and quit — it runs in the background. Empty or all-comment files are a no-op.
+
+**Examples**
+
+```bash
+h bg popup
+```
+
+### run
+
+Run a shell command in a new detached background tmux window. The command is appended to the history file.
+
+**Examples**
+
+```bash
+h bg run bundle exec rake test
+h bg run sleep 60
+h bg run ./scripts/long_job.sh
 ```
 
 ### setup

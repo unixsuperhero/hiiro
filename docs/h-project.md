@@ -28,15 +28,34 @@ Projects are discovered from two sources:
 
 The default subcommand (no subcommand) runs `help`.
 
-### open
+### config
 
-Open a project by name and start (or attach to) a tmux session for it. Project names are matched with case-insensitive regex; if exactly one match is found, it's used. If multiple matches are found, an exact match is preferred.
+Print the contents of `~/.config/hiiro/projects.yml`.
 
 **Examples**
 
 ```bash
-h project open hiiro
-h project open my-app
+h project config
+```
+
+### copy
+
+Fuzzy-select a project and copy its path to the clipboard.
+
+**Examples**
+
+```bash
+h project copy
+```
+
+### edit
+
+Open `~/.config/hiiro/projects.yml` in your editor. Creates the file with a template comment if it doesn't exist.
+
+**Examples**
+
+```bash
+h project edit
 ```
 
 ### list / ls
@@ -50,24 +69,15 @@ h project list
 h project ls
 ```
 
-### config
+### open
 
-Print the contents of `~/.config/hiiro/projects.yml`.
-
-**Examples**
-
-```bash
-h project config
-```
-
-### edit
-
-Open `~/.config/hiiro/projects.yml` in your editor. Creates the file with a template comment if it doesn't exist.
+Open a project by name and start (or attach to) a tmux session for it. Project names are matched with case-insensitive regex; if exactly one match is found, it's used. If multiple matches are found, an exact match is preferred.
 
 **Examples**
 
 ```bash
-h project edit
+h project open hiiro
+h project open my-app
 ```
 
 ### select
@@ -79,16 +89,6 @@ Fuzzy-select a project and print its absolute path.
 ```bash
 h project select
 cd $(h project select)
-```
-
-### copy
-
-Fuzzy-select a project and copy its path to the clipboard.
-
-**Examples**
-
-```bash
-h project copy
 ```
 
 ### sh

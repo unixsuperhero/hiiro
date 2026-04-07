@@ -12,66 +12,6 @@ h queue <subcommand> [args]
 
 ## Subcommands
 
-### ls / list
-
-List all queue tasks across all statuses, showing status, timestamp, elapsed time (for running tasks), and a preview of the prompt content. Defaults to the 10 most recent tasks per status.
-
-**Options**
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--all` | `-a` | Show all tasks without limit; uses pager if output exceeds terminal height | false |
-| `--status` | `-s` | Filter by status (`wip`, `pending`, `running`, `done`, `failed`); repeatable | all |
-
-**Examples**
-
-```bash
-h queue ls
-h queue ls -a
-h queue ls -s running
-h queue ls -s pending -s failed
-h queue ls pending        # positional status filter (prefix-matched)
-```
-
----
-
-### status
-
-Show detailed status for all tasks, including elapsed time for running tasks, tmux pane/window info, and working directory.
-
-**Examples**
-
-```bash
-h queue status
-```
-
----
-
-### watch
-
-Poll the pending queue every 2 seconds and launch any pending tasks as new tmux windows. Automatically restarts itself if a new hiiro version is detected.
-
-**Examples**
-
-```bash
-h queue watch
-```
-
----
-
-### run
-
-Launch one or all pending tasks in tmux windows. If a task name is provided, launches that specific task (must be in `pending` status). Without a name, launches all pending tasks.
-
-**Examples**
-
-```bash
-h queue run
-h queue run my-task-name
-```
-
----
-
 ### add
 
 Create a new pending queue task. Adds the task to the `pending` directory immediately.
@@ -103,92 +43,6 @@ echo "Do something" | h queue add
 
 ---
 
-### hadd
-
-Shortcut for `h queue add --horizontal`. Opens the editor in a horizontal tmux split pane; when saved, runs `claude` in that pane.
-
-**Examples**
-
-```bash
-h queue hadd
-h queue hadd -t my-task
-```
-
----
-
-### vadd
-
-Shortcut for `h queue add --vertical`. Opens the editor in a vertical tmux split pane.
-
-**Examples**
-
-```bash
-h queue vadd
-h queue vadd "Fix the login bug"
-```
-
----
-
-### cadd
-
-Shortcut for `h queue add` that runs claude in the current tmux pane (via `exec`).
-
-**Examples**
-
-```bash
-h queue cadd
-h queue cadd "Run the migration"
-```
-
----
-
-### sadd
-
-Add a task scoped to the current tmux session. Equivalent to `h queue add --session`, but also launches the task immediately in the current session.
-
-**Examples**
-
-```bash
-h queue sadd
-h queue sadd "Run the test suite"
-```
-
----
-
-### wip
-
-Create or edit a work-in-progress prompt in the `wip` directory. Unlike `add`, tasks in `wip` are not queued — they must be moved to `pending` via `ready`. With no name and existing wip tasks, opens a fuzzyfind selector.
-
-**Options**
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--task` | `-t` | Task name | auto-detected |
-| `--find` | `-f` | Choose task/session interactively | false |
-| `--session` | `-s` | Associate with current tmux session | false |
-
-**Examples**
-
-```bash
-h queue wip my-draft
-h queue wip          # fuzzy-select from existing wip tasks
-```
-
----
-
-### ready
-
-Move a wip task to `pending`, making it eligible for `run`/`watch`. With no name and exactly one wip task, moves it automatically. With multiple wip tasks, opens a fuzzyfind selector.
-
-**Examples**
-
-```bash
-h queue ready
-h queue ready my-draft
-```
-
----
-
 ### attach
 
 Switch to a running task's tmux window. With no name, opens a fuzzyfind selector over running tasks.
@@ -202,40 +56,15 @@ h queue attach my-task
 
 ---
 
-### session
+### cadd
 
-Open (or create) the default queue tmux session (`hq`).
-
-**Examples**
-
-```bash
-h queue session
-```
-
----
-
-### kill
-
-Kill a running task's tmux window/pane and move it to `failed`. With no name and exactly one running task, kills it automatically.
+Shortcut for `h queue add` that runs claude in the current tmux pane (via `exec`).
 
 **Examples**
 
 ```bash
-h queue kill
-h queue kill my-task
-```
-
----
-
-### retry
-
-Move a failed or done task back to `pending` for re-execution.
-
-**Examples**
-
-```bash
-h queue retry
-h queue retry my-failed-task
+h queue cadd
+h queue cadd "Run the migration"
 ```
 
 ---
@@ -264,12 +93,183 @@ h queue dir
 
 ---
 
+### hadd
+
+Shortcut for `h queue add --horizontal`. Opens the editor in a horizontal tmux split pane; when saved, runs `claude` in that pane.
+
+**Examples**
+
+```bash
+h queue hadd
+h queue hadd -t my-task
+```
+
+---
+
+### kill
+
+Kill a running task's tmux window/pane and move it to `failed`. With no name and exactly one running task, kills it automatically.
+
+**Examples**
+
+```bash
+h queue kill
+h queue kill my-task
+```
+
+---
+
+### ls / list
+
+List all queue tasks across all statuses, showing status, timestamp, elapsed time (for running tasks), and a preview of the prompt content. Defaults to the 10 most recent tasks per status.
+
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--all` | `-a` | Show all tasks without limit; uses pager if output exceeds terminal height | false |
+| `--status` | `-s` | Filter by status (`wip`, `pending`, `running`, `done`, `failed`); repeatable | all |
+
+**Examples**
+
+```bash
+h queue ls
+h queue ls -a
+h queue ls -s running
+h queue ls -s pending -s failed
+h queue ls pending        # positional status filter (prefix-matched)
+```
+
+---
+
 ### pane-dir
 
 Internal subcommand. Resolves the working directory for a pane-launched prompt after editing, accounting for `app:` and `dir:` frontmatter fields. Used by the `hadd`/`vadd`/`cadd` shell scripts.
 
 ```bash
 cd $(h queue pane-dir /path/to/prompt.md /base/dir)
+```
+
+---
+
+### ready
+
+Move a wip task to `pending`, making it eligible for `run`/`watch`. With no name and exactly one wip task, moves it automatically. With multiple wip tasks, opens a fuzzyfind selector.
+
+**Examples**
+
+```bash
+h queue ready
+h queue ready my-draft
+```
+
+---
+
+### retry
+
+Move a failed or done task back to `pending` for re-execution.
+
+**Examples**
+
+```bash
+h queue retry
+h queue retry my-failed-task
+```
+
+---
+
+### run
+
+Launch one or all pending tasks in tmux windows. If a task name is provided, launches that specific task (must be in `pending` status). Without a name, launches all pending tasks.
+
+**Examples**
+
+```bash
+h queue run
+h queue run my-task-name
+```
+
+---
+
+### sadd
+
+Add a task scoped to the current tmux session. Equivalent to `h queue add --session`, but also launches the task immediately in the current session.
+
+**Examples**
+
+```bash
+h queue sadd
+h queue sadd "Run the test suite"
+```
+
+---
+
+### session
+
+Open (or create) the default queue tmux session (`hq`).
+
+**Examples**
+
+```bash
+h queue session
+```
+
+---
+
+### status
+
+Show detailed status for all tasks, including elapsed time for running tasks, tmux pane/window info, and working directory.
+
+**Examples**
+
+```bash
+h queue status
+```
+
+---
+
+### vadd
+
+Shortcut for `h queue add --vertical`. Opens the editor in a vertical tmux split pane.
+
+**Examples**
+
+```bash
+h queue vadd
+h queue vadd "Fix the login bug"
+```
+
+---
+
+### watch
+
+Poll the pending queue every 2 seconds and launch any pending tasks as new tmux windows. Automatically restarts itself if a new hiiro version is detected.
+
+**Examples**
+
+```bash
+h queue watch
+```
+
+---
+
+### wip
+
+Create or edit a work-in-progress prompt in the `wip` directory. Unlike `add`, tasks in `wip` are not queued — they must be moved to `pending` via `ready`. With no name and existing wip tasks, opens a fuzzyfind selector.
+
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--task` | `-t` | Task name | auto-detected |
+| `--find` | `-f` | Choose task/session interactively | false |
+| `--session` | `-s` | Associate with current tmux session | false |
+
+**Examples**
+
+```bash
+h queue wip my-draft
+h queue wip          # fuzzy-select from existing wip tasks
 ```
 
 ---
