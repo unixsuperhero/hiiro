@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.339] - 2026-04-07
+
+### Added
+- `h ps byport <port> [port2 ...]` — find processes listening on specified port(s)
+- `PsProcess.by_port(*ports)` — query processes by listening port numbers
+- `h task switch` now matches ~/proj/* directories by prefix as fallback when task name doesn't match
+
 ## [0.1.338] - 2026-04-07
 
 ### Changed
