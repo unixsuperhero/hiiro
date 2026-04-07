@@ -356,3 +356,11 @@ MIT
 
 
 ```
+
+# Development
+
+Testing locally:
+
+```sh
+ruby -I lib bin/h-ps search ruby
+```

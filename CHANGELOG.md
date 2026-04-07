@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.335] - 2026-04-07
+
+### Added
+- New `Hiiro::PsProcess` class (`lib/hiiro/ps_process.rb`) for encapsulated process info:
+  - `PsProcess.from_line(line)` - parse `ps awwux` output
+  - `PsProcess.all`, `.search(pattern)`, `.find(pid)`, `.in_dirs(*paths)`
+  - Instance methods: `#files`, `#ports`, `#dir`, `#parent`, `#children`
+  - Simple `#to_s` output: PID + CMD
+- New `h ps` subcommands: `info`, `files`, `ports`
+- Smart argument resolution in `h ps`: accepts PID, search pattern, or directory path
+
+### Changed
+- Refactored `h-ps` to use `PsProcess` class instead of raw `ps` parsing
+
 ## [0.1.334] - 2026-04-07
 
 ### Added
