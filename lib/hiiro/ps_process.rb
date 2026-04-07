@@ -81,7 +81,7 @@ class Hiiro::PsProcess
 
   # Open network ports for this process
   def ports
-    `lsof -p #{pid} -i 2>/dev/null`.lines[1..].map do |line|
+    `lsof -a -p #{pid} -i 2>/dev/null`.lines[1..].map do |line|
       parts = line.split
       { protocol: parts[7], name: parts[8] } if parts.size >= 9
     end.compact
