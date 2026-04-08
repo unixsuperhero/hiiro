@@ -915,6 +915,33 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     matches.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
   end
 
+  add_cmd(:review, :cr) do
+    prs = args.filter_map do |arg|
+      pr = Hiiro::Git::Pr.from_link(arg)
+      pr ||= Hiiro::Git::Pr.from_number(arg)
+    end
+
+    exit 1 if prs.empty?
+
+    parent_dir = File.join(Dir.home, 'work', 'codereviews')
+    FileUtils.mkdir_p(parent_dir)
+    Dir.chdir(parent_dir)
+
+    if `git rev-parse --is-inside-work-tree`.strip == 'true'
+      master = `git master`
+      system('git', 'checkout', `git rev-parse master`)
+    else
+      system('git', 'worktree', 'add', '--no-checkout', parent_dir)
+    end
+
+    system('git', 'checkout', `git rev-parse master`)
+
+    prs.each do |pr|
+      puts ['PR NUMBER', pr.number].join(': ')
+      # Hiiro::Shell.pipe_lines("/prcr #{pr.number}", 'claude -p')
+    end
+  end
+
   # === Tags ===
 
   add_subcmd(:tag) do |*raw_args|
