@@ -20,6 +20,32 @@ class Hiiro
         []
       end
 
+      def is_link?(link)
+        temp_link = link.to_s
+        return false unless temp_link.match?('github.com') && temp_link.match?(/pull\/[0-9]+/)
+
+        true
+      end
+
+      def self.from_link(link)
+        return nil unless is_link?(link)
+
+        number = link[/pull\/(\d+)/].sub(/\D*/, '')
+        owner, name, _ = link.sub(/.*github.com./, '').split(?/, 3)
+        new(
+          number: number,
+          url: link,
+          repo: [owner, name].join(?/),
+        )
+      end
+
+      def self.from_number(number)
+        number = number.to_s.strip[/^\d+$/]
+        return if number&.length == 0
+
+        new(number: number)
+      end
+
       def self.repo_from_url(url)
         return nil unless url
         url.match(%r{github\.com/([^/]+/[^/]+)/pull/})&.[](1)
