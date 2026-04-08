@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.342] - 2026-04-08
+
+### Added
+- `h pr review` / `h pr cr` — code review workflow for managing PR sessions in ~/work/codereviews worktree
+- `Hiiro::Git::Pr.from_link(url)` — parse PR number, owner, and repo from GitHub PR links
+- `Hiiro::Git::Pr.from_number(number)` — create PR instances from PR numbers
+- `Hiiro::Git::Pr.is_link?(link)` — validate GitHub PR links
+
 ## [0.1.341] - 2026-04-07
 
 ### Fixed
