@@ -80,7 +80,8 @@ class Hiiro
     # Matches the full ANSI/VT100 escape sequence spec:
     # cursor movement, erase, colors, SGR — everything a terminal interprets.
     # [^[] catches all single-char Fe sequences (e.g. \eM, \eD); \[...] catches CSI.
-    ANSI_PATTERN = /\e(?:\[[0-?]*[ -/]*[@-~]|[^[])/
+    # \x20-\x2f used instead of space-to-slash to avoid ambiguity with the / regex delimiter.
+    ANSI_PATTERN = /\e(?:\[[0-?]*[\x20-\x2f]*[@-~]|[^\[])/
 
     attr_reader :stdout, :stderr, :status
 
