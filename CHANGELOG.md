@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.343] - 2026-04-12
 
 ### Added
 - Task subcommands now fall back to `~/proj/*` directories when no task matches
@@ -8,6 +8,9 @@
   - Works for: `cd`, `path`, `sh`, `branch`, `tree`, `session`, and any subcommand using `-t` flag
   - `FallbackTarget` class duck-types as `Task` for seamless integration
   - Ambiguous project matches print a warning to stderr
+
+### Fixed
+- `Hiiro::Git::Pr.is_link?` is now a class method (was instance method)
 
 ## [0.1.342] - 2026-04-08
 
