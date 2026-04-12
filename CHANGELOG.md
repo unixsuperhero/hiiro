@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `h pr tags` now accepts optional tag names to filter output to only those tags
+
 ## [0.1.345] - 2026-04-12
 
 ### Fixed

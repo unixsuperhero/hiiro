@@ -1054,7 +1054,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned_manager.save_pinned(pinned)
   end
 
-  add_subcmd(:tags) do
+  add_subcmd(:tags) do |*filter_tags|
     pinned = pinned_manager.load_pinned
 
     if pinned.empty?
@@ -1071,6 +1071,16 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         untagged << pr
       else
         tags.each { |t| by_tag[t] << pr }
+      end
+    end
+
+    if filter_tags.any?
+      unknown = filter_tags - by_tag.keys
+      unknown.each { |t| STDERR.puts "No PRs tagged '#{t}'" }
+      by_tag = by_tag.select { |tag, _| filter_tags.include?(tag) }
+      if by_tag.empty?
+        puts "No PRs match tag(s): #{filter_tags.join(', ')}"
+        next
       end
     end
 
@@ -1096,7 +1106,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       render_group.call("\e[30;104m#{tag}\e[0m (#{prs.length})", prs, tag)
     end
 
-    render_group.call("(untagged) (#{untagged.length})", untagged, nil) if untagged.any?
+    render_group.call("(untagged) (#{untagged.length})", untagged, nil) if untagged.any? && filter_tags.empty?
   end
 
   # === Multi-PR action commands (mCMD) ===
