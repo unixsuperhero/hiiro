@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.345] - 2026-04-12
+
+### Fixed
+- ANSI escape sequence pattern now uses hex escapes (`\x20-\x2f`) instead of literal space-to-slash to avoid ambiguity with the `/` regex delimiter
+
 ## [0.1.343] - 2026-04-12
 
 ### Added
