@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.347] - 2026-04-12
+
+### Added
+- `h pr tags` now supports flags: `--update/-u` (refresh PR status before listing), `--verbose/-v` (multi-line output per PR), `--checks/-C` (show individual check run details)
+
 ## [0.1.346] - 2026-04-12
 
 ### Added
