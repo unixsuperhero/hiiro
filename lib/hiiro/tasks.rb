@@ -63,6 +63,37 @@ class Hiiro
       Hiiro::Matcher.new(tasks, key).by_prefix(name).first&.item
     end
 
+    # Resolve a name to a Task or FallbackTarget (~/proj/* directory).
+    # Falls back to ~/proj/* prefix match when no task matches.
+    def resolve_name(name)
+      return nil if name.nil?
+
+      task = task_by_name(name)
+      return task if task
+
+      proj_dirs = Dir.glob(File.expand_path('~/proj/*/'))
+      dir_names = proj_dirs.map { |d| File.basename(d) }
+      result = Hiiro::Matcher.by_prefix(dir_names, name)
+      if result.one?
+        dir_name = result.first.item
+        return FallbackTarget.from_project(dir_name, File.expand_path("~/proj/#{dir_name}"))
+      elsif result.ambiguous?
+        STDERR.puts "Ambiguous project match for '#{name}': #{result.matches.map(&:item).join(', ')}"
+      end
+
+      nil
+    end
+
+    # Resolve the filesystem path for a Task or FallbackTarget.
+    def resolve_path(target)
+      return nil unless target
+
+      return target.path if target.is_a?(FallbackTarget)
+
+      tree = environment.find_tree(target.tree_name)
+      tree ? tree.path : File.join(Hiiro::WORK_DIR, target.tree_name)
+    end
+
     def task_by_tree(tree_name)
       environment.task_matcher.resolve(tree_name, :tree_name).resolved&.item
     end
@@ -499,8 +530,8 @@ class Hiiro
 
     def value_for_task(task_name = nil, &block)
       if task_name
-        task = task_by_name(task_name)
-        return block.call(task) if task
+        target = resolve_name(task_name)
+        return block.call(target) if target
       end
 
       task_list = scope == :subtask ? tasks.sort_by(&:short_name) : environment.all_tasks.sort_by(&:name)
@@ -769,9 +800,9 @@ class Hiiro
             task = sel.is_a?(Hiiro::Task) ? sel : nil
             [task, positional]
           elsif opts.task
-            [tm.task_by_name(opts.task), positional]
+            [tm.resolve_name(opts.task), positional]
           elsif positional.any?
-            found = tm.task_by_name(positional.first)
+            found = tm.resolve_name(positional.first)
             found ? [found, positional[1..]] : [tm.current_task, positional]
           else
             [tm.current_task, positional]
@@ -1001,8 +1032,7 @@ class Hiiro
             puts "No task found"
             next
           end
-          tree = tm.environment.find_tree(task.tree_name)
-          tree_path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
+          tree_path = tm.resolve_path(task)
           app_name = positional[0]
           if app_name.nil?
             tm.send_cd(tree_path)
@@ -1023,8 +1053,7 @@ class Hiiro
             STDERR.puts "No task found"
             next
           end
-          tree = tm.environment.find_tree(task.tree_name)
-          tree_path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
+          tree_path = tm.resolve_path(task)
 
           app_name = positional[0]
           globs    = positional[1..]
@@ -1099,8 +1128,7 @@ class Hiiro
             puts "Not in a task session (use -t or -f to specify)"
             next
           end
-          tree = tm.environment.find_tree(task.tree_name)
-          path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
+          path = tm.resolve_path(task)
 
           if opts.session
             session_name = opts.session
@@ -1443,6 +1471,53 @@ class Hiiro
         branch:  "[#{branch}]",
         session: "(#{sname})"
       }
+    end
+  end
+
+  class FallbackTarget
+    attr_reader :name, :type
+
+    def self.from_project(name, path)
+      new(name: name, path: path, type: :project)
+    end
+
+    def initialize(name:, path:, type:)
+      @name = name
+      @_path = path
+      @type = type
+    end
+
+    def session_name = name
+    def tree_name = nil
+    def color_index = nil
+    def subtask? = false
+    def top_level? = true
+    def short_name = name
+    def parent_name = nil
+    def tree = nil
+
+    def path
+      @_path
+    end
+
+    def branch
+      return nil unless @_path
+      out = IO.popen(['git', '-C', @_path, 'rev-parse', '--abbrev-ref', 'HEAD'], err: File::NULL, &:read)
+      out&.strip&.then { |b| b.empty? ? nil : b }
+    end
+
+    def display_data(scope: :task, environment:)
+      br = branch
+      {
+        name: name,
+        tree: '(project)',
+        branch: br ? "[#{br}]" : '(none)',
+        session: "(#{name})"
+      }
+    end
+
+    def to_s
+      name
     end
   end
 

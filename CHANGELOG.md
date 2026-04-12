@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Task subcommands now fall back to `~/proj/*` directories when no task matches
+  - `h task path hiiro` → resolves to `~/proj/hiiro` if no task named "hiiro" exists
+  - Works for: `cd`, `path`, `sh`, `branch`, `tree`, `session`, and any subcommand using `-t` flag
+  - `FallbackTarget` class duck-types as `Task` for seamless integration
+  - Ambiguous project matches print a warning to stderr
+
 ## [0.1.342] - 2026-04-08
 
 ### Added
