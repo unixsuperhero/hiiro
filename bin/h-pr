@@ -1054,13 +1054,23 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     pinned_manager.save_pinned(pinned)
   end
 
-  add_subcmd(:tags) do |*filter_tags|
+  add_subcmd(:tags) do |*raw_args|
+    opts = Hiiro::Options.parse(raw_args) { |o|
+      o.flag(:update,  short: 'u', desc: 'update status before listing')
+      o.flag(:verbose, short: 'v', desc: 'multi-line output per PR')
+      o.flag(:checks,  short: 'C', desc: 'show individual check run details')
+    }
+    filter_tags = opts.args
+
     pinned = pinned_manager.load_pinned
 
     if pinned.empty?
       puts "No tracked PRs."
       next
     end
+
+    pinned_manager.refresh_all_status(pinned, force: opts.update)
+    pinned_manager.save_pinned(pinned)
 
     by_tag = Hash.new { |h, k| h[k] = [] }
     untagged = []
@@ -1093,12 +1103,13 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       crs_w   = prs.map { |pr| [pr.reviews&.dig('changes_requested').to_i.to_s.length, 1].max }.max
       widths  = { slot: slot_w, succ: succ_w, total: total_w, as: as_w, crs: crs_w }
       prs.each_with_index do |pr, idx|
-        line = pinned_manager.display_pinned(pr, idx, widths: widths, oneline: true)
+        line = pinned_manager.display_pinned(pr, idx, widths: widths, oneline: !opts.verbose)
         if current_tag
           other = Array(pr.tags) - [current_tag]
           line += "  " + other.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') if other.any?
         end
         puts "  #{line}"
+        pinned_manager.display_check_runs(pr) if opts.checks
       end
     end
 
