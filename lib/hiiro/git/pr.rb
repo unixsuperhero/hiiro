@@ -20,7 +20,7 @@ class Hiiro
         []
       end
 
-      def is_link?(link)
+      def self.is_link?(link)
         temp_link = link.to_s
         return false unless temp_link.match?('github.com') && temp_link.match?(/pull\/[0-9]+/)
 
