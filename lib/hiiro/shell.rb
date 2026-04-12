@@ -59,48 +59,28 @@ class Hiiro
     #   end
     #
     # stream_combined replaces that pattern — stderr merged in, one Result back.
-    def self.stream(*command, **env)
+    def self.stream(*command, tee: $stdout, **env)
       env = env.transform_keys(&:to_s).transform_values(&:to_s)
-      output = ""
-      status = nil
-
       Open3.popen2(env, *command) do |stdin, stdout, wait_thr|
         stdin.close
-        loop do
-          chunk = stdout.readpartial(4096)
-          $stdout.write(chunk)
-          output << chunk
-        rescue EOFError
-          break
-        end
-        status = wait_thr.value
+        return Result.collect_chunks(stdout, wait_thr, tee: tee)
       end
-
-      Result.new(output, status)
     end
 
-    def self.stream_combined(*command, **env)
+    def self.stream_combined(*command, tee: $stdout, **env)
       env = env.transform_keys(&:to_s).transform_values(&:to_s)
-      output = ""
-      status = nil
-
       Open3.popen2e(env, *command) do |stdin, stdout_err, wait_thr|
         stdin.close
-        loop do
-          chunk = stdout_err.readpartial(4096)
-          $stdout.write(chunk)
-          output << chunk
-        rescue EOFError
-          break
-        end
-        status = wait_thr.value
+        return Result.collect_chunks(stdout_err, wait_thr, tee: tee)
       end
-
-      Result.new(output, status)
     end
   end
 
   class Result
+    # Matches the full ANSI/VT100 escape sequence spec:
+    # cursor movement, erase, colors, SGR — everything a terminal interprets.
+    ANSI_PATTERN = /\e(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/
+
     attr_reader :stdout, :stderr, :status
 
     def initialize(stdout, status, stderr: nil)
@@ -119,6 +99,41 @@ class Hiiro
 
     def exit_code
       status.exitstatus
+    end
+
+    # Replay buffered output to the terminal with ANSI sequences intact —
+    # colors, cursor movement, line clears all work as they did live.
+    # Returns self so you can chain: result.display.lines
+    def display(out: $stdout)
+      out.write(stdout)
+      out.flush
+      self
+    end
+
+    # Strip ANSI escape codes for text processing or filtering.
+    # Also strips bare \r (carriage-return-only, used by progress bars).
+    def plain_text
+      stdout.gsub(ANSI_PATTERN, '').gsub(/\r(?!\n)/, '')
+    end
+
+    # Plain text split into non-empty lines.
+    def lines
+      plain_text.split("\n").reject(&:empty?)
+    end
+
+    # Factory: reads chunks from an IO (popen handle), optionally tee-ing
+    # each chunk to `tee` as it arrives. Used by Shell.stream / stream_combined.
+    # Pass tee: nil to capture without printing.
+    def self.collect_chunks(io, wait_thr, tee: $stdout)
+      output = +""
+      loop do
+        chunk = io.readpartial(4096)
+        tee&.write(chunk)
+        output << chunk
+      rescue EOFError
+        break
+      end
+      new(output, wait_thr.value)
     end
   end
 end
