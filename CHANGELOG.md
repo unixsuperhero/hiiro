@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.349] - 2026-04-17
+
+### Removed
+- `h task branches` and `h task wtrees` convenience subcommands; use `h branch` and `h wtree` directly instead
+
 ## [0.1.348] - 2026-04-17
 
 ### Added
