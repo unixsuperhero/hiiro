@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.348] - 2026-04-17
 
 ### Added
 - `h task path|tree|branch|session` now accept `-a/--all` to print one value per task; trailing positional args act as prefix filters (OR'd together)
