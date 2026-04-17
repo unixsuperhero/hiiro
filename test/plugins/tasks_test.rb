@@ -505,3 +505,62 @@ class TaskManagerConfigTest < Minitest::Test
     end
   end
 end
+
+class TaskManagerFilterTasksTest < Minitest::Test
+  include TestHelpers
+
+  def build_tm(tasks_yaml)
+    with_temp_dir do |dir|
+      tasks_dir = File.join(dir, "tasks")
+      FileUtils.mkdir_p(tasks_dir)
+      tasks_file = File.join(tasks_dir, "tasks.yml")
+      File.write(tasks_file, tasks_yaml)
+      config = TaskManager::Config.new(tasks_file: tasks_file)
+      env = Hiiro::Environment.new(config: config)
+      yield TaskManager.new(MockHiiro.new, environment: env)
+    end
+  end
+
+  def test_filter_tasks_returns_all_when_no_prefixes
+    yaml = <<~YAML
+      tasks:
+        - { name: alpha, tree: alpha/main }
+        - { name: beta,  tree: beta/main }
+        - { name: gamma, tree: gamma/main }
+    YAML
+    build_tm(yaml) do |tm|
+      assert_equal %w[alpha beta gamma], tm.filter_tasks.map(&:name)
+    end
+  end
+
+  def test_filter_tasks_filters_by_prefix
+    yaml = <<~YAML
+      tasks:
+        - { name: feature-auth, tree: feature-auth/main }
+        - { name: feature-api,  tree: feature-api/main }
+        - { name: bugfix,       tree: bugfix/main }
+    YAML
+    build_tm(yaml) do |tm|
+      assert_equal %w[feature-api feature-auth], tm.filter_tasks(["feat"]).map(&:name)
+    end
+  end
+
+  def test_filter_tasks_ors_multiple_prefixes
+    yaml = <<~YAML
+      tasks:
+        - { name: feature-auth, tree: feature-auth/main }
+        - { name: bugfix,       tree: bugfix/main }
+        - { name: chore,        tree: chore/main }
+    YAML
+    build_tm(yaml) do |tm|
+      assert_equal %w[bugfix feature-auth], tm.filter_tasks(["feat", "bug"]).map(&:name)
+    end
+  end
+
+  def test_filter_tasks_returns_empty_for_no_match
+    yaml = "tasks:\n  - { name: alpha, tree: alpha/main }\n"
+    build_tm(yaml) do |tm|
+      assert_empty tm.filter_tasks(["zzz"])
+    end
+  end
+end

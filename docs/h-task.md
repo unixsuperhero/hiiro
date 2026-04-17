@@ -41,11 +41,21 @@ h task apps
 
 Print the git branch for a task. With no argument, opens a fuzzyfind selector. Outputs nothing if the tree is detached.
 
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--task` | `-t` | Task name | current task |
+| `--find` | `-f` | Choose task interactively | false |
+| `--all` | `-a` | Print branch for every task; positional args become prefix filters (OR'd) | false |
+
 **Examples**
 
 ```bash
 h task branch
 h task branch my-feature
+h task branch -a               # print branch for every task
+h task branch -a feat bug      # tasks whose name starts with "feat" or "bug"
 ```
 
 ---
@@ -186,6 +196,7 @@ Print the absolute path to a task's worktree or app subdirectory. With glob patt
 |------|-------|-------------|---------|
 | `--task` | `-t` | Task name | current task |
 | `--find` | `-f` | Choose task interactively | false |
+| `--all` | `-a` | Print path for every task; positional args become prefix filters (OR'd). App / glob args are ignored in this mode. | false |
 
 **Examples**
 
@@ -194,6 +205,27 @@ h task path
 h task path my-feature
 h task path my-feature api
 h task path my-feature api "**/*.rb"
+h task path -a                 # print worktree path for every task
+h task path -a feat bug        # tasks whose name starts with "feat" or "bug"
+```
+
+---
+
+### prune
+
+Drop task records whose worktree directory is missing on disk. Useful after deleting worktrees out-of-band (e.g. `git worktree remove` on stale branches). Defaults to a dry-run; pass `-f` to actually remove.
+
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--force` | `-f` | Actually delete (default is dry-run) | false |
+
+**Examples**
+
+```bash
+h task prune        # show what would be pruned
+h task prune -f     # actually remove the missing-worktree task records
 ```
 
 ---
@@ -270,15 +302,46 @@ h task service start my-rails
 
 ---
 
+### name
+
+Print the full task name. With no argument, opens a fuzzyfind selector. Useful for scripting alongside `tree -a`, `branch -a`, and `path -a` (results are sorted by name across all four, so they line up).
+
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--task` | `-t` | Task name | current task |
+| `--find` | `-f` | Choose task interactively | false |
+| `--all` | `-a` | Print every task's name; positional args become prefix filters (OR'd) | false |
+
+**Examples**
+
+```bash
+h task name -a                            # list every task name
+h task name -a feat                       # only tasks starting with "feat"
+paste <(h task name -a) <(h task path -a) # name <-> path mapping
+```
+
+---
+
 ### session
 
 Print the tmux session name for a task. With no argument, opens a fuzzyfind selector.
+
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--task` | `-t` | Task name | current task |
+| `--find` | `-f` | Choose task interactively | false |
+| `--all` | `-a` | Print session name for every task; positional args become prefix filters (OR'd) | false |
 
 **Examples**
 
 ```bash
 h task session
 h task session my-feature
+h task session -a
 ```
 
 ---
@@ -448,11 +511,21 @@ h task todo done 0
 
 Print the worktree name for a task. With no argument, opens a fuzzyfind selector.
 
+**Options**
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--task` | `-t` | Task name | current task |
+| `--find` | `-f` | Choose task interactively | false |
+| `--all` | `-a` | Print tree name for every task; positional args become prefix filters (OR'd) | false |
+
 **Examples**
 
 ```bash
 h task tree
 h task tree my-feature
+h task tree -a
+h task tree -a feat bug
 ```
 
 ---

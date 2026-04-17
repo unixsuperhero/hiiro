@@ -257,6 +257,16 @@ class Hiiro
       switch_to_task(task)
     end
 
+    # Return tasks (sorted by name) optionally narrowed by prefix matches.
+    # Each prefix matches if a task's name (or short_name in subtask scope)
+    # starts with it. Multiple prefixes are OR'd together.
+    def filter_tasks(prefixes = [])
+      key = (scope == :subtask) ? :short_name : :name
+      list = (scope == :subtask ? tasks : environment.all_tasks)
+      list = list.select { |t| prefixes.any? { |p| t.public_send(key).start_with?(p) } } if prefixes.any?
+      list.sort_by(&key)
+    end
+
     def list(tags_filter: [])
       tag_store = Hiiro::Tags.new(:task)
       items = tasks
@@ -812,6 +822,7 @@ class Hiiro
         task_opts_block = proc {
           option(:task, short: :t, desc: 'Task name')
           flag(:find,   short: :f, desc: 'Choose task interactively')
+          flag(:all,    short: :a, desc: 'Operate on all tasks (positional args = prefix filters)')
         }
 
         h.add_subcmd(:list) do |*args|
@@ -1048,6 +1059,15 @@ class Hiiro
 
         h.add_subcmd(:path) do |*raw_args|
           opts = Hiiro::Options.parse(raw_args, &task_opts_block)
+
+          if opts.all
+            tm.filter_tasks(opts.args).each do |task|
+              path = tm.resolve_path(task)
+              puts path if path
+            end
+            next
+          end
+
           task, positional = resolve_task.call(opts, opts.args)
           unless task
             STDERR.puts "No task found"
@@ -1080,17 +1100,26 @@ class Hiiro
           end
         end
 
-        h.add_subcmd(:branch) do |task_name=nil|
-          print tm.value_for_task(task_name, &:branch)
+        # Helper for branch/tree/session/name: when -a is set, print one
+        # value per matching task; otherwise behave like the original
+        # single-task lookup (positional task name or fuzzyfind).
+        print_task_value = lambda do |raw_args, attr|
+          opts = Hiiro::Options.parse(raw_args, &task_opts_block)
+          if opts.all
+            tm.filter_tasks(opts.args).each do |t|
+              val = t.public_send(attr)
+              puts val if val
+            end
+          else
+            task_name = opts.task || opts.args.first
+            print tm.value_for_task(task_name) { |t| t.public_send(attr) }
+          end
         end
 
-        h.add_subcmd(:tree) do |task_name=nil|
-          print tm.value_for_task(task_name, &:tree_name)
-        end
-
-        h.add_subcmd(:session) do |task_name=nil|
-          print tm.value_for_task(task_name, &:session_name)
-        end
+        h.add_subcmd(:branch)  { |*raw_args| print_task_value.call(raw_args, :branch) }
+        h.add_subcmd(:tree)    { |*raw_args| print_task_value.call(raw_args, :tree_name) }
+        h.add_subcmd(:session) { |*raw_args| print_task_value.call(raw_args, :session_name) }
+        h.add_subcmd(:name)    { |*raw_args| print_task_value.call(raw_args, :name) }
 
         h.add_subcmd(:current) do
           task = tm.current_task
@@ -1146,6 +1175,38 @@ class Hiiro
         h.add_subcmd(:st) { tm.status }
 
         h.add_subcmd(:save) { tm.save }
+
+        h.add_subcmd(:prune) do |*raw_args|
+          opts = Hiiro::Options.parse(raw_args) {
+            flag(:force, short: :f, desc: 'Actually delete (default is dry-run)')
+          }
+
+          to_remove = tm.environment.all_tasks.select do |task|
+            next true unless task.tree_name
+            path = tm.resolve_path(task)
+            path.nil? || !Dir.exist?(path)
+          end
+
+          if to_remove.empty?
+            puts "No tasks to prune"
+            next
+          end
+
+          to_remove.each do |task|
+            path = task.tree_name ? tm.resolve_path(task) : '(no tree)'
+            if opts.force
+              tm.config.remove_task(task.name)
+              puts "Pruned: #{task.name} (#{path})"
+            else
+              puts "Would prune: #{task.name} (#{path})"
+            end
+          end
+
+          unless opts.force
+            puts
+            puts "Re-run with -f to actually delete."
+          end
+        end
 
         h.add_subcmd(:color) do
           task = tm.current_task
