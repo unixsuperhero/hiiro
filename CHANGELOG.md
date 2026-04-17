@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `h task path|tree|branch|session` now accept `-a/--all` to print one value per task; trailing positional args act as prefix filters (OR'd together)
+- `h task name` — new subcommand; prints current task name (or selects via fuzzyfind), supports `-a` like the others
+- `h task prune` — drops task records whose worktree dir is missing; dry-run by default, requires `-f` to actually delete
+- `TaskManager#filter_tasks(prefixes)` helper for sorted, prefix-filtered task lists
+
 ## [0.1.347] - 2026-04-12
 
 ### Added
