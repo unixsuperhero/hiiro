@@ -1,0 +1,175 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+require 'open3'
+require 'time'
+require 'hiiro'
+
+CAPTURES_DIR = File.expand_path('~/.local/share/hiiro/captures')
+
+# TODO(USER): implement resolve_path.
+#
+# Given a name-or-path string from `h capture file <fpath_or_name> ...`,
+# return the absolute filesystem path where the capture should be written.
+#
+# Spec from the user:
+#   - If the input has NO path separators (just a bare filename like "build.log"),
+#     the file goes in CAPTURES_DIR.
+#   - Otherwise it's a path expression — write it relative to the current
+#     working directory (or honor it as-is if already absolute).
+#
+# Open design questions for you to decide:
+#   - Should "~/foo.log" be expanded? (File.expand_path handles this for free)
+#   - Should we ensure parent dirs exist via FileUtils.mkdir_p?
+#   - Should paths starting with "./" be normalized?
+#
+# Whichever rules you pick, this 5–8 line method is the contract for where
+# `h capture file` writes — so it's worth getting right for your workflow.
+def resolve_path(name_or_path)
+  raise NotImplementedError, "resolve_path not yet implemented — see TODO in bin/h-capture"
+end
+
+def ensure_dir(path)
+  FileUtils.mkdir_p(File.dirname(path))
+end
+
+# Run cmd, tee combined stdout+stderr to terminal AND to output_path.
+# If our own stdin is piped (not a tty), forward it into the subprocess.
+def run_and_capture(cmd_args, output_path)
+  ensure_dir(output_path)
+  exit_status = nil
+
+  File.open(output_path, 'w') do |f|
+    Open3.popen2e(*cmd_args) do |stdin, stdout_err, wait_thr|
+      pipe_thread = if !STDIN.tty?
+        Thread.new do
+          IO.copy_stream(STDIN, stdin)
+        rescue Errno::EPIPE, IOError
+          # subprocess closed stdin early — fine
+        ensure
+          stdin.close rescue nil
+        end
+      else
+        stdin.close
+        nil
+      end
+
+      loop do
+        chunk = stdout_err.readpartial(4096)
+        $stdout.write(chunk)
+        $stdout.flush
+        f.write(chunk)
+      rescue EOFError
+        break
+      end
+
+      pipe_thread&.join
+      exit_status = wait_thr.value.exitstatus
+    end
+  end
+
+  exit_status
+end
+
+def fetch_capture(num)
+  Hiiro::Capture.at_offset(num.to_i)
+end
+
+def record_capture(name:, path:, command:, exit_status:)
+  Hiiro::Capture.create(
+    name: name,
+    path: path,
+    command: command,
+    exit_status: exit_status
+  )
+end
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:new) do |*args|
+    if args.empty?
+      puts "Usage: h capture new <command> [args...]"
+      exit 1
+    end
+
+    name = "#{Time.now.strftime('%Y%m%d%H%M%S')}.output"
+    path = File.join(CAPTURES_DIR, name)
+    ensure_dir(path)
+
+    code = run_and_capture(args, path)
+    record_capture(name: name, path: path, command: args.join(' '), exit_status: code)
+    warn "\n[capture saved: #{path} (exit #{code})]"
+  end
+
+  add_subcmd(:file) do |fpath = nil, *args|
+    if fpath.nil? || args.empty?
+      puts "Usage: h capture file <fpath_or_name> <command> [args...]"
+      exit 1
+    end
+
+    path = resolve_path(fpath)
+    name = File.basename(fpath)
+
+    code = run_and_capture(args, path)
+    record_capture(name: name, path: path, command: args.join(' '), exit_status: code)
+    warn "\n[capture saved: #{path} (exit #{code})]"
+  end
+
+  add_subcmd(:ls) do |num = nil|
+    captures = if num.nil?
+      Hiiro::Capture.recent
+    elsif num.to_i >= 0
+      cap = Hiiro::Capture.at_offset(num.to_i)
+      cap ? [cap] : []
+    else
+      Hiiro::Capture.recent(num.to_i.abs)
+    end
+
+    if captures.empty?
+      puts "No captures."
+      next
+    end
+
+    captures.each_with_index { |cap, i| puts cap.display_string(i) }
+  end
+
+  add_subcmd(:cat) do |num = 0|
+    cap = fetch_capture(num)
+    if cap.nil?
+      warn "No capture at offset #{num}."
+      exit 1
+    end
+    unless File.exist?(cap.path)
+      warn "File missing: #{cap.path}"
+      exit 1
+    end
+    $stdout.write(File.read(cap.path))
+  end
+
+  add_subcmd(:cppath) do |num = 0|
+    cap = fetch_capture(num)
+    if cap.nil?
+      warn "No capture at offset #{num}."
+      exit 1
+    end
+    Hiiro::Shell.pipe(cap.path, 'pbcopy')
+    puts "Copied path: #{cap.path}"
+  end
+
+  add_subcmd(:cp) do |num = 0|
+    cap = fetch_capture(num)
+    if cap.nil?
+      warn "No capture at offset #{num}."
+      exit 1
+    end
+    unless File.exist?(cap.path)
+      warn "File missing: #{cap.path}"
+      exit 1
+    end
+    Hiiro::Shell.pipe(File.read(cap.path), 'pbcopy')
+    puts "Copied contents of: #{cap.path}"
+  end
+
+  add_subcmd(:path) do
+    print CAPTURES_DIR
+  end
+end
