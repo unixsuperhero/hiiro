@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.350] - 2026-04-18
+
+### Added
+- `h-capture` command and `Hiiro::Capture` module for clipboard/selection capture
+
+### Changed
+- Optimize `Hiiro::Shell::Result#plain_text` and `#lines` with instance-level caching
+- Refactor `Shell::Result#lines` to use `String#lines(chomp: true)` for improved line handling
+- Reduce Claude API effort to `low` in publish script for faster changelog generation
+
 ## [0.1.349] - 2026-04-17
 
 ### Removed
@@ -301,92 +311,3 @@
 
 ### Fixed
 - Prevent duplicate pinned_prs during import with `insert_conflict` and per-row rescue
-
-## [0.1.308.pre.6] - 2026-03-31
-
-### Fixed
-- Prevent duplicate pinned_prs during import with `insert_conflict` and per-row rescue
-
-## [0.1.308.pre.5] - 2026-03-31
-
-### Added
-- `h-claude vim` subcommand to open all matched files in `$EDITOR`
-
-### Fixed
-- `h branch ls` now sorts oldest-first so most recent branches appear at bottom
-
-## [0.1.308.pre.4] - 2026-03-31
-
-### Fixed
-- Don't pass empty string arg to gem when `--pre` is false
-
-## [0.1.308.pre.3] - 2026-03-31
-
-### Changed
-- Poll RubyGems in `delayed_update` instead of blind sleep for more reliable version detection
-
-### Fixed
-- Per-row rescue in `import_todos` so one bad row doesn't abort the entire batch
-
-## [0.1.308.pre.2] - 2026-03-31
-
-### Added
-- `--pre`/`-p` flag to `h install` and `h update` for installing/updating pre-release versions
-
-### Changed
-- Merge `prs` and `pinned_prs` tables into single `prs` table in SQLite schema
-- Refactor PR storage to use unified table structure
-
-### Fixed
-- YAML migration for todos, prs, pinned_prs, and tags to correctly handle merged schema
-
-## [0.1.308.pre.1] - 2026-03-31
-
-### Added
-- `Hiiro::Effects` injectable interface for testable file system and command execution
-- `null_fs` to `TestHarness` for testing without side effects
-- Effects helpers and accessors to `TestHarness` for controlled effect simulation
-- `Hiiro::Invocation` and `Hiiro::InvocationResolution` tracking in PaneHome SQLite migration
-
-### Changed
-- Refactor effects layer: expose `executor` and `fs` as accessors on `Hiiro::Effects`
-- `h-db` command now includes h-pane in SQLite migration
-- Gem version handling: treat non-main branches as pre-release in publish script
-
-### Fixed
-- `h-branch co` and `h-branch rm` restore extra argument pass-through
-- Test suite: add missing `TestHarness` stubs and fix pre-existing test failures
-- Test fixtures: anchor `load_bin` path to project root instead of `Dir.pwd`
-
-### Deprecated
-- `SystemCallCapture` — use `Hiiro::Effects` helpers in `TestHarness` instead
-
-## [0.1.307]
-
-### Added
-- `Hiiro::DB` — SQLite foundation via Sequel; `DB.setup!` creates all tables, `DB.connection` establishes connection eagerly at load time; supports `HIIRO_TEST_DB=sqlite::memory:` for tests
-- `lib/hiiro/db.rb` — one-time YAML→SQLite migration (`migrate_yaml!`) guarded by `schema_migrations` table; dual-write mode (`dual_write?` / `disable_dual_write!`) for gradual cutover
-- `lib/hiiro/branch.rb` — `Hiiro::Branch` Sequel model for worktree branch records
-- `lib/hiiro/tracked_pr.rb` — `Hiiro::TrackedPr` Sequel model for tracked PR records (`:prs` table)
-- `lib/hiiro/link.rb` — `Hiiro::Link` Sequel model with `matches?`, `display_string`, `to_h` helpers
-- `lib/hiiro/project.rb` — `Hiiro::Project` Sequel model
-- `lib/hiiro/pane_home.rb` — `Hiiro::PaneHome` Sequel model with `data_json` JSON blob
-- `lib/hiiro/pin_record.rb` — `Hiiro::PinRecord` Sequel model for per-command key-value pin storage
-- `lib/hiiro/task_record.rb` — `Hiiro::TaskRecord` Sequel model for task metadata
-- `lib/hiiro/app_record.rb` — `Hiiro::AppRecord` Sequel model for app directory mappings
-- `lib/hiiro/assignment.rb` — `Hiiro::Assignment` Sequel model for worktree→branch assignments
-- `lib/hiiro/reminder.rb` — `Hiiro::Reminder` Sequel model
-- `lib/hiiro/invocation.rb` — `Hiiro::Invocation` and `Hiiro::InvocationResolution` Sequel models; every CLI invocation is recorded to SQLite for history/analytics
-- `bin/h-db` — new subcommand: `h db status`, `h db tables`, `h db q <sql>`, `h db migrate`, `h db restore`
-
-### Changed
-- `lib/hiiro/todo.rb` — `TodoItem` is now a `Sequel::Model`; `TodoManager` reads/writes via SQLite with YAML dual-write fallback
-- `lib/hiiro/tags.rb` — `Tag` is now a `Sequel::Model`; tag operations persist to SQLite with YAML dual-write fallback
-- `lib/hiiro/pinned_pr_manager.rb` — `PinnedPR` is now a `Sequel::Model` (`lib/hiiro/pinned_pr.rb`); `PinnedPRManager` reads/writes via SQLite with YAML dual-write
-- `lib/hiiro/projects.rb` — `Projects#from_config` reads from `Hiiro::Project` SQLite model with YAML fallback
-- `lib/hiiro/tasks.rb` — `TaskManager::Config` reads/writes tasks and apps via `Hiiro::TaskRecord` and `Hiiro::AppRecord` SQLite models
-- `bin/h-branch` — `BranchManager` reads/writes via `Hiiro::Branch` and `Hiiro::TrackedPr` SQLite models with YAML dual-write fallback; adds `q`/`query` subcommands for raw SQL inspection
-- `bin/h-link` — reads/writes links via `Hiiro::Link` SQLite model with YAML dual-write fallback; adds `q`/`query` subcommands
-- `bin/h-pane` — load/save pane homes via `Hiiro::PaneHome` model with YAML dual-write
-- `bin/h-pr` — adds `q`/`query` subcommands for inspecting PR records via raw SQL
-- `plugins/pins.rb` — `Pin` class reads/writes via `Hiiro::PinRecord` SQLite model with YAML dual-write fallback
