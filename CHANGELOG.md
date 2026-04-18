@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- `h capture path <num>` now prints the path of the Nth most recent capture (was always printing the captures dir regardless of args)
+- `h capture new` / `h capture file` now record to the DB even when interrupted (Ctrl-C, exception) so partial captures show up in `h capture ls`. Interrupted captures display with the existing `?` glyph and `(exit interrupted)` message.
+
 ## [0.1.350] - 2026-04-18
 
 ### Added

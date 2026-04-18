@@ -90,6 +90,19 @@ def record_capture(name:, path:, command:, exit_status:)
   )
 end
 
+# Run the command and record the capture even if interrupted (Ctrl-C, error).
+# `exit_status` is nil when the process didn't reach a clean exit — the `?`
+# glyph in Hiiro::Capture#status_glyph already handles that case.
+def capture_and_record(args, path:, name:)
+  code = nil
+  begin
+    code = run_and_capture(args, path)
+  ensure
+    record_capture(name: name, path: path, command: args.join(' '), exit_status: code)
+    warn "\n[capture saved: #{path} (exit #{code || 'interrupted'})]"
+  end
+end
+
 Hiiro.run(*ARGV) do
   add_subcmd(:new) do |*args|
     if args.empty?
@@ -101,9 +114,7 @@ Hiiro.run(*ARGV) do
     path = File.join(CAPTURES_DIR, name)
     ensure_dir(path)
 
-    code = run_and_capture(args, path)
-    record_capture(name: name, path: path, command: args.join(' '), exit_status: code)
-    warn "\n[capture saved: #{path} (exit #{code})]"
+    capture_and_record(args, path: path, name: name)
   end
 
   add_subcmd(:file) do |fpath = nil, *args|
@@ -115,9 +126,7 @@ Hiiro.run(*ARGV) do
     path = resolve_path(fpath)
     name = File.basename(fpath)
 
-    code = run_and_capture(args, path)
-    record_capture(name: name, path: path, command: args.join(' '), exit_status: code)
-    warn "\n[capture saved: #{path} (exit #{code})]"
+    capture_and_record(args, path: path, name: name)
   end
 
   add_subcmd(:ls) do |num = nil|
@@ -175,7 +184,17 @@ Hiiro.run(*ARGV) do
     puts "Copied contents of: #{cap.path}"
   end
 
-  add_subcmd(:path) do
-    print CAPTURES_DIR
+  add_subcmd(:path) do |num = nil|
+    if num.nil?
+      print CAPTURES_DIR
+      next
+    end
+
+    cap = fetch_capture(num)
+    if cap.nil?
+      warn "No capture at offset #{num}."
+      exit 1
+    end
+    print cap.path
   end
 end
