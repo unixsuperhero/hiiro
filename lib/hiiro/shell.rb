@@ -77,6 +77,21 @@ class Hiiro
   end
 
   class Result
+    # Factory: reads chunks from an IO (popen handle), optionally tee-ing
+    # each chunk to `tee` as it arrives. Used by Shell.stream / stream_combined.
+    # Pass tee: nil to capture without printing.
+    def self.collect_chunks(io, wait_thr, tee: $stdout)
+      output = +""
+      loop do
+        chunk = io.readpartial(4096)
+        tee&.write(chunk)
+        output << chunk
+      rescue EOFError
+        break
+      end
+      new(output, wait_thr.value)
+    end
+
     # Matches the full ANSI/VT100 escape sequence spec:
     # cursor movement, erase, colors, SGR — everything a terminal interprets.
     # [^[] catches all single-char Fe sequences (e.g. \eM, \eD); \[...] catches CSI.
@@ -115,27 +130,12 @@ class Hiiro
     # Strip ANSI escape codes for text processing or filtering.
     # Also strips bare \r (carriage-return-only, used by progress bars).
     def plain_text
-      stdout.gsub(ANSI_PATTERN, '').gsub(/\r(?!\n)/, '')
+      @plain_text ||= stdout.gsub(ANSI_PATTERN, '').gsub(/\r(?!\n)/, '')
     end
 
     # Plain text split into non-empty lines.
     def lines
-      plain_text.split("\n").reject(&:empty?)
-    end
-
-    # Factory: reads chunks from an IO (popen handle), optionally tee-ing
-    # each chunk to `tee` as it arrives. Used by Shell.stream / stream_combined.
-    # Pass tee: nil to capture without printing.
-    def self.collect_chunks(io, wait_thr, tee: $stdout)
-      output = +""
-      loop do
-        chunk = io.readpartial(4096)
-        tee&.write(chunk)
-        output << chunk
-      rescue EOFError
-        break
-      end
-      new(output, wait_thr.value)
+      @lines ||= plain_text.lines(chomp: true)
     end
   end
 end
