@@ -26,7 +26,13 @@ CAPTURES_DIR = File.expand_path('~/.local/share/hiiro/captures')
 # Whichever rules you pick, this 5–8 line method is the contract for where
 # `h capture file` writes — so it's worth getting right for your workflow.
 def resolve_path(name_or_path)
-  raise NotImplementedError, "resolve_path not yet implemented — see TODO in bin/h-capture"
+  if File.dirname(name_or_path) != ?.
+    FileUtils.mkdir_p(File.dirname(name_or_path))
+    return name_or_path
+  end
+
+  FileUtils.mkdir_p(CAPTURES_DIR)
+  File.join(CAPTURES_DIR, name_or_path)
 end
 
 def ensure_dir(path)
