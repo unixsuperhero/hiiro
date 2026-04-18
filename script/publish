@@ -166,7 +166,7 @@ class Claude
       }
     PROMPT
 
-    raw = IO.popen(["claude", "-p", "--model", MODEL], "r+") { |io|
+    raw = IO.popen(["claude", "-p", "--model", MODEL, '--effort', 'low'], "r+") { |io|
       io.write(prompt)
       io.close_write
       io.read
