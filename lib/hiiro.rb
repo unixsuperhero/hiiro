@@ -63,7 +63,7 @@ end
 
 class Hiiro
   WORK_DIR = File.join(Dir.home, 'work')
-  REPO_PATH = File.join(WORK_DIR, '.bare')
+  REPO_PATH = File.join(WORK_DIR, '.git')
 
   def self.init(*oargs, plugins: [], logging: false, tasks: false, task_scope: nil, **values, &block)
     load_env
