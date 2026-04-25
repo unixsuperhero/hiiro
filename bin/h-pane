@@ -61,7 +61,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     system('tmux', 'split-window', *args)
   }
 
-  add_subcmd(:splitv) { |*args|
+  add_subcmd(:hsplit, :splith) { |*args|
     if args.empty?
       tmux.split_window(horizontal: false)
     else
@@ -69,7 +69,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
   }
 
-  add_subcmd(:splith) { |*args|
+  add_subcmd(:vsplit, :splitv) { |*args|
     if args.empty?
       tmux.split_window(horizontal: true)
     else
