@@ -93,6 +93,8 @@ h ping
 | `h window` | Tmux window management |
 | `h wtree` | Git worktree management |
 
+`h claude agents|commands|skills -a` prints the absolute file path for each matching `.claude` tool, including `SKILL.md` for skills.
+
 ## Abbreviations
 
 Any subcommand can be abbreviated as long as the prefix uniquely matches:

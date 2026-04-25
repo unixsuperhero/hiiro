@@ -77,6 +77,7 @@ List agent, command, and skill files found in `.claude/` directories from the cu
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--full` | `-f` | Full text search (grep inside files) |
+| `--absolute` | `-a` | Print the absolute path to each matching tool file (`SKILL.md` for skills) |
 | `--verbose` | `-v` | Show `.claude` paths being searched |
 | `--veryverbose` | `-V` | Show all paths including skipped |
 
@@ -85,7 +86,9 @@ List agent, command, and skill files found in `.claude/` directories from the cu
 ```bash
 h claude all
 h claude agents fetch
+h claude agents -a fetch
 h claude commands refactor
+h claude skills -a review
 h claude skills -f "pull request"
 ```
 
@@ -333,7 +336,7 @@ h claude vadd "Write tests for foo"
 
 ### vim
 
-Open matching agent, command, and skill files in your editor. Uses the same filter logic as `all`.
+Open matching agent, command, and skill files in your editor. Uses the same filter logic and search flags as `all`; matches are opened via their absolute file paths.
 
 **Examples**
 

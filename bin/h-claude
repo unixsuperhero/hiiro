@@ -17,11 +17,26 @@ opts = Hiiro::Options.setup {
 
 tool_opts = Hiiro::Options.setup {
   flag(:full, short: :f, default: false, desc: 'fulltext search - full grep file or dir')
+  flag(:absolute, short: :a, default: false, desc: 'print absolute path to matching tool file')
   flag(:verbose, short: :v, default: false, desc: 'display claude dirs in stderr')
   flag(:veryverbose, short: :V, default: false, desc: 'display all stderr messages')
 }
 
-def glob_path(glob, bname=nil, opts:)
+def tool_file(path, skill: false)
+  return path unless skill
+
+  path / 'SKILL.md'
+end
+
+def display_tool_path(path, bname: nil, opts:, skill: false)
+  target = tool_file(path, skill: skill)
+  return target if opts.absolute
+  return path.basename if skill
+
+  target.basename(bname.to_s)
+end
+
+def glob_path(glob, bname=nil, opts:, skill: false)
   filters = opts.args
   fulltext = opts.full
   bname ||= ''
@@ -46,6 +61,7 @@ def glob_path(glob, bname=nil, opts:)
       cmd = ['egrep', *more_args, '-m1', re_s, f.to_s]
       kwcmd = { out: File.open('/dev/null', 'w') }
       base_f = f.basename(bname)
+      display_f = display_tool_path(f, bname: bname, opts: opts, skill: skill)
 
       matches = 
         if fulltext
@@ -55,7 +71,7 @@ def glob_path(glob, bname=nil, opts:)
         end
 
       if matches
-        puts base_f
+        puts display_f
       else
         $stderr.puts "SKIPPING #{base_f}" if opts.veryverbose
       end
@@ -74,7 +90,7 @@ def collect_files(glob, bname=nil, opts:, skill: false)
   claude_paths.flat_map { |path| path.glob(glob) }.filter_map do |f|
     base_f = f.basename(bname.to_s)
     next unless base_f.to_s.match?(re)
-    target = skill ? f / 'SKILL.md' : f
+    target = tool_file(f, skill: skill)
     target if target.exist?
   end
 end
@@ -171,7 +187,7 @@ add_subcmd(:env) { |*args|
     opts = tool_opts.parse(args)
     glob_path('agents/*.md', '.md', opts: opts)
     glob_path('commands/*.md', '.md', opts: opts)
-    glob_path('skills/*/', opts: opts)
+    glob_path('skills/*/', opts: opts, skill: true)
   }
 
   add_subcmd(:agents) { |*args|
@@ -186,7 +202,7 @@ add_subcmd(:env) { |*args|
 
   add_subcmd(:skills) { |*args|
     opts = tool_opts.parse(args)
-    glob_path('skills/*/', opts: opts)
+    glob_path('skills/*/', opts: opts, skill: true)
   }
 
   add_subcmd(:vim) { |*args|
