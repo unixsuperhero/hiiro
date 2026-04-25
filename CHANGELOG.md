@@ -2,9 +2,16 @@
 
 ## [Unreleased]
 
+## [0.1.352] - 2026-04-24
+
+### Added
+- `h claude all|agents|commands|skills` now support `--absolute/-a` to print absolute tool paths; skill matches resolve to `SKILL.md`
+
 ### Fixed
 - `h capture path <num>` now prints the path of the Nth most recent capture (was always printing the captures dir regardless of args)
 - `h capture new` / `h capture file` now record to the DB even when interrupted (Ctrl-C, exception) so partial captures show up in `h capture ls`. Interrupted captures display with the existing `?` glyph and `(exit interrupted)` message.
+- `h pane splitv/splith` subcommand mappings corrected
+- Corrected `REPO_PATH` constant from `.bare` to `.git`
 
 ## [0.1.350] - 2026-04-18
 
