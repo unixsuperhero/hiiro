@@ -8,6 +8,7 @@ A lightweight, extensible CLI framework for Ruby. Build your own multi-command t
 - **Abbreviation matching** - Type `h ex hel` instead of `h example hello`
 - **Plugin system** - Extend functionality with reusable modules
 - **Per-command storage** - Each command gets its own pin/config namespace
+- **TUI helpers** - Build keyboard-driven list screens with `Hiiro::Tui::ListScreen`
 
 See [docs/](docs/) for detailed documentation on all subcommands.
 
@@ -153,6 +154,10 @@ end
 h example hello  # => Hi!
 h example bye    # => Goodbye!
 ```
+
+### Building TUIs
+
+Use `Hiiro::Tui::ListScreen` for simple full-screen list interfaces. Subclass it, override `header_lines`, `format_row`, and `handle_key`, then run it from a normal `Hiiro.run` subcommand.
 
 ### Method 2: Inline Subcommands
 
