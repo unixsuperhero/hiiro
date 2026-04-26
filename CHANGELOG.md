@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- Add `Hiiro::Tui::ListScreen` and terminal helpers for keyboard-driven list TUIs.
+
 ## [0.1.352] - 2026-04-24
 
 ### Added
