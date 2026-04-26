@@ -2,8 +2,11 @@
 
 ## [Unreleased]
 
+## [0.1.353] - 2026-04-26
+
 ### Added
-- Add `Hiiro::Tui::ListScreen` and terminal helpers for keyboard-driven list TUIs.
+- `Hiiro::Tui::ListScreen` for building keyboard-driven full-screen list interfaces
+- `Hiiro::Config.load_yaml` and `Hiiro::Config.yaml_dig` helpers for YAML file loading with nested key access
 
 ## [0.1.352] - 2026-04-24
 
