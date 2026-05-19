@@ -1,6 +1,6 @@
 # h task
 
-Manage top-level tasks. Each task is a worktree + tmux session pair. Tasks enable parallel development across multiple features — each with an isolated checkout and its own tmux session.
+Manage top-level tasks. Each task is a worktree + tmux session pair. Tasks enable parallel development across multiple features — each with an isolated checkout and its own tmux session. `h task start` creates worktrees under Hiiro's default work root; `h task from` can register an existing worktree from any repo/path.
 
 Tasks are stored in `~/.config/hiiro/tasks/tasks.yml` (SQLite-backed with YAML backup).
 
@@ -160,6 +160,30 @@ Manage tracked app files for the current task. Delegates to the app files system
 ```bash
 h task file ls
 h task file add myapp path/to/file.rb
+```
+
+---
+
+### from
+
+Register an existing git worktree as a Hiiro task and switch to it. The path is normalized to the worktree root with `git rev-parse --show-toplevel`, then stored as the task's tree path.
+
+**Examples**
+
+```bash
+h task from ~/ic_repos/other_repo_base_dir other-task
+h task path other-task
+h task switch other-task
+```
+
+Stored task shape:
+
+```js
+{
+  name: "other-task",
+  tree: "/Users/josh/ic_repos/other_repo_base_dir",
+  session: "other-task"
+}
 ```
 
 ---
@@ -548,4 +572,3 @@ h task untag my-feature          # remove all tags
 List worktrees for the current task. Delegates to `h wtree`.
 
 ---
-

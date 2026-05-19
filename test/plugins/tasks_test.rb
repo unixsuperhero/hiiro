@@ -180,6 +180,12 @@ class TaskTest < Minitest::Test
     assert_nil task.parent_name
   end
 
+  def test_task_absolute_tree
+    task = Task.new(name: "external", tree: "/tmp/external-repo")
+
+    assert task.absolute_tree?
+  end
+
   def test_task_subtask
     task = Task.new(name: "feature/api", tree: "feature/api")
 
@@ -359,6 +365,32 @@ class EnvironmentTest < Minitest::Test
     end
   end
 
+  def test_current_task_detects_external_absolute_tree
+    Hiiro::TaskRecord.dataset.delete
+
+    with_temp_dir do |dir|
+      external_tree = File.join(dir, "external-repo")
+      nested_path = File.join(external_tree, "apps", "api")
+      FileUtils.mkdir_p(nested_path)
+
+      tasks_dir = File.join(dir, "tasks")
+      FileUtils.mkdir_p(tasks_dir)
+      tasks_file = File.join(tasks_dir, "tasks.yml")
+      File.write(tasks_file, <<~YAML)
+        tasks:
+          - name: external
+            tree: #{external_tree}
+            session: external
+      YAML
+
+      config = TaskManager::Config.new(tasks_file: tasks_file)
+      env = Environment.new(path: nested_path, config: config)
+
+      assert_equal external_tree, env.tree.path
+      assert_equal "external", env.task.name
+    end
+  end
+
   def test_find_task_with_slash_path
     with_temp_dir do |dir|
       tasks_dir = File.join(dir, "tasks")
@@ -407,6 +439,61 @@ class EnvironmentTest < Minitest::Test
 end
 
 TaskManager = Hiiro::TaskManager
+
+class TaskManagerFromWorktreeTest < Minitest::Test
+  include TestHelpers
+
+  def setup
+    Hiiro::TaskRecord.dataset.delete
+    Hiiro::AppRecord.dataset.delete
+  end
+
+  def teardown
+    Hiiro::TaskRecord.dataset.delete
+    Hiiro::AppRecord.dataset.delete
+  end
+
+  def test_task_from_worktree_registers_existing_git_worktree
+    with_temp_dir do |dir|
+      repo = File.join(dir, "repo")
+      FileUtils.mkdir_p(repo)
+      assert system('git', 'init', '-q', repo)
+
+      tasks_dir = File.join(dir, "tasks")
+      tasks_file = File.join(tasks_dir, "tasks.yml")
+      config = TaskManager::Config.new(tasks_file: tasks_file)
+      env = Hiiro::Environment.new(config: config)
+      tm = TaskManager.new(MockHiiro.new, environment: env)
+
+      task = nil
+      out, = capture_io do
+        task = tm.task_from_worktree(repo, "external")
+      end
+
+      expected_root = `git -C #{repo.shellescape} rev-parse --show-toplevel`.strip
+      assert_equal "external", task.name
+      assert_equal expected_root, task.tree_name
+      assert_equal expected_root, tm.resolve_path(task)
+      assert_match "Added task 'external' from worktree '#{expected_root}'", out
+    end
+  end
+
+  def test_task_from_worktree_rejects_non_git_directory
+    with_temp_dir do |dir|
+      config = TaskManager::Config.new(tasks_file: File.join(dir, "tasks", "tasks.yml"))
+      env = Hiiro::Environment.new(config: config)
+      tm = TaskManager.new(MockHiiro.new, environment: env)
+
+      task = nil
+      out, = capture_io do
+        task = tm.task_from_worktree(dir, "external")
+      end
+
+      assert_nil task
+      assert_match "is not inside a git worktree", out
+    end
+  end
+end
 
 class TaskManagerConfigTest < Minitest::Test
   include TestHelpers

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- `h task from <worktree-path> <task-name>` registers an existing git worktree from any path as a Hiiro task and switches to it.
+
 ## [0.1.353] - 2026-04-26
 
 ### Added

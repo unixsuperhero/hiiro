@@ -30,7 +30,7 @@ These subcommands are defined directly in `exe/h` or loaded from `lib/`:
 | [`h service`](h-service.md) | Dev service management with tmux, env files, and service groups | `lib/hiiro/service_manager.rb` |
 | `h setup` | Install plugins and bin scripts to `~/bin` | `exe/h` |
 | [`h subtask`](h-subtask.md) | Subtask management scoped to the current parent task | `lib/hiiro/tasks.rb` |
-| [`h task`](h-task.md) | Task management — worktree + tmux session pairs for parallel development | `lib/hiiro/tasks.rb` |
+| [`h task`](h-task.md) | Task management — worktree + tmux session pairs, including existing external worktrees | `lib/hiiro/tasks.rb` |
 | `h version` | Print installed hiiro version (`-a` for all rbenv versions) | `exe/h` |
 
 ## External subcommands

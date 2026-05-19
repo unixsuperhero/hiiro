@@ -91,7 +91,10 @@ class Hiiro
       return target.path if target.is_a?(FallbackTarget)
 
       tree = environment.find_tree(target.tree_name)
-      tree ? tree.path : File.join(Hiiro::WORK_DIR, target.tree_name)
+      return tree.path if tree
+      return target.tree_name if target.absolute_tree?
+
+      File.join(Hiiro::WORK_DIR, target.tree_name)
     end
 
     def task_by_tree(tree_name)
@@ -115,6 +118,43 @@ class Hiiro
     end
 
     # --- Actions ---
+
+    def task_from_worktree(path, name)
+      if path.nil? || name.nil? || name.empty?
+        puts "Usage: h #{scope} from <worktree-path> <task-name>"
+        return
+      end
+
+      root = git_worktree_root(path)
+      unless root
+        puts "ERROR: '#{path}' is not inside a git worktree"
+        return
+      end
+
+      existing = task_by_name(name)
+      if existing
+        existing_path = resolve_path(existing)
+        if same_path?(existing_path, root)
+          puts "Task '#{existing.name}' already uses '#{root}'. Switching..."
+          return existing
+        end
+
+        puts "ERROR: Task '#{existing.name}' already exists for '#{existing_path}'"
+        return
+      end
+
+      existing_for_path = environment.all_tasks.find { |task| same_path?(resolve_path(task), root) }
+      if existing_for_path
+        puts "Worktree '#{root}' is already registered as task '#{existing_for_path.name}'. Switching..."
+        return existing_for_path
+      end
+
+      color_index = Hiiro::TaskColors.next_index(config.tasks.map(&:color_index).compact)
+      task = Task.new(name: name, tree: root, session: name, color_index: color_index)
+      config.save_task(task)
+      puts "Added task '#{name}' from worktree '#{root}'"
+      task
+    end
 
     def start_task(name, app_name: nil, sparse_groups: [])
       existing = task_by_name(name)
@@ -185,8 +225,7 @@ class Hiiro
         return
       end
 
-      tree = environment.find_tree(task.tree_name)
-      tree_path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
+      tree_path = resolve_path(task)
 
       session_name = task.session_name
       session_exists = system('tmux', 'has-session', '-t', "=#{session_name}", err: File::NULL)
@@ -369,8 +408,7 @@ class Hiiro
 
       puts "Task: #{task.name}"
       puts "Worktree: #{task.tree_name}"
-      tree = environment.find_tree(task.tree_name)
-      puts "Path: #{tree&.path || '(unknown)'}"
+      puts "Path: #{resolve_path(task) || '(unknown)'}"
       puts "Session: #{task.session_name}"
       puts "Parent: #{task.parent_name}" if task.subtask?
     end
@@ -445,9 +483,7 @@ class Hiiro
         return
       end
 
-      tree = environment.find_tree(task.tree_name)
-      path = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
-      send_cd(path)
+      send_cd(resolve_path(task))
     end
 
     def cd_to_app(app_name = nil)
@@ -458,8 +494,7 @@ class Hiiro
       end
 
       if app_name.nil? || app_name.empty?
-        tree = environment.find_tree(task.tree_name)
-        send_cd(tree&.path || File.join(Hiiro::WORK_DIR, task.tree_name))
+        send_cd(resolve_path(task))
         return
       end
 
@@ -473,8 +508,7 @@ class Hiiro
     def app_path(app_name = nil)
       task = current_task
       tree_root = if task
-        tree = environment.find_tree(task.tree_name)
-        tree&.path || File.join(Hiiro::WORK_DIR, task.tree_name)
+        resolve_path(task)
       else
         Hiiro::Git.new(nil, Dir.pwd).root
       end
@@ -596,14 +630,31 @@ class Hiiro
       end
     end
 
+    def git_worktree_root(path)
+      expanded = File.expand_path(path.to_s)
+      return nil unless Dir.exist?(expanded)
+
+      root = IO.popen(['git', '-C', expanded, 'rev-parse', '--show-toplevel'], err: File::NULL, &:read).to_s.strip
+      return nil if root.empty?
+
+      File.expand_path(root)
+    rescue
+      nil
+    end
+
+    def same_path?(left, right)
+      return false if left.nil? || right.nil?
+
+      File.expand_path(left) == File.expand_path(right)
+    end
+
     def find_available_tree
       assigned_tree_names = environment.all_tasks.map(&:tree_name)
       environment.all_trees.find { |tree| !assigned_tree_names.include?(tree.name) }
     end
 
     def resolve_app(app_name, task)
-      tree = environment.find_tree(task.tree_name)
-      tree_root = tree ? tree.path : File.join(Hiiro::WORK_DIR, task.tree_name)
+      tree_root = resolve_path(task)
 
       result = environment.app_matcher.find_all(app_name)
 
@@ -1036,6 +1087,13 @@ class Hiiro
 
         h.add_subcmd(:apps) { tm.list_apps }
 
+        if tm.scope == :task
+          h.add_subcmd(:from) do |path = nil, task_name = nil|
+            task = tm.task_from_worktree(path, task_name)
+            tm.switch_to_task(task) if task
+          end
+        end
+
         h.add_subcmd(:cd) do |*raw_args|
           opts = Hiiro::Options.parse(raw_args, &task_opts_block)
           task, positional = resolve_task.call(opts, opts.args)
@@ -1419,6 +1477,13 @@ class Hiiro
   class Tree
     attr_reader :path, :head, :branch
 
+    def self.from_path(path)
+      expanded = File.expand_path(path.to_s)
+      branch = Hiiro::Git.new(nil, expanded).branch if Dir.exist?(expanded)
+      branch = nil if branch.nil? || branch.empty? || branch == 'HEAD'
+      new(path: expanded, branch: branch)
+    end
+
     def self.all(repo_path: Hiiro::REPO_PATH)
       git = Hiiro::Git.new(nil, repo_path)
       git.worktrees(repo_path: repo_path).filter_map do |wt|
@@ -1483,6 +1548,10 @@ class Hiiro
 
     def top_level?
       !subtask?
+    end
+
+    def absolute_tree?
+      tree_name.to_s.start_with?('/')
     end
 
     def tree
@@ -1649,7 +1718,7 @@ class Hiiro
         t = tree
         all_tasks.find { |task|
           (s && task.session_name == s.name) ||
-            (t && task.tree_name == t.name)
+            (t && (task.tree_name == t.name || task.tree_name == t.path))
         }
       end
     end
@@ -1659,7 +1728,7 @@ class Hiiro
     end
 
     def tree
-      @tree ||= all_trees.find { |t| t.match?(path) }
+      @tree ||= all_trees.find { |t| t.match?(path) } || external_task_tree
     end
 
     def find_task(abbreviated)
@@ -1682,6 +1751,8 @@ class Hiiro
 
     def find_tree(abbreviated)
       return nil if abbreviated.nil?
+      return Tree.from_path(abbreviated) if abbreviated.to_s.start_with?('/') && Dir.exist?(abbreviated)
+
       tree_matcher.find(abbreviated).first&.item
     end
 
@@ -1693,6 +1764,11 @@ class Hiiro
     def find_app(abbreviated)
       return nil if abbreviated.nil?
       app_matcher.find(abbreviated).first&.item
+    end
+
+    def external_task_tree
+      task = all_tasks.find { |t| t.absolute_tree? && t.tree_name && (path == t.tree_name || path.start_with?(t.tree_name + '/')) }
+      Tree.from_path(task.tree_name) if task
     end
   end
 end

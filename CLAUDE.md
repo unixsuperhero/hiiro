@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Safety
+
+- NEVER commit secrets, tokens, api keys, etc. do not include any work-related content or information
+
 ## Project Overview
 
 Hiiro is a lightweight CLI framework for Ruby that enables building multi-command tools similar to `git` or `docker`. It provides subcommand dispatch, abbreviation matching (e.g., `h ex hel` matches `h example hello`), and a plugin system.
@@ -545,5 +549,4 @@ All config lives in `~/.config/hiiro/`:
 - bin/h-session
 - lib/hiiro/tmux.rb
 - lib/hiiro/tmux/*
-
 

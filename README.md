@@ -65,7 +65,7 @@ h ping
 | `h setup` | Install plugins and subcommands to system paths |
 | `h edit` | Open the h script in your editor |
 | `h alert` | macOS desktop notifications via terminal-notifier |
-| `h task` | Task management across git worktrees (via Tasks plugin) |
+| `h task` | Task management across git worktrees, including existing external worktrees (via Tasks plugin) |
 | `h subtask` | Subtask management within tasks (via Tasks plugin) |
 
 ### External Subcommands
@@ -116,7 +116,7 @@ Plugins are Ruby modules loaded from `~/.config/hiiro/plugins/`:
 |--------|-------------|
 | Pins | Per-command YAML key-value storage |
 | Project | Project directory navigation with tmux session management |
-| Tasks | Task lifecycle management across git worktrees with subtask support |
+| Tasks | Task lifecycle management across git worktrees with external-worktree registration and subtask support |
 | Notify | macOS desktop notifications via terminal-notifier |
 
 ## Adding Subcommands
