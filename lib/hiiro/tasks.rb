@@ -1543,7 +1543,7 @@ class Hiiro
     end
 
     def subtask?
-      name.include?('/')
+      name.include?('/') && !absolute_tree?
     end
 
     def top_level?

@@ -194,6 +194,15 @@ class TaskTest < Minitest::Test
     assert_equal "feature", task.parent_name
   end
 
+  def test_external_task_with_slash_name_is_top_level
+    task = Task.new(name: "menu/ids", tree: "/tmp/ids-copy")
+
+    refute task.subtask?
+    assert task.top_level?
+    assert_nil task.parent_name
+    assert_equal "menu/ids", task.short_name
+  end
+
   def test_task_short_name_top_level
     task = Task.new(name: "feature", tree: "feature/main")
 
@@ -596,6 +605,11 @@ end
 class TaskManagerFilterTasksTest < Minitest::Test
   include TestHelpers
 
+  def setup
+    Hiiro::TaskRecord.dataset.delete
+    Hiiro::AppRecord.dataset.delete
+  end
+
   def build_tm(tasks_yaml)
     with_temp_dir do |dir|
       tasks_dir = File.join(dir, "tasks")
@@ -617,6 +631,17 @@ class TaskManagerFilterTasksTest < Minitest::Test
     YAML
     build_tm(yaml) do |tm|
       assert_equal %w[alpha beta gamma], tm.filter_tasks.map(&:name)
+    end
+  end
+
+  def test_tasks_includes_external_slash_named_tasks
+    yaml = <<~YAML
+      tasks:
+        - { name: menu/ids, tree: /tmp/ids-copy }
+        - { name: feature/api, tree: feature/api }
+    YAML
+    build_tm(yaml) do |tm|
+      assert_equal ["menu/ids"], tm.tasks.map(&:name)
     end
   end
 
