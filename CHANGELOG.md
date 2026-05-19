@@ -5,6 +5,9 @@
 ### Added
 - `h task from <worktree-path> <task-name>` registers an existing git worktree from any path as a Hiiro task and switches to it.
 
+### Fixed
+- `h task list` now shows external tasks registered with slash-containing names like `menu/ids`.
+
 ## [0.1.353] - 2026-04-26
 
 ### Added
