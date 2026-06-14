@@ -5,6 +5,12 @@ require "json"
 require "open3"
 require "shellwords"
 
+HIIRO_SUPPORTED_RUBY_VERSION = ">= 3.2.0"
+
+unless Gem::Requirement.new(HIIRO_SUPPORTED_RUBY_VERSION).satisfied_by?(Gem::Version.new(RUBY_VERSION))
+  abort("ERROR: publishing hiiro requires Ruby #{HIIRO_SUPPORTED_RUBY_VERSION}; current Ruby is #{RUBY_VERSION}")
+end
+
 # ─── RubyGems API ────────────────────────────────────────────────────────────
 
 class RubyGems
@@ -107,7 +113,7 @@ class Git
     puts "Tagged v#{version}"
   end
 
-  def self.push
+  def self.push(version)
     if system("git", "push", "origin", "main", "--follow-tags")
       puts "Pushed to origin/main"
     else
@@ -232,7 +238,15 @@ if pending_before
 else
   puts "\nNo pending changes — skipping Claude."
 end
-File.write("lib/hiiro/version.rb", "class Hiiro\n  VERSION = #{new_version.inspect}\nend\n")
+File.write(
+  "lib/hiiro/version.rb",
+  <<~RUBY
+    class Hiiro
+      VERSION = #{new_version.inspect}
+      SUPPORTED_RUBY_VERSION = #{HIIRO_SUPPORTED_RUBY_VERSION.inspect}
+    end
+  RUBY
+)
 
 RubyGem.build(new_version)
 
@@ -242,7 +256,7 @@ end
 
 Git.commit_all("publishing v#{new_version}")
 Git.tag(new_version)
-Git.push
+Git.push(new_version)
 
 puts "\nWaiting for v#{new_version} to appear on RubyGems..."
 unless RubyGems.wait_for("hiiro", new_version)
@@ -250,12 +264,24 @@ unless RubyGems.wait_for("hiiro", new_version)
   exit 1
 end
 
-puts "v#{new_version} available — installing across all Ruby versions...\n\n"
+puts "v#{new_version} available — installing across compatible Ruby versions...\n\n"
 pre_flag = pre_release ? ["--pre"] : []
 mu       = Mutex.new
 
 rbenv_versions = `rbenv versions --bare`.lines(chomp: true)
-threads = rbenv_versions.map do |ver|
+supported_versions, skipped_versions = rbenv_versions.partition do |ver|
+  ruby_version = `RBENV_VERSION=#{ver.shellescape} rbenv exec ruby -e 'print RUBY_VERSION' 2>/dev/null`.strip
+  Gem::Requirement.new(HIIRO_SUPPORTED_RUBY_VERSION).satisfied_by?(Gem::Version.new(ruby_version))
+rescue ArgumentError
+  false
+end
+
+skipped_versions.each do |ver|
+  puts "  ruby #{ver}  skipped (requires Ruby #{HIIRO_SUPPORTED_RUBY_VERSION})"
+end
+puts if skipped_versions.any?
+
+threads = supported_versions.map do |ver|
   Thread.new do
     env = { "RBENV_VERSION" => ver }
 

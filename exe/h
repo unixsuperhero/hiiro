@@ -38,10 +38,16 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
 
     if opts.all
       versions = Hiiro::Rbenv.versions
-      puts "Updating hiiro across #{versions.size} Ruby version(s)...\n\n"
+      supported_versions = Hiiro::Rbenv.supported_versions
+      skipped_versions = versions - supported_versions
+      puts "Updating hiiro across #{supported_versions.size} compatible Ruby version(s)...\n\n"
+      skipped_versions.each do |ver|
+        puts "  ruby #{ver}  skipped (requires Ruby #{Hiiro::SUPPORTED_RUBY_VERSION})"
+      end
+      puts if skipped_versions.any?
       mu = Mutex.new
 
-      threads = versions.map do |ver|
+      threads = supported_versions.map do |ver|
         Thread.new do
           Hiiro::Rbenv.install_gem('hiiro', pre: opts.pre, version: ver)
           Hiiro::Rbenv.run('h', 'setup', version: ver)

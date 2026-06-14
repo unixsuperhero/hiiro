@@ -38,6 +38,22 @@ class Hiiro
         capture('ruby', '--version', version: version).strip
       end
 
+      def ruby_version_number(version: current_version)
+        capture('ruby', '-e', 'print RUBY_VERSION', version: version).strip
+      end
+
+      def supported_ruby?(version)
+        Gem::Requirement.new(Hiiro::SUPPORTED_RUBY_VERSION).satisfied_by?(
+          Gem::Version.new(ruby_version_number(version: version))
+        )
+      rescue ArgumentError
+        false
+      end
+
+      def supported_versions
+        versions.select { |ver| supported_ruby?(ver) }
+      end
+
       # --- Running commands ---
 
       # Run a command through `rbenv exec` in the given version.
@@ -78,7 +94,7 @@ class Hiiro
 
       # Install or update a gem across all installed versions.
       def install_gem_in_all(gem_name, pre: false)
-        versions.each { |ver| install_gem(gem_name, pre: pre, version: ver) }
+        supported_versions.each { |ver| install_gem(gem_name, pre: pre, version: ver) }
       end
 
       # --- Path helpers ---

@@ -16,6 +16,8 @@ See [docs/](docs/) for detailed documentation on all subcommands.
 
 ### Via RubyGems
 
+Requires Ruby 3.2 or newer.
+
 ```sh
 gem install hiiro
 

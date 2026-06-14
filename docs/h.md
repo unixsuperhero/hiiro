@@ -21,7 +21,7 @@ These subcommands are defined directly in `exe/h` or loaded from `lib/`:
 | `h delayed_update` | Poll RubyGems for a new version and install when available | `exe/h` |
 | `h edit` | Open the `h` bin file in your editor | `exe/h` |
 | [`h file`](h-file.md) | Track frequently-used files per app and open them in your editor | `lib/hiiro/app_files.rb` |
-| `h install` / `h update` | Install or update the hiiro gem (`-a` all rbenv versions, `-p` pre-release) | `exe/h` |
+| `h install` / `h update` | Install or update the hiiro gem (`-a` compatible rbenv versions, `-p` pre-release) | `exe/h` |
 | `h ping` | Health check — prints `pong` | `exe/h` |
 | `h pry` | Open a pry REPL in the hiiro context | `exe/h` |
 | [`h queue`](h-queue.md) | Claude prompt queue — create, watch, and run AI prompts in tmux | `lib/hiiro/queue.rb` |
