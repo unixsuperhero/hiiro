@@ -85,6 +85,7 @@ class Hiiro
       loop do
         chunk = io.readpartial(4096)
         tee&.write(chunk)
+        puts chunk
         output << chunk
       rescue EOFError
         break
