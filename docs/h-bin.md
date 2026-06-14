@@ -2,6 +2,8 @@
 
 List and edit hiiro bin scripts (`h-*` executables found in PATH).
 
+`h bin` uses `Hiiro::Bins` to scan the current `PATH` for executable files.
+
 ## Synopsis
 
 ```bash
@@ -36,4 +38,3 @@ List `h-*` executables found in PATH. With no arguments, lists all. With names, 
 h bin list
 h bin list branch pr
 ```
-

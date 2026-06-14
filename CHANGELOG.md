@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Restore the missing `Hiiro::Bins` helper so `require "hiiro"` boots and commands like `h jumplist record` dispatch correctly.
+
 ## [0.1.355] - 2026-05-19
 
 ### Added
