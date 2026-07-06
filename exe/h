@@ -3,6 +3,8 @@
 require "hiiro"
 require "fileutils"
 
+binding.pry
+
 def update_hiiro(version=nil, pre: false)
   ver = version || Hiiro::Rbenv.current_version
   puts

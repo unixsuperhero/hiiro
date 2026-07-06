@@ -29,6 +29,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "pry", "~> 0.14"
   spec.add_dependency "front_matter_parser"
   spec.add_dependency "awesome_print"
+  spec.add_dependency "mcp"
   spec.add_dependency "sqlite3", "~> 2.0"
   spec.add_dependency "sequel", "~> 5.0"
 
