@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+cp -v /Users/josh/bin/h-build bin/
+cp -v /Users/josh/bin/h-ch bin/
+cp -v /Users/josh/bin/h-collections bin/
+cp -v /Users/josh/bin/h-context bin/
+cp -v /Users/josh/bin/h-demo bin/
+cp -v /Users/josh/bin/h-df bin/
+cp -v /Users/josh/bin/h-dir bin/
+cp -v /Users/josh/bin/h-docs bin/
+cp -v /Users/josh/bin/h-dot bin/
+cp -v /Users/josh/bin/h-dotenv bin/
+cp -v /Users/josh/bin/h-dotfiles bin/
+cp -v /Users/josh/bin/h-gh bin/
+cp -v /Users/josh/bin/h-git bin/
+cp -v /Users/josh/bin/h-home bin/
+cp -v /Users/josh/bin/h-html bin/
+cp -v /Users/josh/bin/h-js bin/
+cp -v /Users/josh/bin/h-jsonl bin/
+cp -v /Users/josh/bin/h-loop bin/
+cp -v /Users/josh/bin/h-ls bin/
+cp -v /Users/josh/bin/h-mermaid bin/
+cp -v /Users/josh/bin/h-mic bin/
+cp -v /Users/josh/bin/h-note bin/
+cp -v /Users/josh/bin/h-obsidian bin/
+cp -v /Users/josh/bin/h-osubtask bin/
+cp -v /Users/josh/bin/h-otask bin/
+cp -v /Users/josh/bin/h-placements bin/
+cp -v /Users/josh/bin/h-pr-breaking.watch bin/
+cp -v /Users/josh/bin/h-pr-cwatch bin/
+cp -v /Users/josh/bin/h-remind bin/
+cp -v /Users/josh/bin/h-sign bin/
+cp -v /Users/josh/bin/h-t3 bin/
+cp -v /Users/josh/bin/h-uri bin/
+cp -v /Users/josh/bin/h-video bin/
+cp -v /Users/josh/bin/h-vim bin/
+cp -v /Users/josh/bin/h-watchprs bin/
+cp -v /Users/josh/bin/h-xxserve bin/
+cp -v /Users/josh/bin/h-zosubtask bin/
+cp -v /Users/josh/bin/h-zotask bin/
+cp -v /Users/josh/bin/h-zzztaskzzz bin/
+cp -v /Users/josh/bin/h.from-proj bin/
+safe_nvim +Ddir\ bin/\ /Users/josh/bin/
+# safe_nvim -d bin/h-app /Users/josh/bin/h-app
+# safe_nvim -d bin/h-db /Users/josh/bin/h-db
+# safe_nvim -d bin/h-link /Users/josh/bin/h-link
+# safe_nvim -d bin/h-ps /Users/josh/bin/h-ps
