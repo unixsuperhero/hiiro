@@ -11,6 +11,7 @@ class Hiiro
     ENV_TEMPLATES_DIR = File.join(Dir.home, '.config', 'hiiro', 'env_templates')
 
     attr_reader :config_file, :state_file
+    attr_writer :herdr
 
     def self.add_resolvers(hiiro)
       sm = new
@@ -19,9 +20,10 @@ class Hiiro
       end
     end
 
-    def initialize(config_file: CONFIG_FILE, state_file: STATE_FILE)
+    def initialize(config_file: CONFIG_FILE, state_file: STATE_FILE, herdr: Hiiro::Herdr.client)
       @config_file = config_file
       @state_file = state_file
+      @herdr = herdr
     end
 
     def services
@@ -67,7 +69,7 @@ class Hiiro
       end
     end
 
-    def start_group(name, tmux_info: {}, task_info: {})
+    def start_group(name, herdr_info: {}, task_info: {})
       group = find_group(name)
       unless group
         puts "Group '#{name}' not found"
@@ -80,40 +82,27 @@ class Hiiro
         return false
       end
 
-      session = tmux_info[:session] || current_tmux_session
-      unless session
-        puts "tmux is required to start a service group"
+      workspace = herdr_info[:workspace] || current_herdr_workspace
+      unless workspace
+        puts "Herdr is required to start a service group"
         return false
       end
 
       puts "Starting group '#{group[:name]}'..."
 
-      # Create one window for the group, split panes for each service
-      window_target, first_pane_id = create_tmux_window(session, group[:name])
-      last_pane_id = first_pane_id
-
-      members.each_with_index do |member, idx|
+      members.each do |member|
         member_name = member['name'] || member[:name]
         use_overrides = member['use'] || member[:use] || {}
 
         svc = find_service(member_name)
         next unless svc
 
-        if idx == 0
-          pane_id = first_pane_id
-        else
-          # Split from the last pane so each new pane is distinct
-          pane_id = split_tmux_pane(window_target, last_pane_id)
-          last_pane_id = pane_id
-        end
-
-        member_tmux_info = tmux_info.merge(
-          session: session,
-          window: window_target,
-          pane: pane_id,
+        start(
+          member_name,
+          herdr_info: herdr_info.merge(workspace: workspace),
+          task_info: task_info,
+          variation_overrides: use_overrides
         )
-
-        start(member_name, tmux_info: member_tmux_info, task_info: task_info, variation_overrides: use_overrides, skip_window_creation: true)
       end
       true
     end
@@ -195,7 +184,7 @@ class Hiiro
       state = load_state
       return puts("No running services to clean") if state.empty?
 
-      stale = state.select { |_, info| stale_pane?(info['tmux_pane']) }
+      stale = state.select { |_, info| stale_pane?(info['herdr_pane']) }
       if stale.empty?
         puts "All running services have live panes"
         return false
@@ -209,7 +198,7 @@ class Hiiro
       true
     end
 
-    def start(name, tmux_info: {}, task_info: {}, variation_overrides: {}, skip_env: false, skip_window_creation: false)
+    def start(name, herdr_info: {}, task_info: {}, variation_overrides: {}, skip_env: false)
       svc = find_service(name)
       unless svc
         puts "Service '#{name}' not found"
@@ -220,7 +209,7 @@ class Hiiro
 
       if running?(svc_name)
         info = running_services[svc_name]
-        puts "Service '#{svc_name}' is already running (pid: #{info['pid']}, pane: #{info['tmux_pane']})"
+        puts "Service '#{svc_name}' is already running (pid: #{info['pid']}, pane: #{info['herdr_pane']})"
         return false
       end
 
@@ -242,23 +231,21 @@ class Hiiro
       )
 
       base_dir = resolve_base_dir(svc[:base_dir])
-      session = tmux_info[:session] || current_tmux_session
+      workspace = resolve_herdr_workspace(herdr_info[:workspace] || current_herdr_workspace)
 
-      if session && !skip_window_creation
-        # Create a new tmux window for this service
-        window_target, pane_id = create_tmux_window(session, svc_name)
-      elsif session && skip_window_creation
-        # Pane already created by start_group
-        pane_id = tmux_info[:pane]
-        window_target = tmux_info[:window]
+      if workspace
+        result = herdr.new_tab(
+          name: svc_name,
+          workspace: workspace,
+          start_directory: base_dir,
+          command: script,
+          focus: false
+        )
+        tab_id = result.dig('tab', 'tab_id')
+        pane_id = result.dig('root_pane', 'pane_id')
       else
+        tab_id = nil
         pane_id = nil
-        window_target = nil
-      end
-
-      if pane_id
-        send_to_pane(pane_id, base_dir, script)
-      else
         system("cd #{base_dir} && #{script} &")
       end
 
@@ -266,9 +253,10 @@ class Hiiro
       state = load_state
       state[svc_name] = {
         'pid' => nil,
-        'tmux_session' => session || tmux_info[:session],
-        'tmux_window' => window_target || tmux_info[:window],
-        'tmux_pane' => pane_id,
+        'herdr_workspace' => workspace&.id,
+        'workspace_name' => workspace&.name,
+        'herdr_tab' => tab_id,
+        'herdr_pane' => pane_id,
         'task' => task_info[:task_name],
         'tree' => task_info[:tree],
         'branch' => task_info[:branch],
@@ -295,7 +283,7 @@ class Hiiro
       end
 
       info = running_services[svc_name]
-      pane_id = info['tmux_pane']
+      pane_id = info['herdr_pane']
 
       if svc[:stop] && !svc[:stop].to_s.strip.empty?
         stop_cmd = svc[:stop]
@@ -304,7 +292,7 @@ class Hiiro
         end
         system(stop_cmd)
       elsif pane_id
-        system('tmux', 'send-keys', '-t', pane_id, 'C-c')
+        herdr.send_keys(pane_id, 'ctrl+c')
       end
 
       # Run cleanup commands
@@ -335,21 +323,11 @@ class Hiiro
       end
 
       info = running_services[svc_name]
-      pane_id = info['tmux_pane']
-      session = info['tmux_session']
-      window = info['tmux_window']
+      workspace_id = info['herdr_workspace']
+      tab_id = info['herdr_tab']
 
-      if session
-        system('tmux', 'switch-client', '-t', session)
-      end
-
-      if window
-        system('tmux', 'select-window', '-t', window)
-      end
-
-      if pane_id
-        system('tmux', 'select-pane', '-t', pane_id)
-      end
+      herdr.focus_workspace(workspace_id) if workspace_id
+      herdr.focus_tab(tab_id) if tab_id
 
       true
     end
@@ -391,7 +369,7 @@ class Hiiro
         info = running_services[svc_name]
         puts "Status: running"
         puts "PID: #{info['pid'] || '(unknown)'}"
-        puts "Pane: #{info['tmux_pane'] || '(unknown)'}"
+        puts "Pane: #{info['herdr_pane'] || '(unknown)'}"
         puts "Task: #{info['task'] || '(none)'}"
         puts "Started: #{info['started_at']}"
       else
@@ -495,8 +473,9 @@ class Hiiro
             end
           end
 
-          tmux_info = {
-            session: h.tmux_client.current_session&.name,
+          sm.herdr = h.herdr_client
+          herdr_info = {
+            workspace: h.herdr_client.current_workspace,
           }
 
           task_info = {}
@@ -515,9 +494,9 @@ class Hiiro
           # Check if it's a group or individual service
           group = sm.find_group(svc_name)
           if group
-            sm.start_group(svc_name, tmux_info: tmux_info, task_info: task_info)
+            sm.start_group(svc_name, herdr_info: herdr_info, task_info: task_info)
           else
-            sm.start(svc_name, tmux_info: tmux_info, task_info: task_info, variation_overrides: variation_overrides)
+            sm.start(svc_name, herdr_info: herdr_info, task_info: task_info, variation_overrides: variation_overrides)
           end
         end
 
@@ -804,7 +783,7 @@ class Hiiro
 
     def stale_pane?(pane_id)
       return true unless pane_id
-      !system('tmux', 'has-session', '-t', pane_id, [:out, :err] => '/dev/null')
+      herdr.get_pane(pane_id).nil?
     end
 
     def scripts_dir
@@ -866,24 +845,19 @@ class Hiiro
       write_shell_script(launcher_path, steps)
     end
 
-    def current_tmux_session
-      Hiiro::Tmux::Session.current&.name
+    def current_herdr_workspace
+      herdr.current_workspace
     end
 
-    def create_tmux_window(session, name)
-      pane_id = `tmux new-window -d -t #{session} -n #{name} -P -F '\#{pane_id}'`.chomp
-      window_target = "#{session}:#{name}"
-      [window_target, pane_id]
+    def resolve_herdr_workspace(workspace)
+      return workspace if workspace.respond_to?(:id)
+      return nil unless workspace
+
+      herdr.find_workspace(workspace)
     end
 
-    def split_tmux_pane(window_target, target_pane_id)
-      pane_id = `tmux split-window -d -t #{target_pane_id} -P -F '\#{pane_id}'`.chomp
-      system('tmux', 'select-layout', '-t', window_target, 'even-vertical')
-      pane_id
-    end
-
-    def send_to_pane(pane_id, base_dir, script)
-      system('tmux', 'send-keys', '-t', pane_id, "cd #{base_dir} && #{script}", 'Enter')
+    def herdr
+      @herdr ||= Hiiro::Herdr.client
     end
 
     def load_config

@@ -6,7 +6,7 @@ require 'front_matter_parser'
 class Hiiro
   class Queue
     DIR = Hiiro::Config.data_path('queue')
-    TMUX_SESSION = 'hq'
+    HERDR_WORKSPACE = 'hq'
     STATUSES = %w[wip pending running done failed].freeze
 
     def self.current(hiiro=nil)
@@ -70,10 +70,10 @@ class Hiiro
               mins = (elapsed / 60).to_i
               line += "  (#{mins}m)"
             end
-            if meta['tmux_pane']
-              line += "  [pane #{meta['tmux_pane']}]"
-            elsif meta['tmux_session']
-              line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]"
+            if meta['herdr_pane']
+              line += "  [pane #{meta['herdr_pane']}]"
+            elsif meta['herdr_tab']
+              line += "  [tab #{meta['herdr_tab']}]"
             end
           end
           preview = task_preview(t[:name], status.to_sym)
@@ -123,10 +123,8 @@ class Hiiro
       nil
     end
 
-    def ensure_tmux_session
-      unless system('tmux', 'has-session', '-t', TMUX_SESSION, out: File::NULL, err: File::NULL)
-        system('tmux', 'new-session', '-d', '-s', TMUX_SESSION)
-      end
+    def ensure_herdr_workspace(name = HERDR_WORKSPACE, cwd: nil)
+      herdr.find_workspace(name) || herdr.new_workspace(name, start_directory: cwd, focus: false)
     end
 
     def launch_task(name)
@@ -149,24 +147,24 @@ class Hiiro
 
       prompt_obj = Prompt.from_file(running_md, hiiro: hiiro)
 
-      # Determine target tmux session and working directory from frontmatter
-      target_session = TMUX_SESSION
+      # Determine target Herdr workspace and working directory from frontmatter.
+      target_workspace = HERDR_WORKSPACE
       working_dir = Dir.pwd
       tree_root = nil
 
       if prompt_obj
         fm = prompt_obj.frontmatter
 
-        # 1. Session: frontmatter session_name wins outright — no env lookup needed
+        # 1. session_name is retained in frontmatter for compatibility, but now
+        #    identifies a Herdr workspace label.
         raw_session = fm['session_name'].to_s
         if !raw_session.empty?
-          target_session = raw_session
-          # Seed working_dir from the session's active pane (overridden by tree below if present)
-          pane_path = `tmux display-message -t #{Shellwords.shellescape(raw_session)}: -p '\#{pane_current_path}' 2>/dev/null`.strip
-          working_dir = pane_path if !pane_path.empty? && Dir.exist?(pane_path)
+          target_workspace = raw_session
+          workspace_dir = directory_for_workspace(raw_session)
+          working_dir = workspace_dir if workspace_dir
         elsif prompt_obj.task
           task_session = prompt_obj.task.session_name
-          target_session = task_session if task_session && !task_session.empty?
+          target_workspace = task_session if task_session && !task_session.empty?
         end
 
         # 2. Tree: sets both working_dir and tree_root (overrides session pane dir)
@@ -231,7 +229,7 @@ class Hiiro
       SH
       FileUtils.chmod(0755, script_path)
 
-      # Build base meta (no tmux_window/pane yet)
+      # Build base metadata; Herdr IDs are added after the tab/pane is created.
       meta = {
         'started_at' => Time.now.iso8601,
         'working_dir' => working_dir,
@@ -244,27 +242,38 @@ class Hiiro
 
       case mode
       when :window
-        # Ensure the target session exists
-        unless system('tmux', 'has-session', '-t', target_session, out: File::NULL, err: File::NULL)
-          system('tmux', 'new-session', '-d', '-s', target_session, '-c', working_dir)
-        end
-        win_name = short_window_name(name)
-        system('tmux', 'new-window', '-d', '-t', target_session, '-n', win_name, '-c', working_dir, script_path)
-        meta['tmux_session'] = target_session
-        meta['tmux_window']  = win_name
+        workspace = ensure_herdr_workspace(target_workspace, cwd: working_dir)
+        tab_name = short_window_name(name)
+        result = herdr.new_tab(
+          name: tab_name,
+          workspace: workspace,
+          start_directory: working_dir,
+          command: script_path,
+          focus: false
+        )
+        meta['herdr_workspace'] = workspace.id
+        meta['herdr_tab'] = result.dig('tab', 'tab_id')
+        meta['herdr_pane'] = result.dig('root_pane', 'pane_id')
         File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
-        puts "Launched: #{name} [#{target_session}:#{win_name}]"
+        puts "Launched: #{name} [#{meta['herdr_tab'] || workspace.id}]"
 
       when :current
         File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
         exec(script_path)
 
       when :hsplit, :vsplit
-        flag = mode == :hsplit ? '-v' : '-h'
-        pane_id = `tmux split-window #{flag} -P -F '\#{pane_id}' -c #{Shellwords.shellescape(working_dir)} #{Shellwords.shellescape(script_path)} 2>/dev/null`.strip
-        meta['tmux_pane'] = pane_id unless pane_id.empty?
+        direction = mode == :hsplit ? :down : :right
+        pane = herdr.split_pane(
+          direction: direction,
+          start_directory: working_dir,
+          command: script_path,
+          focus: true
+        )
+        meta['herdr_workspace'] = pane&.workspace_id
+        meta['herdr_tab'] = pane&.tab_id
+        meta['herdr_pane'] = pane&.id
         File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
-        puts "Launched: #{name} [pane #{pane_id}]"
+        puts "Launched: #{name} [pane #{pane&.id}]"
       end
     end
 
@@ -295,10 +304,10 @@ class Hiiro
         end
       end
 
-      sessions = Hiiro::Tmux::Sessions.fetch rescue nil
-      if sessions
-        sessions.names.sort.each do |name|
-          mapping[format("session  %s", name)] = { type: :session, name: name }
+      workspaces = herdr.workspaces rescue nil
+      if workspaces
+        workspaces.names.sort.each do |name|
+          mapping[format("workspace %s", name)] = { type: :session, name: name }
         end
       end
 
@@ -325,12 +334,12 @@ class Hiiro
       end
     end
 
-    # Prefix-match opts.task against live tmux sessions; return session_name hash or nil.
+    # Prefix-match opts.task against live Herdr workspace labels.
     def session_info_for(prefix)
-      sessions = Hiiro::Tmux::Sessions.fetch rescue nil
-      return nil unless sessions
+      workspaces = herdr.workspaces rescue nil
+      return nil unless workspaces
 
-      names   = sessions.names
+      names   = workspaces.names
       matches = names.select { |n| n.start_with?(prefix) }
       return nil unless matches.length == 1
 
@@ -358,8 +367,21 @@ class Hiiro
     end
 
     def existing_window_name?(wname)
-      windows = `tmux list-windows -a -F '#\{window_name\}' 2>/dev/null`.lines(chomp: true)
-      windows.include?(wname)
+      herdr.tabs(all: true).names.include?(wname)
+    end
+
+    def directory_for_workspace(ref)
+      workspace = herdr.find_workspace(ref)
+      return nil unless workspace
+      return workspace.path if workspace.path && Dir.exist?(workspace.path)
+
+      pane = herdr.panes(workspace: workspace).first
+      path = pane&.foreground_cwd || pane&.cwd
+      path if path && Dir.exist?(path)
+    end
+
+    def herdr
+      hiiro&.herdr_client || Hiiro::Herdr.client
     end
 
     # Given a (possibly-edited) prompt file and a base directory (task root),
@@ -529,10 +551,10 @@ class Hiiro
                 mins = (elapsed / 60).to_i
                 line += "  (#{mins}m elapsed)"
               end
-              if meta['tmux_pane']
-                line += "  [pane #{meta['tmux_pane']}]"
-              elsif meta['tmux_session']
-                line += "  [#{meta['tmux_session']}:#{meta['tmux_window']}]"
+              if meta['herdr_pane']
+                line += "  [pane #{meta['herdr_pane']}]"
+              elsif meta['herdr_tab']
+                line += "  [tab #{meta['herdr_tab']}]"
               end
               line += "  dir:#{meta['working_dir']}" if meta['working_dir']
             end
@@ -566,14 +588,18 @@ class Hiiro
           next unless name
 
           meta = q.meta_for(name, :running)
-          session = meta&.[]('tmux_session') || TMUX_SESSION
-          win = meta&.[]('tmux_window') || name
-          system('tmux', 'switch-client', '-t', "#{session}:#{win}")
+          if meta&.[]('herdr_tab')
+            h.herdr_client.focus_tab(meta['herdr_tab'])
+          elsif meta&.[]('herdr_workspace')
+            h.herdr_client.focus_workspace(meta['herdr_workspace'])
+          else
+            puts "No Herdr location recorded for '#{name}'"
+          end
         }
 
         h.add_subcmd(:session) {
           work_dir = File.expand_path('~/work')
-          Tmux.open_session(TMUX_SESSION, start_directory: work_dir)
+          h.herdr_client.open_workspace(HERDR_WORKSPACE, start_directory: work_dir)
         }
 
         do_add = lambda do |args, split: nil, session: false|
@@ -582,10 +608,10 @@ class Hiiro
             option(:task,        short: :t, desc: 'Task name', flag_ifs: [:find])
             option(:name,        short: :n, desc: 'Base filename for the queue task')
             flag(:find,          short: :f, desc: 'Choose task/session interactively (fuzzyfind)')
-            flag(:horizontal,    short: :h, desc: 'Split horizontally in the current tmux window')
-            flag(:vertical,      short: :v, desc: 'Split vertically in the current tmux window')
-            flag(:session,       short: :s, desc: 'Use current tmux session')
-            flag(:ignore,        short: :i, desc: 'Background task — close window when done, no shell')
+            flag(:horizontal,    short: :h, desc: 'Split down in the current Herdr tab')
+            flag(:vertical,      short: :v, desc: 'Split right in the current Herdr tab')
+            flag(:session,       short: :s, desc: 'Use current Herdr workspace')
+            flag(:ignore,        short: :i, desc: 'Background task — no shell after completion')
           end
 
           if opts.help?
@@ -607,11 +633,11 @@ class Hiiro
           end
 
           if opts.session || session
-            session_name = h.tmux_client.current_session&.name
+            session_name = h.herdr_client.current_workspace&.name
             ti = (ti || {}).merge(session_name: session_name) if session_name
           end
 
-          # Split+interactive: open editor AND run claude in a new tmux pane
+          # Split+interactive: open the editor and Claude in a new Herdr pane.
           if split && args.empty? && $stdin.tty?
             fm_lines = ["---"]
             fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
@@ -641,15 +667,11 @@ class Hiiro
                   task_base_dir = nil unless task_base_dir && Dir.exist?(task_base_dir)
                 end
               elsif ti[:session_name]
-                # Session selected (no task) — use active pane's CWD from that session
-                pane_path = `tmux display-message -t #{Shellwords.shellescape(ti[:session_name])}: -p '\#{pane_current_path}' 2>/dev/null`.strip
-                task_base_dir = pane_path unless pane_path.empty? || !Dir.exist?(pane_path)
+                task_base_dir = q.directory_for_workspace(ti[:session_name])
               end
             end
             Dir.chdir(task_base_dir) if task_base_dir
 
-            orig_pane  = `tmux display-message -p '\#{pane_id}'`.strip
-            split_flag = split == :hsplit ? '-v' : '-h'
             claude_cmd = opts.ignore ? 'claude -p' : 'claude'
             shell_line = opts.ignore ? '' : "exec ${SHELL:-zsh}"
 
@@ -658,7 +680,6 @@ class Hiiro
               _PROMPT=#{Shellwords.shellescape(prompt_path)}
               _BASE_DIR="$(pwd)"
               ${EDITOR:-vim} "$_PROMPT"
-              tmux select-pane -t #{Shellwords.shellescape(orig_pane)}
               if [ -s "$_PROMPT" ]; then
                 _WD="$(h queue pane-dir "$_PROMPT" "$_BASE_DIR" 2>/dev/null)"
                 [ -n "$_WD" ] && [ -d "$_WD" ] && cd "$_WD"
@@ -669,8 +690,8 @@ class Hiiro
             SH
             FileUtils.chmod(0755, script_path)
 
-            new_pane = `tmux split-window #{split_flag} -P -F '\#{pane_id}' #{Shellwords.shellescape(script_path)} 2>/dev/null`.strip
-            system('tmux', 'select-pane', '-t', new_pane) unless new_pane.empty?
+            direction = split == :hsplit ? :down : :right
+            h.herdr_client.split_pane(direction: direction, start_directory: Dir.pwd, command: script_path, focus: true)
             next
           end
 
@@ -690,10 +711,10 @@ class Hiiro
             fm_lines << ""
             fm_content = fm_lines.join("\n")
 
-            # cd to the session's active pane dir so the editor opens from there
+            # Start the editor from the selected workspace's active directory.
             if ti&.dig(:session_name) && !ti[:tree_name]
-              pane_path = `tmux display-message -t #{Shellwords.shellescape(ti[:session_name])}: -p '\#{pane_current_path}' 2>/dev/null`.strip
-              Dir.chdir(pane_path) if !pane_path.empty? && Dir.exist?(pane_path)
+              pane_path = q.directory_for_workspace(ti[:session_name])
+              Dir.chdir(pane_path) if pane_path && Dir.exist?(pane_path)
             end
 
             input = InputFile.md_file(hiiro: h, content: fm_content, append: !!fm_content, prefix: 'hq-')
@@ -731,7 +752,7 @@ class Hiiro
           opts = Hiiro::Options.parse(args) do
             option(:task,    short: :t, desc: 'Task name', flag_ifs: [:find])
             flag(:find,      short: :f, desc: 'Choose task/session interactively (fuzzyfind)')
-            flag(:session,   short: :s, desc: 'Use current tmux session')
+            flag(:session,   short: :s, desc: 'Use current Herdr workspace')
           end
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
@@ -743,7 +764,7 @@ class Hiiro
           end
 
           if opts.session
-            session_name = h.tmux_client.current_session&.name
+            session_name = h.herdr_client.current_workspace&.name
             ti = (ti || {}).merge(session_name: session_name) if session_name
           end
 
@@ -821,12 +842,10 @@ class Hiiro
           next unless name
 
           meta = q.meta_for(name, :running)
-          if meta&.key?('tmux_pane')
-            system('tmux', 'kill-pane', '-t', meta['tmux_pane'])
-          else
-            session = meta&.[]('tmux_session') || TMUX_SESSION
-            win = meta&.[]('tmux_window') || name
-            system('tmux', 'kill-window', '-t', "#{session}:#{win}")
+          if meta&.[]('herdr_pane')
+            h.herdr_client.close_pane(meta['herdr_pane'])
+          elsif meta&.[]('herdr_tab')
+            h.herdr_client.close_tab(meta['herdr_tab'])
           end
 
           dirs = q.queue_dirs

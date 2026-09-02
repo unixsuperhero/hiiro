@@ -1,90 +1,37 @@
 require "test_helper"
 
-Session = Hiiro::Tmux::Session
+Workspace = Hiiro::Herdr::Workspace
 
-class TmuxSessionTest < Minitest::Test
-  FORMAT_LINE = ->(id, name, path = '/home/user') {
-    "#{id}|#{name}|1|0|0|0|#{path}"
-  }
+def herdr_workspace(id, name, path = '/home/user')
+  Workspace.new(
+    {
+      'workspace_id' => id,
+      'number' => 1,
+      'label' => name,
+      'focused' => false,
+      'pane_count' => 1,
+      'tab_count' => 1,
+      'active_tab_id' => "#{id}:t1",
+      'agent_status' => 'idle',
+      'worktree' => { 'checkout_path' => path },
+    }
+  )
+end
 
-  def test_tmux_session_initialization
-    session = Session.from_format_line(FORMAT_LINE.call('$1', 'my-session'))
-
-    assert_equal "my-session", session.name
+class HerdrWorkspaceTest < Minitest::Test
+  def test_workspace_initialization
+    workspace = herdr_workspace('w1', 'my-workspace')
+    assert_equal 'my-workspace', workspace.name
   end
 
-  def test_tmux_session_to_s
-    session = Session.from_format_line(FORMAT_LINE.call('$1', 'dev'))
-
-    assert_equal "dev", session.to_s
+  def test_workspace_equality_uses_label
+    assert_equal herdr_workspace('w1', 'test'), herdr_workspace('w2', 'test')
+    refute_equal herdr_workspace('w1', 'test'), herdr_workspace('w3', 'other')
   end
 
-  def test_tmux_session_equality
-    session1 = Session.from_format_line(FORMAT_LINE.call('$1', 'test'))
-    session2 = Session.from_format_line(FORMAT_LINE.call('$2', 'test'))
-    session3 = Session.from_format_line(FORMAT_LINE.call('$3', 'other'))
-
-    assert_equal session1, session2
-    refute_equal session1, session3
-  end
-
-  def test_tmux_session_equality_with_non_session
-    session = Session.from_format_line(FORMAT_LINE.call('$1', 'test'))
-
-    refute_equal session, "test"
-    refute_equal session, nil
-  end
-
-  def test_tmux_session_path
-    session = Session.from_format_line(FORMAT_LINE.call('$1', 'hiiro', '/Users/josh/proj/hiiro'))
-
-    assert_equal '/Users/josh/proj/hiiro', session.path
-  end
-
-  def test_current_returns_nil_when_not_in_tmux
-    Session.stub(:`, "") do
-      result = Session.current
-
-      assert_nil result
-    end
-  end
-
-  def test_current_returns_session_when_in_tmux
-    stub_line = FORMAT_LINE.call('$1', 'my-session', '/home/user/work')
-
-    Session.stub(:`, stub_line) do
-      result = Session.current
-
-      assert_instance_of Session, result
-      assert_equal "my-session", result.name
-      assert_equal "/home/user/work", result.path
-    end
-  end
-
-  def test_all_returns_array_of_sessions
-    stub_output = [
-      FORMAT_LINE.call('$1', 'session1', '/home/user/s1'),
-      FORMAT_LINE.call('$2', 'session2', '/home/user/s2'),
-      FORMAT_LINE.call('$3', 'work',     '/home/user/work'),
-    ].join("\n")
-
-    Session.stub(:`, stub_output) do
-      sessions = Session.all
-
-      assert_equal 3, sessions.count
-      assert sessions.all? { |s| s.is_a?(Session) }
-      assert_equal "session1", sessions[0].name
-      assert_equal "session2", sessions[1].name
-      assert_equal "work",     sessions[2].name
-    end
-  end
-
-  def test_all_returns_empty_array_when_no_sessions
-    Session.stub(:`, "") do
-      sessions = Session.all
-
-      assert_equal [], sessions
-    end
+  def test_workspace_path_comes_from_worktree
+    workspace = herdr_workspace('w1', 'hiiro', '/Users/josh/proj/hiiro')
+    assert_equal '/Users/josh/proj/hiiro', workspace.path
   end
 end
 
@@ -433,11 +380,12 @@ class EnvironmentTest < Minitest::Test
   def test_session_matcher_with_stubbed_sessions
     env = Environment.new
 
-    stub_sessions = [
-      Session.from_format_line("$1|work|1|0|0|0|/home/user/work"),
-      Session.from_format_line("$2|personal|1|0|0|0|/home/user/personal"),
+    stub_workspaces = [
+      herdr_workspace('w1', 'work', '/home/user/work'),
+      herdr_workspace('w2', 'personal', '/home/user/personal'),
     ]
-    Session.stub(:all, stub_sessions) do
+    client = Struct.new(:workspaces).new(stub_workspaces)
+    Hiiro::Herdr.stub(:client, client) do
       # Force reload
       env.instance_variable_set(:@all_sessions, nil)
       matcher = env.session_matcher

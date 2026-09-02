@@ -49,8 +49,8 @@ class Hiiro
     def task_by_service_info(info)
       if name = info['task']
         task_by_name(name)
-      elsif session = info['tmux_session']
-        task_by_session(session)
+      elsif workspace = info['workspace_name']
+        task_by_session(workspace)
       elsif tree = info['tree']
         task_by_tree(tree)
       end
@@ -149,8 +149,7 @@ class Hiiro
         return existing_for_path
       end
 
-      color_index = Hiiro::TaskColors.next_index(config.tasks.map(&:color_index).compact)
-      task = Task.new(name: name, tree: root, session: name, color_index: color_index)
+      task = Task.new(name: name, tree: root, session: name)
       config.save_task(task)
       puts "Added task '#{name}' from worktree '#{root}'"
       task
@@ -198,8 +197,7 @@ class Hiiro
       apply_sparse_checkout(target_path, sparse_groups) if sparse_groups.any?
 
       session_name = task_name
-      color_index = Hiiro::TaskColors.next_index(config.tasks.map(&:color_index).compact)
-      task = Task.new(name: task_name, tree: subtree_name, session: session_name, color_index: color_index)
+      task = Task.new(name: task_name, tree: subtree_name, session: session_name)
       config.save_task(task)
 
       base_dir = target_path
@@ -209,12 +207,7 @@ class Hiiro
       end
 
       Dir.chdir(base_dir)
-      # Create the session detached first so colors are applied before the user attaches
-      unless system('tmux', 'has-session', '-t', "=#{session_name}", err: File::NULL)
-        system('tmux', 'new-session', '-d', '-s', session_name, '-c', Dir.pwd)
-      end
-      Hiiro::TaskColors.apply(session_name, color_index)
-      hiiro.start_tmux_session(session_name)
+      hiiro.start_herdr_workspace(session_name, start_directory: Dir.pwd)
 
       puts "Started task '#{task_name}' in worktree '#{subtree_name}'"
     end
@@ -228,16 +221,10 @@ class Hiiro
       tree_path = resolve_path(task)
 
       session_name = task.session_name
-      session_exists = system('tmux', 'has-session', '-t', "=#{session_name}", err: File::NULL)
+      workspace = hiiro.herdr_client.find_workspace(session_name)
 
-      if session_exists
-        session = environment.find_session(session_name)
-        if session&.attached? && !force
-          puts "Session '#{session_name}' is already attached. Use -f to switch anyway."
-          exit 1
-        end
-        Hiiro::TaskColors.apply(session_name, task.color_index) if task.color_index
-        hiiro.start_tmux_session(session_name)
+      if workspace
+        hiiro.herdr_client.focus_workspace(workspace.id)
       else
         base_dir = tree_path
         if app_name
@@ -247,12 +234,7 @@ class Hiiro
 
         if Dir.exist?(base_dir)
           Dir.chdir(base_dir)
-          # Create detached first so colors are applied before the user attaches
-          unless system('tmux', 'has-session', '-t', "=#{session_name}", err: File::NULL)
-            system('tmux', 'new-session', '-d', '-s', session_name, '-c', Dir.pwd)
-          end
-          Hiiro::TaskColors.apply(session_name, task.color_index) if task.color_index
-          hiiro.start_tmux_session(session_name)
+          hiiro.start_herdr_workspace(session_name, start_directory: Dir.pwd)
         else
           puts "ERROR: Path '#{base_dir}' does not exist"
           return
@@ -288,8 +270,7 @@ class Hiiro
         return
       end
 
-      color_index = Hiiro::TaskColors.next_index(config.tasks.map(&:color_index).compact)
-      task = Task.new(name: task_name, tree: tree.name, session: task_name, color_index: color_index)
+      task = Task.new(name: task_name, tree: tree.name, session: task_name)
       config.save_task(task)
       puts "Resumed task '#{task_name}' from worktree '#{tree.name}'"
 
@@ -334,7 +315,7 @@ class Hiiro
       puts "#{label}:"
       puts
 
-      client_map = Hiiro::Tmux::Session.client_map
+      client_map = Hiiro::Herdr.client.workspaces.select(&:focused?).to_h { |workspace| [workspace.name, workspace.id] }
 
       # Collect rows as {prefix, name, tree, branch, session} so we can
       # compute max column widths before rendering.
@@ -392,7 +373,7 @@ class Hiiro
           extra_name_col = [extra_sessions.map { |s| s.name.length }.max, name_col].max
           extra_sessions.sort_by(&:name).each do |session|
             attach = client_map.key?(session.name) ? "@" : " "
-            line = format(" %s %-#{extra_name_col}s  (tmux session)", attach, session.name)
+            line = format(" %s %-#{extra_name_col}s  (Herdr workspace)", attach, session.name)
             puts cols ? line[0, cols] : line
           end
         end
@@ -402,26 +383,26 @@ class Hiiro
     def status
       task = current_task
       unless task
-        puts "Not currently in a task session"
+        puts "Not currently in a task workspace"
         return
       end
 
       puts "Task: #{task.name}"
       puts "Worktree: #{task.tree_name}"
       puts "Path: #{resolve_path(task) || '(unknown)'}"
-      puts "Session: #{task.session_name}"
+      puts "Workspace: #{task.session_name}"
       puts "Parent: #{task.parent_name}" if task.subtask?
     end
 
     def save
       task = current_task
       unless task
-        puts "ERROR: Not currently in a task session"
+        puts "ERROR: Not currently in a task workspace"
         return
       end
 
-      windows = capture_tmux_windows(task.session_name)
-      puts "Saved task '#{task.name}' state (#{windows.count} windows)"
+      tabs = capture_herdr_tabs(task.session_name)
+      puts "Saved task '#{task.name}' state (#{tabs.count} tabs)"
     end
 
     def open_app(app_name)
@@ -435,8 +416,9 @@ class Hiiro
       return unless result
 
       resolved_name, app_path = result
-      system('tmux', 'new-window', '-n', resolved_name, '-c', app_path)
-      puts "Opened '#{resolved_name}' in new window (#{app_path})"
+      workspace = hiiro.herdr_client.find_workspace(task.session_name)
+      hiiro.herdr_client.new_tab(name: resolved_name, workspace: workspace, start_directory: app_path, focus: true)
+      puts "Opened '#{resolved_name}' in new tab (#{app_path})"
     end
 
     def list_apps
@@ -556,12 +538,12 @@ class Hiiro
         mapping[line] = task
       end
 
-      # Add non-task tmux sessions (exclude sessions that belong to tasks)
+      # Add Herdr workspaces that are not associated with tasks.
       if scope == :task
         task_session_names = environment.all_tasks.map(&:session_name)
         extra_sessions = environment.all_sessions.reject { |s| task_session_names.include?(s.name) }
         extra_sessions.sort_by(&:name).each do |session|
-          line = format("%-25s  (tmux session)", session.name)
+          line = format("%-25s  (Herdr workspace)", session.name)
           mapping[line] = session
         end
       end
@@ -603,12 +585,10 @@ class Hiiro
     end
 
     def send_cd(path)
-      pane = ENV['TMUX_PANE']
-      if pane
-        system('tmux', 'send-keys', '-t', pane, "cd #{path}\n")
-      else
-        system('tmux', 'send-keys', "cd #{path}\n")
-      end
+      pane = ENV['HERDR_PANE_ID']
+      return warn('Not running inside a Herdr pane') unless pane
+
+      hiiro.herdr_client.run_in_pane(pane, "cd #{path.shellescape}")
     end
 
     # --- Private helpers ---
@@ -696,12 +676,11 @@ class Hiiro
       Hiiro::Git.new(nil, path).sparse_checkout(path, dirs)
     end
 
-    def capture_tmux_windows(session)
-      output = `tmux list-windows -t #{session} -F '\#{window_index}:\#{window_name}:\#{pane_current_path}' 2>/dev/null`
-      output.lines.map(&:strip).map { |line|
-        idx, name, path = line.split(':')
-        { 'index' => idx, 'name' => name, 'path' => path }
-      }
+    def capture_herdr_tabs(workspace_name)
+      workspace = hiiro.herdr_client.find_workspace(workspace_name)
+      return [] unless workspace
+
+      hiiro.herdr_client.tabs(workspace: workspace).map(&:to_h)
     end
 
     class Config
@@ -1027,13 +1006,9 @@ class Hiiro
             next unless selected
 
             case selected
-            when Hiiro::Tmux::Session
-              if selected.attached? && !opts.force
-                puts "Session '#{selected.name}' is already attached. Use -f to switch anyway."
-                exit 1
-              end
-              h.start_tmux_session(selected.name)
-              puts "Switched to session '#{selected.name}'"
+            when Hiiro::Herdr::Workspace
+              h.herdr_client.focus_workspace(selected.id)
+              puts "Switched to workspace '#{selected.name}'"
               next
             when Hiiro::Task
               tm.switch_to_task(selected, app_name: app_name, force: opts.force)
@@ -1043,16 +1018,12 @@ class Hiiro
 
           task = tm.task_by_name(task_name)
 
-          # If no task found, check for a matching tmux session
+          # If no task found, check for a matching Herdr workspace.
           unless task
             session = tm.environment.find_session(task_name)
             if session
-              if session.attached? && !opts.force
-                puts "Session '#{session.name}' is already attached. Use -f to switch anyway."
-                exit 1
-              end
-              h.start_tmux_session(session.name)
-              puts "Switched to session '#{session.name}'"
+              h.herdr_client.focus_workspace(session.id)
+              puts "Switched to workspace '#{session.name}'"
               next
             end
           end
@@ -1064,7 +1035,7 @@ class Hiiro
             result = Hiiro::Matcher.by_prefix(dir_names, task_name)
             if result.one?
               dir_name = result.first.item
-              h.start_tmux_session(dir_name, start_directory: File.expand_path("~/proj/#{dir_name}"))
+              h.start_herdr_workspace(dir_name, start_directory: File.expand_path("~/proj/#{dir_name}"))
               puts "Switched to ~/proj/#{dir_name}"
               next
             elsif result.ambiguous?
@@ -1207,22 +1178,28 @@ class Hiiro
           require 'shellwords'
           sh_opts_block = proc {
             instance_exec(&task_opts_block)
-            option(:session, short: :s, desc: 'Run in a new window in this tmux session')
+            option(:session, short: :s, desc: 'Run in a new tab in this Herdr workspace')
           }
           opts = Hiiro::Options.parse(raw_args, &sh_opts_block)
           task, positional = resolve_task.call(opts, opts.args)
           unless task
-            puts "Not in a task session (use -t or -f to specify)"
+            puts "Not in a task workspace (use -t or -f to specify)"
             next
           end
           path = tm.resolve_path(task)
 
           if opts.session
-            session_name = opts.session
-            window_args = ['tmux', 'new-window', '-t', session_name, '-c', path]
-            window_args << positional.shelljoin unless positional.empty?
-            system(*window_args)
-            tmux_client.open_session(session_name)
+            workspace = h.herdr_client.find_workspace(opts.session)
+            unless workspace
+              puts "Workspace '#{opts.session}' not found"
+              next
+            end
+            h.herdr_client.new_tab(
+              workspace: workspace,
+              start_directory: path,
+              command: positional.empty? ? nil : positional.shelljoin,
+              focus: true
+            )
           else
             Dir.chdir(path)
             positional.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*positional)
@@ -1264,21 +1241,6 @@ class Hiiro
             puts
             puts "Re-run with -f to actually delete."
           end
-        end
-
-        h.add_subcmd(:color) do
-          task = tm.current_task
-          unless task
-            puts "Not in a task session"
-            next
-          end
-          unless task.color_index
-            puts "No color assigned to task '#{task.name}'"
-            next
-          end
-          Hiiro::TaskColors.apply(task.session_name, task.color_index)
-          colors = Hiiro::TaskColors.for_index(task.color_index)
-          puts "Applied color theme #{task.color_index}: bg=#{colors[:bg]} fg=#{colors[:fg]}"
         end
 
         h.add_subcmd(:stop) do |task_name=nil|
@@ -1685,7 +1647,7 @@ class Hiiro
     end
 
     def all_sessions
-      @all_sessions ||= Hiiro::Tmux::Session.all
+      @all_sessions ||= Hiiro::Herdr.client.workspaces.to_a
     end
 
     def all_trees
@@ -1724,7 +1686,7 @@ class Hiiro
     end
 
     def session
-      @session ||= Hiiro::Tmux::Session.current
+      @session ||= Hiiro::Herdr.client.current_workspace
     end
 
     def tree

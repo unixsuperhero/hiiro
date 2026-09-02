@@ -31,54 +31,40 @@ class NotifyPluginTest < Minitest::Test
   end
 
   def test_notify_method_builds_correct_args
-    mock = MockHiiro.new
-    captured_args = nil
-
-    # Stub system to capture the args
-    mock.define_singleton_method(:system) do |*args|
-      captured_args = args
-      true
-    end
-
-    Notify.attach_methods(mock)
+    mock, herdr = build_notifier
     mock.notify("Hello", title: "Title")
 
-    # Should include message and title flags
-    assert_includes captured_args, '-message'
-    assert_includes captured_args, 'Hello'
-    assert_includes captured_args, '-title'
-    assert_includes captured_args, 'Title'
+    assert_equal [
+      { title: "Title", body: "Hello", sound: :none },
+    ], herdr.notifications
   end
 
   def test_notify_method_includes_link_when_provided
-    mock = MockHiiro.new
-    captured_args = nil
-
-    mock.define_singleton_method(:system) do |*args|
-      captured_args = args
-      true
-    end
-
-    Notify.attach_methods(mock)
+    mock, herdr = build_notifier
     mock.notify("Click me", link: "https://example.com")
 
-    assert_includes captured_args, '-open'
-    assert_includes captured_args, 'https://example.com'
+    assert_equal "Click me\nhttps://example.com", herdr.notifications.first[:body]
   end
 
   def test_notify_method_includes_command_when_provided
-    mock = MockHiiro.new
-    captured_args = nil
-
-    mock.define_singleton_method(:system) do |*args|
-      captured_args = args
-      true
-    end
-
-    Notify.attach_methods(mock)
+    mock, herdr = build_notifier
     mock.notify("Run this", command: "open .")
 
-    assert_includes captured_args, '-execute'
-    assert_includes captured_args, 'open .'
+    assert_equal "Run this\nopen .", herdr.notifications.first[:body]
+  end
+
+  private
+
+  def build_notifier
+    herdr = Struct.new(:notifications) do
+      def notify(title, body:, sound:)
+        notifications << { title:, body:, sound: }
+      end
+    end.new([])
+
+    mock = MockHiiro.new
+    mock.define_singleton_method(:herdr_client) { herdr }
+    Notify.attach_methods(mock)
+    [mock, herdr]
   end
 end

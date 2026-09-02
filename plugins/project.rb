@@ -38,14 +38,14 @@ module Project
         end
         puts "changing dir: #{path}"
         Dir.chdir(path)
-        hiiro.start_tmux_session(name)
+        hiiro.start_herdr_workspace(name, start_directory: path)
         next
       end
 
       name = project_name.to_s
       puts "changing dir: #{path}"
       Dir.chdir(path)
-      hiiro.start_tmux_session(name)
+      hiiro.start_herdr_workspace(name, start_directory: path)
     end
   end
 end
