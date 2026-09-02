@@ -14,10 +14,20 @@ class Hiiro
         String :task
         String :worktree
         String :git_branch
-        String :tmux_session
-        String :tmux_window
-        String :tmux_pane
+        String :herdr_workspace
+        String :herdr_tab
+        String :herdr_pane
         String :entered_at
+      end
+    end
+
+    def self.migrate!(db)
+      columns = db.schema(:invocations).map(&:first)
+      additions = %i[herdr_workspace herdr_tab herdr_pane] - columns
+      return if additions.empty?
+
+      db.alter_table(:invocations) do
+        additions.each { |column| add_column column, String }
       end
     end
 
@@ -58,9 +68,9 @@ class Hiiro
           task: ENV['HIIRO_TASK'],
           worktree: detect_worktree,
           git_branch: detect_git_branch,
-          tmux_session: detect_tmux_session,
-          tmux_window: detect_tmux_window,
-          tmux_pane: ENV['TMUX_PANE'],
+          herdr_workspace: ENV['HERDR_WORKSPACE_ID'],
+          herdr_tab: ENV['HERDR_TAB_ID'],
+          herdr_pane: ENV['HERDR_PANE_ID'],
           entered_at: Time.now.iso8601
         )
 
@@ -94,19 +104,6 @@ class Hiiro
       nil
     end
 
-    def self.detect_tmux_session
-      return nil unless ENV['TMUX']
-      `tmux display-message -p '#S' 2>/dev/null`.chomp.then { |s| s.empty? ? nil : s }
-    rescue
-      nil
-    end
-
-    def self.detect_tmux_window
-      return nil unless ENV['TMUX']
-      `tmux display-message -p '#W' 2>/dev/null`.chomp.then { |w| w.empty? ? nil : w }
-    rescue
-      nil
-    end
   end
 
   class InvocationResolution < Sequel::Model(:invocation_resolutions)

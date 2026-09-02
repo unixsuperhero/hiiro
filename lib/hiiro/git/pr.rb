@@ -9,7 +9,7 @@ class Hiiro
       attr_accessor :number, :title, :state, :url, :head_branch, :base_branch,
                     :repo, :slot, :is_draft, :mergeable, :review_decision,
                     :checks, :check_runs, :reviews, :last_checked, :pinned_at, :updated_at,
-                    :task, :worktree, :tmux_session, :tags, :assigned, :authored, :depends_on
+                    :task, :worktree, :herdr_workspace, :tags, :assigned, :authored, :depends_on
 
       # Load all pinned PRs from YAML, returning an array of Pr instances.
       def self.pinned_prs
@@ -80,7 +80,7 @@ class Hiiro
           updated_at:      hash['updated_at'],
           task:            hash['task'],
           worktree:        hash['worktree'],
-          tmux_session:    hash['tmux_session'],
+          herdr_workspace: hash['herdr_workspace'] || hash['tmux_session'],
           tags:            hash['tags'],
           assigned:        hash['assigned'],
           authored:        hash['authored'],
@@ -193,7 +193,8 @@ class Hiiro
                      repo: nil, slot: nil, is_draft: nil, mergeable: nil, review_decision: nil,
                      checks: nil, check_runs: nil, reviews: nil, last_checked: nil,
                      pinned_at: nil, updated_at: nil,
-                     task: nil, worktree: nil, tmux_session: nil, tags: nil, assigned: nil, authored: nil,
+                     task: nil, worktree: nil, herdr_workspace: nil, tmux_session: nil,
+                     tags: nil, assigned: nil, authored: nil,
                      depends_on: nil)
         @number          = number
         @title           = title
@@ -214,11 +215,17 @@ class Hiiro
         @updated_at      = updated_at
         @task            = task
         @worktree        = worktree
-        @tmux_session    = tmux_session
+        @herdr_workspace = herdr_workspace || tmux_session
         @tags            = tags
         @assigned        = assigned
         @authored        = authored
         @depends_on      = depends_on ? Array(depends_on).map(&:to_i) : nil
+      end
+
+      # Compatibility accessors for older callers and serialized records.
+      def tmux_session = herdr_workspace
+      def tmux_session=(value)
+        self.herdr_workspace = value
       end
 
       def open?        = state&.upcase == 'OPEN'
@@ -288,7 +295,7 @@ class Hiiro
           'updated_at'          => updated_at,
           'task'                => task,
           'worktree'            => worktree,
-          'tmux_session'        => tmux_session,
+          'herdr_workspace'     => herdr_workspace,
           'tags'                => (Array(tags).empty? ? nil : tags),
           'assigned'            => assigned,
           'authored'            => authored,
@@ -318,7 +325,7 @@ class Hiiro
           updated_at:      updated_at,
           task:            task,
           worktree:        worktree,
-          tmux_session:    tmux_session,
+          herdr_workspace: herdr_workspace,
           tags:            tags,
           assigned:        assigned,
           authored:        authored,

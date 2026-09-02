@@ -128,7 +128,7 @@ class Hiiro
         updates[:reviews_json]    = Hiiro::DB::JSON.dump(pr.reviews)    unless pr.reviews.nil?
         updates[:task]            = pr.task            unless pr.task.nil?
         updates[:worktree]        = pr.worktree        unless pr.worktree.nil?
-        updates[:tmux_session]    = pr.tmux_session    unless pr.tmux_session.nil?
+        updates[:herdr_workspace] = pr.herdr_workspace unless pr.herdr_workspace.nil?
         updates[:tags_json]       = Hiiro::DB::JSON.dump(pr.tags) unless pr.tags.nil?
         updates[:assigned]        = pr.assigned        unless pr.assigned.nil?
         updates[:authored]        = pr.authored        unless pr.authored.nil?

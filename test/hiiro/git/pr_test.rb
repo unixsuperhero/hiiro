@@ -106,4 +106,16 @@ class GitPrTest < Minitest::Test
     refute pr.closed?
     refute pr.merged?
   end
+
+  def test_legacy_session_metadata_maps_to_herdr_workspace
+    pr = Hiiro::Git::Pr.from_pinned_hash(
+      'number' => 1,
+      'tmux_session' => 'feature',
+    )
+
+    assert_equal 'feature', pr.herdr_workspace
+    assert_equal 'feature', pr.tmux_session
+    assert_equal 'feature', pr.to_pinned_h['herdr_workspace']
+    refute pr.to_pinned_h.key?('tmux_session')
+  end
 end

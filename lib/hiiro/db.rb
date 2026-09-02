@@ -195,6 +195,8 @@ class Hiiro
         branches.each do |row|
           next unless row.is_a?(Hash)
           normalized = row.transform_keys(&:to_s)
+          herdr = normalized.delete('herdr')
+          normalized['herdr_json'] = ::JSON.generate(herdr) if herdr
           tmux = normalized.delete('tmux')
           normalized['tmux_json'] = ::JSON.generate(tmux) if tmux
           connection[:branches].insert(normalized)
@@ -236,12 +238,13 @@ class Hiiro
         'reviews'           => 'reviews_json',
         'tags'              => 'tags_json',
         'depends_on'        => 'depends_on_json',
+        'tmux_session'      => 'herdr_workspace',
       }.freeze
 
       PINNED_PR_COLUMNS = %w[
         number title state url head_ref_name branch repo slot pinned is_draft mergeable
         review_decision checks_json check_runs_json reviews_json task worktree
-        tmux_session tmux_json tags_json assigned authored depends_on_json last_checked
+        herdr_workspace tmux_session tmux_json tags_json assigned authored depends_on_json last_checked
         pinned_at created_at updated_at
       ].freeze
 

@@ -31,6 +31,7 @@ class Hiiro
         String :reviews_json       # JSON: { approved, changes_requested, reviewers }
         String :task
         String :worktree
+        String :herdr_workspace
         String :tmux_session
         String :tmux_json          # from old TrackedPr: JSON { session, window, pane }
         String :tags_json          # JSON array of strings
@@ -50,6 +51,18 @@ class Hiiro
         end
       end
       db.drop_table?(:pinned_prs)
+    end
+
+    def self.migrate!(db)
+      columns = db.schema(:prs).map(&:first)
+      unless columns.include?(:herdr_workspace)
+        db.alter_table(:prs) { add_column :herdr_workspace, String }
+      end
+
+      db[:prs]
+        .where(herdr_workspace: nil)
+        .exclude(tmux_session: nil)
+        .update(herdr_workspace: Sequel[:tmux_session])
     end
 
     # --- JSON virtual accessors ---
@@ -107,7 +120,7 @@ class Hiiro
         depends_on_json: Hiiro::DB::JSON.dump(pr.depends_on),
         task:            pr.task,
         worktree:        pr.worktree,
-        tmux_session:    pr.tmux_session,
+        herdr_workspace: pr.herdr_workspace,
         assigned:        pr.assigned,
         authored:        pr.authored,
         last_checked:    pr.last_checked,
@@ -136,7 +149,7 @@ class Hiiro
         reviews:         reviews,
         task:            task,
         worktree:        worktree,
-        tmux_session:    tmux_session,
+        herdr_workspace: herdr_workspace || tmux_session,
         tags:            tags,
         assigned:        assigned,
         authored:        authored,
@@ -168,7 +181,7 @@ class Hiiro
         'updated_at'        => updated_at,
         'task'              => task,
         'worktree'          => worktree,
-        'tmux_session'      => tmux_session,
+        'herdr_workspace'   => herdr_workspace || tmux_session,
         'tags'              => (Array(tags).empty? ? nil : tags),
         'assigned'          => assigned,
         'authored'          => authored,
