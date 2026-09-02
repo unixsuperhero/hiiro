@@ -77,7 +77,7 @@ end
 # DEPRECATED: Use Hiiro::Effects::NullExecutor instead.
 # SystemCallCapture patches Kernel.system globally and has no awareness
 # of which command type is being called. Prefer injecting NullExecutor
-# via null_tmux / null_git helpers in TestHarness.
+# via null_herdr / null_git helpers in TestHarness.
 module SystemCallCapture
   def self.included(base)
     base.class_eval do
@@ -180,7 +180,7 @@ class Hiiro
       harness = new
       block = nil
 
-      # Apply pre-setup stubs (e.g., tmux_client) before loading
+      # Apply pre-setup stubs (e.g., herdr_client) before loading
       harness.instance_eval(&setup_block) if setup_block
 
       # Temporarily replace Hiiro.run to capture the block
@@ -206,7 +206,7 @@ class Hiiro
       define_singleton_method(name, &block)
     end
 
-    # Stubs for Hiiro#add_resolver / #resolve — called by Hiiro::Tmux.add_resolvers during load_bin.
+    # Stubs for Hiiro#add_resolver / #resolve — called by Hiiro::Herdr.add_resolvers during load_bin.
     def add_resolver(name, current = nil, &lookup)
       @resolvers ||= {}
       @resolvers[name.to_sym] = { current:, lookup: }
@@ -230,9 +230,9 @@ class Hiiro
     end
 
     # Initialize Effects doubles. After calling this:
-    #   harness.executor        → NullExecutor (shared by null_tmux + null_git)
+    #   harness.executor        → NullExecutor (shared by null_herdr + null_git)
     #   harness.fs              → NullFilesystem
-    #   harness.null_tmux       → Hiiro::Tmux with executor injected
+    #   harness.null_herdr      → Hiiro::Herdr with executor injected
     #   harness.null_git        → Hiiro::Git  with executor injected
     #   harness.null_fs         → the same NullFilesystem instance
     def setup_effects
@@ -242,7 +242,7 @@ class Hiiro
 
     attr_reader :executor, :fs
 
-    def null_tmux = Hiiro::Tmux.new(executor: @executor)
+    def null_herdr = Hiiro::Herdr.new(executor: @executor)
     def null_git  = Hiiro::Git.new(nil, '/fake/root', executor: @executor)
     def null_fs   = @fs
   end

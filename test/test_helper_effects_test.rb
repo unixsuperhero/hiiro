@@ -6,18 +6,18 @@ class TestHarnessEffectsTest < Minitest::Test
     @harness.setup_effects
   end
 
-  def test_null_tmux_returns_tmux_instance
-    assert_instance_of Hiiro::Tmux, @harness.null_tmux
+  def test_null_herdr_returns_herdr_instance
+    assert_instance_of Hiiro::Herdr, @harness.null_herdr
   end
 
   def test_null_git_returns_git_instance
     assert_instance_of Hiiro::Git, @harness.null_git
   end
 
-  def test_executor_records_tmux_calls
-    @harness.null_tmux.server_running?
-    assert @harness.executor.called?('tmux')
-    assert @harness.executor.called?('has-session')
+  def test_executor_records_herdr_calls
+    @harness.null_herdr.server_running?
+    assert @harness.executor.called?('herdr')
+    assert @harness.executor.called?('status')
   end
 
   def test_executor_records_git_calls
@@ -26,9 +26,10 @@ class TestHarnessEffectsTest < Minitest::Test
     assert @harness.executor.called?('rev-parse')
   end
 
-  def test_null_tmux_run_calls_use_null_executor
-    @harness.null_tmux.new_window(name: 'mywindow')
-    assert @harness.executor.called?('new-window')
+  def test_null_herdr_run_calls_use_null_executor
+    @harness.null_herdr.new_tab(name: 'mytab')
+    assert @harness.executor.called?('tab')
+    assert @harness.executor.called?('create')
   end
 
   def test_null_filesystem_starts_empty
@@ -56,15 +57,15 @@ class TestHarnessEffectsTest < Minitest::Test
   end
 
   def test_executor_reset_clears_calls
-    @harness.null_tmux.server_running?
-    assert @harness.executor.called?('tmux')
+    @harness.null_herdr.server_running?
+    assert @harness.executor.called?('herdr')
     @harness.executor.reset!
-    refute @harness.executor.called?('tmux')
+    refute @harness.executor.called?('herdr')
   end
 
-  def test_multiple_null_tmux_instances_share_executor
-    @harness.null_tmux.server_running?
-    @harness.null_tmux.new_window(name: 'x')
+  def test_multiple_null_herdr_instances_share_executor
+    @harness.null_herdr.server_running?
+    @harness.null_herdr.new_tab(name: 'x')
     assert_equal 2, @harness.executor.calls.size
   end
 end

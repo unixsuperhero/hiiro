@@ -14,8 +14,8 @@ class Hiiro
     # Usage:
     #   ex = NullExecutor.new
     #   ex.stub('new-window', '')        # stub any call containing 'new-window'
-    #   tmux = Hiiro::Tmux.new(executor: ex)
-    #   tmux.new_window('mysession', 'main')
+    #   herdr = Hiiro::Herdr.new(executor: ex)
+    #   herdr.new_tab(name: 'main')
     #   assert ex.called?('new-window')
     class NullExecutor
       attr_reader :calls

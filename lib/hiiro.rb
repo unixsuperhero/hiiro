@@ -29,9 +29,8 @@ require_relative "hiiro/queue"
 require_relative "hiiro/task_record"
 require_relative "hiiro/app_record"
 require_relative "hiiro/assignment"
-require_relative "hiiro/task_colors"
 require_relative "hiiro/tasks"
-require_relative "hiiro/tmux"
+require_relative "hiiro/herdr"
 require_relative "hiiro/todo"
 require_relative "hiiro/service_manager"
 require_relative "hiiro/runner_tool"
@@ -228,12 +227,12 @@ class Hiiro
     Hiiro::Config.open(file, dir: dir)
   end
 
-  def tmux_client
-    @tmux_client ||= Tmux.client!(self)
+  def herdr_client
+    @herdr_client ||= Herdr.client!(self)
   end
 
-  def start_tmux_session(name, **opts)
-    tmux_client.open_session(name, **opts)
+  def start_herdr_workspace(name, **opts)
+    herdr_client.open_workspace(name, **opts)
   end
 
   def make_child(custom_subcmd=nil, custom_args=nil, **kwargs, &block)
