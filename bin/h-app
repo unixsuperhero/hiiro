@@ -25,12 +25,10 @@ def relative_cd_path(target_path)
 end
 
 def send_cd(path)
-  pane = ENV['TMUX_PANE']
-  if pane
-    system('tmux', 'send-keys', '-t', pane, "cd #{path}\n")
-  else
-    system('tmux', 'send-keys', "cd #{path}\n")
-  end
+  pane = ENV['HERDR_PANE_ID']
+  return warn('Not running inside a Herdr pane') unless pane
+
+  Hiiro::Herdr.client.run_in_pane(pane, "cd #{path.shellescape}")
 end
 
 

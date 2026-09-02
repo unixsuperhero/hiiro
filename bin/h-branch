@@ -36,7 +36,7 @@ class BranchManager
       name:     entry[:name],
       worktree: entry[:worktree],
       task:     entry[:task],
-      tmux:     entry[:tmux],
+      herdr:    entry[:herdr],
       sha:      entry[:sha]
     )
     show_entry(entry)
@@ -104,7 +104,7 @@ class BranchManager
         name:       branch_name,
         worktree:   entry[:worktree],
         task:       entry[:task],
-        tmux_json:  Hiiro::DB::JSON.dump(entry[:tmux]),
+        herdr_json: Hiiro::DB::JSON.dump(entry[:herdr]),
         sha:        entry[:sha],
         created_at: Time.now.iso8601
       )
@@ -119,7 +119,7 @@ class BranchManager
         'name'       => b.name,
         'worktree'   => b.worktree,
         'task'       => b.task,
-        'tmux'       => b.tmux.empty? ? nil : b.tmux,
+        'herdr'      => b.herdr.empty? ? nil : b.herdr,
         'sha'        => b.sha,
         'note'       => b.note,
         'created_at' => b.created_at
@@ -132,7 +132,7 @@ class BranchManager
 
   def build_entry(branch_name)
     current_task = Hiiro::Environment.current&.task rescue nil
-    tmux_info = capture_tmux_info
+    herdr_info = capture_herdr_info
     sha = `git rev-parse HEAD 2>/dev/null`.strip
 
     {
@@ -140,7 +140,7 @@ class BranchManager
       sha:      sha.empty? ? nil : sha,
       worktree: current_task&.tree_name,
       task:     current_task&.name,
-      tmux:     tmux_info
+      herdr:    herdr_info
     }
   end
 
@@ -150,13 +150,13 @@ class BranchManager
     hiiro.git.branch
   end
 
-  def capture_tmux_info
-    return nil unless ENV['TMUX']
+  def capture_herdr_info
+    return nil unless ENV['HERDR_ENV'] == '1'
 
     {
-      'session' => `tmux display-message -p '#S'`.strip,
-      'window'  => `tmux display-message -p '#W'`.strip,
-      'pane'    => ENV['TMUX_PANE']
+      'workspace' => ENV['HERDR_WORKSPACE_ID'],
+      'tab' => ENV['HERDR_TAB_ID'],
+      'pane' => ENV['HERDR_PANE_ID'],
     }
   end
 
@@ -165,20 +165,20 @@ class BranchManager
     puts "  SHA: #{entry[:sha] || '(unknown)'}"
     puts "  Task: #{entry[:task] || '(none)'}"
     puts "  Worktree: #{entry[:worktree] || '(none)'}"
-    if entry[:tmux]
-      puts "  Tmux session: #{entry[:tmux]['session']}"
-      puts "  Tmux window: #{entry[:tmux]['window']}"
-      puts "  Tmux pane: #{entry[:tmux]['pane']}"
+    if entry[:herdr]
+      puts "  Herdr workspace: #{entry[:herdr]['workspace']}"
+      puts "  Herdr tab: #{entry[:herdr]['tab']}"
+      puts "  Herdr pane: #{entry[:herdr]['pane']}"
     end
   end
 
-  def save_branch(name:, worktree:, task:, tmux: nil, sha: nil)
+  def save_branch(name:, worktree:, task:, herdr: nil, sha: nil)
     existing = Hiiro::Branch.find_by_name(name)
     if existing
       existing.update(
         worktree:   worktree,
         task:       task,
-        tmux_json:  Hiiro::DB::JSON.dump(tmux),
+        herdr_json: Hiiro::DB::JSON.dump(herdr),
         sha:        sha,
         updated_at: Time.now.iso8601
       )
@@ -187,7 +187,7 @@ class BranchManager
         name:       name,
         worktree:   worktree,
         task:       task,
-        tmux_json:  Hiiro::DB::JSON.dump(tmux),
+        herdr_json: Hiiro::DB::JSON.dump(herdr),
         sha:        sha,
         created_at: Time.now.iso8601
       )
@@ -301,10 +301,10 @@ Hiiro.run(*ARGV) do
     puts "  SHA:      #{entry[:sha] || '(unknown)'}"
     puts "  Task:     #{entry[:task] || '(none)'}"
     puts "  Worktree: #{entry[:worktree] || '(none)'}"
-    if entry[:tmux]
-      puts "  Tmux session: #{entry[:tmux]['session']}"
-      puts "  Tmux window:  #{entry[:tmux]['window']}"
-      puts "  Tmux pane:    #{entry[:tmux]['pane']}"
+    if entry[:herdr]
+      puts "  Herdr workspace: #{entry[:herdr]['workspace']}"
+      puts "  Herdr tab:       #{entry[:herdr]['tab']}"
+      puts "  Herdr pane:      #{entry[:herdr]['pane']}"
     end
 
     base = FIND_BASE.call

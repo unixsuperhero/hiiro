@@ -4,8 +4,8 @@ require 'hiiro'
 require 'yaml'
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
-  tmux = tmux_client
-  Hiiro::Tmux.add_resolvers(self)
+  herdr = herdr_client
+  Hiiro::Herdr.add_resolvers(self)
 
   home_config_path = Hiiro::Config.path('pane_homes.yml')
 
@@ -26,14 +26,12 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         if existing
           existing.update(data_json: Hiiro::DB::JSON.dump(data))
         else
-          ph = PaneHome.new(name: name.to_s)
-          ph.data = data
-          ph.save
+          pane_home = PaneHome.new(name: name.to_s)
+          pane_home.data = data
+          pane_home.save
         end
       end
-      # Remove deleted entries
       PaneHome.where(Sequel.~(name: config.keys.map(&:to_s))).delete
-      # Dual-write: rewrite YAML backup
       File.write(home_config_path, config.to_yaml)
     rescue => e
       warn "PaneHome DB save failed: #{e}"
@@ -43,125 +41,106 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
   add_subcmd(:ls) { |*args|
     if args.empty?
-      tmux.panes.each { |p| puts p.to_s }
+      herdr.panes(workspace: ENV['HERDR_WORKSPACE_ID']).each { |pane| puts pane }
     else
-      system('tmux', 'list-panes', *args)
+      system('herdr', 'pane', 'list', *args)
     end
   }
 
   add_subcmd(:lsa) { |*args|
-    if args.empty?
-      tmux.panes(all: true).each { |p| puts p.to_s }
-    else
-      system('tmux', 'list-panes', '-a', *args)
-    end
+    args.empty? ? herdr.panes(all: true).each { |pane| puts pane } : system('herdr', 'pane', 'list', *args)
   }
 
-  add_subcmd(:split) { |*args|
-    system('tmux', 'split-window', *args)
+  add_subcmd(:split) { |direction = 'right', *args|
+    system('herdr', 'pane', 'split', '--current', '--direction', direction, *args)
   }
 
   add_subcmd(:hsplit, :splith) { |*args|
-    if args.empty?
-      tmux.split_window(horizontal: false)
-    else
-      system('tmux', 'split-window', '-v', *args)
-    end
+    args.empty? ? herdr.hsplit_window : system('herdr', 'pane', 'split', '--current', '--direction', 'down', *args)
   }
 
   add_subcmd(:vsplit, :splitv) { |*args|
-    if args.empty?
-      tmux.split_window(horizontal: true)
-    else
-      system('tmux', 'split-window', '-h', *args)
-    end
+    args.empty? ? herdr.vsplit_window : system('herdr', 'pane', 'split', '--current', '--direction', 'right', *args)
   }
 
-  add_subcmd(:kill) { |target = nil, *args|
+  add_subcmd(:kill) { |target = nil|
     target = resolve(:pane, target)
-
-    if target && args.empty?
-      tmux.kill_pane(target)
-    elsif target
-      system('tmux', 'kill-pane', '-t', target, *args)
-    end
+    herdr.kill_pane(target) if target
   }
 
-  add_subcmd(:swap) { |*args|
-    system('tmux', 'swap-pane', *args)
-  }
-
-  add_subcmd(:zoom) { |target = nil, *args|
-    if args.empty?
-      tmux.resize_pane(target: target, zoom: true)
+  add_subcmd(:swap) { |source = nil, target = nil|
+    if source && target
+      herdr.swap_pane(source, target)
+    elsif source
+      herdr.swap_current_pane(source.to_sym)
     else
-      system('tmux', 'resize-pane', '-Z', *[target && "-t", target, *args].compact)
+      puts 'Usage: h pane swap <left|right|up|down> OR h pane swap <source> <target>'
     end
   }
 
-  add_subcmd(:capture) { |*args|
-    if args.empty?
-      content = tmux.capture_pane
-      print content if content
-    else
-      system('tmux', 'capture-pane', *args)
-    end
+  add_subcmd(:zoom) { |target = nil|
+    herdr.zoom_pane(target)
   }
 
-  add_subcmd(:select) { |target = nil, *args|
+  add_subcmd(:capture) { |target = nil, lines = nil|
+    target ||= ENV['HERDR_PANE_ID']
+    content = herdr.read_pane(target, lines: lines)
+    print content if content
+  }
+
+  add_subcmd(:select) { |target = nil|
     target = resolve(:pane, target)
-
-    if target
-      print target
-    end
+    print target if target
   }
 
-  add_subcmd(:copy) { |target = nil, *args|
+  add_subcmd(:copy) { |target = nil|
     target = resolve(:pane, target)
-
     if target
       Hiiro::Shell.pipe(target, 'pbcopy')
       puts "Copied pane '#{target}' to clipboard"
     end
   }
 
-  add_subcmd(:sw, :switch) { |target = nil, *args|
+  add_subcmd(:sw, :switch) { |target = nil|
     target = resolve(:pane, target)
-    tmux.open_session(target) if target
+    herdr.focus_pane(target) if target
   }
 
-  add_subcmd(:home) { |*args|
+  add_subcmd(:home) do
     run_child(:home) do |h|
       h.add_subcmd(:ls) {
         homes = load_homes.call
         if homes.empty?
-          puts "No home panes configured."
-          puts "Use: h pane home add <name> <session> [path]"
+          puts 'No home panes configured.'
+          puts 'Use: h pane home add <name> <workspace> [path]'
         else
-          homes.each do |name, cfg|
-            path_str = cfg['path'] ? "  #{cfg['path']}" : ''
-            puts "#{name.ljust(20)} #{cfg['session']}#{path_str}"
+          homes.each do |name, config|
+            workspace = config['workspace'] || config['session']
+            path = config['path'] ? "  #{config['path']}" : ''
+            puts "#{name.ljust(20)} #{workspace}#{path}"
           end
         end
       }
 
-      h.add_subcmd(:add) { |name, session, path = nil|
-        unless name && session
-          puts "Usage: h pane home add <name> <session> [path]"
+      h.add_subcmd(:add) { |name, workspace, path = nil|
+        unless name && workspace
+          puts 'Usage: h pane home add <name> <workspace> [path]'
           next
         end
+
         homes = load_homes.call
-        homes[name] = { 'session' => session }
+        homes[name] = { 'workspace' => workspace }
         homes[name]['path'] = File.expand_path(path) if path
         save_homes.call(homes)
-        puts "Added '#{name}' → #{session}#{path ? " (#{File.expand_path(path)})" : ''}"
+        puts "Added '#{name}' → #{workspace}#{path ? " (#{File.expand_path(path)})" : ''}"
       }
 
       h.add_subcmd(:rm) { |name|
         unless name
-          puts "Usage: h pane home rm <name>"
+          puts 'Usage: h pane home rm <name>'
           next
         end
+
         homes = load_homes.call
         if homes.delete(name)
           save_homes.call(homes)
@@ -176,106 +155,86 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
         if name.nil?
           if homes.empty?
-            puts "No home panes configured. Use 'h pane home add <name> <session> [path]'"
+            puts "No home panes configured. Use 'h pane home add <name> <workspace> [path]'"
             next
           end
-          display_map = homes.each_with_object({}) do |(n, cfg), map|
-            label = "#{n}  [#{cfg['session']}#{cfg['path'] ? "  #{cfg['path']}" : ''}]"
-            map[label] = n
+          display_map = homes.each_with_object({}) do |(home_name, config), map|
+            workspace = config['workspace'] || config['session']
+            map["#{home_name}  [#{workspace}#{config['path'] ? "  #{config['path']}" : ''}]"] = home_name
           end
           name = fuzzyfind_from_map(display_map)
           next unless name
         end
 
-        cfg = homes[name]
-        unless cfg
-          matched = homes.keys.select { |k| k.start_with?(name) }
-          case matched.size
-          when 1
-            name = matched.first
-            cfg = homes[name]
-          when 0
-            puts "Home pane '#{name}' not found"
-            next
+        config = homes[name]
+        unless config
+          matches = homes.keys.select { |home_name| home_name.start_with?(name) }
+          if matches.one?
+            name = matches.first
+            config = homes[name]
           else
-            puts "Ambiguous home pane '#{name}': #{matched.join(', ')}"
+            puts(matches.empty? ? "Home pane '#{name}' not found" : "Ambiguous home pane '#{name}': #{matches.join(', ')}")
             next
           end
         end
 
-        session = cfg['session']
-        path = cfg['path']
-
-        if !tmux.session_exists?(session)
-          tmux.new_session(session, detached: true, start_directory: path, window_name: name)
-        else
-          window_names = `tmux list-windows -t #{session.shellescape} -F '\#{window_name}' 2>/dev/null`.lines(chomp: true)
-          unless window_names.include?(name)
-            dir = path || tmux.find_session(session)&.path
-            tmux.new_window(name: name, target: session, start_directory: dir)
-          end
+        workspace_name = config['workspace'] || config['session']
+        workspace = herdr.find_workspace(workspace_name)
+        unless workspace
+          herdr.new_workspace(workspace_name, start_directory: config['path'], tab_name: name, focus: true)
+          next
         end
 
-        target = "#{session}:#{name}"
-        if tmux.in_tmux?
-          system('tmux', 'switch-client', '-t', target)
-        else
-          system('tmux', 'attach-session', '-t', target)
+        tab = herdr.tabs(workspace: workspace).find { |candidate| candidate.name == name }
+        unless tab
+          result = herdr.new_tab(name: name, workspace: workspace, start_directory: config['path'], focus: true)
+          next if result['tab']
         end
+
+        herdr.focus_workspace(workspace.id)
+        herdr.focus_tab(tab.id) if tab
       }
     end
-  }
+  end
 
-  add_subcmd(:move) { |*args|
-    system('tmux', 'move-pane', *args)
-  }
-
-  add_subcmd(:break) { |*args|
-    if args.empty?
-      tmux.break_pane
-    else
-      system('tmux', 'break-pane', *args)
+  add_subcmd(:move) { |target, tab, split = 'right'|
+    unless target && tab
+      puts 'Usage: h pane move <pane> <tab> [right|down]'
+      next
     end
+    system('herdr', 'pane', 'move', target, '--tab', tab, '--split', split, '--focus')
   }
 
-  add_subcmd(:join) { |*args|
-    system('tmux', 'join-pane', *args)
+  add_subcmd(:break) { |target = nil|
+    herdr.break_pane(src: target)
   }
 
-  add_subcmd(:resize) { |*args|
-    system('tmux', 'resize-pane', *args)
-  }
-
-  add_subcmd(:width) { |size, target = nil, *args|
-    if target.nil? && args.empty?
-      tmux.resize_pane(width: size)
-    else
-      system('tmux', 'resize-pane', '-x', size, *[target && "-t", target, *args].compact)
+  add_subcmd(:join) { |source, target, direction = 'down'|
+    unless source && target
+      puts 'Usage: h pane join <source> <target> [right|down]'
+      next
     end
+    herdr.join_pane(source, target, horizontal: direction == 'right')
   }
 
-  add_subcmd(:height) { |size, target = nil, *args|
-    if target.nil? && args.empty?
-      tmux.resize_pane(height: size)
-    else
-      system('tmux', 'resize-pane', '-y', size, *[target && "-t", target, *args].compact)
+  add_subcmd(:resize) { |direction, amount = nil, target = nil|
+    unless %w[left right up down].include?(direction)
+      puts 'Usage: h pane resize <left|right|up|down> [amount] [pane]'
+      next
     end
+    herdr.resize_pane(target: target, direction: direction, amount: amount)
   }
 
   add_subcmd(:info) { |target = nil|
-    pane = if target
-      tmux.panes(all: true).find { |p| p.id == target }
-    else
-      tmux.current_pane
-    end
-
+    pane = target ? herdr.get_pane(target) : herdr.current_pane
     if pane
-      puts pane.to_s
-      puts "  Size: #{pane.width}x#{pane.height}"
-      puts "  Command: #{pane.command}"
-      puts "  Path: #{pane.path}"
+      puts pane
+      puts "  Size: #{pane.width}x#{pane.height}" if pane.width.positive? && pane.height.positive?
+      puts "  Agent: #{pane.agent}" if pane.agent
+      puts "  Path: #{pane.path || pane.cwd}" if pane.path || pane.cwd
+      puts "  Status: #{pane.agent_status}" if pane.agent_status
     else
-      puts "Pane not found"
+      puts 'Pane not found'
     end
   }
 end

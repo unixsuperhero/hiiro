@@ -238,7 +238,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       task = env.task
       pr_info.task         = task.name      if task
       pr_info.worktree     = task.tree_name if task&.tree_name
-      pr_info.tmux_session = env.session&.name
+      pr_info.herdr_workspace = env.session&.name
     end
 
     pinned_manager.pin(pr_info)
@@ -575,22 +575,23 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next
     end
 
-    # Resolve task session and working directory
-    target_session = nil
+    # Resolve the task's Herdr workspace and working directory.
+    target_workspace = nil
     working_dir = Dir.pwd
 
     if task_name
       env = Environment.current rescue nil
       task = env&.find_task(task_name)
       if task
-        target_session = task.session_name
+        target_workspace = task.session_name
         tree = task.tree
         working_dir = tree.path if tree
       end
     end
 
-    unless target_session && system('tmux', 'has-session', '-t', target_session, out: File::NULL, err: File::NULL)
-      puts "Task '#{task_name || '(none)'}' has no active tmux session"
+    workspace = target_workspace && herdr_client.find_workspace(target_workspace)
+    unless workspace
+      puts "Task '#{task_name || '(none)'}' has no active Herdr workspace"
       next
     end
 
@@ -613,8 +614,13 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     SH
     FileUtils.chmod(0755, script_path)
 
-    system('tmux', 'new-window', '-t', target_session, '-c', working_dir, script_path)
-    system('tmux', 'switch-client', '-t', target_session)
+    herdr_client.new_tab(
+      name: "pr-#{pr_number}",
+      workspace: workspace,
+      start_directory: working_dir,
+      command: script_path,
+      focus: true
+    )
   end
 
   add_subcmd(:rm) do |ref = nil|
@@ -749,7 +755,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       task_info = {
         task_name:    pr.task,
         tree_name:    pr.worktree,
-        session_name: pr.tmux_session,
+        session_name: pr.herdr_workspace,
       }.compact
       task_info = nil if task_info.empty?
 
@@ -1163,7 +1169,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       pr = pinned.find { |p| p.number.to_s == num }
       next unless pr
 
-      task_info = { task_name: pr.task, tree_name: pr.worktree, session_name: pr.tmux_session }.compact
+      task_info = { task_name: pr.task, tree_name: pr.worktree, session_name: pr.herdr_workspace }.compact
       task_info = nil if task_info.empty?
       result = q.add_with_frontmatter("/pr:fix #{pr.number}", task_info: task_info)
       if result

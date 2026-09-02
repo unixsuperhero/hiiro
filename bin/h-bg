@@ -16,9 +16,7 @@ def append_history(cmd)
 end
 
 def run_in_bg(cmd)
-  Hiiro::Background.ensure_session
-  name = cmd.split.first.to_s
-  system('tmux', 'new-window', '-d', '-t', "#{Hiiro::Background::SESSION}:", '-n', name, cmd)
+  Hiiro::Background.run(ENV['SHELL'] || 'zsh', '-lc', cmd)
 end
 
 Hiiro.run(*ARGV) do
@@ -57,7 +55,8 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:attach, :a) do
-    system('tmux', 'switch-client', '-t', Hiiro::Background::SESSION)
+    workspace = Hiiro::Background.ensure_workspace
+    Hiiro::Herdr.client.focus_workspace(workspace.id)
   end
 
   add_subcmd(:history, :hist) do
@@ -70,10 +69,6 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:setup) do
-    $stderr.puts 'Add this to your tmux.conf:'
-    $stderr.puts
-    puts "bind-key b display-popup -E -w 80% -h 40% \"h bg popup\""
-    $stderr.puts
-    $stderr.puts "Then reload tmux: tmux source-file ~/.tmux.conf"
+    puts 'No setup is required. Bind `h bg popup` in Herdr if you want a shortcut.'
   end
 end

@@ -26,8 +26,8 @@ Hiiro.run(*ARGV) {
     }.run
   }
 
-  add_subcmd(:tmux) {
-    open_config('.tmux.conf', dir: '~')
+  add_subcmd(:herdr) {
+    open_config('config.toml', dir: '~/.config/herdr')
   }
 
   add_subcmd(:zsh) {

@@ -1,52 +1,29 @@
 #!/usr/bin/env ruby
 
-require "hiiro"
-require "fileutils"
-require "yaml"
+require 'fileutils'
+require 'hiiro'
+require 'yaml'
 
 TYPE_PRESETS = {
-  'success' => { prefix: '[OK]',   sound: 'Glass', title: 'Success' },
-  'error'   => { prefix: '[ERR]',  sound: 'Basso', title: 'Error' },
-  'info'    => { prefix: '[INFO]', sound: 'Pop',   title: 'Info' },
-  'warning' => { prefix: '[WARN]', sound: 'Purr',  title: 'Warning' },
-}
+  'success' => { prefix: '[OK]', title: 'Success', sound: 'done' },
+  'error' => { prefix: '[ERR]', title: 'Error', sound: 'request' },
+  'info' => { prefix: '[INFO]', title: 'Info', sound: 'none' },
+  'warning' => { prefix: '[WARN]', title: 'Warning', sound: 'request' },
+}.freeze
 
 LOG_FILE = Hiiro::Config.data_path('notify_log.yml')
-
-TMUX_CONF       = File.join(Dir.home, '.tmux.conf')
-NOTIFY_CONF     = File.join(Dir.home, '.config', 'tmux', 'h-notify.tmux.conf')
 CLAUDE_SETTINGS = File.join(Dir.home, '.claude', 'settings.json')
-
-NOTIFY_TMUX_HOOKS = %w[after-kill-pane window-unlinked session-closed].freeze
-
-NOTIFY_TMUX_CONF_CONTENT = <<~'CONF'
-  # --- Notify hooks (clean up notifications when panes/windows/sessions close) ---
-  set-hook -g after-kill-pane  "run-shell -b 'h notify remove_pane \#{hook_pane_id}'"
-  set-hook -g session-closed   "run-shell -b 'h notify remove_session \#{hook_session_name}'"
-  # set-hook -g window-unlinked  "run-shell -b 'h notify remove_window \#{hook_window_id}'"
-
-  # --- Notify keybinding (prefix + N to open notification menu) ---
-  bind-key N run-shell "h notify menu"
-CONF
-
-CLAUDE_NOTIFICATION_CMD = %q(MSG=$(cat | jq -r '.message // "Needs input"'); h alert -t 'Claude Code' -m "$MSG" -s k -c "echo switchc -t '$TMUX_PANE' | pbcopy"; h notify push -t info "$MSG")
-CLAUDE_STOP_CMD         = %q(h alert -t 'Claude Code' -m 'Work completed' -s b -c "echo switchc -t '$TMUX_PANE' | pbcopy"; h notify push -t success 'Work completed')
+CLAUDE_NOTIFICATION_CMD = %q(MSG=$(cat | jq -r '.message // "Needs input"'); h notify push -t info "$MSG")
+CLAUDE_STOP_CMD = %q(h notify push -t success 'Work completed')
 
 def read_log
   return [] unless File.exist?(LOG_FILE)
+
   data = YAML.safe_load(File.read(LOG_FILE))
-  if data.is_a?(Hash)
-    backup = "#{LOG_FILE}.bak.#{Time.now.strftime('%Y%m%d%H%M%S')}"
-    FileUtils.cp(LOG_FILE, backup)
-    $stderr.puts "h notify: migrated log to flat format (backup: #{backup})"
-    migrated = data.values.flatten.compact.sort_by { |e| -(e['timestamp'] || 0) }
-    write_log(migrated)
-    migrated
-  elsif data.is_a?(Array)
-    data
-  else
-    []
-  end
+  return data if data.is_a?(Array)
+  return [] unless data.is_a?(Hash)
+
+  data.values.flatten.compact.sort_by { |entry| -(entry['timestamp'] || 0) }
 rescue
   []
 end
@@ -56,304 +33,162 @@ def write_log(data)
   File.write(LOG_FILE, data.to_yaml)
 end
 
-def current_pane
-  # Prefer $TMUX_PANE env var — it's reliably set even in hook subprocesses
-  env_id = ENV['TMUX_PANE'].to_s
-  if !env_id.empty?
-    Hiiro::Tmux::Panes.fetch(all: true).find_by_id(env_id)
-  else
-    Hiiro::Tmux::Pane.current
-  end
-end
-
-def pane_exists?(pane_id)
-  Hiiro::Tmux::Panes.fetch(all: true).find_by_id(pane_id)
-end
-
 Hiiro.run(*ARGV, tasks: true) do
   @opts = Hiiro::Options.parse(args) do
     option(:type, short: 't', desc: 'Notification type (success, error, info, warning)', default: 'info')
   end
-
   @preset = TYPE_PRESETS[@opts.type] || TYPE_PRESETS['info']
+
+  live_panes = -> { herdr_client.panes(all: true) }
 
   add_subcmd(:push) do
     message = @opts.args.join(' ')
     if message.empty?
-      puts "Usage: h notify push [-t TYPE] \"message\""
+      puts 'Usage: h notify push [-t TYPE] "message"'
       next
     end
 
-    pane    = current_pane
-    session = pane&.session_name || Hiiro::Tmux::Session.current&.name
-
-    unless pane && session
-      $stderr.puts "h notify push: not in a tmux session"
-      next
-    end
-
+    pane = herdr_client.current_pane
     entry = {
-      'pane_id'   => pane.id,
-      'window_id' => pane.window_id,
-      'session'   => session,
+      'workspace_id' => pane&.workspace_id || ENV['HERDR_WORKSPACE_ID'],
+      'tab_id' => pane&.tab_id || ENV['HERDR_TAB_ID'],
+      'pane_id' => pane&.id || ENV['HERDR_PANE_ID'],
+      'agent' => pane&.agent,
       'timestamp' => Time.now.to_i,
-      'pane_cmd'  => pane.command,
-      'message'   => message,
-      'type'      => @opts.type,
-    }
+      'message' => message,
+      'type' => @opts.type,
+    }.compact
 
     data = read_log
-    # One entry per pane — replace existing, newest first
-    data.reject! { |e| e['pane_id'] == pane.id }
+    data.reject! { |existing| entry['pane_id'] && existing['pane_id'] == entry['pane_id'] }
     data.unshift(entry)
     write_log(data)
-
-    binpath = `command -v terminal-notifier`
-    system(binpath,
-      '-title', @preset[:title],
-      '-message', message,
-      '-sound', @preset[:sound])
+    herdr_client.notify(@preset[:title], body: message, sound: @preset[:sound])
   end
 
   add_subcmd(:ls) do
     data = read_log
+    live_ids = live_panes.call.ids
+    current = data.select { |entry| !entry['pane_id'] || live_ids.include?(entry['pane_id']) }
+    removed = data.size - current.size
+    write_log(current) if removed.positive?
 
-    if data.empty?
-      puts "No notifications."
-    else
-      live_ids = Hiiro::Tmux::Panes.fetch(all: true).ids.to_set
-      pruned   = data.reject { |e| live_ids.include?(e['pane_id']) }
-      data     = data.select { |e| live_ids.include?(e['pane_id']) }
-      write_log(data) if pruned.any?
+    if current.empty?
+      puts(removed.positive? ? "No notifications (#{removed} stale entries removed)." : 'No notifications.')
+      next
+    end
 
-      if data.empty?
-        puts "No notifications (#{pruned.size} stale entries removed)."
-      else
-        puts "(#{pruned.size} stale entries removed.)" if pruned.any?
-        data.each_with_index do |e, i|
-          time_str = Time.at(e['timestamp']).strftime('%H:%M:%S')
-          prefix   = TYPE_PRESETS[e['type']]&.dig(:prefix) || '[INFO]'
-          puts "%3d) %s [%s/%s] %s: %s (%s)" % [i, prefix, e['session'], e['pane_id'], e['pane_cmd'], e['message'], time_str]
-        end
-      end
+    current.each_with_index do |entry, index|
+      time = Time.at(entry['timestamp']).strftime('%H:%M:%S')
+      prefix = TYPE_PRESETS[entry['type']]&.dig(:prefix) || '[INFO]'
+      location = [entry['workspace_id'], entry['tab_id'], entry['pane_id']].compact.join('/')
+      actor = entry['agent'] || 'pane'
+      puts "%3d) %s [%s] %s: %s (%s)" % [index, prefix, location, actor, entry['message'], time]
     end
   end
 
   add_subcmd(:prune) do
-    data     = read_log
-    live_ids = Hiiro::Tmux::Panes.fetch(all: true).ids.to_set
-    pruned   = data.reject { |e| live_ids.include?(e['pane_id']) }
-    write_log(data.select { |e| live_ids.include?(e['pane_id']) })
-    puts "Removed #{pruned.size} stale notification(s). #{data.size - pruned.size} remaining."
+    data = read_log
+    live_ids = live_panes.call.ids
+    current = data.select { |entry| !entry['pane_id'] || live_ids.include?(entry['pane_id']) }
+    write_log(current)
+    puts "Removed #{data.size - current.size} stale notification(s). #{current.size} remaining."
   end
 
   add_subcmd(:menu) do
-    data     = read_log
-    live_ids = Hiiro::Tmux::Panes.fetch(all: true).ids.to_set
-    entries  = data.select { |e| live_ids.include?(e['pane_id']) }
-    write_log(entries) if entries.size != data.size
-
+    entries = read_log
     if entries.empty?
+      puts 'No notifications.'
       next
     end
 
-    menu_args = ['-T', 'Notifications']
-
-    entries.first(10).each_with_index do |e, idx|
-      msg    = e['message']
-      msg    = msg[0..46] + '...' if msg.length > 50
-      prefix = TYPE_PRESETS[e['type']]&.dig(:prefix) || '[INFO]'
-      label  = "#{idx}: #{prefix} [#{e['pane_id']}] #{e['pane_cmd']}: #{msg}"
-      menu_args.push(label, idx.to_s, "run-shell 'h notify jump #{idx}'")
+    mapping = entries.each_with_index.each_with_object({}) do |(entry, index), choices|
+      prefix = TYPE_PRESETS[entry['type']]&.dig(:prefix) || '[INFO]'
+      choices["#{prefix} #{entry['message']} [#{entry['pane_id'] || 'no pane'}]"] = index
     end
-
-    menu_args.push('', '', 'Clear all', 'c', "run-shell 'h notify clear'")
-    system('tmux', 'display-menu', *menu_args)
+    index = fuzzyfind_from_map(mapping)
+    run_subcmd(:jump, index.to_s) if index
   end
 
-  add_subcmd(:jump) do |index_str = nil|
-    if index_str.nil?
-      puts "Usage: h notify jump INDEX"
+  add_subcmd(:jump) do |index_string = nil|
+    unless index_string
+      puts 'Usage: h notify jump INDEX'
       next
     end
 
-    index = index_str.to_i
-    data  = read_log
-
-    next if index >= data.length
-
+    data = read_log
+    index = index_string.to_i
     entry = data[index]
+    next unless entry
 
-    unless pane_exists?(entry['pane_id'])
-      data.delete_at(index)
-      write_log(data)
-      next
-    end
-
-    system('tmux', 'switch-client', '-t', entry['session'])
-    system('tmux', 'select-window', '-t', entry['window_id'])
-    system('tmux', 'select-pane',   '-t', entry['pane_id'])
-
+    herdr_client.focus_workspace(entry['workspace_id']) if entry['workspace_id']
+    herdr_client.focus_tab(entry['tab_id']) if entry['tab_id']
     data.delete_at(index)
     write_log(data)
   end
 
-  add_subcmd(:clear) do
-    write_log([])
-  end
+  add_subcmd(:clear) { write_log([]) }
 
-  # Called by tmux hook: after-kill-pane
   add_subcmd(:remove_pane) do |pane_id = nil|
     next unless pane_id
-    data = read_log
-    data.reject! { |e| e['pane_id'] == pane_id }
-    write_log(data)
+    write_log(read_log.reject { |entry| entry['pane_id'] == pane_id })
   end
 
-  # Called by tmux hook: window-unlinked
-  add_subcmd(:remove_window) do |window_id = nil|
-    next unless window_id
-    data = read_log
-    data.reject! { |e| e['window_id'] == window_id }
-    write_log(data)
+  add_subcmd(:remove_window, :remove_tab) do |tab_id = nil|
+    next unless tab_id
+    write_log(read_log.reject { |entry| entry['tab_id'] == tab_id })
   end
 
-  # Called by tmux hook: session-closed
-  add_subcmd(:remove_session) do |sess = nil|
-    next unless sess
-    data = read_log
-    data.reject! { |e| e['session'] == sess }
-    write_log(data)
+  add_subcmd(:remove_session, :remove_workspace) do |workspace_id = nil|
+    next unless workspace_id
+    write_log(read_log.reject { |entry| entry['workspace_id'] == workspace_id })
   end
 
-  # --- h notify tmux ---
-
-  add_subcmd(:tmux) do
-    make_child {
-      add_subcmd(:setup) do
-        FileUtils.mkdir_p(File.dirname(NOTIFY_CONF))
-        File.write(NOTIFY_CONF, NOTIFY_TMUX_CONF_CONTENT)
-        puts "Wrote #{NOTIFY_CONF}"
+  add_subcmd(:herdr) do
+    run_child(:herdr) do |child|
+      child.add_subcmd(:setup) do
+        puts 'No hooks are required. Hiiro uses Herdr notifications and live pane IDs directly.'
       end
-
-      add_subcmd(:add_hooks) do
-        source_line = "source-file #{NOTIFY_CONF}"
-
-        if File.exist?(TMUX_CONF)
-          existing = File.read(TMUX_CONF)
-          if existing.include?(source_line)
-            puts "#{TMUX_CONF} already sources #{NOTIFY_CONF}"
-          else
-            File.open(TMUX_CONF, 'a') { |f| f.puts; f.puts source_line }
-            puts "Added '#{source_line}' to #{TMUX_CONF}"
-          end
-        else
-          File.write(TMUX_CONF, source_line + "\n")
-          puts "Created #{TMUX_CONF} with source line"
-        end
-
-        system('tmux', 'source-file', TMUX_CONF)
-        puts "Reloaded #{TMUX_CONF}"
-      end
-
-      add_subcmd(:reset_hooks) do
-        NOTIFY_TMUX_HOOKS.each do |hook|
-          system('tmux', 'set-hook', '-gu', hook)
-          puts "Unset tmux hook: #{hook}"
-        end
-      end
-
-      add_subcmd(:load_hooks) do
-        system('tmux', 'source-file', TMUX_CONF)
-        puts "Sourced #{TMUX_CONF}"
-      end
-    }.run
+    end
   end
-
-  # --- h notify claude ---
 
   add_subcmd(:claude) do
     require 'json'
 
-    read_claude_settings = lambda do
-      return {} unless File.exist?(CLAUDE_SETTINGS)
-      JSON.parse(File.read(CLAUDE_SETTINGS))
+    read_settings = lambda do
+      File.exist?(CLAUDE_SETTINGS) ? JSON.parse(File.read(CLAUDE_SETTINGS)) : {}
     rescue JSON::ParserError
       {}
     end
+    write_settings = ->(settings) { File.write(CLAUDE_SETTINGS, JSON.pretty_generate(settings)) }
 
-    write_claude_settings = lambda do |settings|
-      File.write(CLAUDE_SETTINGS, JSON.pretty_generate(settings))
-    end
-
-    make_child {
-      add_subcmd(:setup) do
-        settings = read_claude_settings.call
+    run_child(:claude) do |child|
+      child.add_subcmd(:setup, :add_hooks) do
+        settings = read_settings.call
         settings['hooks'] ||= {}
         settings['hooks']['Notification'] = [{ 'hooks' => [{ 'type' => 'command', 'command' => CLAUDE_NOTIFICATION_CMD }] }]
-        settings['hooks']['Stop']         = [{ 'hooks' => [{ 'type' => 'command', 'command' => CLAUDE_STOP_CMD }] }]
-        write_claude_settings.call(settings)
-        puts "Updated #{CLAUDE_SETTINGS}"
-        puts "  Notification -> h alert + h notify push -t info"
-        puts "  Stop         -> h alert + h notify push -t success"
+        settings['hooks']['Stop'] = [{ 'hooks' => [{ 'type' => 'command', 'command' => CLAUDE_STOP_CMD }] }]
+        write_settings.call(settings)
+        puts "Updated #{CLAUDE_SETTINGS} with Herdr-backed Hiiro notifications"
       end
 
-      add_subcmd(:add_hooks) do
-        settings = read_claude_settings.call
+      child.add_subcmd(:reset_hooks) do
         unless File.exist?(CLAUDE_SETTINGS)
           puts "#{CLAUDE_SETTINGS} not found"
           next
         end
 
-        settings['hooks'] ||= {}
-
-        # Inject h notify push into existing commands if not already present,
-        # otherwise write fresh hooks
-        %w[Notification Stop].each do |event|
-          existing_hooks = settings.dig('hooks', event, 0, 'hooks') || []
-          if existing_hooks.any? { |h| h['command']&.include?('h notify push') }
-            puts "#{event} hook already includes h notify push — skipping"
-            next
-          end
-
-          cmd = event == 'Notification' ? CLAUDE_NOTIFICATION_CMD : CLAUDE_STOP_CMD
-          settings['hooks'][event] = [{ 'hooks' => [{ 'type' => 'command', 'command' => cmd }] }]
-          puts "Set #{event} hook -> h alert + h notify push"
-        end
-
-        write_claude_settings.call(settings)
-      end
-
-      add_subcmd(:reset_hooks) do
-        unless File.exist?(CLAUDE_SETTINGS)
-          puts "#{CLAUDE_SETTINGS} not found"
-          next
-        end
-
-        settings = read_claude_settings.call
-        settings['hooks'] ||= {}
-
+        settings = read_settings.call
         %w[Notification Stop].each do |event|
           hooks = settings.dig('hooks', event, 0, 'hooks') || []
-          hooks.each do |h|
-            next unless h['command']&.include?('h notify push')
-            # Strip the h notify push portion from the command
-            h['command'] = h['command']
-              .split(';')
-              .reject { |part| part.strip.start_with?('h notify push') }
-              .join(';')
-              .strip
-          end
-          puts "Stripped h notify push from #{event} hook"
+          hooks.reject! { |hook| hook['command']&.include?('h notify push') }
         end
-
-        write_claude_settings.call(settings)
+        write_settings.call(settings)
       end
 
-      add_subcmd(:load_hooks) do
-        puts "Claude Code settings are loaded automatically on startup."
-        puts "Restart claude to pick up changes to #{CLAUDE_SETTINGS}"
+      child.add_subcmd(:load_hooks) do
+        puts 'Claude Code loads hook settings on startup; restart it to pick up changes.'
       end
-    }.run
+    end
   end
 end

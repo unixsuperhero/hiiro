@@ -27,8 +27,8 @@ Hiiro.run(*ARGV, cwd: Dir.pwd) do
     end
 
     path = File.expand_path(path)
-    session_name = File.basename(path)
-    Hiiro::Tmux.open_session(session_name, start_directory: path)
+    workspace_name = File.basename(path)
+    Hiiro::Herdr.open_workspace(workspace_name, start_directory: path)
   end
 
   add_subcmd(:select) do |*args|

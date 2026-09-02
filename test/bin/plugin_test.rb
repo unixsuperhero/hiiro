@@ -7,7 +7,6 @@ class PluginTest < Minitest::Test
     test_dir = @test_dir
 
     @harness = Hiiro::TestHarness.load_bin("bin/h-plugin") do
-      define_singleton_method(:tmux_client) { MockTmux.new }
       define_singleton_method(:get_value) { |key| test_dir }
       define_singleton_method(:plugin_files) { ["#{test_dir}/pins.rb", "#{test_dir}/tasks.rb"] }
     end
@@ -51,9 +50,4 @@ class PluginTest < Minitest::Test
     assert_includes call.last, 'h-plugin'
   end
 
-  class MockTmux
-    def sessions
-      []
-    end
-  end
 end

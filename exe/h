@@ -92,7 +92,7 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
 
     # Copy bin scripts, renaming from h-* to #{prefix}-*
     bin_groups = {
-      'tmux'   => %w[buffer pane session window],
+      'herdr'  => %w[pane session window],
       'git'    => %w[branch commit sha wtree],
       'github' => %w[pr],
       'claude' => %w[claude],

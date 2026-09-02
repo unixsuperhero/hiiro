@@ -14,10 +14,10 @@ class ProjectTest < Minitest::Test
         { "config-proj" => "/custom/path/config-proj" }
       end
 
-      # Stub start_tmux_session
-      @tmux_sessions_started = []
-      define_singleton_method(:start_tmux_session) do |name|
-        @tmux_sessions_started << name
+      # Stub Herdr workspace opening if a command exercises project navigation.
+      @workspaces_opened = []
+      define_singleton_method(:open_project_workspace) do |name, path|
+        @workspaces_opened << [name, path]
       end
     end
   end

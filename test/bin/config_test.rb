@@ -18,19 +18,19 @@ class ConfigTest < Minitest::Test
   end
 
   def test_registers_expected_subcommands
-    expected = %i[vim git tmux zsh profile starship claude]
+    expected = %i[vim git herdr zsh profile starship claude]
     expected.each do |subcmd|
       assert @harness.has_subcmd?(subcmd), "Expected subcmd :#{subcmd} to be registered"
     end
   end
 
-  def test_tmux_opens_tmux_conf
-    @harness.run_subcmd(:tmux)
+  def test_herdr_opens_herdr_config
+    @harness.run_subcmd(:herdr)
 
     calls = @harness.instance_variable_get(:@open_config_calls)
     assert_equal 1, calls.size
-    assert_equal '~', calls.first[:dir]
-    assert_equal '.tmux.conf', calls.first[:file]
+    assert_equal '~/.config/herdr', calls.first[:dir]
+    assert_equal 'config.toml', calls.first[:file]
   end
 
   def test_zsh_opens_zshrc

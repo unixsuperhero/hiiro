@@ -128,7 +128,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
     size += '%' if opts.percent
     cmd = opts.ignore ? fire_command(opts) : start_command(opts)
 
-    tmux_client.split_window(horizontal: !opts.horizontal, size: size, command: cmd)
+    herdr_client.split_window(horizontal: !opts.horizontal, size: size, command: cmd)
   }
 
   add_subcmd(:vsplit) { |*args|
@@ -138,8 +138,8 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
     size += '%' if size && opts.percent
     cmd = opts.ignore ? fire_command(opts) : start_command(opts)
 
-    tmux_client.vsplit_window(size: size, command: cmd)
-    tmux_client.swap_current_pane(0, keep_active: true) if opts.left
+    herdr_client.vsplit_window(size: size, command: cmd)
+    herdr_client.swap_current_pane(:left) if opts.left
   }
 
   add_subcmd(:hsplit) { |*args|
@@ -149,14 +149,14 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
     size += '%' if size && opts.percent
     cmd = opts.ignore ? fire_command(opts) : start_command(opts)
 
-    tmux_client.hsplit_window(size: size, command: cmd)
-    tmux_client.swap_current_pane(0, keep_active: true) unless opts.bottom
+    herdr_client.hsplit_window(size: size, command: cmd)
+    herdr_client.swap_current_pane(:up) unless opts.bottom
   }
 
   add_subcmd(:window) { |*args|
     opts = opts.parse(args)
     cmd = opts.ignore ? fire_command(opts) : start_command(opts)
-    tmux_client.new_window(command: cmd)
+    herdr_client.new_tab(command: cmd)
   }
 
 add_subcmd(:env) { |*args|

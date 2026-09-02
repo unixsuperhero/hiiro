@@ -5,9 +5,7 @@ class LinkTest < Minitest::Test
     @mock_lm = MockLinkManager.new
     mock = @mock_lm
 
-    @harness = Hiiro::TestHarness.load_bin("bin/h-link") do
-      define_singleton_method(:tmux_client) { MockTmux.new }
-    end
+    @harness = Hiiro::TestHarness.load_bin("bin/h-link")
   end
 
   def test_registers_expected_subcommands
@@ -42,9 +40,4 @@ class LinkTest < Minitest::Test
     end
   end
 
-  class MockTmux
-    def sessions
-      []
-    end
-  end
 end

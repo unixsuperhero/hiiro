@@ -4,114 +4,64 @@ require 'hiiro'
 require 'tempfile'
 require 'yaml'
 
+# Compatibility command: the legacy session name maps to a Herdr workspace.
 Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
-  tmux = tmux_client
-  Hiiro::Tmux.add_resolvers(self)
+  herdr = herdr_client
+  Hiiro::Herdr.add_resolvers(self)
 
   add_subcmd(:ls, :list) { |*args|
-    if args.empty?
-      tmux.sessions.each { |s| puts s.to_s }
-    else
-      system('tmux', 'list-sessions', *args)
-    end
+    args.empty? ? herdr.workspaces.each { |workspace| puts workspace } : system('herdr', 'workspace', 'list', *args)
   }
 
-  add_subcmd(:new) { |name = nil, *args|
-    if name && args.empty?
-      tmux.new_session(name, detached: false)
-    else
-      system('tmux', 'new-session', *[name, *args].compact)
-    end
+  add_subcmd(:new) { |name = nil, cwd = nil|
+    herdr.new_workspace(name, start_directory: cwd, focus: true)
   }
 
-  add_subcmd(:kill) { |name = nil, *args|
-    name = resolve(:session, name)
-
-    if name && args.empty?
-      tmux.kill_session(name)
-    elsif name
-      system('tmux', 'kill-session', '-t', name, *args)
-    end
+  add_subcmd(:kill) { |ref = nil|
+    ref = resolve(:session, ref)
+    herdr.close_workspace(ref) if ref
   }
 
-  add_subcmd(:attach) { |name = nil, *args|
-    name = resolve(:session, name)
-
-    if name && args.empty?
-      tmux.attach_session(name)
-    elsif name
-      system('tmux', 'attach-session', '-t', name, *args)
-    end
+  add_subcmd(:attach, :switch) { |ref = nil|
+    ref = resolve(:session, ref)
+    herdr.focus_workspace(ref) if ref
   }
 
-  add_subcmd(:rename) { |old_name = nil, new_name = nil, *args|
-    old_name = resolve(:session, old_name)
-
-    if old_name && new_name && args.empty?
-      tmux.rename_session(old_name, new_name)
-    elsif old_name
-      system('tmux', 'rename-session', '-t', old_name, *[new_name, *args].compact)
-    end
+  add_subcmd(:rename) { |ref = nil, new_name = nil|
+    ref = resolve(:session, ref)
+    herdr.rename_workspace(ref, new_name) if ref && new_name
   }
 
-  add_subcmd(:switch) { |name = nil, *args|
-    name = resolve(:session, name)
-
-    if name
-      tmux.open_session(name)
-    end
+  add_subcmd(:has) { |ref = nil|
+    puts herdr.workspace_exists?(ref)
   }
 
-  add_subcmd(:detach) { |*args|
-    if args.empty?
-      tmux.detach_client
-    else
-      system('tmux', 'detach-client', *args)
-    end
-  }
-
-  add_subcmd(:has) { |name = nil, *args|
-    if name && args.empty?
-      tmux.session_exists?(name)
-    else
-      system('tmux', 'has-session', *[name, *args].compact)
-    end
-  }
-
-  add_subcmd(:info) { |name = nil, *args|
-    if name.nil? && args.empty?
-      session = tmux.current_session
-      if session
-        puts "#{session.name}: #{session.windows} windows#{session.attached? ? ', attached' : ''}"
-      end
-    else
-      system('tmux', 'display-message', '-p', '#{session_name}: #{session_windows} windows, #{session_attached} attached', *['-t', name, *args].compact)
-    end
+  add_subcmd(:info) { |ref = nil|
+    workspace = ref ? herdr.find_workspace(ref) : herdr.current_workspace
+    puts(workspace || 'Workspace not found')
   }
 
   add_subcmd(:open) { |name = nil|
-    if name.nil?
-      puts "Usage: h session open <name>"
+    unless name
+      puts 'Usage: h session open <name>'
       next
     end
-    tmux.open_session(name)
+    herdr.open_workspace(name)
   }
 
-  add_subcmd(:sh) { |session_name=nil, *cmd|
-    require 'shellwords'
-    session_name = resolve(:session, session_name)
-    unless session_name
-      puts "Usage: h session sh <session> [cmd...]"
+  add_subcmd(:sh) { |workspace_ref = nil, *command|
+    workspace = herdr.find_workspace(workspace_ref)
+    unless workspace
+      puts "Workspace '#{workspace_ref}' does not exist"
       next
     end
-    unless tmux.session_exists?(session_name)
-      puts "Session '#{session_name}' does not exist"
-      next
-    end
-    window_args = ['tmux', 'new-window', '-t', session_name]
-    window_args << cmd.shelljoin unless cmd.empty?
-    system(*window_args)
-    tmux.open_session(session_name)
+
+    herdr.new_tab(
+      workspace: workspace,
+      name: command.first,
+      command: command.empty? ? nil : command.shelljoin,
+      focus: true
+    )
   }
 
   add_subcmd(:select) do
@@ -123,46 +73,42 @@ Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
     selected = resolve(:session)
     if selected
       Hiiro::Shell.pipe(selected, 'pbcopy')
-      puts "Copied session '#{selected}' to clipboard"
+      puts "Copied workspace '#{selected}' to clipboard"
     end
   end
 
   add_subcmd(:orphans) do
-    task_session_names = env.all_tasks.map(&:session_name)
-    orphans = env.all_sessions.reject { |s| task_session_names.include?(s.name) }
+    task_workspace_names = env.all_tasks.map(&:session_name)
+    orphans = herdr.workspaces.reject { |workspace| task_workspace_names.include?(workspace.name) }
 
     if orphans.empty?
-      puts "No orphan sessions"
+      puts 'No orphan workspaces'
       next
     end
 
-    puts "Orphan sessions (#{orphans.count}):"
-    orphans.each { |s| puts "  #{s.name}" }
+    puts "Orphan workspaces (#{orphans.count}):"
+    orphans.each { |workspace| puts "  #{workspace.name}" }
   end
 
   add_subcmd(:okill) do
-    task_session_names = env.all_tasks.map(&:session_name)
-    orphans = env.all_sessions.reject { |s| task_session_names.include?(s.name) }
+    task_workspace_names = env.all_tasks.map(&:session_name)
+    orphans = herdr.workspaces.reject { |workspace| task_workspace_names.include?(workspace.name) }
 
     if orphans.empty?
-      puts "No orphan sessions to kill"
+      puts 'No orphan workspaces to close'
       next
     end
 
-    orphan_names = orphans.map(&:name)
+    tempfile = Tempfile.new(['orphan-workspaces-', '.yml'])
+    tempfile.write(orphans.map(&:id).to_yaml)
+    tempfile.close
+    edit_files(tempfile.path)
+    to_close = YAML.safe_load_file(tempfile.path) || []
+    tempfile.unlink
 
-    tmpfile = Tempfile.new(['orphan-sessions-', '.yml'])
-    tmpfile.write(orphan_names.to_yaml)
-    tmpfile.close
-
-    edit_files(tmpfile.path)
-
-    to_kill = YAML.safe_load_file(tmpfile.path) || []
-    tmpfile.unlink
-
-    to_kill.each do |name|
-      tmux.kill_session(name)
-      puts "Killed: #{name}"
+    to_close.each do |workspace_id|
+      herdr.close_workspace(workspace_id)
+      puts "Closed: #{workspace_id}"
     end
   end
 end
