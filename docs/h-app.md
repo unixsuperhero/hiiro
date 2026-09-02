@@ -15,7 +15,7 @@ h app <subcommand> [args]
 | `ls` | List all configured apps |
 | `add <name> <path>` | Register a new app |
 | `rm <name>` | Remove an app |
-| `cd [name]` | Send a `cd` to the current tmux pane |
+| `cd [name]` | Send a `cd` to the current Herdr pane |
 | `path [name]` | Print relative path to app (from cwd) |
 | `abspath [name]` | Print absolute path to app |
 | `fd <name> [args]` | Run `fd` scoped to an app directory |
@@ -50,7 +50,7 @@ h app add web frontend/web
 
 ### cd
 
-Send a `cd` command to the current tmux pane to navigate to an app directory. Resolves the app path relative to the git repo root or current task tree. With no name, `cd`s to the repo root.
+Send a `cd` command to the current Herdr pane to navigate to an app directory. Resolves the app path relative to the git repo root or current task tree. With no name, `cd`s to the repo root.
 
 **Examples**
 

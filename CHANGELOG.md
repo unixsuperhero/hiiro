@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added
+- Add `Hiiro::Herdr`, a JSON-backed adapter for Herdr workspaces, tabs, panes, notifications, and command execution.
+- Persist Herdr workspace/tab/pane IDs for invocations, branches, queued prompts, services, and tracked PRs, with read fallbacks for legacy metadata.
+
+### Changed
+- Move task, project, queue, service, background, Claude, app navigation, PR attach, title, and notification workflows from tmux to Herdr.
+- Keep `h session` and `h window` as compatibility commands for Herdr workspaces and tabs.
+
+### Removed
+- Remove tmux paste-buffer, jumplist, task-color, focus-hook, and arbitrary-layout features that Herdr 0.8.2 does not support.
+- Remove the old `Hiiro::Tmux` adapter and tmux-specific command tests.
+
 ### Fixed
 - Restore the missing `Hiiro::Bins` helper so `require "hiiro"` boots and commands like `h jumplist record` dispatch correctly.
 - Make Hiiro's Ruby requirement explicit as Ruby 3.2+ and have rbenv-wide gem installs skip incompatible Ruby versions.

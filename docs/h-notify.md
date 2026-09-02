@@ -1,6 +1,8 @@
 # h-notify
 
-Push and manage in-pane notifications with macOS alerts, tmux menu navigation, and Claude Code hook integration.
+Send Herdr notifications, keep a pane-aware notification log, and configure Claude Code hooks.
+
+The log is stored at `~/.local/share/hiiro/notify_log.yml`. A new entry replaces the existing entry for the same pane.
 
 ## Synopsis
 
@@ -12,119 +14,44 @@ h notify <subcommand> [args]
 
 | Subcommand | Description |
 |------------|-------------|
-| `push [-t type] <message>` | Push a notification for the current pane |
-| `ls` | List all current notifications |
-| `menu` | Show a tmux popup menu of notifications |
-| `jump <index>` | Navigate to a notification's pane and dismiss it |
-| `clear` | Clear all notifications |
-| `remove_pane <pane_id>` | Remove notifications for a pane (called by tmux hook) |
-| `remove_window <window_id>` | Remove notifications for a window (called by tmux hook) |
-| `remove_session <session>` | Remove notifications for a session (called by tmux hook) |
-| `tmux` | tmux setup subcommands |
-| `claude` | Claude Code hook subcommands |
+| `push [-t type] <message>` | Send and record a Herdr notification |
+| `ls` | List live notifications and prune stale pane entries |
+| `prune` | Remove entries whose Herdr panes no longer exist |
+| `menu` | Choose a notification with the configured fuzzy finder |
+| `jump <index>` | Focus its workspace/tab and dismiss it |
+| `clear` | Clear the log |
+| `remove_pane <pane-id>` | Remove entries for a pane |
+| `remove_tab <tab-id>` | Remove entries for a tab |
+| `remove_workspace <workspace-id>` | Remove entries for a workspace |
+| `herdr setup` | Explain that no Herdr hooks are required |
+| `claude <subcommand>` | Manage Claude Code hooks |
 
-Notification log is stored at `~/.config/hiiro/data/notify_log.yml`. One entry per pane (new pushes replace the existing entry for that pane).
+`remove_window` and `remove_session` remain aliases for `remove_tab` and `remove_workspace`.
 
-Notification types:
+## Notification types
 
-| Type | Prefix | Sound | Title |
-|------|--------|-------|-------|
-| `info` | `[INFO]` | Pop | Info |
-| `success` | `[OK]` | Glass | Success |
-| `error` | `[ERR]` | Basso | Error |
-| `warning` | `[WARN]` | Purr | Warning |
-
-### claude
-
-Subcommands for integrating with Claude Code notification hooks in `~/.claude/settings.json`.
-
-| Subcommand | Description |
-|------------|-------------|
-| `setup` | Set `Notification` and `Stop` hooks to use `h alert` + `h notify push` |
-| `add_hooks` | Inject `h notify push` into existing hooks (non-destructive) |
-| `reset_hooks` | Strip `h notify push` from existing hooks |
-| `load_hooks` | Print a reminder to restart claude |
-
-**Examples**
-
-```bash
-h notify claude setup
-h notify claude add_hooks
-```
-### clear
-
-Remove all notifications from the log.
-
-**Examples**
-
-```bash
-h notify clear
-```
-
-### jump
-
-Navigate to the pane for notification at `index` and dismiss it from the log. Dead panes are pruned automatically.
-
-**Examples**
-
-```bash
-h notify jump 0
-h notify jump 2
-```
-
-### ls
-
-List all notifications with index, type prefix, session/pane, command, message, and time.
-
-**Examples**
-
-```bash
-h notify ls
-```
-
-### menu
-
-Show a tmux `display-menu` popup listing the last 10 notifications. Each entry lets you jump to that pane. Includes a "Clear all" option at the bottom. Bound to `prefix + N` after `h notify tmux setup`.
-
-**Examples**
-
-```bash
-h notify menu
-```
-
-### push
-
-Push a notification for the current tmux pane. Fires a `terminal-notifier` macOS alert and stores the entry in the log.
-
-**Options**
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--type` | `-t` | Notification type (`success`, `error`, `info`, `warning`) | `info` |
-
-**Examples**
+| Type | Prefix | Herdr sound |
+|------|--------|-------------|
+| `info` | `[INFO]` | `none` |
+| `success` | `[OK]` | `done` |
+| `error` | `[ERR]` | `request` |
+| `warning` | `[WARN]` | `request` |
 
 ```bash
 h notify push "Build complete"
 h notify push -t success "Tests passed"
-h notify push -t error "Deploy failed"
+h notify menu
+h notify jump 0
 ```
 
-### tmux
+## Claude Code hooks
 
-Subcommands for setting up tmux hooks.
+The nested commands edit `~/.claude/settings.json`:
 
 | Subcommand | Description |
 |------------|-------------|
-| `setup` | Write `~/.config/tmux/h-notify.tmux.conf` with hooks and `prefix+N` binding |
-| `add_hooks` | Append `source-file` to `~/.tmux.conf` and reload |
-| `reset_hooks` | Unset the notify tmux hooks |
-| `load_hooks` | Source `~/.tmux.conf` to reload hooks |
+| `claude setup` / `claude add_hooks` | Configure `Notification` and `Stop` to call `h notify push` |
+| `claude reset_hooks` | Remove Hiiro notification hook entries |
+| `claude load_hooks` | Print the restart reminder |
 
-**Examples**
-
-```bash
-h notify tmux setup
-h notify tmux add_hooks
-```
-
+Herdr 0.8.2 can focus the stored workspace and tab but not an arbitrary pane ID, so `jump` lands on the correct tab.

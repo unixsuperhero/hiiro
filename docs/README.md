@@ -16,7 +16,7 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 | [h-commit](h-commit.md) | Fuzzy-select a git commit SHA from the recent log |
 | [h-sha](h-sha.md) | Fuzzy-select, show, and copy git commit SHAs |
 | [h-sparse](h-sparse.md) | Manage named git sparse-checkout path groups |
-| [h-wtree](h-wtree.md) | Manage git worktrees with fuzzy selection and tmux session switching |
+| [h-wtree](h-wtree.md) | Manage git worktrees with fuzzy selection and Herdr workspace switching |
 
 ## GitHub
 
@@ -26,23 +26,21 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 | [h-pr](h-pr.md) | Track, update, view, and act on GitHub pull requests |
 | [h-pr-monitor](h-pr-monitor.md) | Poll `gh pr status` and send notifications on status changes |
 
-## Tmux
+## Herdr
 
 | Command | Description |
 |---------|-------------|
-| [h-buffer](h-buffer.md) | Manage tmux paste buffers |
-| [h-jumplist](h-jumplist.md) | Vim-style tmux navigation history (back/forward through pane focus) |
-| [h-notify](h-notify.md) | Push and manage in-pane notifications with tmux menu |
-| [h-pane](h-pane.md) | Manage tmux panes — split, kill, zoom, resize, home panes |
-| [h-session](h-session.md) | Manage tmux sessions — create, kill, attach, rename, orphan detection |
-| [h-title](h-title.md) | Update terminal tab title from the current hiiro task name |
-| [h-window](h-window.md) | Manage tmux windows — list, create, kill, navigate, layout |
+| [h-notify](h-notify.md) | Send Herdr notifications and navigate their workspace/tab locations |
+| [h-pane](h-pane.md) | Manage Herdr panes — split, close, zoom, resize, home panes |
+| [h-session](h-session.md) | Compatibility commands for Herdr workspaces |
+| [h-title](h-title.md) | Rename the current Herdr pane from its Hiiro task |
+| [h-window](h-window.md) | Compatibility commands for Herdr tabs |
 
 ## Claude / AI
 
 | Command | Description |
 |---------|-------------|
-| [h-claude](h-claude.md) | Launch Claude sessions in tmux splits, search `.claude` dirs, run inline prompts |
+| [h-claude](h-claude.md) | Launch Claude sessions in Herdr splits, search `.claude` dirs, run inline prompts |
 | [h-pm](h-pm.md) | Queue `/project-manager` skill prompts via `h queue add` |
 
 ## App / Project Management
@@ -50,7 +48,7 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 | Command | Description |
 |---------|-------------|
 | [h-app](h-app.md) | Manage named application subdirectories within a git repo |
-| [h-project](h-project.md) | Manage project directories and start tmux sessions |
+| [h-project](h-project.md) | Manage project directories and open Herdr workspaces |
 
 ## Data / Config
 
@@ -69,7 +67,7 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 
 | Command | Description |
 |---------|-------------|
-| [h-bg](h-bg.md) | Run commands in background tmux windows with history tracking |
+| [h-bg](h-bg.md) | Run commands in background Herdr tabs with history tracking |
 | [h-img](h-img.md) | Save or base64-encode images from clipboard or file |
 | [h-misc](h-misc.md) | Miscellaneous utilities (symlink destination reporting) |
 | [h-sha](h-sha.md) | Fuzzy-select, show, and copy git commit SHAs |
@@ -79,7 +77,6 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 All commands support prefix abbreviation:
 
 ```sh
-h buf ls      # h buffer ls
 h ses ls      # h session ls
 h win new     # h window new
 h br save     # h branch save

@@ -42,7 +42,7 @@ h pr <subcommand> [args]
 | `untag <ref> [tags]` | Remove tags from a tracked PR |
 | `for-task [task]` | List tracked PRs for a task |
 | `branch [ref]` | Get the head branch for a tracked PR |
-| `attach [ref]` | Checkout a PR's branch in its task's tmux session |
+| `attach [ref]` | Checkout a PR's branch in its task's Herdr workspace |
 | `assigned` | List PRs assigned to you |
 | `created` | List PRs authored by you |
 | `missing` | List your untracked PRs |
@@ -57,7 +57,7 @@ PR references (`ref`) can be a PR number, a URL containing `/pull/<number>`, or 
 
 ### attach
 
-Checkout a PR's branch inside its associated task's tmux session. Creates a WIP commit if there are uncommitted changes before switching.
+Checkout a PR's branch in a new tab inside its associated task's Herdr workspace. Creates a WIP commit if there are uncommitted changes before switching.
 
 **Examples**
 
@@ -212,4 +212,3 @@ h pr update
 h pr update --red
 h pr update -U
 ```
-

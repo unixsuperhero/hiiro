@@ -1,6 +1,6 @@
 # h service
 
-Manage background development services with tmux integration, env file management, and service groups.
+Manage background development services with Herdr integration, env file management, and service groups.
 
 Config lives in `~/.config/hiiro/services.yml`. Runtime state is tracked in `~/.config/hiiro/services/running.yml`.
 
@@ -26,7 +26,7 @@ h service add
 
 ### attach
 
-Switch to a running service's tmux window/pane. With no name, opens a fuzzyfind selector.
+Focus a running service's Herdr workspace and tab. With no name, opens a fuzzyfind selector.
 
 **Examples**
 
@@ -39,7 +39,7 @@ h service attach
 
 ### clean
 
-Remove all stale services from the running state (services whose tmux pane no longer exists).
+Remove stale services from the running state when their recorded Herdr pane no longer exists.
 
 **Examples**
 
@@ -124,7 +124,7 @@ h service port my-rails
 
 ### reset
 
-Clear a service from the running state without actually stopping the process. Useful when the tmux pane is already dead. With no name, opens a fuzzyfind selector.
+Clear a service from the running state without stopping the process. Useful when the Herdr pane is already gone. With no name, opens a fuzzyfind selector.
 
 **Examples**
 
@@ -149,7 +149,7 @@ h service remove my-rails
 
 ### start
 
-Start a service or service group in a new tmux window. Prepares env files before starting (copies base template and injects variation values). With no name, opens a fuzzyfind selector.
+Start a service or service group in new Herdr tabs. Hiiro prepares env files first by copying the base template and injecting variation values. With no name, it opens a fuzzyfind selector.
 
 **Options**
 
@@ -170,7 +170,7 @@ h service start                   # fuzzyfind selector
 
 ### status
 
-Show detailed status for a service: base dir, URL, running state, PID, tmux pane, associated task, and start time. With no name, opens a fuzzyfind selector over running services.
+Show detailed status for a service: base dir, URL, running state, Herdr pane, associated task, and start time. With no name, opens a fuzzyfind selector over running services.
 
 **Examples**
 
@@ -183,7 +183,7 @@ h service status
 
 ### stop
 
-Stop a running service or group. Sends `C-c` to the tmux pane, or runs the configured `stop` command. With no name, opens a fuzzyfind selector over running services.
+Stop a running service or group. Sends `Ctrl-C` to the Herdr pane, or runs the configured `stop` command. With no name, opens a fuzzyfind selector over running services.
 
 **Examples**
 
@@ -262,7 +262,7 @@ my-stack:
     - name: my-graphql
 ```
 
-When starting a group, each member gets its own tmux pane in a shared window, laid out with `even-vertical`.
+When starting a group, each member gets its own unfocused Herdr tab in the same workspace.
 
 ## Env resolution
 

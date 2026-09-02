@@ -1,8 +1,8 @@
 # h queue
 
-Manage the Claude prompt queue — a directory-based task system that pipes prompts through the `claude` CLI in tmux windows or panes.
+Manage the Claude prompt queue — a directory-based task system that pipes prompts through the `claude` CLI in Herdr tabs or panes.
 
-Queue directories live in `~/.config/hiiro/data/queue/{wip,pending,running,done,failed}/`. Each task is a Markdown file with optional YAML frontmatter.
+Queue directories live in `~/.local/share/hiiro/queue/{wip,pending,running,done,failed}/`. Each task is a Markdown file with optional YAML frontmatter.
 
 ## Synopsis
 
@@ -22,13 +22,13 @@ With no arguments (and a TTY), opens your editor with frontmatter pre-filled fro
 
 | Flag | Short | Description | Default |
 |------|-------|-------------|---------|
-| `--task` | `-t` | Task name to associate (prefix-matched against tasks and sessions) | auto-detected |
+| `--task` | `-t` | Task name to associate (prefix-matched against tasks and workspaces) | auto-detected |
 | `--name` | `-n` | Base filename for the queue task | derived from prompt content |
-| `--find` | `-f` | Choose task/session interactively via fuzzyfind | false |
-| `--horizontal` | `-h` | Open editor in a horizontal split pane and run claude there | false |
-| `--vertical` | `-v` | Open editor in a vertical split pane and run claude there | false |
-| `--session` | `-s` | Associate with the current tmux session | false |
-| `--ignore` | `-i` | Fire-and-forget: run `claude -p` (no persistent shell after) | false |
+| `--find` | `-f` | Choose task/workspace interactively via fuzzyfind | false |
+| `--horizontal` | `-h` | Split down and run Claude there | false |
+| `--vertical` | `-v` | Split right and run Claude there | false |
+| `--session` | `-s` | Associate with the current Herdr workspace | false |
+| `--ignore` | `-i` | Run `claude -p` without starting an extra shell afterward | false |
 
 **Examples**
 
@@ -45,7 +45,7 @@ echo "Do something" | h queue add
 
 ### attach
 
-Switch to a running task's tmux window. With no name, opens a fuzzyfind selector over running tasks.
+Focus a running task's recorded Herdr tab or workspace. With no name, opens a fuzzyfind selector over running tasks.
 
 **Examples**
 
@@ -58,7 +58,7 @@ h queue attach my-task
 
 ### cadd
 
-Shortcut for `h queue add` that runs claude in the current tmux pane (via `exec`).
+Shortcut for `h queue add` that runs Claude in the current process via `exec`.
 
 **Examples**
 
@@ -83,7 +83,7 @@ h queue clean
 
 ### dir
 
-Print the queue root directory path (`~/.config/hiiro/data/queue`).
+Print the queue root directory path (`~/.local/share/hiiro/queue`).
 
 **Examples**
 
@@ -95,7 +95,7 @@ h queue dir
 
 ### hadd
 
-Shortcut for `h queue add --horizontal`. Opens the editor in a horizontal tmux split pane; when saved, runs `claude` in that pane.
+Shortcut for `h queue add --horizontal`. Opens the editor in a new Herdr pane below the current pane; when saved, runs `claude` there.
 
 **Examples**
 
@@ -108,7 +108,7 @@ h queue hadd -t my-task
 
 ### kill
 
-Kill a running task's tmux window/pane and move it to `failed`. With no name and exactly one running task, kills it automatically.
+Close a running task's recorded Herdr pane or tab and move it to `failed`. With no name and exactly one running task, closes it automatically.
 
 **Examples**
 
@@ -180,7 +180,7 @@ h queue retry my-failed-task
 
 ### run
 
-Launch one or all pending tasks in tmux windows. If a task name is provided, launches that specific task (must be in `pending` status). Without a name, launches all pending tasks.
+Launch one or all pending tasks in Herdr tabs. If a task name is provided, launches that specific task (it must be `pending`). Without a name, launches all pending tasks.
 
 **Examples**
 
@@ -193,7 +193,7 @@ h queue run my-task-name
 
 ### sadd
 
-Add a task scoped to the current tmux session. Equivalent to `h queue add --session`, but also launches the task immediately in the current session.
+Add a task scoped to the current Herdr workspace. Equivalent to `h queue add --session`, but also launches the task immediately in that workspace.
 
 **Examples**
 
@@ -206,7 +206,7 @@ h queue sadd "Run the test suite"
 
 ### session
 
-Open (or create) the default queue tmux session (`hq`).
+Open (or create) the default queue Herdr workspace (`hq`).
 
 **Examples**
 
@@ -218,7 +218,7 @@ h queue session
 
 ### status
 
-Show detailed status for all tasks, including elapsed time for running tasks, tmux pane/window info, and working directory.
+Show detailed status for all tasks, including elapsed time, Herdr pane/tab IDs, and working directory.
 
 **Examples**
 
@@ -230,7 +230,7 @@ h queue status
 
 ### vadd
 
-Shortcut for `h queue add --vertical`. Opens the editor in a vertical tmux split pane.
+Shortcut for `h queue add --vertical`. Opens the editor in a new Herdr pane to the right.
 
 **Examples**
 
@@ -243,7 +243,7 @@ h queue vadd "Fix the login bug"
 
 ### watch
 
-Poll the pending queue every 2 seconds and launch any pending tasks as new tmux windows. Automatically restarts itself if a new hiiro version is detected.
+Poll the pending queue every 2 seconds and launch pending tasks as new Herdr tabs. Automatically restarts itself if a new Hiiro version is detected.
 
 **Examples**
 
@@ -262,8 +262,8 @@ Create or edit a work-in-progress prompt in the `wip` directory. Unlike `add`, t
 | Flag | Short | Description | Default |
 |------|-------|-------------|---------|
 | `--task` | `-t` | Task name | auto-detected |
-| `--find` | `-f` | Choose task/session interactively | false |
-| `--session` | `-s` | Associate with current tmux session | false |
+| `--find` | `-f` | Choose task/workspace interactively | false |
+| `--session` | `-s` | Associate with current Herdr workspace | false |
 
 **Examples**
 
@@ -282,16 +282,16 @@ Prompts are Markdown files with optional YAML frontmatter. The frontmatter contr
 ---
 task_name: my-task           # associate with a hiiro task
 tree_name: my-task/main      # worktree to use as working dir
-session_name: my-task        # tmux session (overrides task lookup)
+session_name: my-task        # compatibility field: Herdr workspace label
 app: api                     # app name to cd into (resolved via apps.yml)
 dir: packages/api            # subdirectory within app or tree root
-ignore: true                 # fire-and-forget: close window when done
+ignore: true                 # use claude -p; do not start an extra shell
 ---
 Your prompt text here.
 ```
 
 The resolution order for working directory is:
 
-1. `session_name` (from the active pane's CWD if no tree)
+1. `session_name` (from the workspace's pane CWD if no tree)
 2. `tree_name` (sets working dir to the worktree path)
 3. `app` + `dir` (resolved relative to tree root)

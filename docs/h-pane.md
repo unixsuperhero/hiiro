@@ -1,6 +1,6 @@
 # h-pane
 
-Manage tmux panes — list, split, kill, zoom, capture, resize, and configure named home panes.
+Manage Herdr panes: list, split, close, move, resize, inspect, and configure named home panes.
 
 ## Synopsis
 
@@ -12,158 +12,46 @@ h pane <subcommand> [args]
 
 | Subcommand | Description |
 |------------|-------------|
-| `ls [args]` | List panes in current window |
-| `lsa [args]` | List all panes across all sessions |
-| `split [args]` | Split window |
-| `splitv [args]` | Vertical split (side by side) |
-| `splith [args]` | Horizontal split (top/bottom) |
-| `kill [target]` | Kill a pane |
-| `swap [args]` | Swap panes |
-| `zoom [target]` | Toggle pane zoom |
-| `capture [args]` | Capture pane contents |
-| `select [target]` | Print target pane ID (fuzzy-select if needed) |
-| `copy [target]` | Copy pane target to clipboard |
-| `sw` / `switch [target]` | Switch to a pane's session |
-| `move [args]` | Move a pane |
-| `break [args]` | Break pane into a new window |
-| `join [args]` | Join a pane from another window |
-| `resize [args]` | Resize a pane |
-| `width <size> [target]` | Set pane width |
-| `height <size> [target]` | Set pane height |
-| `info [target]` | Show pane info (size, command, path) |
-| `home` | Named home pane management |
+| `ls [args]` | List panes in the current workspace |
+| `lsa [args]` | List panes across all workspaces |
+| `split [right\|down] [args]` | Split the current pane |
+| `hsplit` / `splith` | Split down |
+| `vsplit` / `splitv` | Split right |
+| `kill [pane]` | Close a pane |
+| `swap <direction>` | Swap the current pane left, right, up, or down |
+| `swap <source> <target>` | Swap two panes by ID |
+| `zoom [pane]` | Toggle pane zoom |
+| `capture [pane] [lines]` | Print recent pane output |
+| `select [pane]` | Resolve and print a pane ID |
+| `copy [pane]` | Copy a pane ID to the clipboard |
+| `sw` / `switch [pane]` | Focus the pane's workspace and tab |
+| `move <pane> <tab> [right\|down]` | Move a pane into a tab |
+| `break [pane]` | Move a pane into a new tab |
+| `join <source> <target> [right\|down]` | Move a pane beside another pane |
+| `resize <direction> [amount] [pane]` | Resize a split |
+| `info [pane]` | Show pane size, agent, path, and status |
+| `home` | Manage named home panes |
 
-### capture
+When an extra argument is passed to `ls`, `lsa`, or a split command, it is forwarded to the corresponding Herdr CLI command.
 
-Capture and print the contents of the current pane. Extra args forwarded to `tmux capture-pane`.
+Herdr 0.8.2 focuses tabs rather than arbitrary pane IDs. `h pane switch` therefore focuses the pane's workspace and tab.
 
-**Examples**
+## Home panes
 
-```bash
-h pane capture
-```
-
-### copy
-
-Fuzzy-select a pane and copy its ID to the clipboard.
-
-**Examples**
-
-```bash
-h pane copy
-```
-
-### home
-
-Manage named "home" panes — saved session+path combos that can be quickly switched to.
-
-#### home subcommands
+Home panes save a workspace label and optional path:
 
 | Subcommand | Description |
 |------------|-------------|
-| `ls` | List all home panes |
-| `add <name> <session> [path]` | Add a named home pane |
-| `rm <name>` | Remove a named home pane |
-| `switch [name]` | Switch to a named home pane (fuzzy-select if no name) |
+| `home ls` | List saved homes |
+| `home add <name> <workspace> [path]` | Save a home |
+| `home rm <name>` | Remove a home |
+| `home switch [name]` | Open or focus the home's workspace and tab |
 
-Home panes are stored in `~/.config/hiiro/pane_homes.yml`. When switching, creates the session and/or window if they don't exist.
-
-**Examples**
+Homes are stored in `~/.config/hiiro/pane_homes.yml` and mirrored in SQLite.
 
 ```bash
-h pane home ls
-h pane home add work main ~/work
-h pane home add devserver main
+h pane home add work development ~/work
 h pane home switch work
-h pane home switch
-h pane home rm work
+h pane capture w1:p1 100
+h pane resize right 0.1 w1:p1
 ```
-### info
-
-Show pane details: size, current command, working path.
-
-**Examples**
-
-```bash
-h pane info
-h pane info %3
-```
-
-### kill
-
-Kill a pane. Fuzzy-select if no target given.
-
-**Examples**
-
-```bash
-h pane kill
-h pane kill %3
-```
-
-### ls / lsa
-
-List panes in the current window (`ls`) or all panes across all sessions (`lsa`). Extra arguments are forwarded to `tmux list-panes`.
-
-**Examples**
-
-```bash
-h pane ls
-h pane lsa
-```
-
-### select
-
-Fuzzy-select a pane and print its ID. Useful for scripting.
-
-**Examples**
-
-```bash
-h pane select
-pane=$(h pane select)
-```
-
-### split / splitv / splith
-
-Split the current window. `splitv` splits vertically (side by side), `splith` splits horizontally (top/bottom). Extra args forwarded to `tmux split-window`.
-
-**Examples**
-
-```bash
-h pane split
-h pane splitv
-h pane splith
-```
-
-### sw / switch
-
-Switch to the session associated with a pane. Fuzzy-select if no target given.
-
-**Examples**
-
-```bash
-h pane sw
-h pane switch %3
-```
-
-### width / height
-
-Set pane width or height in characters. Fuzzy-select target if not provided.
-
-**Examples**
-
-```bash
-h pane width 80
-h pane height 20
-```
-
-### zoom
-
-Toggle zoom on a pane. Extra args forwarded to `tmux resize-pane -Z`.
-
-**Examples**
-
-```bash
-h pane zoom
-h pane zoom %3
-```
-

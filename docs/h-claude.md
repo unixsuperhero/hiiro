@@ -1,6 +1,6 @@
 # h-claude
 
-Launch Claude Code sessions in tmux splits/windows, search `.claude` directories, run inline prompts, and manage the Claude prompt queue.
+Launch Claude Code sessions in Herdr panes/tabs, search `.claude` directories, run inline prompts, and manage the Claude prompt queue.
 
 ## Synopsis
 
@@ -12,10 +12,10 @@ h claude <subcommand> [options] [args]
 
 | Subcommand | Description |
 |------------|-------------|
-| `split [opts] [args]` | Open claude in a tmux split pane |
+| `split [opts] [args]` | Open Claude in a Herdr split pane |
 | `vsplit [opts] [args]` | Open claude in a vertical split pane |
 | `hsplit [opts] [args]` | Open claude in a horizontal split pane |
-| `window [opts] [args]` | Open claude in a new tmux window |
+| `window [opts] [args]` | Open Claude in a new Herdr tab |
 | `inline [prompt]` | Run a one-shot prompt via `claude -p` |
 | `loop` | Multi-turn interactive prompt loop in editor |
 | `new` | Write a prompt in editor and launch as a new claude session |
@@ -27,16 +27,16 @@ h claude <subcommand> [options] [args]
 | `ls` / `list` | List all prompt queue tasks |
 | `status` | Show detailed queue status |
 | `add` | Add a new prompt to the queue |
-| `hadd` | Add and launch in a horizontal tmux split |
-| `vadd` | Add and launch in a vertical tmux split |
-| `cadd` | Add and run in the current tmux pane |
-| `sadd` | Add scoped to current tmux session |
+| `hadd` | Add and launch in a Herdr pane below |
+| `vadd` | Add and launch in a Herdr pane to the right |
+| `cadd` | Add and run in the current process |
+| `sadd` | Add scoped to the current Herdr workspace |
 | `wip [name]` | Create or edit a work-in-progress prompt |
 | `ready [name]` | Move wip prompt to pending |
-| `run [name]` | Launch pending task(s) in tmux windows |
+| `run [name]` | Launch pending task(s) in Herdr tabs |
 | `watch` | Continuously poll and launch pending tasks |
-| `attach [name]` | Switch to a running task's tmux window |
-| `session` | Open the queue tmux session |
+| `attach [name]` | Focus a running task's Herdr tab |
+| `session` | Open the queue Herdr workspace |
 | `kill [name]` | Kill a running task |
 | `retry [name]` | Move failed/done task back to pending |
 | `clean` | Remove all done/failed task files |
@@ -54,9 +54,9 @@ Add a new prompt to the queue. With no arguments and a TTY, opens an editor pre-
 | `--task` | `-t` | Task name to associate |
 | `--name` | `-n` | Base filename for the task |
 | `--find` | `-f` | Choose task/session interactively (fuzzyfind) |
-| `--horizontal` | `-h` | Launch in horizontal tmux split |
-| `--vertical` | `-v` | Launch in vertical tmux split |
-| `--session` | `-s` | Use current tmux session |
+| `--horizontal` | `-h` | Launch in a Herdr pane below |
+| `--vertical` | `-v` | Launch in a Herdr pane to the right |
+| `--session` | `-s` | Use the current Herdr workspace |
 | `--ignore` | `-i` | Fire-and-forget (close window when done, no shell) |
 
 **Examples**
@@ -94,7 +94,7 @@ h claude skills -f "pull request"
 
 ### attach
 
-Switch to a running task's tmux window. Fuzzy-selects if no name given.
+Focus a running task's recorded Herdr tab or workspace. Fuzzy-selects if no name is given.
 
 **Examples**
 
@@ -105,7 +105,7 @@ h claude attach my-task
 
 ### cadd
 
-Add a prompt and run it in the current pane (splits the current tmux window). Same options as `add`.
+Add a prompt and run it in the current process. Same options as `add`.
 
 **Examples**
 
@@ -135,7 +135,7 @@ h claude dir
 
 ### hadd
 
-Add a prompt and immediately launch it in a horizontal tmux split. Same options as `add`.
+Add a prompt and immediately launch it in a Herdr pane below the current pane. Same options as `add`.
 
 **Examples**
 
@@ -179,7 +179,7 @@ h claude inline
 
 ### kill
 
-Kill a running task's tmux window/pane and move the task to `failed`. Fuzzy-selects if no name given.
+Close a running task's Herdr pane/tab and move the task to `failed`. Fuzzy-selects if no name is given.
 
 **Examples**
 
@@ -262,7 +262,7 @@ h claude retry my-task
 
 ### run
 
-Launch pending task(s) in tmux windows. With a name, launches that specific task. With no name, launches all pending tasks.
+Launch pending tasks in Herdr tabs. With a name, launch that specific task. With no name, launch all pending tasks.
 
 **Examples**
 
@@ -273,7 +273,7 @@ h claude run my-task
 
 ### sadd
 
-Add a prompt scoped to the current tmux session. Same options as `add`.
+Add a prompt scoped to the current Herdr workspace. Same options as `add`.
 
 **Examples**
 
@@ -283,7 +283,7 @@ h claude sadd "Deploy to staging"
 
 ### session
 
-Open (or create) the `hq` queue tmux session.
+Open (or create) the `hq` queue Herdr workspace.
 
 **Examples**
 
@@ -293,7 +293,7 @@ h claude session
 
 ### split
 
-Open a new tmux split pane running `claude`. Arguments are forwarded to `claude`. With `-i`, runs `claude -p` (no persistent shell).
+Open a new Herdr split pane running `claude`. Arguments are forwarded to `claude`. With `-i`, run `claude -p` without starting an extra shell afterward.
 
 **Options**
 
@@ -315,7 +315,7 @@ h claude split -d
 
 ### status
 
-Show detailed queue status for all tasks, including elapsed time for running tasks and tmux pane/window info.
+Show detailed queue status for all tasks, including elapsed time and Herdr pane/tab IDs.
 
 **Examples**
 
@@ -325,7 +325,7 @@ h claude status
 
 ### vadd
 
-Add a prompt and immediately launch it in a vertical tmux split. Same options as `add`.
+Add a prompt and immediately launch it in a Herdr pane to the right. Same options as `add`.
 
 **Examples**
 
@@ -378,7 +378,7 @@ h claude watch
 
 ### window
 
-Open a new tmux window running `claude`.
+Open a new Herdr tab running `claude`.
 
 **Options**
 
@@ -404,7 +404,7 @@ Create or edit a work-in-progress prompt (stored in the `wip/` status directory)
 |------|-------|-------------|
 | `--task` | `-t` | Task name to associate |
 | `--find` | `-f` | Choose task/session interactively (fuzzyfind) |
-| `--session` | `-s` | Use current tmux session |
+| `--session` | `-s` | Use current Herdr workspace |
 
 **Examples**
 

@@ -1,6 +1,6 @@
 # h task
 
-Manage top-level tasks. Each task is a worktree + tmux session pair. Tasks enable parallel development across multiple features — each with an isolated checkout and its own tmux session. `h task start` creates worktrees under Hiiro's default work root; `h task from` can register an existing worktree from any repo/path.
+Manage top-level tasks. Each task pairs a worktree with a Herdr workspace. `h task start` creates worktrees under Hiiro's default work root; `h task from` can register an existing worktree from any repo or path.
 
 Tasks are stored in `~/.config/hiiro/tasks/tasks.yml` (SQLite-backed with YAML backup).
 
@@ -14,7 +14,7 @@ h task <subcommand> [args]
 
 ### app
 
-Open a named app in a new tmux window within the current task session. With no argument, opens a fuzzyfind selector over configured apps.
+Open a named app in a new Herdr tab within the current task workspace. With no argument, opens a fuzzyfind selector over configured apps.
 
 **Examples**
 
@@ -80,7 +80,7 @@ h task cbranch
 
 ### cd
 
-Send a `cd` command to the current tmux pane, navigating to a task's worktree or app subdirectory.
+Send a `cd` command to the current Herdr pane, navigating to a task's worktree or app subdirectory.
 
 **Options**
 
@@ -100,21 +100,9 @@ h task cd -t my-feature
 
 ---
 
-### color
-
-Apply the current task's color theme to its tmux session.
-
-**Examples**
-
-```bash
-h task color
-```
-
----
-
 ### csession
 
-Print the tmux session name of the **current** task.
+Print the Herdr workspace label stored for the **current** task.
 
 **Examples**
 
@@ -138,7 +126,7 @@ h task ctree
 
 ### current
 
-Print the name of the current task (based on tmux session or worktree match). Exits with an error if not in a task.
+Print the name of the current task based on the Herdr workspace or worktree match. Exits with an error if not in a task.
 
 **Examples**
 
@@ -190,9 +178,9 @@ Stored task shape:
 
 ### ls / list
 
-List all tasks with their worktree, branch, and session. Also shows available (unassigned) worktrees and extra tmux sessions.
+List all tasks with their worktree, branch, and workspace label. It also shows available worktrees and extra Herdr workspaces.
 
-A `*` prefix marks the current task. An `@` prefix indicates the session has an active tmux client attached.
+A `*` prefix marks the current task. An `@` prefix indicates the Herdr workspace is focused.
 
 **Options**
 
@@ -303,7 +291,7 @@ h task run test ruby
 
 ### save
 
-Save the current task's tmux window state.
+Read and report the current task's Herdr tab state.
 
 **Examples**
 
@@ -350,7 +338,7 @@ paste <(h task name -a) <(h task path -a) # name <-> path mapping
 
 ### session
 
-Print the tmux session name for a task. With no argument, opens a fuzzyfind selector.
+Print the stored Herdr workspace label for a task. The `session` command name remains for compatibility. With no argument, it opens a fuzzyfind selector.
 
 **Options**
 
@@ -358,7 +346,7 @@ Print the tmux session name for a task. With no argument, opens a fuzzyfind sele
 |------|-------|-------------|---------|
 | `--task` | `-t` | Task name | current task |
 | `--find` | `-f` | Choose task interactively | false |
-| `--all` | `-a` | Print session name for every task; positional args become prefix filters (OR'd) | false |
+| `--all` | `-a` | Print workspace label for every task; positional args become prefix filters (OR'd) | false |
 
 **Examples**
 
@@ -372,7 +360,7 @@ h task session -a
 
 ### sh
 
-Open a shell (or run a command) in the current task's worktree. With `--session`, creates a new tmux window in the specified session.
+Open a shell (or run a command) in the current task's worktree. With `--session`, create a new Herdr tab in the specified workspace.
 
 **Options**
 
@@ -380,7 +368,7 @@ Open a shell (or run a command) in the current task's worktree. With `--session`
 |------|-------|-------------|---------|
 | `--task` | `-t` | Task name | current task |
 | `--find` | `-f` | Choose task interactively | false |
-| `--session` | `-s` | Run in a new window in this tmux session | none |
+| `--session` | `-s` | Run in a new tab in this Herdr workspace | none |
 
 **Examples**
 
@@ -417,7 +405,7 @@ h task sparse -d           # disable sparse checkout
 
 ### start
 
-Create a new task (worktree + tmux session) and switch to it. If the task already exists, switches to it instead. Reuses an available unassigned worktree when possible; otherwise creates a new one.
+Create a new task (worktree + Herdr workspace) and switch to it. If the task already exists, switch to it instead. Reuse an available unassigned worktree when possible; otherwise create a new one.
 
 **Options**
 
@@ -437,7 +425,7 @@ h task start my-feature -s default
 
 ### status / st
 
-Show detailed info about the current task: name, worktree, path, session, and parent (if subtask).
+Show detailed info about the current task: name, worktree, path, workspace, and parent (if subtask).
 
 **Examples**
 
@@ -463,13 +451,13 @@ h task stop
 
 ### switch
 
-Switch to an existing task's tmux session. With no arguments, opens an interactive fuzzyfind selector over tasks and sessions. If the task name matches a tmux session (not a task), switches to that session directly.
+Switch to an existing task's Herdr workspace. With no arguments, open a fuzzyfind selector over tasks and workspaces. If the name matches a Herdr workspace rather than a task, focus it directly.
 
 **Options**
 
 | Flag | Short | Description | Default |
 |------|-------|-------------|---------|
-| `--force` | `-f` | Switch even if the session is already attached | false |
+| `--force` | `-f` | Accepted for compatibility; Herdr workspace focus does not require it | false |
 
 **Examples**
 

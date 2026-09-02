@@ -12,7 +12,7 @@ h branch <subcommand> [args]
 
 | Subcommand | Description |
 |------------|-------------|
-| `save [branch]` | Save branch with task/worktree/tmux metadata |
+| `save [branch]` | Save branch with task/worktree/Herdr metadata |
 | `saved [filter]` | List saved branches |
 | `ls [filter]` | List saved branches with tags |
 | `current` | Print current branch name |
@@ -144,7 +144,7 @@ h branch for-task   # uses current task
 
 ### info
 
-Show full metadata for the current branch: SHA, task, worktree, tmux context, commits ahead/behind base, any associated PR, and note.
+Show full metadata for the current branch: SHA, task, worktree, Herdr context, commits ahead/behind base, any associated PR, and note.
 
 **Examples**
 
@@ -269,7 +269,7 @@ h branch rename new-name old-name
 
 ### save
 
-Save the current (or named) branch with metadata: task name, worktree, tmux session/window/pane, HEAD SHA. Creates or updates a record in the branches table.
+Save the current (or named) branch with metadata: task name, worktree, Herdr workspace/tab/pane, and HEAD SHA. Creates or updates a record in the branches table.
 
 **Options**
 
@@ -364,4 +364,3 @@ Remove tags from a branch. With no tags, clears all tags.
 h branch untag my-branch urgent
 h branch untag
 ```
-

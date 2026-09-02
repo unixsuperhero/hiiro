@@ -1,6 +1,6 @@
 # h subtask
 
-Manage subtasks within the current parent task. Subtasks follow the same worktree + tmux session model as top-level tasks, but are scoped under the current task (e.g. `my-feature/auth`).
+Manage subtasks within the current parent task. Subtasks follow the same worktree + Herdr workspace model as top-level tasks, but are scoped under the current task (for example, `my-feature/auth`).
 
 All subcommands are identical to [h task](h-task.md) but operate on the subtask scope. Subtask names are relative (e.g. `auth` rather than `my-feature/auth`).
 
@@ -12,7 +12,7 @@ h subtask <subcommand> [args]
 
 ## Scope behavior
 
-When in a task session, `h subtask` lists and operates on subtasks of the current parent task. A synthetic `main` subtask is always shown, representing the parent task's primary worktree.
+When in a task workspace, `h subtask` lists and operates on subtasks of the current parent task. A synthetic `main` subtask is always shown, representing the parent task's primary worktree.
 
 Subtask names are stored as `parent/child` (e.g. `my-feature/auth`) but displayed as their short name (`auth`) in subtask context.
 
@@ -24,7 +24,7 @@ All subcommands from [h task](h-task.md) are available. Key ones:
 |------------|-------------|
 | `ls` / `list` | List subtasks of the current task |
 | `start <name>` | Create or switch to a subtask |
-| `switch [name]` | Switch to a subtask session |
+| `switch [name]` | Switch to a subtask workspace |
 | `stop [name]` | Stop a subtask (preserves worktree) |
 | `current` | Print the current subtask name |
 | `status` / `st` | Show current subtask details |

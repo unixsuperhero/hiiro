@@ -1,6 +1,6 @@
 # h-project
 
-Manage project directories and start tmux sessions for them.
+Manage project directories and open Herdr workspaces for them.
 
 ## Synopsis
 
@@ -12,7 +12,7 @@ h project <subcommand> [args]
 
 | Subcommand | Description |
 |------------|-------------|
-| `open <name>` | Open a project and start/attach tmux session |
+| `open <name>` | Open a project and focus/create its Herdr workspace |
 | `list` / `ls` | List all known projects |
 | `config` | Show the config file contents |
 | `edit` | Edit the config file |
@@ -71,7 +71,7 @@ h project ls
 
 ### open
 
-Open a project by name and start (or attach to) a tmux session for it. Project names are matched with case-insensitive regex; if exactly one match is found, it's used. If multiple matches are found, an exact match is preferred.
+Open a project by name and focus (or create) a Herdr workspace rooted at its directory. Project names are matched with case-insensitive regex; if exactly one match is found, it is used. If multiple matches are found, an exact match is preferred.
 
 **Examples**
 

@@ -9,7 +9,7 @@ Your Docker container should have:
 - Bare repo at `~/work/.bare`
 - `sk` or `fzf` installed
 - `gh` CLI
-- `tmux` (available but tests run outside tmux)
+- Herdr 0.8.2 or newer (live workspace tests require a Herdr terminal)
 - No `terminal-notifier` (macOS-only)
 
 ---
@@ -457,16 +457,15 @@ cat ~/.config/hiiro/apps.yml
 | Command | Reason |
 |---------|--------|
 | `h alert` | Requires terminal-notifier |
-| `h buffer *` | Requires active tmux |
-| `h claude *` | Requires tmux + claude CLI |
+| `h claude *` | Requires Herdr + Claude CLI |
 | `h commit select` | Requires sk/fzf interactive |
 | `h config *` | Opens editor |
-| `h pane *` | Requires active tmux |
-| `h session *` | Requires active tmux |
-| `h window *` | Requires active tmux |
+| `h pane *` | Requires an active Herdr terminal |
+| `h session *` | Requires a Herdr server |
+| `h window *` | Requires an active Herdr workspace |
 | `h pr check/watch` | Requires gh auth + real PR |
 | Interactive select/copy | Requires sk/fzf |
-| `h task *` | Requires tmux session |
+| `h task *` | Requires a Herdr workspace |
 
 ---
 

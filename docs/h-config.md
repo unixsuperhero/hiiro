@@ -14,7 +14,7 @@ h config <subcommand>
 |------------|-------------|
 | `vim` | Open Neovim/Vim config (`init.lua` or `init.vim`) |
 | `git` | Git config subcommands |
-| `tmux` | Open `~/.tmux.conf` |
+| `herdr` | Open `~/.config/herdr/config.toml` |
 | `zsh` | Open `~/.zshrc` |
 | `profile` | Open `~/.zprofile` |
 | `starship` | Open `~/.config/starship/starship.toml` |
@@ -67,14 +67,14 @@ Open `~/.config/starship/starship.toml`.
 h config starship
 ```
 
-### tmux
+### herdr
 
-Open `~/.tmux.conf`.
+Open `~/.config/herdr/config.toml`.
 
 **Examples**
 
 ```bash
-h config tmux
+h config herdr
 ```
 
 ### vim
@@ -96,4 +96,3 @@ Open `~/.zshrc`.
 ```bash
 h config zsh
 ```
-

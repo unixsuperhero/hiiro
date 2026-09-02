@@ -1,6 +1,6 @@
 # h-wtree
 
-Manage git worktrees with fuzzy selection, tmux session switching, and disk usage reporting.
+Manage git worktrees with fuzzy selection, Herdr workspace switching, and disk usage reporting.
 
 ## Synopsis
 
@@ -21,7 +21,7 @@ h wtree <subcommand> [args]
 | `prune [args]` | Prune stale worktree references |
 | `remove [args]` | Remove a worktree |
 | `repair [args]` | Repair worktree references |
-| `switch [path]` | Switch to a worktree's tmux session |
+| `switch [path]` | Open or focus a worktree's Herdr workspace |
 | `select` | Fuzzy-select a worktree and print its path |
 | `copy` | Fuzzy-select a worktree and copy path to clipboard |
 | `branch [paths]` | Print branch name(s) for worktree path(s) |
@@ -105,7 +105,7 @@ h wtree size
 
 ### switch
 
-Fuzzy-select a worktree and open/create a tmux session named after its directory, starting from that directory.
+Fuzzy-select a worktree and open or focus a Herdr workspace named after its directory, rooted at that directory.
 
 **Examples**
 
@@ -113,4 +113,3 @@ Fuzzy-select a worktree and open/create a tmux session named after its directory
 h wtree switch
 h wtree switch /path/to/worktree
 ```
-

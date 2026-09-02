@@ -27,7 +27,7 @@ h setup
 
 This installs:
 - Plugins to `~/.config/hiiro/plugins/`
-- Subcommands (`h-buffer`, `h-todo`, etc.) to `~/bin/`
+- Subcommands (`h-pane`, `h-todo`, etc.) to `~/bin/`
 
 Ensure `~/bin` is in your `$PATH`.
 
@@ -35,8 +35,11 @@ Ensure `~/bin` is in your `$PATH`.
 ### Dependencies
 
 ```sh
-# For notify plugin (macOS)
+# For h alert (macOS)
 brew install terminal-notifier
+
+# Terminal workspace, tab, and pane management
+# Install Herdr 0.8.2 or newer.
 
 # For fuzzy-finder
 brew install sk # (or fzf)
@@ -76,24 +79,22 @@ h ping
 |---------|-------------|
 | `h app` | Manage app directories within tasks/projects |
 | `h branch` | Git branch management with fuzzy selection and copy |
-| `h buffer` | Tmux paste buffer management |
-| `h claude` | Claude CLI wrapper with tmux split support |
+| `h claude` | Claude CLI wrapper with Herdr split support |
 | `h commit` | Select commits using fuzzy finder |
-| `h config` | Open config files (vim, git, tmux, zsh, starship, claude) |
+| `h config` | Open config files (vim, git, Herdr, zsh, starship, claude) |
 | `h link` | Manage saved links with URL, description, and shorthand |
-| `h pane` | Tmux pane management |
+| `h pane` | Herdr pane management |
 | `h plugin` | Manage hiiro plugins (list, edit, search) |
 | `h pr` | GitHub PR management via gh CLI |
-| `h project` | Project navigation with tmux session management |
-| `h queue` | Claude prompt queue with tmux-based task execution |
-| `h jumplist` | Vim-style tmux navigation history (back/forward through panes) |
+| `h project` | Project navigation with Herdr workspace management |
+| `h queue` | Claude prompt queue with Herdr-based task execution |
 | `h service` | Manage background dev services with env variations and groups |
 | `h file` | Track and open frequently-used files per app |
 | `h run` | Run dev tools (lint/test/format) against changed files |
-| `h session` | Tmux session management |
+| `h session` | Compatibility commands for Herdr workspaces |
 | `h sha` | Extract short SHA from git log |
 | `h todo` | Todo list management with tags and task association |
-| `h window` | Tmux window management |
+| `h window` | Compatibility commands for Herdr tabs |
 | `h wtree` | Git worktree management |
 
 `h claude agents|commands|skills -a` prints the absolute file path for each matching `.claude` tool, including `SKILL.md` for skills.
@@ -103,7 +104,6 @@ h ping
 Any subcommand can be abbreviated as long as the prefix uniquely matches:
 
 ```sh
-h buf ls      # matches h buffer ls
 h ses ls      # matches h session ls
 h win         # matches h window
 ```
@@ -117,9 +117,9 @@ Plugins are Ruby modules loaded from `~/.config/hiiro/plugins/`:
 | Plugin | Description |
 |--------|-------------|
 | Pins | Per-command YAML key-value storage |
-| Project | Project directory navigation with tmux session management |
+| Project | Project directory navigation with Herdr workspace management |
 | Tasks | Task lifecycle management across git worktrees with external-worktree registration and subtask support |
-| Notify | macOS desktop notifications via terminal-notifier |
+| Notify | Herdr desktop notifications |
 
 ## Adding Subcommands
 
@@ -226,9 +226,8 @@ All configuration lives in `~/.config/hiiro/`:
 ~/.config/hiiro/
   plugins/        # Plugin files (auto-loaded)
   pins/           # Pin storage (per command)
-  queue/          # Prompt queue (wip, pending, running, done, failed)
   services/       # Service runtime state
-  jumplist/       # Per-client tmux navigation history
+  bg-history.txt  # Background command history
   env_templates/  # Base .env templates for services
   tasks/          # Task metadata
   projects.yml    # Project aliases
@@ -237,6 +236,14 @@ All configuration lives in `~/.config/hiiro/`:
   tools.yml       # Runner tool definitions
   app_files.yml   # Per-app tracked file lists
   todo.yml        # Todo items
+```
+
+Runtime data lives separately:
+
+```
+~/.local/share/hiiro/
+  queue/          # Prompt queue (wip, pending, running, done, failed)
+  notify_log.yml  # Herdr notification log
 ```
 
 ## Testing
@@ -349,7 +356,7 @@ MIT
   # Start with specific variations
   h service start api-rails --use DATABASE_URL=docker --use REDIS_URL=docker
 
-  # Start the full local stack (one window, 3 split panes)
+  # Start the full local stack (one Herdr tab per service)
   h service start full-stack
 
   # Start frontend pointing at staging backends
