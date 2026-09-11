@@ -190,7 +190,7 @@ class Hiiro
         end
       end
 
-      # Write a clean prompt file (no frontmatter) for claude
+      # Write a clean prompt file (no frontmatter) for the agent
       raw = File.read(running_md).strip
       prompt_body = prompt_obj ? strip_frontmatter(prompt_obj.doc.content.strip) : strip_frontmatter(raw)
       prompt_file = File.join(dirs[:running], "#{name}.prompt")
@@ -198,14 +198,14 @@ class Hiiro
 
       # Write a launcher script
       fire_mode   = prompt_obj&.ignore?
-      claude_cmd  = fire_mode ? 'claude -p' : 'claude'
+      agent_cmd   = fire_mode ? 'omp -p' : 'omp'
       shell_line  = fire_mode ? '' : "exec #{Shellwords.shellescape(ENV['SHELL'] || 'zsh')}"
       script_path = File.join(dirs[:running], "#{name}.sh")
       File.write(script_path, <<~SH)
         #!/usr/bin/env bash
 
         cd #{Shellwords.shellescape(working_dir)}
-        cat #{Shellwords.shellescape(prompt_file)} | #{claude_cmd}
+        #{agent_cmd} @#{Shellwords.shellescape(prompt_file)}
         HQ_EXIT=$?
 
         # Move task files to done/failed based on exit code
@@ -597,6 +597,89 @@ class Hiiro
           end
         }
 
+        h.add_subcmd(:peek) { |name = nil|
+          running = q.tasks_in(:running)
+          if running.empty?
+            puts "No running tasks"
+            next
+          end
+
+          if name.nil?
+            name = h.fuzzyfind(running)
+          else
+            result = Matcher.by_prefix(running, name)
+            if result.one?
+              name = result.first.item
+            elsif result.ambiguous?
+              puts "Ambiguous match for '#{name}':"
+              result.matches.each { |m| puts "  #{m.item}" }
+              next
+            else
+              puts "No running task matching: #{name}"
+              next
+            end
+          end
+
+          next unless name
+
+          meta = q.meta_for(name, :running)
+          pane_id = meta&.[]('herdr_pane')
+          unless pane_id
+            puts "No Herdr pane recorded for '#{name}'"
+            next
+          end
+
+          text = h.herdr_client.read_pane(pane_id)
+          if text.nil? || text.empty?
+            puts "(pane empty or unreadable)"
+          else
+            puts text
+          end
+        }
+
+        h.add_subcmd(:say) { |name = nil, *rest|
+          running = q.tasks_in(:running)
+          if running.empty?
+            puts "No running tasks"
+            next
+          end
+
+          if name.nil?
+            name = h.fuzzyfind(running)
+          else
+            result = Matcher.by_prefix(running, name)
+            if result.one?
+              name = result.first.item
+            elsif result.ambiguous?
+              puts "Ambiguous match for '#{name}':"
+              result.matches.each { |m| puts "  #{m.item}" }
+              next
+            else
+              puts "No running task matching: #{name}"
+              next
+            end
+          end
+
+          next unless name
+
+          text = rest.join(' ').strip
+          if text.empty?
+            puts "Usage: h queue say <name> <message>"
+            next
+          end
+
+          meta = q.meta_for(name, :running)
+          pane_id = meta&.[]('herdr_pane')
+          unless pane_id
+            puts "No Herdr pane recorded for '#{name}'"
+            next
+          end
+
+          h.herdr_client.send_text(pane_id, text)
+          h.herdr_client.send_keys(pane_id, 'Enter')
+          puts "Sent to #{name} [pane #{pane_id}]"
+        }
+
         h.add_subcmd(:session) {
           work_dir = File.expand_path('~/work')
           h.herdr_client.open_workspace(HERDR_WORKSPACE, start_directory: work_dir)
@@ -637,14 +720,14 @@ class Hiiro
             ti = (ti || {}).merge(session_name: session_name) if session_name
           end
 
-          # Split+interactive: open the editor and Claude in a new Herdr pane.
+          # Split+interactive: open the editor and omp in a new Herdr pane.
           if split && args.empty? && $stdin.tty?
             fm_lines = ["---"]
             fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
             fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
             fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
             fm_lines << "ignore: true" if opts.ignore
-            fm_lines << "# app: <partial-app-name>  (run claude from this app's directory)"
+            fm_lines << "# app: <partial-app-name>  (run omp from this app's directory)"
             fm_lines << "# dir: <relative-path>     (subdir within app or tree root)"
             fm_lines << "---"
             fm_lines << ""
@@ -672,7 +755,7 @@ class Hiiro
             end
             Dir.chdir(task_base_dir) if task_base_dir
 
-            claude_cmd = opts.ignore ? 'claude -p' : 'claude'
+            agent_cmd = opts.ignore ? 'omp -p' : 'omp'
             shell_line = opts.ignore ? '' : "exec ${SHELL:-zsh}"
 
             File.write(script_path, <<~SH)
@@ -683,7 +766,7 @@ class Hiiro
               if [ -s "$_PROMPT" ]; then
                 _WD="$(h queue pane-dir "$_PROMPT" "$_BASE_DIR" 2>/dev/null)"
                 [ -n "$_WD" ] && [ -d "$_WD" ] && cd "$_WD"
-                cat "$_PROMPT" | #{claude_cmd}
+                #{agent_cmd} "@$_PROMPT"
               fi
               rm -f #{Shellwords.shellescape(prompt_path)} #{Shellwords.shellescape(script_path)}
               #{shell_line}
@@ -705,7 +788,7 @@ class Hiiro
             fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
             fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
             fm_lines << "ignore: true" if opts.ignore
-            fm_lines << "# app: <partial-app-name>  (run claude from this app's directory)"
+            fm_lines << "# app: <partial-app-name>  (run omp from this app's directory)"
             fm_lines << "# dir: <relative-path>     (subdir within app or tree root)"
             fm_lines << "---"
             fm_lines << ""
@@ -789,7 +872,7 @@ class Hiiro
             fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
             fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
             fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
-            fm_lines << "# app: <partial-app-name>  (run claude from this app's directory)"
+            fm_lines << "# app: <partial-app-name>  (run omp from this app's directory)"
             fm_lines << "# dir: <relative-path>     (subdir within app or tree root)"
             fm_lines << "---"
             fm_lines << ""
