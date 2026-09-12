@@ -89,7 +89,11 @@ class Hiiro
       subset = self.class.setup {}
       names.each do |name|
         defn = @definitions[name.to_sym]
-        subset.definitions[name.to_sym] = defn if defn
+        if defn
+          subset.definitions[name.to_sym] = defn
+        else
+          subset.definitions[name.to_sym] = Definition.new(name, short: name.to_s.chars.first, desc: "auto-created flag: #{name}")
+        end
       end
       subset
     end

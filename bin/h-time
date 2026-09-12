@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'time'
+
+# Parse a timestamp string as unix seconds (10-digit) or milliseconds (13-digit)
+def parse_unix(str, ms: nil)
+  n = Rational(str.to_s)
+  ms = str.to_s.sub(/\..*/, '').length > 11 if ms.nil?
+  Time.at(ms ? n / 1000 : n)
+end
+
+def parse_time(str)
+  str.nil? || str.empty? || str == 'now' ? Time.now : Time.parse(str)
+end
+
+Hiiro.run(*ARGV) do
+  add_flag(:ms, short: :m, desc: 'Use milliseconds instead of seconds')
+  add_flag(:utc, short: :u, desc: 'Output in UTC')
+
+  # h time to_unix [time-string]  -> unix seconds (or ms with --ms)
+  add_cmd(:to_unix, :unix, :ts, opts: %i[ms]) do
+    t = parse_time(@opts.args.join(' '))
+    puts @opts.ms ? (t.to_f * 1000).round : t.to_i
+  end
+
+  # h time from_unix <timestamp>  -> HH:MM:SS.mmm (auto-detects ms by digit count)
+  add_cmd(:from_unix, :parse, opts: %i[ms utc]) do
+    raw = @opts.args.first or abort 'usage: h time from_unix <timestamp> [--ms] [--utc]'
+    t = parse_unix(raw, ms: @opts.ms ? true : nil)
+    t = t.utc if @opts.utc
+    puts t.strftime('%H:%M:%S.%L')
+  end
+
+  # h time fmt H:M:S  -> strftime with % auto-inserted before each char
+  add_cmd(:fmt, :format, :strftime, opts: %i[utc]) do
+    fmt = @opts.args.join(' ')
+    abort 'usage: h time fmt <strftime-chars-without-percent>' if fmt.empty?
+    with_percent = fmt.gsub(/[A-Za-z%]/) { |c| c == '%' ? '%%' : "%#{c}" }
+    t = @opts.utc ? Time.now.utc : Time.now
+    puts t.strftime(with_percent)
+  end
+
+  add_cmd(:now, opts: %i[ms utc]) do
+    t = @opts.utc ? Time.now.utc : Time.now
+    puts t.strftime(@opts.ms ? '%H:%M:%S.%L' : '%H:%M:%S')
+  end
+end
