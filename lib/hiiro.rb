@@ -355,10 +355,11 @@ class Hiiro
     end
   end
 
-  def add_cmd(*names, args: [], opts: [], &block)
+  def add_cmd(*names, args: [], opts: [], passthrough: false, &block)
     cmd_opts = options.select(opts)
 
     wrapper = lambda do |*raw_args|
+      next instance_eval(&block) if passthrough
       @opts = cmd_opts.parse(raw_args)
       if @opts.help?
         puts @opts.help_text
@@ -372,7 +373,8 @@ class Hiiro
         name, wrapper,
         subcmd_args: args,
         subcmd_opts: cmd_opts,
-        **global_values
+        **global_values,
+        source_location: block.source_location&.join(':')
       )
     end
   end
@@ -746,13 +748,14 @@ class Hiiro
       end
 
       def location
-        handler.source_location&.join(':')
+        values[:source_location] || handler.source_location&.join(':')
       end
 
       def params_string
         if subcmd_args.any?
           return subcmd_args.map { |a| "<#{a}>" }.join(' ')
         end
+        return nil if subcmd_opts
 
         return nil unless handler.respond_to?(:parameters)
 

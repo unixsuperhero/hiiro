@@ -6,7 +6,7 @@ Task records and resource references live in `~/.config/hiiro/hiiro.db`, in the 
 
 ## t
 
-Running `t` without arguments displays command help. `t` uses Hiiro command dispatch directly and does not run `h task` or discover legacy `t-*` executables.
+The command implementation lives in `~/bin/t`, not a `Hiiro::TaskCLI` library class. Commands use `add_cmd` with per-command argument and option declarations. Running `t` or `t doc` displays Hiiro's generated subcommand table, including declaration locations. Leaf help, such as `t directory add --help`, displays only that command's options without executing it. There is no separate task help template. `t` does not run `h task` or discover legacy `t-*` executables.
 
 Every task command accepts `-t TASK` or `--task TASK` before or after the command. Explicit task names are exact and take precedence over the current directory or workspace. Conflicting explicit names are errors.
 

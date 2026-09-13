@@ -9,6 +9,7 @@
 - Persist Herdr workspace/tab/pane IDs for invocations, branches, queued prompts, services, and tracked PRs, with read fallbacks for legacy metadata.
 
 ### Changed
+- Keep task command definitions and helpers in `~/bin/t`, using `add_cmd` and native Hiiro help instead of a library-level TaskCLI and custom help template.
 - Preserve task records and resource references when detaching or pruning worktrees.
 - Move task, project, queue, service, background, Claude, app navigation, PR attach, title, and notification workflows from tmux to Herdr.
 - Keep `h session` and `h window` as compatibility commands for Herdr workspaces and tabs.
@@ -18,6 +19,7 @@
 - Remove the old `Hiiro::Tmux` adapter and tmux-specific command tests.
 
 ### Fixed
+- Preserve `add_cmd` declaration locations and argument metadata in generated help; allow command groups to pass arguments and help through to child commands.
 - Make undeclared `add_cmd opts:` entries boolean flags without consuming positional arguments; preserve explicit options and reserve conflicting short aliases.
 - Show selected command options for `add_cmd -h`/`--help` without executing the command block.
 - Focus the exact Herdr pane through the socket API and read the CLI's plain-text pane output without JSON parsing.

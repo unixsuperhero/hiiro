@@ -461,6 +461,11 @@ class TaskManagerConfigTest < Minitest::Test
     Hiiro::AppRecord.dataset.delete
   end
 
+  def teardown
+    Hiiro::TaskRecord.dataset.delete
+    Hiiro::AppRecord.dataset.delete
+  end
+
   def test_config_apps_from_yaml
     with_temp_dir do |dir|
       apps_file = File.join(dir, "apps.yml")

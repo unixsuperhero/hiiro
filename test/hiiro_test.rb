@@ -212,6 +212,42 @@ class HiiroAddCmdTest < Minitest::Test
       refute_match(/--unselected/, output)
     end
   end
+
+  def test_nested_add_cmd_preserves_leaf_options_and_help
+    calls = []
+    dispatch = lambda do |*arguments|
+      parent = Hiiro.new("testbin-zzz", "group", "leaf", *arguments, external_commands: false)
+      parent.add_cmd(:group, passthrough: true) do
+        child = make_child(:group, args, external_commands: false) do
+          add_option :task, short: :t
+          add_cmd(:leaf, opts: %i[task all]) do
+            calls << { task: opts.task, all: opts.all, args: opts.args }
+          end
+        end
+        child.runner.run(*child.args)
+      end
+      parent.runner.run(*parent.args)
+    end
+
+    dispatch.call("-t", "demo", "--all", "payload")
+    assert_equal [{ task: "demo", all: true, args: ["payload"] }], calls
+
+    output, = capture_io { dispatch.call("--help") }
+    assert_equal [{ task: "demo", all: true, args: ["payload"] }], calls
+    assert_match(/-t, --task/, output)
+    assert_match(/--all/, output)
+  end
+
+  def test_generated_help_uses_command_declarations_not_wrapper_metadata
+    hiiro = Hiiro.new("testbin-zzz", external_commands: false)
+    hiiro.add_cmd(:list) { puts "listed" }
+    hiiro.add_cmd(:show, args: %i[payload]) { puts "shown" }
+
+    output, = capture_io { assert_raises(SystemExit) { hiiro.help } }
+    assert_match(/show\s+<payload>/, output)
+    assert_match(/hiiro_test\.rb:/, output)
+    refute_match(/\[\*raw_args\]/, output)
+  end
 end
 
 class HiiroRunnersBinTest < Minitest::Test
