@@ -1,12 +1,6 @@
 # Changelog
 
-## [0.1.364] - 2026-09-13
-
-### Fixed
-- Create the publish response log directory before saving Claude's output, preventing release preparation from failing when the directory is absent.
-- Prevent infinite recursion in help directory grouping when command locations span different filesystem-root directories, such as `/Users` and `/Volumes`.
-
-## [Unreleased]
+## [0.1.365] - 2026-09-13
 
 ### Added
 - Add the `t` task CLI with `--task`/`-t` selection, durable task status and next actions, document homes, resource references, and Herdr workspace/tab/pane commands.
@@ -33,6 +27,12 @@
 - Restore the missing `Hiiro::Bins` helper so `require "hiiro"` boots and commands like `h jumplist record` dispatch correctly.
 - Make Hiiro's Ruby requirement explicit as Ruby 3.2+ and have rbenv-wide gem installs skip incompatible Ruby versions.
 - Update the publish script to preserve the Ruby support constant, run only on supported Ruby, and install releases only into compatible rbenv versions.
+
+## [0.1.364] - 2026-09-13
+
+### Fixed
+- Create the publish response log directory before saving Claude's output, preventing release preparation from failing when the directory is absent.
+- Prevent infinite recursion in help directory grouping when command locations span different filesystem-root directories, such as `/Users` and `/Volumes`.
 
 ## [0.1.355] - 2026-05-19
 
