@@ -4,6 +4,7 @@ require "net/http"
 require "json"
 require "open3"
 require "shellwords"
+require "fileutils"
 
 HIIRO_SUPPORTED_RUBY_VERSION = ">= 3.2.0"
 
@@ -187,6 +188,7 @@ class Claude
     puts '------------------------'
     puts
 
+    FileUtils.mkdir_p('tmp/publish_output')
     File.write('tmp/publish_output/' + Time.now.strftime('%Y%m%d%H%M%S') + '.json', raw)
     parsed = JSON.parse(raw)
     Result.new(parsed["commits"], parsed["changelog"])
