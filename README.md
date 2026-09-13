@@ -59,6 +59,22 @@ h ping
 # => pong
 ```
 
+### Task CLI
+
+`~/bin/t` uses `Hiiro::TaskCLI` to manage tasks, documents, resource references,
+and Herdr workspaces. `t new NAME` creates a task and its notes directory without
+creating a Git worktree. Select a task with `--task NAME` or `-t NAME`.
+
+```sh
+t new investigation
+t next -t investigation "Inspect the failing request"
+t doc new findings -t investigation
+t doc open findings -t investigation
+t show investigation
+```
+
+See [Task commands](docs/h-task.md) for the full command reference.
+
 ## Subcommands
 
 ### Base Commands
@@ -180,6 +196,38 @@ add_subcmd(:pwd) do |*args|
   puts get_value(:cwd)
 end
 ```
+
+### Commands with declared options
+
+Use `add_cmd` to expose a command's options in help. Undeclared names in `opts:`
+become boolean flags with a default of `false`. A flag does not consume the next
+positional argument.
+
+```ruby
+Hiiro.run do
+  add_option :task, short: :t, desc: 'Task name'
+
+  add_cmd :test, opts: %i[a b c d task] do
+    puts 'a was set' if opts.a
+    puts opts.task if opts.task
+    puts opts.args
+  end
+end
+```
+
+Here, `test -a payload -t investigation` sets `opts.a` to `true`, leaves
+`payload` in `opts.args`, and sets `opts.task` to `investigation`.
+`test -h` and `test --help` display the selected options without running the
+command block.
+
+Automatic flags use their first letter as a short alias only when it is unique
+among the command's automatic flags and does not conflict with a selected
+explicit option or `-h`. Every automatic flag has a long form. Explicit flags
+and value options keep their definitions.
+
+For a CLI that should dispatch only registered blocks, pass
+`external_commands: false` to `Hiiro.run` and its `make_child` calls. This
+prevents unrelated same-prefix executables on `PATH` from taking precedence.
 
 ## Writing Plugins
 

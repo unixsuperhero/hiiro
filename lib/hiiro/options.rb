@@ -86,13 +86,18 @@ class Hiiro
     public
 
     def select(names)
+      names = names.map(&:to_sym).uniq
       subset = self.class.setup {}
+      reserved_shorts = ['h'] + names.filter_map { |name| @definitions[name]&.short }
+      auto_shorts = names.reject { |name| @definitions.key?(name) }.map { |name| name.to_s[0] }.tally
       names.each do |name|
-        defn = @definitions[name.to_sym]
+        defn = @definitions[name]
         if defn
-          subset.definitions[name.to_sym] = defn
+          subset.definitions[name] = defn
         else
-          subset.definitions[name.to_sym] = Definition.new(name, short: name.to_s.chars.first, desc: "auto-created flag: #{name}")
+          short = name.to_s[0]
+          short = nil if reserved_shorts.include?(short) || auto_shorts[short] > 1
+          subset.flag(name, short: short, desc: "auto-created flag: #{name}")
         end
       end
       subset

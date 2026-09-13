@@ -89,6 +89,7 @@ class Hiiro
       return nil unless target
 
       return target.path if target.is_a?(FallbackTarget)
+      return target.home unless target.tree_name
 
       tree = environment.find_tree(target.tree_name)
       return tree.path if tree
@@ -250,8 +251,8 @@ class Hiiro
         return
       end
 
-      config.remove_task(task.name)
-      subtasks(task).each { |st| config.remove_task(st.name) }
+      config.detach_tree(task.name)
+      subtasks(task).each { |st| config.detach_tree(st.name) }
 
       puts "Stopped task '#{task.name}' (worktree available for reuse)"
     end
@@ -265,12 +266,14 @@ class Hiiro
       # Derive a default task name from the tree name: "foo/main" -> "foo"
       task_name ||= tree.name.end_with?('/main') ? tree.name.chomp('/main') : tree.name
 
-      if task_by_name(task_name)
-        puts "Task '#{task_name}' already exists"
+      existing = task_by_name(task_name)
+      if existing&.tree_name
+        puts "Task '#{task_name}' already has a worktree"
         return
       end
 
-      task = Task.new(name: task_name, tree: tree.name, session: task_name)
+      attributes = existing ? existing.to_h : { name: task_name }
+      task = Task.new(**attributes.merge(tree: tree.name, session: task_name))
       config.save_task(task)
       puts "Resumed task '#{task_name}' from worktree '#{tree.name}'"
 
@@ -706,27 +709,26 @@ class Hiiro
       end
 
       def save_task(task)
-        TaskRecord.find_or_create(name: task.name) do |r|
-          r.tree = task.tree_name
-          r.session = task.session_name
-          r.app = task.respond_to?(:app) ? task.app : nil
-          r.color_index = task.color_index
-        end.update(
-          tree: task.tree_name,
-          session: task.session_name,
-          app: task.respond_to?(:app) ? task.app : nil,
-          color_index: task.color_index
-        )
+        record = TaskRecord.find_by_name(task.name) || TaskRecord.new(name: task.name, created_at: Time.now.iso8601)
+        record.set(task.to_h.merge(tree: task.tree_name, session: task.session_name, color_index: task.color_index))
+        record.save
         save_tasks_yaml_backup
       rescue => e
         warn "Failed to save task to DB: #{e}"
       end
 
-      def remove_task(name)
-        TaskRecord.where(name: name).delete
+      def detach_tree(name)
+        record = TaskRecord.find_by_name(name)
+        return unless record&.tree
+
+        path = record.tree.start_with?('/') ? record.tree : File.join(Hiiro::WORK_DIR, record.tree)
+        Hiiro::DB.connection.transaction do
+          TaskResource.find_or_create(task_id: record.id, kind: 'directory', target: path)
+          record.update(tree: nil, updated_at: Time.now.iso8601)
+        end
         save_tasks_yaml_backup
       rescue => e
-        warn "Failed to remove task from DB: #{e}"
+        warn "Failed to detach task worktree: #{e}"
       end
 
       private
@@ -735,7 +737,7 @@ class Hiiro
         rows = TaskRecord.all_as_list
         return fallback_load_tasks_from_yaml if rows.empty?
         { 'tasks' => rows.map { |r|
-          { 'name' => r.name, 'tree' => r.tree, 'session' => r.session, 'app' => r.app, 'color_index' => r.color_index }.compact
+          r.task_attributes.transform_keys(&:to_s)
         }}
       rescue => e
         warn "Failed to load tasks from DB: #{e}. Falling back to YAML."
@@ -801,7 +803,7 @@ class Hiiro
 
       def save_tasks_yaml_backup(data = nil)
         data ||= { 'tasks' => TaskRecord.all_as_list.map { |r|
-          { 'name' => r.name, 'tree' => r.tree, 'session' => r.session, 'app' => r.app, 'color_index' => r.color_index }.compact
+          r.task_attributes.transform_keys(&:to_s)
         }}
         FileUtils.mkdir_p(File.dirname(tasks_file))
         File.write(tasks_file, YAML.dump(data))
@@ -1213,33 +1215,33 @@ class Hiiro
 
         h.add_subcmd(:prune) do |*raw_args|
           opts = Hiiro::Options.parse(raw_args) {
-            flag(:force, short: :f, desc: 'Actually delete (default is dry-run)')
+            flag(:force, short: :f, desc: 'Detach missing worktrees (default is dry-run)')
           }
 
           to_remove = tm.environment.all_tasks.select do |task|
-            next true unless task.tree_name
+            next false unless task.tree_name
             path = tm.resolve_path(task)
             path.nil? || !Dir.exist?(path)
           end
 
           if to_remove.empty?
-            puts "No tasks to prune"
+            puts "No missing task worktrees"
             next
           end
 
           to_remove.each do |task|
             path = task.tree_name ? tm.resolve_path(task) : '(no tree)'
             if opts.force
-              tm.config.remove_task(task.name)
-              puts "Pruned: #{task.name} (#{path})"
+              tm.config.detach_tree(task.name)
+              puts "Detached missing worktree: #{task.name} (#{path}); task retained"
             else
-              puts "Would prune: #{task.name} (#{path})"
+              puts "Would detach missing worktree: #{task.name} (#{path})"
             end
           end
 
           unless opts.force
             puts
-            puts "Re-run with -f to actually delete."
+            puts "Re-run with -f to detach these worktree references."
           end
         end
 
@@ -1486,13 +1488,19 @@ class Hiiro
   end
 
   class Task
-    attr_reader :name, :tree_name, :session_name, :color_index
+    attr_reader :name, :tree_name, :session_name, :color_index, :app, :created_at, *TaskRecord::METADATA_COLUMNS
 
-    def initialize(name:, tree: nil, session: nil, color_index: nil, **_)
+    def initialize(name:, tree: nil, session: nil, color_index: nil, **attributes)
       @name = name
       @tree_name = tree
       @session_name = session || name
       @color_index = color_index
+      @attributes = attributes.slice(:app, :created_at, *TaskRecord::METADATA_COLUMNS)
+      @attributes.each { |key, value| instance_variable_set("@#{key}", value) }
+    end
+
+    def home
+      TaskRecord.home_for(name)
     end
 
     def parent_name
@@ -1537,7 +1545,7 @@ class Hiiro
     end
 
     def to_h
-      h = { name: name }
+      h = @attributes.merge(name: name)
       h[:tree] = tree_name if tree_name
       h[:session] = session_name if session_name != name
       h[:color_index] = color_index unless color_index.nil?

@@ -1,8 +1,111 @@
-# h task
+# Task commands
 
-Manage top-level tasks. Each task pairs a worktree with a Herdr workspace. `h task start` creates worktrees under Hiiro's default work root; `h task from` can register an existing worktree from any repo or path.
+`t` manages durable tasks. A task can be a coding project, an investigation, or administrative work. It does not need Git or Herdr.
 
-Tasks are stored in `~/.config/hiiro/tasks/tasks.yml` (SQLite-backed with YAML backup).
+Task records and resource references live in `~/.config/hiiro/hiiro.db`, in the existing `tasks` table and the `task_resources` table. `h task` uses the same records. Its YAML file is a backup, not a separate task store.
+
+## t
+
+Running `t` without arguments displays command help. `t` uses Hiiro command dispatch directly and does not run `h task` or discover legacy `t-*` executables.
+
+Every task command accepts `-t TASK` or `--task TASK` before or after the command. Explicit task names are exact and take precedence over the current directory or workspace. Conflicting explicit names are errors.
+
+Without a selector, `t` considers the current directory inside a task home, an attached directory, or a legacy worktree. In a Herdr terminal, it also queries the current workspace. If the contexts identify different tasks, the command fails without changing task data. A shared directory therefore requires an explicit selector. Outside Herdr, an unrelated focused workspace does not affect task selection.
+
+### Task records
+
+```text
+t list [--all]
+t show [TASK]
+t current
+t new TASK
+t next [TEXT...] [--clear]
+t status [active|waiting|done|archived]
+t waiting [TEXT...] [--clear]
+t done
+t archive
+```
+
+`list` shows active and waiting tasks. `--all` includes completed and archived tasks. `next`, `waiting`, and `status` without arguments display the current value.
+
+`new TASK` creates a record and `~/notes/work/TASK`. It never creates a Git worktree, moves code, or launches Herdr. Repeating `new` keeps the existing record and ensures its home exists. Names contain 1-120 ASCII letters, digits, dots, underscores, or hyphens and start with a letter or digit. Existing names that contain other characters remain usable, with those characters percent-encoded in the computed home directory name.
+
+Setting waiting text changes status to `waiting`. Clearing that text changes a waiting task back to `active`. `done` and `archive` change status and record timestamps. They never remove a task home, a file, a directory, a link, or a workspace. `status active` reopens a task.
+
+```bash
+t new audit-invoices
+t next -t audit-invoices 'Compare the September export'
+t waiting -t audit-invoices 'Finance approval'
+t waiting -t audit-invoices --clear
+t done -t audit-invoices
+t show audit-invoices
+```
+
+### Directory, link, PR, and file references
+
+```text
+t directory add PATH [--primary] [--label LABEL]
+t directory list
+t directory open [ID|PATH|LABEL]
+t link add URL [--kind general|issue|thread] [--label LABEL]
+t link list [--kind general|issue|thread]
+t link open [ID|URL|LABEL]
+t pr add URL [--label LABEL]
+t pr list
+t pr open [ID|URL|LABEL]
+t file add PATH [--label LABEL]
+t file list
+t file open [ID|PATH|LABEL]
+```
+
+Directory and file attachments must already exist. `add` stores their canonical paths without moving or copying anything. Repeating an identical attachment does not create another reference. `--primary` marks an attached directory as the default code directory for new workspace tabs and panes.
+
+Links must be absolute HTTP or HTTPS URLs. `link list` includes PR references unless a kind filter is present. PRs use the same resource storage as other links and do not require a Git repository or provider API.
+
+`file list` also discovers files in the task home, including documents, without registration. Home files can be opened by a relative path or an unambiguous basename. An omitted open selector works only when exactly one resource matches. Otherwise, the command requires an ID, path, URL, or unique label.
+
+`open` uses the operating system's default application. Attachments remain references even after task completion.
+
+### Documents
+
+```text
+t doc new NAME [TITLE...]
+t doc list
+t doc open [NAME]
+```
+
+`doc new` creates a Markdown file in the task home with an initial heading. It never overwrites an existing file. Documents have a stable task-ID prefix, such as `task-42-investigation.md`, to avoid collisions in `mdoc`'s shared HTML output directory. `doc open investigation` accepts the short name and invokes `mdoc`. Existing Markdown files in the task home also appear without registration.
+
+Task creation, metadata, references, and document creation/listing work without Git or Herdr. Document reading requires `mdoc` on `PATH` and its existing configuration.
+
+### Herdr workspaces, tabs, and panes
+
+```text
+t workspace open [--directory PATH]
+t workspace show
+t tab list
+t tab new [LABEL] [--directory PATH] [--command COMMAND]
+t tab open ID|LABEL
+t pane list
+t pane open ID|LABEL
+t pane read ID|LABEL
+t pane run ID|LABEL COMMAND...
+t pane split ID|LABEL [--direction right|down] [--directory PATH] [--command COMMAND]
+```
+
+These commands require a running Herdr server. `workspace open` focuses the workspace with the task's label or creates one. A new workspace starts in the explicit directory, the primary code directory, the legacy worktree, or the task home, in that order. `--directory` changes that operation's start directory without changing stored attachments.
+
+`workspace show` queries the current tabs and panes. Tab and pane selectors must belong to the selected task's workspace. Duplicate labels require a live ID. No pane or tab ID is stored as durable task identity. Task workspace labels follow Herdr's dot-to-underscore normalization. Colliding task or workspace labels are errors rather than fuzzy matches.
+
+Use `--` before literal command arguments that begin with a dash:
+
+```bash
+t pane run -t audit-invoices PANE_ID -- printf '%s\n' --example
+```
+
+## h task
+
+The existing `h task` commands below retain their coding-worktree operations. Unlike `t new`, `h task start` can create a worktree for a new task. For a task without a worktree, path resolution uses its task home. Starting an existing noncoding task switches to that home without creating a worktree.
 
 ## Synopsis
 
@@ -225,19 +328,19 @@ h task path -a feat bug        # tasks whose name starts with "feat" or "bug"
 
 ### prune
 
-Drop task records whose worktree directory is missing on disk. Useful after deleting worktrees out-of-band (e.g. `git worktree remove` on stale branches). Defaults to a dry-run; pass `-f` to actually remove.
+Detach worktree associations whose directories are missing. The task record, metadata, and resource references remain. Tasks without worktrees are not pruned. Defaults to a dry-run.
 
 **Options**
 
 | Flag | Short | Description | Default |
 |------|-------|-------------|---------|
-| `--force` | `-f` | Actually delete (default is dry-run) | false |
+| `--force` | `-f` | Detach missing worktrees | false |
 
 **Examples**
 
 ```bash
 h task prune        # show what would be pruned
-h task prune -f     # actually remove the missing-worktree task records
+h task prune -f     # detach missing worktrees, retaining task records
 ```
 
 ---
@@ -264,7 +367,7 @@ h task queue hadd
 
 ### resume
 
-Re-register an available (unassigned) worktree as a new task and switch to it. With no argument, opens a fuzzyfind selector over available worktrees.
+Associate an available worktree with a new task or an existing task whose worktree was detached, then switch to it. Existing task metadata is preserved. With no argument, opens a fuzzyfind selector over available worktrees.
 
 **Examples**
 
@@ -438,7 +541,7 @@ h task st
 
 ### stop
 
-Remove a task from the task list (preserves the worktree for future reuse via `resume`). With no arguments, opens a fuzzyfind selector.
+Detach a task's worktree association and those of its subtasks. The task records, metadata, workspace labels, and resources remain. The former worktree path becomes a directory reference, and the worktree is available for reuse through `resume`. With no arguments, opens a fuzzyfind selector.
 
 **Examples**
 

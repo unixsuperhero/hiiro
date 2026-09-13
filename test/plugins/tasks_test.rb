@@ -527,25 +527,27 @@ class TaskManagerConfigTest < Minitest::Test
     end
   end
 
-  def test_config_remove_task
+  def test_detaching_a_worktree_preserves_task_metadata_and_references
     with_temp_dir do |dir|
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
+      config = TaskManager::Config.new(tasks_file: File.join(dir, 'tasks.yml'))
+      task = Task.new(name: 'existing-task', tree: dir, next_action: 'Review the design', status: 'waiting', waiting_on: 'Feedback')
+      config.save_task(task)
+      record = Hiiro::TaskRecord.find_by_name(task.name)
+      Hiiro::TaskResource.create(task_id: record.id, kind: 'issue', target: 'https://example.com/issue/42')
 
-      # Pre-populate the tasks file with string keys
-      File.write(tasks_file, <<~YAML)
-        tasks:
-          - name: existing-task
-            tree: existing-task/main
-            session: existing-task
-      YAML
+      config.detach_tree(task.name)
+      config.detach_tree(task.name)
+      loaded = config.tasks.find { |item| item.name == task.name }
+      config.save_task(loaded)
 
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      config.remove_task("existing-task")
-
-      content = YAML.load_file(tasks_file, permitted_classes: [Symbol])
-      assert_equal 0, content['tasks'].count
+      assert_nil loaded.tree_name
+      assert_equal 'waiting', loaded.status
+      assert_equal 'Review the design', loaded.next_action
+      assert_equal 'Feedback', loaded.waiting_on
+      assert_equal [
+        ['directory', dir],
+        ['issue', 'https://example.com/issue/42']
+      ], record.resources.order(:kind).select_map([:kind, :target])
     end
   end
 end

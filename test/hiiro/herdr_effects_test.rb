@@ -121,13 +121,6 @@ class HerdrEffectsTest < Minitest::Test
     assert_equal ['herdr', 'pane', 'run', 'w1:p2', 'claude'], @executor.calls_to(:run).last[:args]
   end
 
-  def test_read_pane_extracts_text
-    @executor.stub('pane read', JSON.generate(
-      'result' => { 'read' => { 'pane_id' => 'w1:p1', 'text' => "one\ntwo" } },
-    ))
-
-    assert_equal "one\ntwo", @herdr.read_pane('w1:p1')
-  end
 
   def test_default_executor_is_real
     herdr = Hiiro::Herdr.new

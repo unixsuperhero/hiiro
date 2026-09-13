@@ -1,4 +1,6 @@
 require 'json'
+require 'socket'
+require 'timeout'
 
 class Hiiro
   class Herdr
@@ -487,11 +489,20 @@ class Hiiro
     alias kill_pane close_pane
 
     def focus_pane(ref)
-      pane = get_pane(ref)
-      return false unless pane
+      status = @executor.capture('herdr', 'status', 'server')
+      socket_path = status.lines.find { |line| line.start_with?('socket: ') }&.delete_prefix('socket: ')&.strip
+      return false unless socket_path
 
-      focus_workspace(pane.workspace_id)
-      focus_tab(pane.tab_id)
+      request = { id: 'hiiro:pane:focus', method: 'pane.focus', params: { pane_id: ref } }
+      Timeout.timeout(5) do
+        UNIXSocket.open(socket_path) do |socket|
+          socket.puts(JSON.generate(request))
+          response = JSON.parse(socket.gets || '{}')
+          response.dig('result', 'pane', 'focused') == true
+        end
+      end
+    rescue SystemCallError, IOError, JSON::ParserError, Timeout::Error
+      false
     end
     alias select_pane focus_pane
 
@@ -546,7 +557,7 @@ class Hiiro
 
       args = ['pane', 'read', pane_id, '--source', source]
       args += ['--lines', lines.to_s] if lines
-      capture_result(*args).dig('read', 'text')
+      @executor.capture('herdr', *args)
     end
     alias capture_pane read_pane
 

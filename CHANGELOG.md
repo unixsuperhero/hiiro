@@ -3,10 +3,13 @@
 ## [Unreleased]
 
 ### Added
+- Add the `t` task CLI with `--task`/`-t` selection, durable task status and next actions, document homes, resource references, and Herdr workspace/tab/pane commands.
+- Allow block-only command dispatch with `external_commands: false`, keeping legacy `t-*` executables out of the task CLI.
 - Add `Hiiro::Herdr`, a JSON-backed adapter for Herdr workspaces, tabs, panes, notifications, and command execution.
 - Persist Herdr workspace/tab/pane IDs for invocations, branches, queued prompts, services, and tracked PRs, with read fallbacks for legacy metadata.
 
 ### Changed
+- Preserve task records and resource references when detaching or pruning worktrees.
 - Move task, project, queue, service, background, Claude, app navigation, PR attach, title, and notification workflows from tmux to Herdr.
 - Keep `h session` and `h window` as compatibility commands for Herdr workspaces and tabs.
 
@@ -15,6 +18,9 @@
 - Remove the old `Hiiro::Tmux` adapter and tmux-specific command tests.
 
 ### Fixed
+- Make undeclared `add_cmd opts:` entries boolean flags without consuming positional arguments; preserve explicit options and reserve conflicting short aliases.
+- Show selected command options for `add_cmd -h`/`--help` without executing the command block.
+- Focus the exact Herdr pane through the socket API and read the CLI's plain-text pane output without JSON parsing.
 - Restore the missing `Hiiro::Bins` helper so `require "hiiro"` boots and commands like `h jumplist record` dispatch correctly.
 - Make Hiiro's Ruby requirement explicit as Ruby 3.2+ and have rbenv-wide gem installs skip incompatible Ruby versions.
 - Update the publish script to preserve the Ruby support constant, run only on supported Ruby, and install releases only into compatible rbenv versions.

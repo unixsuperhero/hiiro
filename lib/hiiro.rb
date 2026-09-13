@@ -360,6 +360,10 @@ class Hiiro
 
     wrapper = lambda do |*raw_args|
       @opts = cmd_opts.parse(raw_args)
+      if @opts.help?
+        puts @opts.help_text
+        next
+      end
       instance_eval(&block)
     end
 
@@ -605,6 +609,8 @@ class Hiiro
     end
 
     def all_bins
+      return [] unless hiiro.global_values.fetch(:external_commands, true)
+
       pattern = format('{%s}/%s-*', paths.join(?,), bin_name)
 
       Dir.glob(pattern).map { |path| Bin.new(bin_name, path) }

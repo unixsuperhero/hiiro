@@ -165,6 +165,53 @@ class OptionsTest < Minitest::Test
 
     assert opts.dry_run
   end
+
+  def test_select_creates_boolean_flags_without_consuming_positionals
+    options = Hiiro::Options.new.select([:a, "a", "b", :c, :d])
+    opts = options.parse(%w[-a first --b second -c third])
+
+    assert_equal({ help: false, a: true, b: true, c: true, d: false }, opts.to_h)
+    assert_equal %w[first second third], opts.args
+    assert_equal({ help: false, a: false, b: false, c: false, d: false }, options.parse([]).to_h)
+  end
+
+  def test_select_preserves_explicit_value_options_and_flags
+    options = Hiiro::Options.new do
+      option "task", short: :t, default: "current"
+      option :count, long: :limit, short: "n", type: :integer, default: 3
+      option :tag, short: "g", multi: true
+      flag :color, default: true
+    end.select(["task", :count, "tag", :color])
+
+    defaults = options.parse([])
+    assert_equal({ help: false, task: "current", count: 3, tag: [], color: true }, defaults.to_h)
+
+    opts = options.parse(%w[-t feature --limit 5 -g ruby --tag cli --color payload])
+    assert_equal({ help: false, task: "feature", count: 5, tag: %w[ruby cli], color: false }, opts.to_h)
+    assert_equal ["payload"], opts.args
+  end
+
+  def test_select_reserves_explicit_short_aliases_before_creating_flags
+    options = Hiiro::Options.new do
+      option :task, short: :t
+    end
+    selected = options.select(%i[target task dry_run])
+    opts = selected.parse(%w[-t feature -d payload])
+
+    assert_equal({ help: false, target: false, task: "feature", dry_run: true }, opts.to_h)
+    assert_equal ["payload"], opts.args
+    assert_equal "original", options.parse(%w[-t original]).task
+  end
+
+  def test_select_omits_ambiguous_short_aliases_and_preserves_help
+    options = Hiiro::Options.new.select(%i[all archive history h])
+    opts = options.parse(%w[-a payload --all --archive -h])
+
+    assert_equal({ help: true, all: true, archive: true, history: false, h: false }, opts.to_h)
+    assert_equal %w[-a payload], opts.args
+    refute_match(/-a,/, options.help_text)
+    assert_match(/-h, --help/, options.help_text)
+  end
 end
 
 class OptionsDefinitionTest < Minitest::Test

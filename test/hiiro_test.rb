@@ -173,7 +173,70 @@ class HiiroAddDefaultTest < Minitest::Test
   end
 end
 
+class HiiroAddCmdTest < Minitest::Test
+  def test_auto_flags_and_explicit_task_option_reach_handler
+    hiiro = Hiiro.new("testbin-zzz")
+    hiiro.add_option(:task, short: :t)
+    hiiro.add_cmd(:example, opts: %i[a b c d task]) do
+      [opts.to_h, opts.args]
+    end
+
+    result = hiiro.run_subcommand(:example, "--a", "first", "-b", "second", "--task", "feature")
+
+    assert_equal [
+      { help: false, a: true, b: true, c: false, d: false, task: "feature" },
+      %w[first second]
+    ], result
+  end
+
+  def test_help_lists_only_selected_options_without_running_handler
+    hiiro = Hiiro.new("testbin-zzz")
+    hiiro.add_option(:task, short: :t)
+    hiiro.add_flag(:unselected)
+    calls = []
+    hiiro.add_cmd(:example, opts: %i[a history task]) { calls << opts.args }
+
+    hiiro.run_subcommand(:example, "payload")
+    assert_equal [["payload"]], calls
+    calls.clear
+
+    %w[-h --help].each do |help|
+      output, = capture_io { hiiro.run_subcommand(:example, help) }
+
+      assert_empty calls
+      assert_match(/-a, --a/, output)
+      refute_match(/--a[^\n]*<value>/, output)
+      assert_match(/--history/, output)
+      assert_match(/-t, --task[^\n]*<value>/, output)
+      assert_match(/-h, --help/, output)
+      refute_match(/--unselected/, output)
+    end
+  end
+end
+
 class HiiroRunnersBinTest < Minitest::Test
+  def test_disabling_external_commands_keeps_task_dispatch_inside_the_cli
+    previous_path = ENV["PATH"]
+    Dir.mktmpdir do |dir|
+      external = File.join(dir, "testbin-zzz-example")
+      File.write(external, "#!/bin/sh\nprintf 'external\\n'\n")
+      File.chmod(0o755, external)
+      ENV["PATH"] = dir
+
+      default = Hiiro.new("testbin-zzz", "example")
+      default.add_cmd(:example) { puts "internal" }
+      output, = capture_subprocess_io { default.runner.run }
+      assert_equal "external\n", output
+
+      isolated = Hiiro.new("testbin-zzz", "example", external_commands: false)
+      isolated.add_cmd(:example) { puts "internal" }
+      output, = capture_io { isolated.runner.run }
+      assert_equal "internal\n", output
+    end
+  ensure
+    ENV["PATH"] = previous_path
+  end
+
   def test_bin_subcommand_name
     bin = Hiiro::Runners::Bin.new("h", "/usr/local/bin/h-project")
 
