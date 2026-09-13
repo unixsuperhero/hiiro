@@ -248,6 +248,20 @@ class HiiroAddCmdTest < Minitest::Test
     assert_match(/hiiro_test\.rb:/, output)
     refute_match(/\[\*raw_args\]/, output)
   end
+
+  def test_generated_help_with_locations_under_different_root_directories
+    hiiro = Hiiro.new("testbin-zzz", external_commands: false)
+    hiiro.instance_eval("add_cmd(:users) {}", "/Users/unixsuperhero/bin/t", 1)
+    hiiro.instance_eval("add_cmd(:volumes) {}", "/Volumes/yaba/homedir/gems/hiiro/lib/hiiro.rb", 1)
+
+    output, = capture_io do
+      assert_equal 1, assert_raises(SystemExit) { hiiro.help }.status
+    end
+    assert_includes output, 'export BIN="/Users/unixsuperhero/bin"'
+    assert_includes output, 'export LIB="/Volumes/yaba/homedir/gems/hiiro/lib"'
+    assert_match(/users\s+.*\$BIN\/t:1/, output)
+    assert_match(/volumes\s+.*\$LIB\/hiiro.rb:1/, output)
+  end
 end
 
 class HiiroRunnersBinTest < Minitest::Test

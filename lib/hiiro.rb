@@ -508,8 +508,10 @@ class Hiiro
     if lca_depth >= min_depth
       [lca]
     else
-      lca_parts = lca.split('/')
-      subgroups = dirs.group_by { |d| d.split('/').first(lca_parts.length + 1).join('/') }
+      subgroups = dirs.group_by do |dir|
+        depth = lca_depth + (dir.start_with?('/') ? 2 : 1)
+        dir.split('/').first(depth).join('/')
+      end
       subgroups.flat_map { |_, group| consolidate_dirs(group, min_depth: min_depth) }.uniq
     end
   end
