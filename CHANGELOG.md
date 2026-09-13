@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.364] - 2026-09-13
+
+### Fixed
+- Create the publish response log directory before saving Claude's output, preventing release preparation from failing when the directory is absent.
+- Prevent infinite recursion in help directory grouping when command locations span different filesystem-root directories, such as `/Users` and `/Volumes`.
+
 ## [Unreleased]
 
 ### Added
@@ -19,8 +25,6 @@
 - Remove the old `Hiiro::Tmux` adapter and tmux-specific command tests.
 
 ### Fixed
-- Create the publish response log directory before saving Claude's output, preventing release preparation from failing when the directory is absent.
-- Prevent infinite recursion in help directory grouping when command locations span different filesystem-root directories, such as `/Users` and `/Volumes`.
 - Preserve `add_cmd` declaration locations and argument metadata in generated help; allow command groups to pass arguments and help through to child commands.
 - Make undeclared `add_cmd opts:` entries boolean flags without consuming positional arguments; preserve explicit options and reserve conflicting short aliases.
 - Show selected command options for `add_cmd -h`/`--help` without executing the command block.
