@@ -25,6 +25,7 @@
 - Remove the old `Hiiro::Tmux` adapter and tmux-specific command tests.
 
 ### Fixed
+- Strip the desktop notifier executable path and run notifications and sounds as detached processes instead of creating persistent Herdr tabs.
 - Preserve `add_cmd` declaration locations and argument metadata in generated help; allow command groups to pass arguments and help through to child commands.
 - Make undeclared `add_cmd opts:` entries boolean flags without consuming positional arguments; preserve explicit options and reserve conflicting short aliases.
 - Show selected command options for `add_cmd -h`/`--help` without executing the command block.

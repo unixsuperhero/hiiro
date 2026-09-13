@@ -42,19 +42,19 @@ class Hiiro
       cmd += ['-title', options.title.tr('()[]', '')] if options.title
       cmd += ['-open', options.link] if options.link
       cmd += ['-execute', options.command] if options.command
-      Background.run(*cmd)
+      Process.detach(spawn(*cmd))
 
       play_sound
     end
 
     def play_sound
       if options.sound && sounds[options.sound]
-        Background.run('afplay', sounds[options.sound.downcase])
+        Process.detach(spawn('afplay', sounds[options.sound.downcase]))
       end
     end
 
     def binpath
-      `command -v terminal-notifier`
+      `command -v terminal-notifier`.strip
     end
 
     def has_cmd?

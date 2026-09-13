@@ -1,6 +1,8 @@
 require "test_helper"
 require "hiiro/options"
 require "hiiro/notification"
+require "json"
+require "timeout"
 
 class NotificationTest < Minitest::Test
   include TestHelpers
@@ -98,6 +100,42 @@ class NotificationTest < Minitest::Test
         assert_includes sounds.keys, 'custom'
         assert_includes sounds.keys, 'alert'
       end
+    end
+  end
+
+  def test_show_runs_notification_and_sound_without_herdr_terminals
+    with_temp_dir do |dir|
+      previous_env = ENV.to_h
+      script = <<~RUBY
+        \#!#{RbConfig.ruby}
+        require "json"
+        path = File.join(#{dir.inspect}, File.basename($0) + ".json")
+        File.write(path + ".tmp", JSON.generate(ARGV))
+        File.rename(path + ".tmp", path)
+        puts '{"result":{}}'
+      RUBY
+      %w[terminal-notifier afplay herdr].each do |name|
+        path = File.join(dir, name)
+        File.write(path, script)
+        FileUtils.chmod(0o755, path)
+      end
+      sound_dir = File.join(dir, ".config/hiiro/sounds")
+      FileUtils.mkdir_p(sound_dir)
+      sound_path = File.join(sound_dir, "done.wav")
+      File.write(sound_path, "")
+      ENV.update("PATH" => "#{dir}:#{ENV['PATH']}", "HERDR_ENV" => "1")
+      notification = Hiiro::Notification.new(MockHiiroForNotify.new(["-m", "Work completed", "-s", "done"]))
+
+      Dir.stub(:home, dir) { notification.show }
+
+      refute File.exist?(File.join(dir, "herdr.json")), "A notification must not allocate Herdr terminals"
+      Timeout.timeout(5) do
+        sleep 0.01 until %w[terminal-notifier afplay].all? { |name| File.exist?(File.join(dir, "#{name}.json")) }
+      end
+      assert_equal ["-message", "Work completed"], JSON.parse(File.read(File.join(dir, "terminal-notifier.json")))
+      assert_equal [sound_path], JSON.parse(File.read(File.join(dir, "afplay.json")))
+    ensure
+      ENV.replace(previous_env)
     end
   end
 
