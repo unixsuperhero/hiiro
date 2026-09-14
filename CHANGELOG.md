@@ -5,6 +5,7 @@
 ## [0.1.375] - 2026-09-14
 
 ### Changed
+- Herdr `hiiro.nvim` action opens bare `nvim` in the calling pane's working directory instead of the task notes home
 - `t switch`, `t tab open`, and `t pane open` no longer default to the current task; with no destination they open the picker (tasks, workspaces, panes, or tabs) and fail non-interactively. `.` still means the current task
 
 ## [0.1.374] - 2026-09-14
