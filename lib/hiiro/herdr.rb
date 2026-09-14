@@ -102,6 +102,8 @@ class Hiiro
         @agent_status = data['agent_status']
       end
 
+      def name = label
+
       alias name label
       alias index number
       alias panes pane_count
