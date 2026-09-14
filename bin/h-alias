@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run do
+  add_flag :global, short: :g, desc: 'Create a global zsh alias'
+
+  add_cmd :add, args: ['NAME', 'COMMAND...'], opts: [:global] do
+    abort 'Usage: h alias add [--global|-g] NAME COMMAND...' unless opts.args.length >= 2
+    name, *command_args = opts.args
+    abort 'Invalid alias name' unless /\A[A-Za-z0-9_.][A-Za-z0-9_.-]*\z/.match?(name)
+    command = command_args.length == 1 ? command_args.first : Shellwords.join(command_args)
+    quoted = "'" + command.gsub("'") { "'\\''" } + "'"
+
+    home = ENV.fetch('HOME')
+    path = File.join(home, '.zshrc.d', 'aliases.zsh')
+    path = File.join(home, '.zshrc') unless File.file?(path)
+
+    File.open(path, 'a+', 0o600) do |file|
+      unless file.size.zero?
+        file.seek(-1, IO::SEEK_END)
+        file.write("\n") unless file.read(1) == "\n"
+      end
+      file.write("alias #{opts.global ? '-g ' : ''}#{name}=#{quoted}\n")
+    end
+    puts "Added alias to #{path}"
+  end
+end

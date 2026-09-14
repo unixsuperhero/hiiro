@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run do
+  add_cmd :add, args: %i[NAME VALUE] do
+    abort 'Usage: h env add NAME VALUE' unless opts.args.length == 2
+    name, value = opts.args
+    abort 'Invalid environment variable name' unless /\A[A-Za-z_][A-Za-z0-9_]*\z/.match?(name)
+
+    home = ENV.fetch('HOME')
+    path = File.join(home, '.zshenv.d', 'vars.zsh')
+    path = File.join(home, '.zshenv') unless File.file?(path)
+    escaped = value.gsub(/["\\$`]/) { |char| "\\#{char}" }
+
+    File.open(path, 'a+', 0o600) do |file|
+      unless file.size.zero?
+        file.seek(-1, IO::SEEK_END)
+        file.write("\n") unless file.read(1) == "\n"
+      end
+      file.write("export #{name}=\"#{escaped}\"\n")
+    end
+    puts "Added environment variable to #{path}"
+  end
+end
