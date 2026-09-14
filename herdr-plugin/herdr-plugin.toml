@@ -1,0 +1,47 @@
+# Hiiro task actions for Herdr. Install with `h herdr install`, which copies this
+# directory to ~/.config/hiiro/herdr-plugin and links it. Every action opens the
+# popup pane with HIIRO_HERDR_ACTION set; `h herdr popup` does the work there.
+id = "hiiro"
+name = "Hiiro tasks"
+version = "0.1.0"
+min_herdr_version = "0.7.4"
+description = "Fuzzy task switcher, todo capture, and task shell/editor popups backed by the t CLI."
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "switch"
+title = "Switch to task…"
+contexts = ["workspace"]
+command = ["h", "herdr", "action", "switch"]
+
+[[actions]]
+id = "todo-add"
+title = "Add todo to task…"
+contexts = ["workspace"]
+command = ["h", "herdr", "action", "todo-add"]
+
+[[actions]]
+id = "todos"
+title = "Copy a todo from the current task…"
+contexts = ["workspace"]
+command = ["h", "herdr", "action", "todos"]
+
+[[actions]]
+id = "shell"
+title = "Shell in the current task directory"
+contexts = ["workspace"]
+command = ["h", "herdr", "action", "shell"]
+
+[[actions]]
+id = "nvim"
+title = "nvim in the current task notes"
+contexts = ["workspace"]
+command = ["h", "herdr", "action", "nvim"]
+
+[[panes]]
+id = "popup"
+title = "hiiro"
+placement = "popup"
+width = "70%"
+height = "70%"
+command = ["h", "herdr", "popup"]

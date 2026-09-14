@@ -1,0 +1,156 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'fileutils'
+
+# Herdr plugin glue for the t task CLI. The plugin manifest lives in the gem's
+# herdr-plugin/ directory; `h herdr install` copies it to ~/.config/hiiro/herdr-plugin
+# and links it with `herdr plugin link`. Actions run headless behind keybindings and
+# open the plugin popup; `h herdr popup` runs inside that popup with a real TTY.
+
+PLUGIN_ID = 'hiiro'
+ACTIONS = %w[switch todo-add todos shell nvim].freeze
+INSTALL_DIR = Hiiro::Config.config_dir('herdr-plugin')
+SOURCE_DIR = File.expand_path('../herdr-plugin', File.dirname(File.realpath(__FILE__)))
+KEYS_SNIPPET = <<~TOML
+  # Hiiro task actions (h herdr keys)
+  [[keys.command]]
+  key = "prefix+t"
+  type = "plugin_action"
+  command = "hiiro.switch"
+  description = "switch to task"
+
+  [[keys.command]]
+  key = "prefix+shift+a"
+  type = "plugin_action"
+  command = "hiiro.todo-add"
+  description = "add todo"
+
+  [[keys.command]]
+  key = "prefix+shift+y"
+  type = "plugin_action"
+  command = "hiiro.todos"
+  description = "copy a todo"
+
+  [[keys.command]]
+  key = "prefix+shift+s"
+  type = "plugin_action"
+  command = "hiiro.shell"
+  description = "task shell popup"
+
+  [[keys.command]]
+  key = "prefix+shift+e"
+  type = "plugin_action"
+  command = "hiiro.nvim"
+  description = "task notes in nvim"
+TOML
+
+def herdr_bin
+  ENV['HERDR_BIN_PATH'] || 'herdr'
+end
+
+def source_dir
+  return SOURCE_DIR if File.exist?(File.join(SOURCE_DIR, 'herdr-plugin.toml'))
+  gem_root = Gem.loaded_specs['hiiro']&.full_gem_path
+  gem_root && File.join(gem_root, 'herdr-plugin')
+end
+
+Hiiro.run(*ARGV, external_commands: false) do
+  add_cmd(:install) do
+    no_args = opts.args.empty?
+    raise Hiiro::Error, 'h herdr install takes no arguments' unless no_args
+    src = source_dir
+    raise Hiiro::Error, 'Plugin manifest not found; reinstall the hiiro gem' unless src
+    FileUtils.mkdir_p(File.dirname(INSTALL_DIR))
+    FileUtils.rm_rf(INSTALL_DIR)
+    FileUtils.cp_r(src, INSTALL_DIR)
+    puts "Copied plugin to #{INSTALL_DIR}"
+    linked = system(herdr_bin, 'plugin', 'link', INSTALL_DIR)
+    puts(linked ? 'Linked plugin "hiiro" in Herdr' : 'Plugin already linked or link failed; run: herdr plugin list')
+    puts "\nAdd keybindings to ~/.config/herdr/config.toml (h herdr keys prints them), then run:"
+    puts '  herdr server reload-config'
+  end
+
+  add_cmd(:uninstall) do
+    system(herdr_bin, 'plugin', 'unlink', PLUGIN_ID)
+    FileUtils.rm_rf(INSTALL_DIR)
+    puts "Removed #{INSTALL_DIR}"
+  end
+
+  add_cmd(:keys) { puts KEYS_SNIPPET }
+
+  add_cmd(:actions) { ACTIONS.each { |name| puts "hiiro.#{name}" } }
+
+  # Headless: bound to a key, opens the popup with the chosen action.
+  add_cmd(:action, args: %i[name]) do
+    name = opts.args.first
+    raise Hiiro::Error, "Unknown action #{name}; one of #{ACTIONS.join(', ')}" unless ACTIONS.include?(name)
+    size = %w[shell nvim].include?(name) ? %w[--width 90% --height 90%] : []
+    system(herdr_bin, 'plugin', 'pane', 'open', '--plugin', PLUGIN_ID, '--entrypoint', 'popup',
+           '--env', "HIIRO_HERDR_ACTION=#{name}", *size, '--focus')
+  end
+
+  # Runs inside the popup pane (real TTY, HERDR_WORKSPACE_ID set by Herdr).
+  add_cmd(:popup) do
+    name = ENV['HIIRO_HERDR_ACTION'] || opts.args.first
+    raise Hiiro::Error, "Set HIIRO_HERDR_ACTION to one of #{ACTIONS.join(', ')}" unless ACTIONS.include?(name)
+    run_popup(name)
+  end
+
+  def tasks
+    Hiiro::TaskRecord.all_as_list.reject { |task| %w[done archived].include?(task.task_status) }
+  end
+
+  def current_task_name
+    Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve&.name
+  end
+
+  def pick_task(prompt_current: true)
+    current = prompt_current && current_task_name
+    names = tasks.map(&:name)
+    names = [current, *names.reject { |n| n == current }] if current
+    raise Hiiro::Error, 'No tasks; create one with t NAME new' if names.empty?
+    choice = fuzzyfind(names)
+    raise Hiiro::Error, 'No task selected' if choice.nil? || choice.strip.empty?
+    choice.strip
+  end
+
+  def pause(message)
+    $stderr.puts message
+    sleep 2
+  end
+
+  def run_popup(name)
+    case name
+    when 'switch'
+      task = pick_task(prompt_current: false)
+      system('t', 'switch', task) || pause("t switch #{task} failed")
+    when 'todo-add'
+      task = pick_task
+      print "Todo for #{task}: "
+      text = $stdin.gets.to_s.strip
+      raise Hiiro::Error, 'No todo text' if text.empty?
+      system('t', 'todo', 'add', '-t', task, text) || pause('todo add failed')
+      sleep 1
+    when 'todos'
+      task = current_task_name || pick_task
+      items = Hiiro::TodoItem.where(task_name: task, subtask_name: nil).exclude(status: %w[done skip]).order(:id).all
+      raise Hiiro::Error, "No open todos for #{task}" if items.empty?
+      text = fuzzyfind_from_map(items.to_h { |item| ["#{item.id}  #{item.text}", item.text] })
+      raise Hiiro::Error, 'No todo selected' unless text
+      Hiiro::Shell.pipe(text, 'pbcopy')
+      puts "Copied: #{text}"
+      sleep 1
+    when 'shell'
+      exec('t', 'sh')
+    when 'nvim'
+      task = Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve!
+      FileUtils.mkdir_p(task.home)
+      Dir.chdir(task.home)
+      exec(ENV['EDITOR'] || 'nvim', '.')
+    end
+  rescue Hiiro::Error => e
+    pause("ERROR: #{e.message}")
+    exit 1
+  end
+end
