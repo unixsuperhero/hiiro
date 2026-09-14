@@ -5,6 +5,8 @@
 ## [0.1.370] - 2026-09-14
 
 ### Added
+- `t ls` lists the panes under every open workspace with directory, agent state, and foreground command via `herdr pane process-info`; `t switch` accepts an exact pane ID and its picker includes panes
+- `Hiiro::Herdr#process_info` and `Pane#foreground_command`
 - `t ls` marks tasks with an open Herdr workspace with `@` and lists workspaces that belong to no task
 
 ## [0.1.369] - 2026-09-14
