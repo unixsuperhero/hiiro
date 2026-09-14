@@ -204,6 +204,19 @@ class Hiiro
       def to_s
         "#{id} #{name} [#{workspace_id} / #{tab_id}]#{focused? ? ' *' : ''}"
       end
+
+      # `herdr pane process-info` for this pane, fetched once.
+      def process_info
+        @process_info ||= client.process_info(id)
+      end
+
+      # Command line of the foreground process group leader, or nil at a shell prompt.
+      def foreground_command
+        procs = process_info['foreground_processes'] || []
+        leader = procs.find { |proc| proc['pid'] == process_info['foreground_process_group_id'] } || procs.last
+        return nil if leader.nil? || leader['pid'] == process_info['shell_pid']
+        leader['cmdline']
+      end
     end
 
     class Panes < Collection
@@ -317,6 +330,10 @@ class Hiiro
     def get_tab(id)
       row = capture_result('tab', 'get', id)['tab']
       row && Tab.new(row, client: self)
+    end
+
+    def process_info(pane_id)
+      capture_result('pane', 'process-info', '--pane', pane_id).fetch('process_info', {})
     end
 
     def get_pane(id)
