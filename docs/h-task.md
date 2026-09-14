@@ -6,56 +6,60 @@ Task records and resource references live in `~/.config/hiiro/hiiro.db`, in the 
 
 ## t
 
-The command implementation lives in `~/bin/t`, not a `Hiiro::TaskCLI` library class. Commands use `add_cmd` with per-command argument and option declarations. Running `t` or `t doc` displays Hiiro's generated subcommand table, including declaration locations. Leaf help, such as `t directory add --help`, displays only that command's options without executing it. There is no separate task help template. `t` does not run `h task` or discover legacy `t-*` executables.
+The command implementation lives in the repository's `bin/t`, not a `Hiiro::TaskCLI` library class. `~/bin/t` is a symlink to that executable, which loads the repository library. Installing the gem does not install this launcher. Commands use `add_cmd` with per-command argument and option declarations. Running `t` or `t doc` displays Hiiro's native subcommand table, including declaration locations. Leaf help, such as `t directory add --help`, displays only that command's options without executing it. There is no separate task help template. `t` does not run `h task` or discover legacy `t-*` executables.
 
-Every task command accepts `-t TASK` or `--task TASK` before or after the command. Explicit task names are exact and take precedence over the current directory or workspace. Conflicting explicit names are errors.
+The grammar is `t COMMAND [TASK] [PAYLOAD...]` or `t GROUP COMMAND [TASK] [PAYLOAD...]`. The task is the first positional argument after the leaf command. Exact task names take precedence over context; unknown names are errors. Task selection has no flag and cannot appear before the command or between a group and its child command.
 
-Without a selector, `t` considers the current directory inside a task home, an attached directory, or a legacy worktree. In a Herdr terminal, it also queries the current workspace. If the contexts identify different tasks, the command fails without changing task data. A shared directory therefore requires an explicit selector. Outside Herdr, an unrelated focused workspace does not affect task selection.
+Omit `TASK` only when there are no payload positionals. For example, `t next` reads the selected task's next action, while `t next audit-invoices 'Compare the export'` updates a named task. A lone text argument is treated as a task name, not as a payload for an implicit task.
+
+Selection uses the explicit name, then a matching calling Herdr workspace label, then the current directory inside a task home, code directory, or registered directory, then the saved task. Workspace context wins over a conflicting directory. Ambiguous matches at the same priority and invalid, stale, or conflicting Herdr IDs are errors. Outside Herdr, an unrelated focused workspace does not affect selection.
+
+`t current TASK` prints the name and saves the task without changing terminal focus. `t current` only prints the selected name. The fallback is a `PinRecord` with `command='t'`, `key='current_task'`, and the task ID as a JSON integer in `value_json`. A missing saved task is an error when selection reaches that fallback. Reads and implicit workspace opens do not replace it.
 
 ### Task records
 
 ```text
-t list [--all]
+t list [TASK] [--all]
 t show [TASK]
-t current
+t current [TASK]
 t new TASK
-t next [TEXT...] [--clear]
-t status [active|waiting|done|archived]
-t waiting [TEXT...] [--clear]
-t done
-t archive
+t next [TASK] [TEXT...] [--clear]
+t status [TASK] [active|waiting|done|archived]
+t waiting [TASK] [TEXT...] [--clear]
+t done [TASK]
+t archive [TASK]
 ```
 
-`list` shows active and waiting tasks. `--all` includes completed and archived tasks. `next`, `waiting`, and `status` without arguments display the current value.
+`list` without a task shows all active and waiting tasks, regardless of context or the saved task. An explicit name restricts the list. `--all` includes completed and archived tasks. `next`, `waiting`, and `status` without a payload display the selected task's current value.
 
 `new TASK` creates a record and `~/notes/work/TASK`. It never creates a Git worktree, moves code, or launches Herdr. Repeating `new` keeps the existing record and ensures its home exists. Names contain 1-120 ASCII letters, digits, dots, underscores, or hyphens and start with a letter or digit. Existing names that contain other characters remain usable, with those characters percent-encoded in the computed home directory name.
 
-Setting waiting text changes status to `waiting`. Clearing that text changes a waiting task back to `active`. `done` and `archive` change status and record timestamps. They never remove a task home, a file, a directory, a link, or a workspace. `status active` reopens a task.
+Setting waiting text changes status to `waiting`. Clearing that text changes a waiting task back to `active`. `done` and `archive` change status and record timestamps. They never remove a task home, a file, a directory, a link, or a workspace. `t status TASK active` reopens a task.
 
 ```bash
 t new audit-invoices
-t next -t audit-invoices 'Compare the September export'
-t waiting -t audit-invoices 'Finance approval'
-t waiting -t audit-invoices --clear
-t done -t audit-invoices
+t next audit-invoices 'Compare the September export'
+t waiting audit-invoices 'Finance approval'
+t waiting audit-invoices --clear
+t done audit-invoices
 t show audit-invoices
 ```
 
 ### Directory, link, PR, and file references
 
 ```text
-t directory add PATH [--primary] [--label LABEL]
-t directory list
-t directory open [ID|PATH|LABEL]
-t link add URL [--kind general|issue|thread] [--label LABEL]
-t link list [--kind general|issue|thread]
-t link open [ID|URL|LABEL]
-t pr add URL [--label LABEL]
-t pr list
-t pr open [ID|URL|LABEL]
-t file add PATH [--label LABEL]
-t file list
-t file open [ID|PATH|LABEL]
+t directory add TASK PATH [--primary] [--label LABEL]
+t directory list [TASK]
+t directory open [TASK] [ID|PATH|LABEL]
+t link add TASK URL [--kind general|issue|thread] [--label LABEL]
+t link list [TASK] [--kind general|issue|thread]
+t link open [TASK] [ID|URL|LABEL]
+t pr add TASK URL [--label LABEL]
+t pr list [TASK]
+t pr open [TASK] [ID|URL|LABEL]
+t file add TASK PATH [--label LABEL]
+t file list [TASK]
+t file open [TASK] [ID|PATH|LABEL]
 ```
 
 Directory and file attachments must already exist. `add` stores their canonical paths without moving or copying anything. Repeating an identical attachment does not create another reference. `--primary` marks an attached directory as the default code directory for new workspace tabs and panes.
@@ -69,38 +73,40 @@ Links must be absolute HTTP or HTTPS URLs. `link list` includes PR references un
 ### Documents
 
 ```text
-t doc new NAME [TITLE...]
-t doc list
-t doc open [NAME]
+t doc new TASK NAME [TITLE...]
+t doc list [TASK]
+t doc open [TASK] [NAME]
 ```
 
-`doc new` creates a Markdown file in the task home with an initial heading. It never overwrites an existing file. Documents have a stable task-ID prefix, such as `task-42-investigation.md`, to avoid collisions in `mdoc`'s shared HTML output directory. `doc open investigation` accepts the short name and invokes `mdoc`. Existing Markdown files in the task home also appear without registration.
+`doc new` creates a Markdown file in the task home with an initial heading. It never overwrites an existing file. Documents have a stable task-ID prefix, such as `task-42-investigation.md`, to avoid collisions in `mdoc`'s shared HTML output directory. `t doc open TASK investigation` accepts the short name and invokes `mdoc`. Existing Markdown files in the task home also appear without registration.
 
 Task creation, metadata, references, and document creation/listing work without Git or Herdr. Document reading requires `mdoc` on `PATH` and its existing configuration.
 
 ### Herdr workspaces, tabs, and panes
 
 ```text
-t workspace open [--directory PATH]
-t workspace show
-t tab list
-t tab new [LABEL] [--directory PATH] [--command COMMAND]
-t tab open ID|LABEL
-t pane list
-t pane open ID|LABEL
-t pane read ID|LABEL
-t pane run ID|LABEL COMMAND...
-t pane split ID|LABEL [--direction right|down] [--directory PATH] [--command COMMAND]
+t workspace [TASK] [--directory PATH]
+t workspace --show [TASK]
+t tab list [TASK]
+t tab new [TASK] [LABEL] [--directory PATH] [--command COMMAND]
+t tab open TASK ID|LABEL
+t pane list [TASK]
+t pane open TASK ID|LABEL
+t pane read TASK ID|LABEL
+t pane run TASK ID|LABEL -- COMMAND...
+t pane split TASK ID|LABEL [--direction right|down] [--directory PATH] [--command COMMAND]
 ```
 
-These commands require a running Herdr server. `workspace open` focuses the workspace with the task's label or creates one. A new workspace starts in the explicit directory, the primary code directory, the legacy worktree, or the task home, in that order. `--directory` changes that operation's start directory without changing stored attachments.
+These commands require a running Herdr server. `t workspace TASK` directly focuses the workspace with the task's label or creates one. It saves the task only after the explicit switch succeeds. `t workspace` uses selection without changing the saved fallback. A new workspace starts in the explicit directory, the primary code directory, the legacy worktree, or the task home, in that order. `--directory` changes that operation's start directory without changing stored attachments.
 
-`workspace show` queries the current tabs and panes. Tab and pane selectors must belong to the selected task's workspace. Duplicate labels require a live ID. No pane or tab ID is stored as durable task identity. Task workspace labels follow Herdr's dot-to-underscore normalization. Colliding task or workspace labels are errors rather than fuzzy matches.
+`t workspace --show [TASK]` queries the current tabs and panes without saving, focusing, or creating a workspace. `--show` belongs only to `t workspace`; there are no workspace child commands. Native Hiiro abbreviation matching also accepts `t wor [TASK]`.
+
+Tab and pane selectors must belong to the selected task's workspace. Duplicate labels require a live ID. No pane or tab ID is stored as durable task identity. Task workspace labels follow Herdr's dot-to-underscore normalization. Colliding task or workspace labels are errors rather than fuzzy matches.
 
 Use `--` before literal command arguments that begin with a dash:
 
 ```bash
-t pane run -t audit-invoices PANE_ID -- printf '%s\n' --example
+t pane run audit-invoices PANE_ID -- printf '%s\n' --example
 ```
 
 ## h task

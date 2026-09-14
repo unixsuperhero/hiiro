@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Move the canonical task executable into repository `bin/t`, with `~/bin/t` as a symlink. Gem installation does not install the launcher.
+- Put task names immediately after the leaf command, before payload arguments. Replace task selector flags with `t COMMAND [TASK] [PAYLOAD...]` and `t GROUP COMMAND [TASK] [PAYLOAD...]`.
+- Resolve omitted tasks from the calling Herdr workspace, then the current directory, then the saved task. Reject ambiguous context and invalid, stale, or conflicting Herdr IDs.
+- Add `t current [TASK]` for selection inspection and explicit saved selection without terminal focus.
+- Replace workspace child commands with direct `t workspace [TASK]` navigation and read-only `t workspace --show [TASK]`. Save an explicit task only after a successful workspace switch; keep reads and implicit opens from changing the saved fallback.
+
 ## [0.1.365] - 2026-09-13
 
 ### Added
