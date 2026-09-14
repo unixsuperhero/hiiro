@@ -5,6 +5,7 @@
 ## [0.1.374] - 2026-09-14
 
 ### Changed
+- `t switch`, `t tab open`, and `t pane open` no longer default to the current task; with no destination they open the picker (tasks, workspaces, panes, or tabs) and fail non-interactively. `.` still means the current task
 - `h alert` plays sounds through terminal-notifier's `-sound` (macOS system sound names, `none` for silent, `-S` accepted as an alias for `-s`) instead of a separate `afplay` process
 
 ### Removed
