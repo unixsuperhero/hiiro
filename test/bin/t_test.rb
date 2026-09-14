@@ -248,11 +248,11 @@ class TaskCommandTest < Minitest::Test
     command('prez', 'waiting', '--clear')
     assert_equal "active\n", command('prez', 'status')
     assert_equal "prez\tdone\n", command('prez', 'done')
-    assert_equal "other\tactive\nprez\tdone\n", command
+    assert_equal "other  active\nprez   done\n", command
     assert_equal "prez\tarchived\n", command('prez', 'archive')
-    assert_equal "other\tactive\nprez\tarchived\n", command
+    assert_equal "other  active\nprez   archived\n", command
     assert_equal "prez\tactive\n", command('prez', 'status', 'active')
-    assert_equal "other\tactive\nprez\tactive\n", command
+    assert_equal "other  active\nprez   active\n", command
   end
 
   def test_unmatched_workspace_uses_directory_then_saved_task
@@ -425,7 +425,7 @@ class TaskCommandTest < Minitest::Test
   end
 
   def test_root_task_names_are_not_swallowed_by_commands_or_help_prefixes
-    names = %w[new show helpful he edit pry add rm list]
+    names = %w[new show helpful he edit pry add rm lister]
     names.each { |name| @db[:tasks].insert(name: name, session: name, status: 'active') }
     names.each do |name|
       assert_includes command(name), "#{name} [active]"
@@ -434,6 +434,8 @@ class TaskCommandTest < Minitest::Test
     end
     assert_match(/ambiguous/i, failure('h'))
     assert_includes command('helpf'), 'helpful [active]'
+    assert_includes command('list'), 'lister   active'
+    assert_includes command('ls'), 'lister   active'
   end
 
   def test_root_help_is_exact_and_does_not_resolve_context_or_select_a_task
@@ -498,8 +500,23 @@ class TaskCommandTest < Minitest::Test
     @db[:tasks].where(name: 'other').update(status: 'archived')
     @db[:tasks].insert(name: 'waiting', session: 'waiting', status: 'waiting')
     @db[:tasks].insert(name: 'active', session: 'active', status: 'active')
-    assert_equal "active\tactive\nother\tarchived\nprez\tdone\nwaiting\twaiting\n",
-      command(env: { 'HERDR_WORKSPACE_ID' => 'missing' })
+    @db[:tasks].where(name: 'waiting').update(waiting_on: 'review', next_action: 'Ship it')
+    @db[:todos].insert(text: 'a', status: 'not_started', task_name: 'prez')
+    @db[:todos].insert(text: 'b', status: 'started', task_name: 'prez')
+    @db[:todos].insert(text: 'c', status: 'done', task_name: 'prez')
+    @db[:todos].insert(text: 'd', status: 'skip', task_name: 'active')
+    @db[:todos].insert(text: 'e', status: 'not_started', task_name: nil)
+    expected = <<~OUT
+      active    active
+      other     archived
+      prez (2)  done
+      waiting   waiting   next: Ship it  waiting: review
+    OUT
+    context = { 'HERDR_WORKSPACE_ID' => 'missing' }
+    assert_equal expected, command(env: context)
+    assert_equal expected, command('ls', env: context)
+    assert_equal expected, command('list', env: context)
+    failure('ls', 'extra', env: context)
     assert_nil saved_value
     assert_equal [], mutations
   end
@@ -674,6 +691,43 @@ class TaskCommandTest < Minitest::Test
     assert_match(/could not start|failed/i, stdout + stderr)
     refute_includes stdout, 'w1:t2'
     assert_equal ['herdr', 'pane', 'run', 'w1:p2', 'codex'], session_mutations.last
+  end
+
+  def test_tree_commands_create_detach_and_resume_worktrees_without_herdr
+    seed = File.join(@root, 'seed')
+    FileUtils.mkdir_p(seed)
+    git = %w[git -c user.email=t@example.com -c user.name=t -c init.defaultBranch=main]
+    system(*git, '-C', seed, 'init', '-q', out: File::NULL, err: File::NULL)
+    system(*git, '-C', seed, 'commit', '-q', '--allow-empty', '-m', 'init', out: File::NULL, err: File::NULL)
+    work = File.join(@home, 'work')
+    FileUtils.mkdir_p(work)
+    system(*git, 'clone', '-q', '--bare', seed, File.join(work, '.bare'), out: File::NULL, err: File::NULL)
+    File.write(File.join(work, '.git'), "gitdir: .bare\n")
+    tree = File.join(work, 'demo/main')
+    @stubs['status server'] = false
+
+    output = command('demo', 'tree', 'new')
+    assert Dir.exist?(tree)
+    assert_includes output, 'Created worktree demo/main'
+    assert_includes output, 'Herdr is not running'
+    assert_equal 'demo/main', @db[:tasks].where(name: 'demo').get(:tree)
+    assert_equal "demo/main\t#{tree}\n", command('demo', 'tree')
+    assert_equal "#{File.realpath(tree)}\n", command('demo', 'path')
+    assert_equal "(detached)\n", command('demo', 'branch')
+    assert_equal "demo\n", command('.', 'current', cwd: tree)
+    assert_match(/already has worktree/, failure('demo', 'tree', 'new'))
+
+    command('demo', 'tree', 'rm')
+    assert_nil @db[:tasks].where(name: 'demo').get(:tree)
+    assert_equal [['directory', tree]], @db[:task_resources].select_map([:kind, :target])
+    assert Dir.exist?(tree)
+    assert_match(/no worktree/i, failure('demo', 'tree'))
+
+    command('demo', 'tree', 'resume', 'demo/main')
+    assert_equal 'demo/main', @db[:tasks].where(name: 'demo').get(:tree)
+    assert_includes command('demo/api', 'tree', 'new'), 'Created worktree demo/api'
+    assert Dir.exist?(File.join(work, 'demo/api'))
+    assert_equal [], mutations
   end
 
   private
