@@ -714,6 +714,18 @@ class TaskCommandTest < Minitest::Test
     assert_equal [], mutations
   end
 
+  def test_jump_commands_never_assume_the_current_task
+    live_workspace('w1', 'prez')
+    live_pane('w1:p1', 'w1', 'editor')
+    command('use', 'prez')
+    [['switch'], ['workspace'], ['pane', 'open'], ['tab', 'open']].each do |args|
+      assert_match(/name a task|pick|switch to/i, failure(*args, env: { 'HERDR_WORKSPACE_ID' => 'w1' }))
+    end
+    assert_equal [], mutations
+    assert_includes command('switch', '.', env: { 'HERDR_WORKSPACE_ID' => 'w1' }), 'w1 prez'
+    assert_equal [['herdr', 'workspace', 'focus', 'w1']], mutations
+  end
+
   def test_switch_matches_loose_herdr_workspaces_after_tasks_and_never_saves_them
     live_workspace('w1', 'prez')
     live_workspace('w3', 'servers')

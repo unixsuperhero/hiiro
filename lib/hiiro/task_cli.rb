@@ -565,15 +565,50 @@ class Hiiro
           target = pick_switch_target(task_matches, ws_matches, panes: [])
           return [target, target.is_a?(Hiiro::TaskRecord)]
         end
-        args.shift if first == '.'
-        no_args!(args)
-        begin
-          [Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve!, false]
-        rescue Hiiro::Error => e
-          raise unless $stdin.tty? && e.message.start_with?('No current task')
-          target = pick_switch_target(Hiiro::TaskRecord.all_as_list, loose_workspaces)
-          [target, target.is_a?(Hiiro::TaskRecord)]
+        if first == '.'
+          args.shift
+          no_args!(args)
+          return [Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve!, false]
         end
+        no_args!(args)
+        # Jumping somewhere never assumes the current task: pick a destination.
+        raise Error, 'Name a task, workspace, or pane to switch to, or use . for the current task' unless $stdin.tty?
+        target = pick_switch_target(Hiiro::TaskRecord.all_as_list, loose_workspaces)
+        [target, target.is_a?(Hiiro::TaskRecord)]
+      end
+
+      def require_picker!(what)
+        raise Error, "Name a task or #{what} to jump to" unless $stdin.tty?
+      end
+
+      def tab_line(tab)
+        workspace = live_workspaces.find { |candidate| candidate.id == tab.workspace_id }
+        [tab.id, workspace&.name, tab.label].compact.join('  ')
+      end
+
+      # `pane open` / `tab open` with no task: pick from every live pane or tab.
+      def jump_to_pane(reference)
+        panes = live_panes.values.flatten
+        pane = if reference
+          live_item('pane', panes, reference)
+        else
+          require_picker!('pane')
+          fuzzyfind_from_map(panes.to_h { |candidate| [pane_line(candidate), candidate] }) || raise(Error, 'Nothing selected')
+        end
+        focus_pane_target(pane)
+      end
+
+      def jump_to_tab(reference)
+        tabs = client.tabs(all: true).to_a
+        tab = if reference
+          live_item('tab', tabs, reference)
+        else
+          require_picker!('tab')
+          fuzzyfind_from_map(tabs.to_h { |candidate| [tab_line(candidate), candidate] }) || raise(Error, 'Nothing selected')
+        end
+        check_result(client.focus_workspace(tab.workspace_id))
+        check_result(client.focus_tab(tab.id))
+        puts tab_line(tab)
       end
 
       # --- Worktrees (shared with h task via Hiiro::TaskManager) ---
@@ -829,11 +864,15 @@ class Hiiro
               new_tab(task, single(rest, optional: true))
             end
             add_cmd(:open, args: ['task?', 'reference?'], opts: TASK_OPTIONS) do
-              task, rest = take_task(opts.args)
-              workspace = workspace_for(task)
-              tab = live_item('tab', client.tabs(workspace: workspace), single(rest, optional: true))
-              check_result(client.focus_workspace(workspace.id))
-              check_result(client.focus_tab(tab.id))
+              if opts.task || opts.find || opts.args.first == '.' || (opts.args.first && lookup_task(opts.args.first))
+                task, rest = take_task(opts.args)
+                workspace = workspace_for(task)
+                tab = live_item('tab', client.tabs(workspace: workspace), single(rest, optional: true))
+                check_result(client.focus_workspace(workspace.id))
+                check_result(client.focus_tab(tab.id))
+              else
+                jump_to_tab(single(opts.args, optional: true))
+              end
             end
           end
         end
@@ -848,10 +887,16 @@ class Hiiro
             add_cmd(:list, :ls, args: ['task?'], opts: TASK_OPTIONS) do
               client.panes(workspace: workspace_for(take_task_only(opts.args))).each { |pane| puts pane }
             end
-            %w[open read].each do |action|
-              add_cmd(action, args: ['task?', 'pane?'], opts: TASK_OPTIONS) do
+            add_cmd(:read, args: ['task?', 'pane?'], opts: TASK_OPTIONS) do
+              task, rest = take_task(opts.args)
+              pane_action(task, 'read', rest)
+            end
+            add_cmd(:open, args: ['task?', 'pane?'], opts: TASK_OPTIONS) do
+              if opts.task || opts.find || opts.args.first == '.' || (opts.args.first && lookup_task(opts.args.first))
                 task, rest = take_task(opts.args)
-                pane_action(task, action, rest)
+                pane_action(task, 'open', rest)
+              else
+                jump_to_pane(single(opts.args, optional: true))
               end
             end
             add_cmd(:run, args: ['task?', 'pane', 'command...'], passthrough: true) do
