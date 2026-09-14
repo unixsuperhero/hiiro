@@ -64,66 +64,53 @@ h ping
 `t` and `tt` are gem executables in `exe/`, installed alongside `h`. They are thin
 `Hiiro.run` launchers over `Hiiro::TaskCli` in `lib/hiiro/task_cli.rb`, which uses
 the `add_cmd` DSL and existing task records. `bin/t` and `bin/tt` are symlinks to
-the `exe/` files for running from a checkout with `ruby -Ilib bin/t`. `t NAME new`
-creates a task and its notes directory without creating a Git worktree.
+the `exe/` files for running from a checkout with `ruby -Ilib bin/t`. `t new NAME`
+creates a task and its notes directory; `t tree new NAME` adds a Git worktree.
 
-Use `t TASK COMMAND...`. Bare `t`, `t ls`, or `t list` lists every task, including
-done and archived tasks, with the count of open todos after each name. `t TASK`
-shows a task. Only exact root `t help` displays generic usage and
-native scoped help without looking up a task. Other first words are task
-references, even `new`, `show`, `edit`, or `he`.
+Use `t COMMAND [TASK] [ARGS...]`. Bare `t`, `t ls`, or `t list` lists every task,
+including done and archived tasks, with the count of open todos after each name.
+Commands that act on a task take it from the first positional argument when
+that word names a task (exact or unique case-sensitive prefix); otherwise the
+current task is used and the word stays in the payload, exactly like the old
+`h task` commands. `-t TASK` forces a task, `-f` picks one with a fuzzy finder,
+`.` is the current task, and `-` selects orphan todos. Ambiguous prefixes fail.
 
-Task references prefer an exact name, then a unique case-sensitive prefix.
-Ambiguous prefixes fail. `t NAME new` creates the exact name instead of resolving
-a prefix. An unknown name is otherwise an error, except that `t NAME todo add`
-can create the task with its first todo.
-
-Use `.` for the current task. Selection checks the calling Herdr workspace,
-then the current directory, then the saved task. Stale or ambiguous context is
-an error. `t TASK current` saves a named selection without focusing a terminal;
-`t . current` only prints it. `t TASK switch` and `t TASK workspace` focus or
-create the task workspace and save a named selection only after success.
-`--show` inspects without changing focus or the saved task.
+The current task is the calling Herdr workspace, then the current directory
+inside a task home, code directory, worktree, or registered directory, then the
+task saved with `t use TASK`. `t switch TASK` focuses or creates the task
+workspace and also saves it. `t current` only prints.
 
 ```sh
-t investigation new
-t investigation next "Inspect the failing request"
-t investigation todo add Compare the retry settings
-tt investigation add Inspect --help output
-t investigation doc new findings
-t investigation doc open findings
-t investigation
-t investigation todo rm 42 # Use an item ID printed by show or todo list.
-t investigation current
-t investigation switch
-t investigation workspace --show
-t . next "Write the handoff"
+t new investigation
+t next investigation "Inspect the failing request"
+t todo add investigation Compare the retry settings
+tt add Inspect --help output          # current task
+t doc new investigation findings
+t show investigation
+t todo rm 42                          # an ID printed by show or todo list
+t use investigation
+t switch investigation
+t switch --show
+t next . "Write the handoff"
+t tree new investigation
 ```
 
-A task has one `next_action` and can have multiple independent todos. `t TASK`
-and `t TASK todo` print todos with their IDs, statuses, and text in ID order.
-`t TASK todo rm ID` deletes only that exact decimal ID in the selected scope.
-`tt TASK ...` delegates to `t TASK todo ...`; bare `tt` means `t . todo`, and
-`tt help` displays todo help. Use `t - todo` or `tt -` for orphan todos, including
-`add` and `rm`. `-` is not a task and is invalid outside todo commands.
+A task has one `next_action` and can have multiple independent todos. `t show`
+and `t todo` print todos with their IDs, statuses, and text in ID order.
+`t todo show ID` prints one todo's text and `t todo rm ID` deletes it.
+`tt ...` is `t todo ...`. Use `t todo -` and `tt add - TEXT` for orphan todos.
 
-Every argument after `todo add` is literal text, including flags and `--`,
-except that leading `add -h` or `add --help` displays help. Empty text fails
-without creating a task.
+Every argument after the task in `todo add` is literal text, including flags and
+`--`, except a leading `-h` or `--help`. Empty text fails. Only `t new NAME`
+creates tasks.
 
 Todos share the existing `todos` table with `h todo`. `t` writes only to the
 database and does not rewrite `todo.yml`. Adding or removing a todo does not
 change the task's next action, status, or saved selection. Task completion and
 archival preserve todos. `h task` is a symlink to `t`, so both share one grammar.
 
-`t TASK omp`, `t TASK codex` or `cdx`, and `t TASK claude` or `cld` start fresh
+`t omp [TASK]`, `t codex` or `cdx`, and `t claude` or `cld` start fresh
 native CLI sessions in new focused Herdr tabs. Claude always runs `claude`.
-Only a nonempty prefix of `resume` as the first tool argument changes mode.
-Bare `resume` focuses the unique running instance of that tool in the task
-workspace, or launches the native resume picker if none is running. Multiple
-running matches are an error. With an ID or any other arguments after `resume`,
-the command always opens a new tab and passes those arguments to the native CLI.
-All other arguments, including `--help`, are tool flags, not `t` flags.
 
 Tasks can share an existing directory, including a worktree. `t` does not change
 Git state or promise task-isolated persisted AI sessions in shared directories.
@@ -141,6 +128,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h setup` | Install plugins and subcommands to system paths |
 | `h edit` | Open the h script in your editor |
 | `h alert` | macOS desktop notifications via terminal-notifier |
+| `h herdr` | Herdr plugin for `t`: fuzzy task switcher, todo capture, todo copy, task shell and nvim popups (`h herdr install`) |
 | `h task` | Same program as `t`: task records, todos, worktrees (`t NAME tree new`), and Herdr workspaces |
 
 ### External Subcommands

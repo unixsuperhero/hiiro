@@ -30,6 +30,7 @@ These subcommands are defined directly in `exe/h` or loaded from `lib/`:
 | [`h service`](h-service.md) | Dev service management with Herdr, env files, and service groups | `lib/hiiro/service_manager.rb` |
 | `h setup` | Install plugins and bin scripts to `~/bin` | `exe/h` |
 | [`h task`](h-task.md) | Symlink to `t`: task records, todos, worktrees, and Herdr workspaces | `lib/hiiro/task_cli.rb` |
+| [`h herdr`](h-herdr.md) | Herdr plugin exposing `t` as keybound popups: switch task, add/copy todos, task shell, nvim | `bin/h-herdr`, `herdr-plugin/` |
 | `h version` | Print installed hiiro version (`-a` for all rbenv versions) | `exe/h` |
 
 ## External subcommands
