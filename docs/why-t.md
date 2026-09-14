@@ -29,21 +29,37 @@ Compare these two descriptions of the same work:
 The second version takes one command:
 
 ```bash
-t next fix-checkout 'Reproduce the timeout with the saved checkout payload'
+t fix-checkout next 'Reproduce the timeout with the saved checkout payload'
 ```
 
-When a meeting interrupts you, or another bug takes priority, that instruction stays with the task. Tomorrow, `t show fix-checkout` tells you where to pick up.
+When a meeting interrupts you, or another bug takes priority, that instruction stays with the task. Tomorrow, `t fix-checkout` tells you where to pick up.
 
 **The habit that makes this useful is updating `next` before you switch away.** It can be one sentence. It does not need to become a project plan.
 
-`next` is one current action, not an accumulating checklist. Replace it as you make progress. Keep the longer investigation in a document.
+`next` is one current action, not an accumulating checklist. Replace it as you make progress. Separate todos can hold the other steps without replacing that next action:
+
+```bash
+t fix-checkout todo add Compare the retry settings
+tt fix-checkout add Inspect --help output
+t fix-checkout todo
+```
+
+Task display and todo listing show every todo with its ID, status, and text. To remove one, use its displayed ID, such as `t fix-checkout todo rm 42`. The ID must belong to that scope. Adding or removing todos does not change the task's next action or status, and `t` does not choose the next todo for you.
+
+Task references prefer an exact name, then a unique case-sensitive prefix. Ambiguous prefixes fail. If `todo add` finds no task, it creates one with the usual name and notes-home rules before adding the item. Other commands never create unknown tasks except explicit `t NAME new`, which creates that exact name rather than resolving a prefix.
+
+`tt TASK ...` delegates to `t TASK todo ...`. Bare `tt` lists current-task todos, and `tt help` shows todo help. Use `t - todo` or `tt -` to list orphan todos, with `add` and `rm` in that scope. `-` is not a task and works only for todos.
+
+Every word after `add` is literal text, including flags and `--`, except that leading `add -h` or `add --help` shows help. Empty text fails before any task is created.
+
+Todos share the existing database table with `h todo`. `t` does not rewrite `todo.yml` or change `h task` behavior. Keep the longer investigation in a document.
 
 ## Waiting becomes visible instead of forgotten
 
 Some unfinished work is actionable. Some is waiting on someone else. Treating both as the same pile makes it harder to decide what deserves your attention.
 
 ```bash
-t waiting fix-checkout 'Payments team to confirm the retry behavior'
+t fix-checkout waiting 'Payments team to confirm the retry behavior'
 ```
 
 That saves the explanation and changes the task's status to `waiting`. The next action remains available, so you can retain what you intend to do after the blocker clears.
@@ -57,12 +73,12 @@ That saves the explanation and changes the task's status to `waiting`. The next 
 }
 ```
 
-`t list` includes both active and waiting work, with the corresponding text. You can review what to work on and what needs a follow-up without opening every terminal.
+Bare `t` lists every task and status, including done and archived work. Active and waiting rows show their next-action and blocker text, so you can review what needs attention without opening every terminal.
 
 When the answer arrives:
 
 ```bash
-t waiting fix-checkout --clear
+t fix-checkout waiting --clear
 ```
 
 A waiting task becomes active again. There is no automatic reminder or follow-up scheduler; the benefit is having the blocker written down where you review the work.
@@ -86,18 +102,18 @@ A task can hold references to each of those pieces:
 For example, using an existing local directory and illustrative URLs:
 
 ```bash
-t directory add fix-checkout ~/proj/store --primary --label code
-t link add fix-checkout https://example.com/issues/123 --kind issue --label ticket
-t pr add fix-checkout https://example.com/pulls/456 --label implementation
-t doc new fix-checkout investigation 'Checkout investigation'
+t fix-checkout directory add ~/proj/store --primary --label code
+t fix-checkout link add https://example.com/issues/123 --kind issue --label ticket
+t fix-checkout pr add https://example.com/pulls/456 --label implementation
+t fix-checkout doc new investigation 'Checkout investigation'
 ```
 
 You can then return directly to a named resource:
 
 ```bash
-t link open fix-checkout ticket
-t pr open fix-checkout implementation
-t doc open fix-checkout investigation
+t fix-checkout link open ticket
+t fix-checkout pr open implementation
+t fix-checkout doc open investigation
 ```
 
 The primary directory also becomes the default code location for terminals you create through `t`.
@@ -127,7 +143,7 @@ This gives you room for the details that do not belong in a one-line next action
 - A decision and the evidence behind it.
 - A handoff note for your next session or another agent.
 
-`t file list` discovers files in the task home. `t doc open` uses `mdoc`, so the notes can be read in the same rendered-document workflow you already use.
+`t fix-checkout file list` discovers files in the task home. `t fix-checkout doc open` uses `mdoc`, so you can read the notes through the same rendered-document workflow.
 
 The database holds the task metadata and resource references; the notes remain files you can read and edit with your existing tools.
 
@@ -136,23 +152,23 @@ The database holds the task metadata and resource references; the notes remain f
 Herdr makes terminal work persistent. `t` gives that workspace a relationship to the task you are trying to finish.
 
 ```bash
-t workspace fix-checkout
+t fix-checkout switch
 ```
 
 If the task's workspace is already open, this focuses it. If it is missing, `t` creates one using the task's starting-directory rules. Only after the explicit switch succeeds does `t` save the task as your fallback.
 
-`t workspace --show fix-checkout` inspects the workspace without creating it, focusing it, or changing the saved task. Workspace navigation is a direct command, not a group of child commands. You can also use Hiiro's native abbreviation, `t wor fix-checkout`.
+`t fix-checkout workspace` is the same operation. Add `--show` to either command to inspect without creating a workspace, focusing it, or changing the saved task. These are direct commands, not groups. Native command abbreviations remain available inside the task scope, such as `t fix-checkout wor`.
 
 Within that workspace, you can create a labelled tab for a particular activity:
 
 ```bash
-t tab new fix-checkout tests --command 'bundle exec rake test'
+t fix-checkout tab new tests --command 'bundle exec rake test'
 ```
 
 Later:
 
 ```bash
-t tab open fix-checkout tests
+t fix-checkout tab open tests
 ```
 
 You can also list panes, read their output, split one, or submit a command to an existing pane. That is useful when an agent needs to inspect the same working context rather than start an unrelated terminal elsewhere.
@@ -161,33 +177,54 @@ There are important limits. `t` does not restore a closed workspace's old layout
 
 The useful guarantee is narrower: **you can find or open the workspace associated with a task without remembering its position in the sidebar.**
 
+## AI sessions start fresh unless you ask to resume
+
+The tool commands open a new focused tab in the task workspace:
+
+```bash
+t fix-checkout omp
+t fix-checkout codex
+t fix-checkout claude
+```
+
+`cdx` is an alias for `codex`, and `cld` is an alias for `claude`. Each command runs its native executable. Claude runs `claude`, never `omp`.
+
+Only the first tool argument can switch to resume mode. It must be a nonempty prefix of `resume`, such as `r`, `res`, or `resume`:
+
+```bash
+t fix-checkout cdx r
+t fix-checkout cld resume SESSION_ID
+t fix-checkout omp resume --help
+```
+
+With nothing after the resume selector, `t` focuses the unique running instance of that tool in the task workspace. It checks Herdr's agent metadata, not the tab name. Multiple matches produce an error with IDs. If none is running, a new tab opens the native resume picker.
+
+With a session ID or any other arguments after the selector, `t` always creates a tab and passes those arguments to the native resume command. OMP and Claude receive `--resume`; Codex receives `resume`. All other arguments pass unchanged, including `--help`, `--`, and native tool options. There is no wrapper `--new` or automatic last-session resume.
+
+The workspace identifies running terminals, not a separate persisted-session store. If tasks share a directory, native resume discovery is not necessarily task-isolated. The launcher does not inject model or permission settings or make auth/API requests.
+
 ## Context can save typing without making scripts guess
 
-When a calling Herdr workspace, directory, or saved fallback identifies a task, you can omit its name from commands with no payload positionals:
+The first argument is always the task reference. `t TASK` shows the task, and `t TASK COMMAND...` runs a command in that task's scope. Only exact root `t help` is special: it prints usage and native scoped help without task lookup. Names such as `new`, `show`, `edit`, and `he` remain task names at the root.
+
+Use `.` when the calling Herdr workspace, directory, or saved fallback identifies the task:
 
 ```bash
-t current
-t show
-t next
+t . current
+t .
+t . next
+t . next 'Check the new test against the original failing payload'
 ```
 
-To write text or pass any other payload positional, put the exact task name immediately after the leaf command:
-
-```bash
-t next fix-checkout 'Check the new test against the original failing payload'
-```
-
-The CLI never guesses that a lone argument is text for an implicit task. `t next 'Check the test'` looks for a task named `Check the test` and fails if that task does not exist.
-
-An explicit task name takes priority. Otherwise, a matching calling Herdr workspace wins over a conflicting current directory. The directory is next, followed by the saved task. Ambiguous matches at the same priority and invalid, stale, or conflicting Herdr IDs are errors.
+A named reference bypasses context lookup. For `.`, the calling Herdr workspace wins over a conflicting current directory. The directory is next, followed by the saved task. Ambiguous matches and invalid, stale, or conflicting Herdr IDs are errors.
 
 You can set that fallback without moving terminal focus:
 
 ```bash
-t current fix-checkout
+t fix-checkout current
 ```
 
-`t current` only prints the selected name. Reads and implicit workspace opens leave the saved fallback unchanged, and a deleted saved task causes an error if selection reaches it. `t list` remains a list of all eligible tasks when no task name is supplied.
+`t . current` only prints the selected name. Reads and workspace opens through `.` leave the saved fallback unchanged. A deleted saved task causes an error if selection reaches it. Bare `t` always lists all tasks rather than selecting one.
 
 ## An agent can leave you a useful place to resume
 
@@ -196,8 +233,8 @@ An agent's final chat message can be hard to find later. A task's next action an
 For example, an agent working on a selected task can create a handoff document and update what remains:
 
 ```bash
-t doc new fix-checkout handoff 'Checkout handoff'
-t next fix-checkout 'Review the retry test and decide whether to merge'
+t fix-checkout doc new handoff 'Checkout handoff'
+t fix-checkout next 'Review the retry test and decide whether to merge'
 ```
 
 The agent still needs to write its findings into the document. `doc new` creates the file and heading; it does not generate the handoff content.
@@ -209,7 +246,7 @@ This is a shared convention, not an agent orchestration system. `t` does not lau
 You can start tracking work immediately:
 
 ```bash
-t new fix-checkout
+t fix-checkout new
 ```
 
 That creates a record and notes directory. It does not create a worktree, switch branches, modify sparse checkout, or open Herdr.
@@ -220,23 +257,23 @@ This matters for small investigations and noncoding tasks. You can track an invo
 
 The separate `h task` commands still own their coding-worktree operations. The [reference explains that boundary](t.md#worktrees-branches-and-sparse-checkout), including the different behavior of `h task start` and `h task switch`.
 
-## Completing work reduces the daily list without deleting the context
+## Completing work preserves its context
 
 ```bash
-t done fix-checkout
+t fix-checkout done
 ```
 
-Completed work disappears from the default `t list`, but its record, notes, links, and directory references remain available.
+Completed work stays in bare `t` output with its `done` status. Its record, todos, notes, links, and directory references remain available. Archiving also preserves those resources.
 
 ```bash
-t list --all
-t show fix-checkout
+t
+t fix-checkout
 ```
 
 If the problem returns, you can reopen the task:
 
 ```bash
-t status fix-checkout active
+t fix-checkout status active
 ```
 
 Completion does not close terminals or clean up Git worktrees. It means the task is complete, not that every resource associated with it should be destroyed.
@@ -247,14 +284,16 @@ You do not need to use every command for this to pay off.
 
 | Moment | Useful command | What it gives you |
 |---|---|---|
-| You capture a new piece of work | `t new TASK` | A named record and notes home |
-| You decide what to work on | `t list` | Active and waiting tasks with their next-action/blocker text |
-| You resume a task | `t show TASK` | The context you recorded for it |
-| You want a fallback outside task directories and Herdr | `t current TASK` | Saved selection without moving terminal focus |
-| You need its terminals | `t workspace TASK` | The associated workspace, focused or newly created, and a saved fallback after success |
-| You are about to switch away | `t next TASK 'The next concrete action'` | An instruction for your next session |
-| Someone else is blocking progress | `t waiting TASK 'Who or what I need'` | A visible waiting state and explanation |
-| The work is complete | `t done TASK` | A shorter default list without deleting the supporting context |
+| You capture a new piece of work | `t TASK new` | An exact named record and notes home |
+| You capture another step | `tt TASK add 'Compare the retry settings'` | A todo without replacing the next action; creates a task if no name or prefix matches |
+| You decide what to work on | `t` | Every task and status, with next-action and blocker text |
+| You resume a task | `t TASK` | The context you recorded for it |
+| You want a fallback outside task directories and Herdr | `t TASK current` | Saved selection without moving terminal focus |
+| You need its terminals | `t TASK switch` | The associated workspace and a saved fallback after success |
+| You want a fresh AI session | `t TASK omp` | A new focused tab running the native tool |
+| You are about to switch away | `t TASK next 'The next concrete action'` | An instruction for your next session |
+| Someone else is blocking progress | `t TASK waiting 'Who or what I need'` | A waiting state and explanation |
+| The work is complete | `t TASK done` | A done status without deleting the supporting context |
 
 Start with task names and useful next actions. Add documents, links, and terminal organization when they make a particular task easier to resume.
 

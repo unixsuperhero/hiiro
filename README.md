@@ -62,27 +62,69 @@ h ping
 ### Task CLI
 
 The repository's `bin/t` contains the task commands and helpers, using Hiiro's
-`add_cmd` DSL and existing task records. `~/bin/t` is a symlink to that executable;
-installing the gem does not install it. `t new NAME` creates a task and its notes
-directory without creating a Git worktree.
+`add_cmd` DSL and existing task records. `~/bin/t` and `~/bin/tt` are symlinks to
+the repository launchers; installing the gem does not install them. `t NAME new`
+creates a task and its notes directory without creating a Git worktree.
 
-Put the task name immediately after the leaf command, before any payload.
-Omit it only when there are no payload positionals. Selection then uses the
-calling Herdr workspace, the current directory, or the saved task, in that order.
-`t current TASK` saves a fallback without focusing a terminal. `t workspace TASK`
-focuses or creates the task workspace and saves the fallback only after success.
-Root and group help use native Hiiro command declarations; leaf help lists its options.
+Use `t TASK COMMAND...`. Bare `t` lists every task, including done and archived
+tasks. `t TASK` shows a task. Only exact root `t help` displays generic usage and
+native scoped help without looking up a task. Other first words are task
+references, even `new`, `show`, `edit`, or `he`.
+
+Task references prefer an exact name, then a unique case-sensitive prefix.
+Ambiguous prefixes fail. `t NAME new` creates the exact name instead of resolving
+a prefix. An unknown name is otherwise an error, except that `t NAME todo add`
+can create the task with its first todo.
+
+Use `.` for the current task. Selection checks the calling Herdr workspace,
+then the current directory, then the saved task. Stale or ambiguous context is
+an error. `t TASK current` saves a named selection without focusing a terminal;
+`t . current` only prints it. `t TASK switch` and `t TASK workspace` focus or
+create the task workspace and save a named selection only after success.
+`--show` inspects without changing focus or the saved task.
 
 ```sh
-t new investigation
-t next investigation "Inspect the failing request"
-t doc new investigation findings
-t doc open investigation findings
-t show investigation
-t current investigation
-t workspace investigation
-t workspace --show investigation
+t investigation new
+t investigation next "Inspect the failing request"
+t investigation todo add Compare the retry settings
+tt investigation add Inspect --help output
+t investigation doc new findings
+t investigation doc open findings
+t investigation
+t investigation todo rm 42 # Use an item ID printed by show or todo list.
+t investigation current
+t investigation switch
+t investigation workspace --show
+t . next "Write the handoff"
 ```
+
+A task has one `next_action` and can have multiple independent todos. `t TASK`
+and `t TASK todo` print todos with their IDs, statuses, and text in ID order.
+`t TASK todo rm ID` deletes only that exact decimal ID in the selected scope.
+`tt TASK ...` delegates to `t TASK todo ...`; bare `tt` means `t . todo`, and
+`tt help` displays todo help. Use `t - todo` or `tt -` for orphan todos, including
+`add` and `rm`. `-` is not a task and is invalid outside todo commands.
+
+Every argument after `todo add` is literal text, including flags and `--`,
+except that leading `add -h` or `add --help` displays help. Empty text fails
+without creating a task.
+
+Todos share the existing `todos` table with `h todo`. `t` writes only to the
+database and does not rewrite `todo.yml`. Adding or removing a todo does not
+change the task's next action, status, or saved selection. Task completion and
+archival preserve todos; `h task` behavior is unchanged.
+
+`t TASK omp`, `t TASK codex` or `cdx`, and `t TASK claude` or `cld` start fresh
+native CLI sessions in new focused Herdr tabs. Claude always runs `claude`.
+Only a nonempty prefix of `resume` as the first tool argument changes mode.
+Bare `resume` focuses the unique running instance of that tool in the task
+workspace, or launches the native resume picker if none is running. Multiple
+running matches are an error. With an ID or any other arguments after `resume`,
+the command always opens a new tab and passes those arguments to the native CLI.
+All other arguments, including `--help`, are tool flags, not `t` flags.
+
+Tasks can share an existing directory, including a worktree. `t` does not change
+Git state or promise task-isolated persisted AI sessions in shared directories.
 
 See the [task command reference](docs/t.md) for all commands and the [workflow introduction](docs/why-t.md) for practical examples.
 
@@ -236,14 +278,21 @@ among the command's automatic flags and does not conflict with a selected
 explicit option or `-h`. Every automatic flag has a long form. Explicit flags
 and value options keep their definitions.
 
-For a command that delegates to `make_child`, use `add_cmd(..., passthrough: true)`.
+For a command that delegates to `run_child`, use `add_cmd(..., passthrough: true)`.
 It forwards control without parsing the parent's arguments or intercepting the
-child's `--help`. The child declares and parses its own options. Generated help
-uses the original command block's source location and declared `args:`, not the
+child's `--help`. The child declares and parses its own options.
+Generated help uses the original command block's source location and declared `args:`, not the
 internal wrapper's signature.
 
+`run_child` is the convenience form of `make_child(...).run`. `make_child`
+returns an unrun child when the caller needs to configure it before dispatch.
+Module-level `build_hiiro` methods are builders that return such a child; callers
+run the result. They are not required for an inline child command group.
+Child commands inherit the parent's resolvers, so a task can be bound once and
+shared with nested groups without consuming its name again.
+
 For a CLI that should dispatch only registered blocks, pass
-`external_commands: false` to `Hiiro.run` and its `make_child` calls. This
+`external_commands: false` to `Hiiro.run` and its `run_child` or `make_child` calls. This
 prevents unrelated same-prefix executables on `PATH` from taking precedence.
 
 ## Writing Plugins
