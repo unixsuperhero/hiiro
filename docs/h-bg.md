@@ -2,7 +2,7 @@
 
 Run commands in unfocused Herdr tabs with command history tracking.
 
-Inside Herdr, commands run in the `h-bg` workspace, with one tab per command. Outside Herdr, Hiiro falls back to a detached local process. History is stored at `~/.config/hiiro/bg-history.txt`.
+Inside Herdr, commands run in the `h-bg` workspace. Each command reuses the first pane there that is sitting at an idle shell prompt (no agent and no foreground process, as reported by `herdr pane process-info`) and only opens a new unfocused tab when every pane is busy, so the workspace holds at most as many tabs as jobs that ran at the same time. Outside Herdr, Hiiro falls back to a detached local process. History is stored at `~/.config/hiiro/bg-history.txt`.
 
 ## Synopsis
 
