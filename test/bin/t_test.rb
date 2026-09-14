@@ -696,12 +696,18 @@ class TaskCommandTest < Minitest::Test
     live_workspace('w1', 'prez')
     live_workspace('w3', 'servers')
     live_workspace('w4', 'servers')
+    live_pane('w1:p1', 'w1', 'editor', agent: 'claude', agent_status: 'working', cwd: File.join(@home, 'proj/hiiro'))
+    live_pane('w3:p1', 'w3', 'shell', cwd: '/srv')
+    process_info('w1:p1', [['claude', 41], ['caffeinate -i', 40]], leader: 41)
+    process_info('w3:p1', [])
     expected = <<~OUT
         other  active
       @ prez   active
+          w1:p1  ~/proj/hiiro  claude (working)  claude
 
       Workspaces without a task:
         servers  w3
+          w3:p1  /srv  shell
         servers  w4
     OUT
     assert_equal expected, command(env: { 'HERDR_WORKSPACE_ID' => 'missing' })
@@ -845,12 +851,19 @@ class TaskCommandTest < Minitest::Test
     @stubs["workspace get #{id}"] = JSON.generate('result' => { 'workspace' => row })
   end
 
-  def live_pane(id, workspace_id, label, agent: nil)
+  def live_pane(id, workspace_id, label, agent: nil, agent_status: nil, cwd: nil)
     row = { 'pane_id' => id, 'workspace_id' => workspace_id, 'tab_id' => "#{workspace_id}:t1",
-      'label' => label, 'agent' => agent }
+      'label' => label, 'agent' => agent, 'agent_status' => agent_status, 'cwd' => cwd, 'foreground_cwd' => cwd }.compact
     @panes ||= {}
     (@panes[workspace_id] ||= []) << row
     @stubs["pane list --workspace #{workspace_id}"] = JSON.generate('result' => { 'panes' => @panes[workspace_id] })
     @stubs["pane get #{id}"] = JSON.generate('result' => { 'pane' => row })
+    @stubs['pane list'] = JSON.generate('result' => { 'panes' => @panes.values.flatten })
+  end
+
+  def process_info(pane_id, commands, leader: nil)
+    procs = commands.map { |cmdline, pid| { 'cmdline' => cmdline, 'pid' => pid } }
+    @stubs["process-info --pane #{pane_id}"] = JSON.generate('result' => { 'process_info' =>
+      { 'pane_id' => pane_id, 'foreground_process_group_id' => leader, 'foreground_processes' => procs } })
   end
 end
