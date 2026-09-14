@@ -1,0 +1,7 @@
+#!/Users/josh/venvs/voxcpm/bin/python3
+
+from ds_store import DSStore
+
+with DSStore.open(".DS_Store", "r") as store:
+    for record in store:
+        print(record.filename, record.code, record.value)

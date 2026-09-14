@@ -1,0 +1,388 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+begin
+  require 'hiiro/tui'
+rescue LoadError
+  require File.expand_path('~/proj/hiiro/lib/hiiro/tui')
+end
+require 'json'
+require 'time'
+
+DOCS_DIR   = File.join(Dir.home, 'claude', 'docs')
+MDOC       = File.join(Dir.home, 'bin', 'mdoc')
+INDEX_JSON = File.join(Dir.home, 'claude', 'index.json')
+INDEX_HTML = File.join(Dir.home, 'claude', 'index.html')
+
+ls_opts = Hiiro::Options.setup {
+  flag(:html,  short: :h, default: false, desc: 'show only .html files')
+  flag(:md,    short: :m, default: false, desc: 'show only .md files')
+  flag(:full,  short: :f, default: false, desc: 'show full absolute paths')
+  option(:limit, short: :l, default: nil, desc: 'limit number of results')
+}
+
+open_opts = Hiiro::Options.setup {
+  flag(:html, short: :h, default: false, desc: 'consider only .html files')
+  flag(:md,   short: :m, default: false, desc: 'consider only .md files')
+  flag(:all,  short: :a, default: false, desc: 'open ALL matches (skip fuzzyfind)')
+}
+
+def file_patterns(opts)
+  patterns = []
+  patterns << '*.html' if opts.html
+  patterns << '*.md'   if opts.md
+  patterns.empty? ? ['*.html', '*.md'] : patterns
+end
+
+def build_regex(filters)
+  filters = ['.*'] if filters.empty?
+  Regexp.new(filters.join(?|), Regexp::IGNORECASE)
+end
+
+def find_docs(opts)
+  re = build_regex(opts.args)
+  file_patterns(opts).flat_map { |pat| Dir[File.join(DOCS_DIR, '**', pat)] }
+    .select { |path| File.basename(path).match?(re) }
+end
+
+def display(path, opts)
+  opts.respond_to?(:full) && opts.full ? path : File.basename(path)
+end
+
+def pick_one(paths)
+  return paths.first if paths.length == 1
+  basenames = paths.map { |p| File.basename(p) }
+  choice = fuzzyfind(basenames)
+  return nil if choice.nil? || choice.strip.empty?
+  paths.find { |p| File.basename(p) == choice.strip }
+end
+
+class DocsIndex
+  Entry = Struct.new(:key, :entry, :md_path, :html_path, keyword_init: true) do
+    def in_index?
+      !entry.nil?
+    end
+
+    def has_md?
+      md_path && File.file?(md_path)
+    end
+
+    def has_html?
+      html_path && File.file?(html_path)
+    end
+
+    def basename
+      "#{key}.html"
+    end
+
+    def title
+      entry&.fetch('title', nil).to_s.empty? ? key : entry['title']
+    end
+
+    def to_s
+      basename
+    end
+  end
+
+  def initialize(docs_dir:, index_json:, mdoc:)
+    @docs_dir = docs_dir
+    @index_json = index_json
+    @mdoc = mdoc
+    @pending_delete_paths = []
+    @changed = false
+    load_entries
+  end
+
+  attr_reader :entries
+
+  def changed?
+    @changed
+  end
+
+  def rows
+    indexed = entries.each_with_index.to_h { |entry, idx| [key_for_file(entry['file']), [entry, idx]] }
+    keys = indexed.keys
+    keys += Dir[File.join(@docs_dir, '*.md')].map { |path| File.basename(path, '.md') }
+    keys += Dir[File.join(@docs_dir, '*.html')].map { |path| File.basename(path, '.html') }
+
+    keys.uniq.sort_by { |key| indexed[key] ? [0, indexed[key][1]] : [1, key.downcase] }.map do |key|
+      entry = indexed.dig(key, 0)
+      Entry.new(
+        key: key,
+        entry: entry,
+        md_path: File.join(@docs_dir, "#{key}.md"),
+        html_path: html_path_for(key, entry)
+      )
+    end
+  end
+
+  def toggle(row)
+    if row.in_index?
+      remove(row)
+      "Marked #{row.basename} for index removal and file deletion on save"
+    elsif row.has_html?
+      add(row)
+      "Added #{row.basename} to index"
+    else
+      "Cannot add #{row.basename}: no html file exists"
+    end
+  end
+
+  def regenerate(row)
+    return 'Regenerate requires an indexed row with markdown and missing html' unless row.in_index? && row.has_md? && !row.has_html?
+
+    return "Failed to regenerate #{row.basename}" unless system(@mdoc, row.md_path)
+
+    load_entries
+    @changed = true
+    "Regenerated #{row.basename}"
+  end
+
+  def save
+    return true unless changed?
+
+    @pending_delete_paths.uniq.each do |path|
+      File.delete(path) if path && File.file?(path)
+    end
+    File.write(@index_json, JSON.pretty_generate(entries) + "\n")
+    system(@mdoc, '--rebuild-index')
+  end
+
+  private
+
+  def load_entries
+    @entries = JSON.parse(File.read(@index_json))
+  rescue Errno::ENOENT, JSON::ParserError
+    @entries = []
+  end
+
+  def key_for_file(file)
+    File.basename(file.to_s, '.html')
+  end
+
+  def html_path_for(key, entry)
+    file = entry&.fetch('file', nil)
+    return File.join(File.dirname(@docs_dir), file) if file && !file.empty?
+
+    File.join(@docs_dir, "#{key}.html")
+  end
+
+  def html_rel_for(row)
+    "docs/#{File.basename(row.html_path)}"
+  end
+
+  def add(row)
+    rel = html_rel_for(row)
+    @pending_delete_paths.reject! { |path| path == row.md_path || path == row.html_path }
+    entries.reject! { |entry| entry['file'] == rel }
+    entries.unshift(
+      'title' => title_for(row),
+      'file' => rel,
+      'date' => File.mtime(row.html_path).strftime('%Y-%m-%d'),
+      'desc' => '',
+      'ts' => Time.now.iso8601
+    )
+    row.entry = entries.first
+    @changed = true
+  end
+
+  def remove(row)
+    rel = html_rel_for(row)
+    entries.reject! { |entry| entry['file'] == rel || key_for_file(entry['file']) == row.key }
+    @pending_delete_paths << row.md_path
+    @pending_delete_paths << row.html_path
+    row.entry = nil
+    @changed = true
+  end
+
+  def title_for(row)
+    return row.title if row.in_index?
+    return markdown_title(row.md_path) if row.has_md?
+
+    row.key.tr('-', ' ')
+  end
+
+  def markdown_title(path)
+    File.foreach(path) do |line|
+      next unless line.start_with?('# ')
+
+      return line.sub(/^#\s+/, '').strip
+    end
+
+    File.basename(path, '.md').tr('-', ' ')
+  end
+end
+
+class DocsIndexTui < Hiiro::Tui::ListScreen
+  def initialize(index:)
+    @index = index
+    @message = 'space toggle index/files  r regenerate missing html  enter save/rebuild  q cancel'
+    super(items: index.rows, empty_message: 'No docs found.')
+  end
+
+  def handle_key(key)
+    case key
+    when ' '
+      @message = @index.toggle(items[cursor])
+      refresh
+    when 'r'
+      @message = @index.regenerate(items[cursor])
+      refresh
+    when :enter
+      return @index.save
+    else
+      super
+    end
+  end
+
+  def header_lines
+    [
+      'h-docs tui',
+      'I=index entry  M=markdown file  H=html file',
+      @message,
+    ]
+  end
+
+  def footer_lines
+    ["Showing #{top + 1}-#{top + visible_items.length} of #{items.length} docs"]
+  end
+
+  def format_row(row, current, line_cols)
+    prefix = current ? '> ' : '  '
+    indicators = [
+      row.in_index? ? 'I' : '-',
+      row.has_md? ? 'M' : '-',
+      row.has_html? ? 'H' : '-',
+    ].join
+    fixed = "#{prefix}#{indicators} "
+    text_cols = [line_cols - fixed.length, 1].max
+    text = (fixed + visible_text(row.basename, text_cols, horizontal_offset)).ljust(line_cols)
+    style =
+      if current
+        "\e[7m"
+      elsif row.in_index? && row.has_md? && !row.has_html?
+        "\e[33m"
+      else
+        "\e[0m"
+      end
+
+    "#{style}#{text}\e[0m\e[K"
+  end
+
+  def max_horizontal_offset(line_cols = nil, visible = nil)
+    line_cols ||= [terminal_cols - 1, 1].max
+    visible ||= visible_items
+    return 0 if visible.empty?
+
+    fixed_width = 6
+    remaining_cols = [line_cols - fixed_width, 1].max
+    min_visible_chars = [5, remaining_cols].min
+    longest = visible.map { |row| row.basename.length }.max || 0
+
+    [longest - min_visible_chars, 0].max
+  end
+
+  private
+
+  def refresh
+    @items = @index.rows
+    if items.empty?
+      @cursor = 0
+      @top = 0
+      return :continue
+    end
+
+    @cursor = [[cursor, 0].max, items.length - 1].min
+    @top = [[top, 0].max, @cursor].min
+    :continue
+  end
+end
+
+Hiiro.run(*ARGV, plugins: [Pins]) {
+  add_subcmd(:ls) { |*args|
+    opts  = ls_opts.parse(args)
+    paths = find_docs(opts).sort
+    paths = paths.last(opts.limit.to_i) if opts.limit
+    paths.each { |p| puts display(p, opts) }
+  }
+
+  add_subcmd(:recent) { |*args|
+    opts    = ls_opts.parse(args)
+    numeric = opts.args.find { |a| a =~ /^\d+$/ }
+    n       = (opts.limit || numeric || 10).to_i
+    filters = opts.args.reject { |a| a =~ /^\d+$/ }
+    re      = build_regex(filters)
+
+    paths = file_patterns(opts).flat_map { |pat| Dir[File.join(DOCS_DIR, '**', pat)] }
+      .select { |p| File.basename(p).match?(re) }
+      .sort_by { |p| -File.mtime(p).to_i }
+      .first(n)
+
+    paths.each { |p| puts display(p, opts) }
+  }
+
+  add_subcmd(:open) { |*args|
+    opts  = open_opts.parse(args)
+    paths = find_docs(opts)
+    next puts('No matching docs.') if paths.empty?
+
+    targets = opts.all ? paths : [pick_one(paths)].compact
+    targets.each { |t| system('open', t) }
+  }
+
+  add_subcmd(:vim) { |*args|
+    opts  = ls_opts.parse(args)
+    paths = find_docs(opts).sort
+    next puts('No matching docs.') if paths.empty?
+    edit_files(*paths)
+  }
+
+  add_subcmd(:cat) { |*args|
+    opts  = ls_opts.parse(args)
+    paths = find_docs(opts).sort
+    next puts('No matching docs.') if paths.empty?
+
+    paths.each do |p|
+      puts "===== #{File.basename(p)} ====="
+      puts File.read(p)
+      puts
+    end
+  }
+
+  add_subcmd(:rm) { |*args|
+    opts  = ls_opts.parse(args)
+    paths = find_docs(opts)
+    next puts('No matching docs.') if paths.empty?
+
+    target = pick_one(paths)
+    next unless target
+    File.delete(target)
+    puts "Removed: #{target}"
+  }
+
+  add_subcmd(:count) { |*_args|
+    html = Dir[File.join(DOCS_DIR, '**', '*.html')].count
+    md   = Dir[File.join(DOCS_DIR, '**', '*.md')].count
+    puts "html:  #{html}"
+    puts "md:    #{md}"
+    puts "total: #{html + md}"
+  }
+
+  add_subcmd(:index) { |*_args|
+    system('open', INDEX_HTML)
+  }
+
+  add_subcmd(:reindex, :rebuild) { |*_args|
+    exit($?.exitstatus || 1) unless system(MDOC, '--rebuild-index')
+  }
+
+  add_subcmd(:tui) { |*_args|
+    index = DocsIndex.new(docs_dir: DOCS_DIR, index_json: INDEX_JSON, mdoc: MDOC)
+    saved = DocsIndexTui.new(index: index).run
+    puts(saved ? 'Saved docs index.' : 'Canceled docs index changes.')
+  }
+
+  add_subcmd(:path) { |*_args|
+    puts DOCS_DIR
+  }
+}

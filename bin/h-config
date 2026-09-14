@@ -3,6 +3,15 @@
 require 'hiiro'
 
 Hiiro.run(*ARGV) {
+  add_subcmd(:herdr) {
+    open_config('config.toml', dir: '~/.config/herdr')
+  }
+
+  add_subcmd(:ssh) {
+    dir = '~/.ssh'
+    open_config('config', dir: dir)
+  }
+
   add_subcmd(:vim) {
     dir = '~/.config/nvim'
     file = File.exist?(File.expand_path('~/.config/nvim/init.lua')) ? 'init.lua' : 'init.vim'

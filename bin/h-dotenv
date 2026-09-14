@@ -1,0 +1,109 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+class EnvFile
+  attr_reader :path
+
+  def initialize(path)
+    @path = path
+  end
+
+  def lines
+    @lines ||= File.readlines(path, chomp: true) if File.exist?(path)
+  end
+
+  def all
+    @all ||= lines.reject { |line| line.match?(/^\s*#/) || !line.match?(/[=:]/) }.each_with_object({}) { |line, h|
+      name, val = line.split(/\s*[=:]\s*/, 2)
+      next if name.match?(/TIMEOUT/)
+      h[name&.strip] = val&.strip
+    }
+  end
+
+  def names
+    all.keys
+  end
+
+  def values
+    all.values
+  end
+
+  def has_value?(name)
+    names.include?(name)
+  end
+
+  def [](name)
+    all[name]
+  end
+
+  def find(query)
+    all.select{|k,v| k.match?(query) || v.match?(query) }
+  end
+end
+
+Hiiro.run(*ARGV) do |h|
+  h.add_subcmd(:copy_to) { |*files|
+    env_files = files.map{|f| EnvFile.new(f) }
+    last_file = env_files.last
+
+    all_names = env_files.flat_map(&:names).sort.uniq
+
+    all_names.each do |name|
+      if last_file.has_value?(name)
+        diffs = env_files.select{|env| env.has_value?(name) && env[name] != last_file[name] }
+        if diffs.any?
+          puts "VALUE FOR #{name} is different"
+          puts "  current: #{last_file[name]}"
+          puts
+          diffs.each do |env|
+            puts "  #{File.basename(env.path)}: #{env[name]}"
+          end
+          puts
+          puts
+        else
+          puts
+          puts
+          next
+        end
+      else
+        puts "VALUE MISSING: #{name}"
+        val_in = env_files.select{|x| x.has_value?(name) }
+        val_in.each do |env|
+          puts "  #{File.basename(env.path)}: #{env[name]}"
+        end
+        puts
+        puts
+      end
+    end
+  }
+  h.add_subcmd(:compare) { |*files|
+    env_files = files.map{|f| EnvFile.new(f) }
+
+    all_names = env_files.flat_map(&:names).sort.uniq
+
+    all_names.each do |name|
+      puts "NAME: #{name}"
+      files_in = env_files.select{|env| env.has_value?(name) }
+      in_all = env_files.count == files_in.count
+      all_values = env_files.map{|env| env[name] }
+      if in_all
+        puts "  #{name} is in all files."
+        if all_values.uniq.count == 1
+          puts "    the value is the same in all files:"
+          puts "      #{all_values.first}"
+        else
+          puts "  values:"
+          files_in.each do |env|
+            puts "      #{File.basename(env.path)}: #{env[name]}"
+          end
+        end
+      else
+        puts "  values:"
+        files_in.each do |env|
+          puts "      #{File.basename(env.path)}: #{env[name]}"
+        end
+      end
+    end
+  }
+end

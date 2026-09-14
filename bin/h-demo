@@ -1,0 +1,14 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run(*ARGV) do
+  add_subcommand(:josh) do |*args|
+    puts "INSIDE josh subcommand"
+    puts "Args"
+    args.each do |arg|
+      puts "  #{arg}"
+    end
+  end
+end
+

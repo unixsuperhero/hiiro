@@ -14,6 +14,27 @@ def parse_date(str)
   str.nil? || str.empty? || str == 'now' ? Time.now : Time.parse(str)
 end
 
+# Parse a value that is either a unix timestamp (digits) or a date string.
+def parse_date_or_unix(str, ms: false)
+  str.to_s =~ /^-?\d+(\.\d+)?$/ ? parse_unix(str, ms: ms ? true : nil) : parse_date(str)
+end
+
+# Format a number of seconds as a compact human duration: 1d23h12m10s
+def human_duration(total_secs)
+  total = total_secs.to_f
+  sign = total.negative? ? '-' : ''
+  total = total.abs.round
+  days, rem     = total.divmod(86_400)
+  hours, rem    = rem.divmod(3_600)
+  minutes, secs = rem.divmod(60)
+  parts = []
+  parts << "#{days}d"    if days > 0
+  parts << "#{hours}h"   if hours > 0
+  parts << "#{minutes}m" if minutes > 0
+  parts << "#{secs}s"    if secs > 0
+  sign + (parts.empty? ? '0s' : parts.join)
+end
+
 Hiiro.run(*ARGV) do
   add_flag(:ms, short: :m, desc: 'Use milliseconds instead of seconds')
   add_flag(:utc, short: :u, desc: 'Output in UTC')
@@ -44,5 +65,21 @@ Hiiro.run(*ARGV) do
   add_cmd(:now, opts: %i[utc]) do
     t = @opts.utc ? Time.now.utc : Time.now
     puts t.iso8601
+  end
+
+  # h date dur <seconds>  -> 1d23h12m10s  (--ms to interpret input as milliseconds)
+  add_cmd(:dur, :duration, :human, opts: %i[ms]) do
+    raw = @opts.args.first or abort 'usage: h date dur <seconds> [--ms]'
+    n = Rational(raw.to_s)
+    puts human_duration(@opts.ms ? n / 1000 : n)
+  end
+
+  # h date diff <a> <b>  -> how far apart two dates are (dates or unix timestamps)
+  add_cmd(:diff, opts: %i[ms]) do
+    a, b = @opts.args
+    abort 'usage: h date diff <date-a> <date-b>  (each: date string or unix timestamp)' unless a && b
+    ta = parse_date_or_unix(a, ms: @opts.ms)
+    tb = parse_date_or_unix(b, ms: @opts.ms)
+    puts human_duration(tb - ta)
   end
 end

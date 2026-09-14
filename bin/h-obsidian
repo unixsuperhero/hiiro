@@ -1,0 +1,904 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'io/console'
+require 'pathname'
+require 'uri'
+
+class ObsidianNotes
+  CONFIG_PATH = Hiiro::Config.path('config.yml')
+  DEFAULT_VAULT_NAME = 'obsidian_work_vault'
+  DEFAULT_VAULT_DIR = File.join(Dir.home, 'Documents', DEFAULT_VAULT_NAME)
+  DEFAULT_CLD_DIR = File.join(DEFAULT_VAULT_DIR, 'cld')
+  AmbiguousSelectionError = Class.new(StandardError)
+  NoSelectionError = Class.new(StandardError)
+
+  Note = Struct.new(:vault_path, :vault_relative_path, :title, :vault_name, keyword_init: true) do
+    def relative_path
+      vault_relative_path
+    end
+
+    def relative_without_ext
+      vault_relative_path.sub(/\.md\z/, '')
+    end
+
+    def url
+      encoded_vault = URI.encode_www_form_component(vault_name)
+      encoded_file = URI.encode_www_form_component(relative_without_ext)
+      "obsidian://open?vault=#{encoded_vault}&file=#{encoded_file}"
+    end
+
+    def searchable_text
+      @searchable_text ||= [title, relative_path, relative_without_ext].join("\n").downcase
+    end
+
+    def content_text
+      @content_text ||= File.read(vault_path).downcase
+    rescue Errno::ENOENT
+      ''
+    end
+
+    def matches?(*terms)
+      haystack = searchable_text
+      terms.all? { |term| haystack.include?(term.downcase) }
+    end
+
+    def content_matches?(*terms)
+      haystack = [searchable_text, content_text].join("\n")
+      terms.all? { |term| haystack.include?(term.downcase) }
+    end
+
+    def display_string(index = nil)
+      num = index ? "#{(index + 1).to_s.rjust(3)}. " : ''
+      "#{num}#{title} [#{relative_path}]"
+    end
+  end
+
+  SCOPE_DIRS = {
+    tasks: 'tasks',
+    refs: 'refs',
+    projects: 'projects',
+    plans: 'proposals',
+  }.freeze
+
+  def initialize(config_path: CONFIG_PATH)
+    @config_path = config_path
+    @vault_name, @vault_dir, @cld_dir = load_paths
+  end
+
+  attr_reader :vault_name, :vault_dir, :cld_dir
+
+  Task = Struct.new(
+    :title,
+    :done,
+    :original_done,
+    :done_line_index,
+    :note_path,
+    :cld_relative_dir,
+    :key,
+    :project,
+    :priority,
+    keyword_init: true
+  ) do
+    def open?
+      !done
+    end
+
+    def toggled?
+      done != original_done
+    end
+
+    def vault_relative_note_path
+      return nil unless note_path
+
+      File.join(cld_relative_dir, note_path)
+    end
+
+    def searchable_text
+      [
+        title,
+        key,
+        project,
+        priority,
+        note_path,
+        vault_relative_note_path,
+      ].compact.join("\n").downcase
+    end
+
+    def matches?(*terms)
+      haystack = searchable_text
+      terms.all? { |term| haystack.include?(term.downcase) }
+    end
+
+    def display_string(index = nil)
+      num = index ? "#{(index + 1).to_s.rjust(3)}. " : ''
+      status = open? ? '[ ]' : '[x]'
+      suffix = vault_relative_note_path ? " [#{vault_relative_note_path}]" : ''
+      "#{num}#{status} #{title}#{suffix}"
+    end
+  end
+
+  def notes(scopes: nil)
+    paths =
+      if scopes.nil? || scopes.empty?
+        Dir.glob(File.join(cld_dir, '**', '*.md'))
+      else
+        scopes.flat_map do |scope|
+          dirname = SCOPE_DIRS.fetch(scope)
+          Dir.glob(File.join(cld_dir, dirname, '**', '*.md'))
+        end
+      end
+
+    paths.uniq.sort_by { |path| sort_key(path) }.map do |path|
+      relative = Pathname.new(path).relative_path_from(Pathname.new(vault_dir)).to_s
+      Note.new(
+        vault_path: path,
+        vault_relative_path: relative,
+        title: note_title(path),
+        vault_name: vault_name
+      )
+    end
+  end
+
+  def filter(notes, *terms)
+    return notes if terms.empty?
+
+    direct_matches = notes.select { |note| note.matches?(*terms) }
+    return direct_matches if direct_matches.any?
+
+    notes.select { |note| note.content_matches?(*terms) }
+  end
+
+  def find_by_ref(ref, notes)
+    if ref =~ /^\d+$/
+      idx = ref.to_i - 1
+      return notes[idx] if idx >= 0 && idx < notes.length
+    end
+
+    normalized = ref.sub(/\.md\z/, '')
+
+    notes.find do |note|
+      candidates = [
+        note.relative_path,
+        note.relative_without_ext,
+        File.basename(note.relative_path),
+        File.basename(note.relative_without_ext),
+      ]
+
+      candidates.include?(ref) || candidates.include?(normalized)
+    end
+  end
+
+  def pick(notes, hiiro:)
+    return nil if notes.empty?
+    return notes.first if notes.length == 1
+
+    unless $stdin.tty? && $stdout.tty?
+      raise AmbiguousSelectionError, format_matches(notes)
+    end
+
+    mapping = notes.each_with_index.each_with_object({}) do |(note, idx), acc|
+      acc[note.display_string(idx)] = note
+    end
+
+    selected = hiiro.fuzzyfind_from_map(mapping)
+    raise NoSelectionError if selected.nil?
+
+    selected
+  end
+
+  def cld_dir
+    @cld_dir
+  end
+
+  def vault_dir
+    @vault_dir
+  end
+
+  def tasks
+    lines = File.readlines(task_index_path, chomp: true)
+    in_tasks = false
+    current = nil
+    entries = []
+
+    lines.each_with_index do |line, idx|
+      case line
+      when /^## Claude Tasks$/
+        in_tasks = true
+        next
+      when /^## /
+        if in_tasks
+          entries << current if task_complete?(current)
+          break
+        end
+      end
+
+      next unless in_tasks
+
+      if line.start_with?('### ')
+        entries << current if task_complete?(current)
+        current = Task.new(title: line.sub(/^### /, '').strip, cld_relative_dir: cld_relative_dir)
+        next
+      end
+
+      next unless current
+
+      stripped = line.strip
+
+      case stripped
+      when '- [ ] Done'
+        current.done = false
+        current.original_done = false if current.original_done.nil?
+        current.done_line_index = idx
+      when '- [x] Done'
+        current.done = true
+        current.original_done = true if current.original_done.nil?
+        current.done_line_index = idx
+      when /\A-\s+\*\*Task note:\*\* .*?\(([^)]+)\)/
+        current.note_path = Regexp.last_match(1)
+      when /\A-\s+\*\*Key:\*\* (.+)\z/
+        current.key = Regexp.last_match(1).strip
+      when /\A-\s+\*\*Project:\*\* (.+)\z/
+        current.project = Regexp.last_match(1).strip
+      when /\A-\s+\*\*Priority:\*\* (.+)\z/
+        current.priority = Regexp.last_match(1).strip
+      end
+    end
+
+    entries << current if task_complete?(current)
+    entries
+  rescue Errno::ENOENT
+    []
+  end
+
+  def filter_tasks(tasks, *terms)
+    return tasks if terms.empty?
+
+    tasks.select { |task| task.matches?(*terms) }
+  end
+
+  def save_task_statuses(tasks)
+    lines = File.readlines(task_index_path)
+
+    tasks.each do |task|
+      next unless task.toggled?
+      next if task.done_line_index.nil?
+
+      lines[task.done_line_index] = lines[task.done_line_index].sub(/\[( |x)\] Done/, task.done ? '[x] Done' : '[ ] Done')
+      task.original_done = task.done
+    end
+
+    File.write(task_index_path, lines.join)
+  end
+
+  def format_matches(notes)
+    notes.each_with_index.map { |note, idx| note.display_string(idx) }.join("\n")
+  end
+
+  private
+
+  def task_index_path
+    File.join(cld_dir, 'tasks.md')
+  end
+
+  def cld_relative_dir
+    Pathname.new(cld_dir).relative_path_from(Pathname.new(vault_dir)).to_s
+  rescue ArgumentError
+    File.basename(cld_dir)
+  end
+
+  def load_paths
+    configured_vault_name =
+      Hiiro::Config.yaml_dig('config.yml', 'obsidian', 'vault_name', default: nil) ||
+      Hiiro::Config.yaml_dig('config.yml', 'vault_name', default: nil) ||
+      DEFAULT_VAULT_NAME
+
+    configured_vault_dir = File.expand_path(
+      Hiiro::Config.yaml_dig('config.yml', 'obsidian', 'vault_dir', default: nil) ||
+      Hiiro::Config.yaml_dig('config.yml', 'vault_dir', default: nil) ||
+      DEFAULT_VAULT_DIR
+    )
+
+    configured_cld_dir = File.expand_path(
+      Hiiro::Config.yaml_dig('config.yml', 'obsidian', 'cld_dir', default: nil) ||
+      Hiiro::Config.yaml_dig('config.yml', 'cld_dir', default: nil) ||
+      File.join(configured_vault_dir, 'cld')
+    )
+
+    [configured_vault_name, configured_vault_dir, configured_cld_dir]
+  end
+
+  def task_complete?(task)
+    task && task.title && !task.done.nil?
+  end
+
+  def note_title(path)
+    File.foreach(path) do |line|
+      next unless line.start_with?('#')
+
+      title = line.sub(/\A#+\s*/, '').strip
+      return title unless title.empty?
+    end
+
+    File.basename(path, '.md').tr('-', ' ')
+  rescue Errno::ENOENT
+    File.basename(path, '.md').tr('-', ' ')
+  end
+
+  def sort_key(path)
+    relative = Pathname.new(path).relative_path_from(Pathname.new(cld_dir)).to_s
+    [
+      relative.start_with?('tasks/') ? 0 : 1,
+      relative
+    ]
+  end
+end
+
+SCOPE_FLAGS = {
+  tasks: %w[-t --tasks],
+  refs: %w[-r --refs],
+  projects: %w[-p --projects],
+  plans: %w[-l --plans -P --proposals],
+}.freeze
+
+def help_requested?(args)
+  args.include?('-h') || args.include?('--help')
+end
+
+def extract_scopes(args)
+  scopes = []
+
+  SCOPE_FLAGS.each do |scope, flags|
+    matched = flags.any? { |flag| args.delete(flag) }
+    scopes << scope if matched
+  end
+
+  scopes
+end
+
+def general_help
+  <<~HELP
+    Usage: h obsidian <command> [query]
+
+    Commands:
+      ls, list, search [query]   List matching notes under cld/
+      tasks [filters] [query]    List tracked tasks from cld/tasks.md
+      toggle [filters] [query]   Interactive toggle UI for tracked tasks
+      select [query]             Interactively choose a note and print its Obsidian URL
+      url [query]                Print the Obsidian URL for a note
+      open [query]               Open a note in Obsidian
+      path                       Print the cld/ directory path
+      vault                      Print the vault root path
+      help                       Print this help
+
+    Flags:
+      -t, --tasks                Restrict search to cld/tasks/
+      -r, --refs                 Restrict search to cld/refs/
+      -p, --projects             Restrict search to cld/projects/
+      -l, --plans                Restrict search to cld/proposals/
+      -P, --proposals            Alias for --plans
+      -h, --help                 Print help for the current command
+
+    Notes:
+      - Scope flags are combinable, e.g. `--refs --projects`.
+      - With no scope flags, the search covers all of `cld/`.
+      - Queries match title and relative path first, then markdown content.
+      - With multiple matches in a terminal, `sk` is used for interactive selection.
+      - You can also open by number from `ls`, or by relative path/basename.
+  HELP
+end
+
+def command_help(command)
+  case command
+  when :ls
+    <<~HELP
+      Usage: h obsidian ls [scope flags] [query]
+
+      List matching notes under `cld/`.
+      If no query is given, lists all indexed notes in the selected scopes.
+    HELP
+  when :select
+    <<~HELP
+      Usage: h obsidian select [scope flags] [query]
+
+      Print the Obsidian URL for the selected note.
+      If multiple notes match in a terminal, opens `sk` for selection.
+    HELP
+  when :url
+    <<~HELP
+      Usage: h obsidian url [scope flags] [query]
+
+      Print the Obsidian URL for a matching note.
+      If multiple notes match in a terminal, opens `sk` for selection.
+    HELP
+  when :open
+    <<~HELP
+      Usage: h obsidian open [scope flags] [query]
+
+      Open a matching note in Obsidian.
+      If multiple notes match in a terminal, opens `sk` for selection.
+    HELP
+  when :tasks
+    <<~HELP
+      Usage: h obsidian tasks [filters] [query]
+
+      List tasks from `cld/tasks.md`.
+
+      Filters:
+        -o, --open   Only open tasks
+        -d, --done   Only completed tasks
+        -a, --all    Show all tasks (default)
+    HELP
+  when :toggle
+    <<~HELP
+      Usage: h obsidian toggle [filters] [query]
+
+      Interactive task toggler for `cld/tasks.md`.
+
+      Filters:
+        -o, --open   Only open tasks
+        -d, --done   Only completed tasks
+        -a, --all    Show all tasks (default)
+
+      Keys:
+        Up/Down, j/k   Move cursor
+        Space          Toggle task status under cursor
+        Enter          Save changes
+        q              Cancel without saving
+    HELP
+  when :path
+    "Usage: h obsidian path"
+  when :vault
+    "Usage: h obsidian vault"
+  else
+    general_help
+  end
+end
+
+def resolve_note(manager, hiiro, args)
+  scopes = extract_scopes(args)
+  notes = manager.notes(scopes:)
+
+  if args.any?
+    direct_note = manager.find_by_ref(args.first, notes)
+    return direct_note if direct_note && args.length == 1
+  end
+
+  matches = manager.filter(notes, *args)
+  return nil if matches.empty?
+
+  manager.pick(matches, hiiro:)
+end
+
+manager = ObsidianNotes.new
+hiiro = Hiiro.init(*ARGV)
+
+def extract_task_filters(args)
+  only_open = args.delete('-o') || args.delete('--open')
+  only_done = args.delete('-d') || args.delete('--done')
+  args.delete('-a') || args.delete('--all')
+
+  {
+    open: only_open,
+    done: only_done,
+  }
+end
+
+def filter_task_status(tasks, filters)
+  return tasks if filters[:open] && filters[:done]
+  return tasks.select(&:open?) if filters[:open]
+  return tasks.reject(&:open?) if filters[:done]
+
+  tasks
+end
+
+class TaskToggleTui
+  def initialize(tasks:, manager:)
+    @tasks = tasks
+    @manager = manager
+    @cursor = 0
+    @top = 0
+    @horizontal_offset = 0
+  end
+
+  def run
+    return false if @tasks.empty?
+
+    with_screen do |input|
+      loop do
+        render
+
+        case read_key(input)
+        when :up, 'k'
+          move(-1)
+        when :down, 'j'
+          move(1)
+        when :left, 'h'
+          scroll_horizontal(-4)
+        when :right, 'l'
+          scroll_horizontal(4)
+        when ' '
+          current = @tasks[@cursor]
+          current.done = !current.done if current
+        when :enter
+          @manager.save_task_statuses(@tasks)
+          return true
+        when 'q', :escape, :ctrl_c
+          return false
+        end
+      end
+    end
+  end
+
+  private
+
+  def with_screen
+    input = $stdin
+    $stdout.write("\e[?1049h\e[?25l")
+    $stdout.flush
+
+    input.raw do
+      yield input
+    end
+  ensure
+    $stdout.write("\r\e[0m\e[?25h\e[?1049l")
+    $stdout.flush
+  end
+
+  def read_key(input)
+    char = input.getch
+    return :ctrl_c if char == "\u0003"
+    return :enter if char == "\r" || char == "\n"
+
+    if char == "\e"
+      first = read_escape_char(input)
+      return :escape if first.nil?
+      return :escape unless first == '['
+
+      second = read_escape_char(input)
+      return :up if second == 'A'
+      return :down if second == 'B'
+      return :right if second == 'C'
+      return :left if second == 'D'
+      return :escape
+    end
+
+    char
+  end
+
+  def read_escape_char(input)
+    return nil unless IO.select([input], nil, nil, 0.02)
+
+    input.getch
+  end
+
+  def move(delta)
+    @cursor = [[@cursor + delta, 0].max, @tasks.length - 1].min
+    visible_task_rows = task_rows_budget
+    @top = @cursor if @cursor < @top
+    @top = @cursor - visible_task_rows + 1 if @cursor >= @top + visible_task_rows
+    adjust_top_around_end_marker(delta)
+    clamp_horizontal_offset
+  end
+
+  def scroll_horizontal(delta)
+    @horizontal_offset = [[@horizontal_offset + delta, 0].max, max_horizontal_offset].min
+  end
+
+  def terminal_rows
+    env_dimension('LINES') || IO.console.winsize[0]
+  rescue StandardError
+    24
+  end
+
+  def terminal_cols
+    env_dimension('COLUMNS') || IO.console.winsize[1]
+  rescue StandardError
+    80
+  end
+
+  def render
+    rows = terminal_rows
+    cols = terminal_cols
+    line_cols = [cols - 1, 1].max
+    visible_rows = [rows - 3, 1].max
+    end_marker_visible = end_marker_visible?
+    task_rows_budget = [visible_rows - (end_marker_visible ? 1 : 0), 1].max
+    visible = @tasks[@top, task_rows_budget] || []
+    @horizontal_offset = [@horizontal_offset, max_horizontal_offset(line_cols, visible)].min
+
+    lines = []
+    lines << terminal_line('h-obsidian toggle  j/k or arrows move  h/l or arrows scroll  space toggle  enter save  q cancel', line_cols)
+    lines << terminal_line('Task status comes from the `- [ ] Done` / `- [x] Done` line under each task in cld/tasks.md', line_cols)
+
+    render_rows = visible.dup
+    if end_marker_visible
+      render_rows << :end_marker
+    end
+
+    render_rows.each_with_index do |task, idx|
+      absolute_idx = @top + idx
+      if task == :end_marker
+        lines << terminal_line(center_text('------------- END -------------', line_cols), line_cols)
+      else
+        lines << format_row(task, absolute_idx == @cursor, line_cols)
+      end
+    end
+
+    remaining = visible_rows - render_rows.length
+    remaining.times { lines << terminal_line('', line_cols) }
+    lines << terminal_line("Showing #{@top + 1}-#{@top + visible.length} of #{@tasks.length} tasks", line_cols)
+
+    $stdout.write("\e[H\e[2J")
+    $stdout.write(lines.join("\r\n"))
+    $stdout.write("\r")
+    $stdout.flush
+  end
+
+  def format_row(task, current, line_cols)
+    prefix = current ? '> ' : '  '
+    status = "#{task.done ? '[x]' : '[ ]'} "
+    fixed = prefix + status
+    remaining_cols = [line_cols - fixed.length, 1].max
+    title_text = visible_text(task.title.to_s, remaining_cols, @horizontal_offset)
+    suffix = task.vault_relative_note_path ? " [#{task.vault_relative_note_path}]" : ''
+    available_for_suffix = [remaining_cols - title_text.length, 0].max
+    suffix_text = available_for_suffix.positive? ? truncate(suffix, available_for_suffix) : ''
+    text = (fixed + title_text + suffix_text).ljust(line_cols)
+
+    style =
+      if task.toggled? && current
+        "\e[30;106;1m"
+      elsif task.toggled?
+        "\e[30;103m"
+      elsif current
+        "\e[7m"
+      else
+        "\e[0m"
+      end
+
+    "#{style}#{text}\e[0m\e[K"
+  end
+
+  def max_horizontal_offset(line_cols = nil, visible = nil)
+    line_cols ||= [terminal_cols - 1, 1].max
+    visible ||= visible_tasks
+    return 0 if visible.empty?
+
+    fixed_prefix_width = 6 # "> [ ] " and "  [x] " are both 6 chars
+    remaining_cols = [line_cols - fixed_prefix_width, 1].max
+    min_visible_chars = [5, remaining_cols].min
+    longest_visible_title = visible.map { |task| task.title.to_s.length }.max || 0
+
+    [longest_visible_title - min_visible_chars, 0].max
+  end
+
+  def visible_tasks
+    @tasks[@top, task_rows_budget] || []
+  end
+
+  def clamp_horizontal_offset
+    @horizontal_offset = [@horizontal_offset, max_horizontal_offset].min
+  end
+
+  def task_rows_budget
+    visible_rows = [terminal_rows - 3, 1].max
+    end_marker_visible = end_marker_visible?
+    [visible_rows - (end_marker_visible ? 1 : 0), 1].max
+  end
+
+  def end_marker_visible?
+    @top >= last_page_top
+  end
+
+  def last_page_top
+    visible_rows = [terminal_rows - 3, 1].max
+    [@tasks.length - [visible_rows - 1, 1].max, 0].max
+  end
+
+  def adjust_top_around_end_marker(delta)
+    forbidden_top = last_page_top - 1
+    return if forbidden_top.negative?
+    return unless @top == forbidden_top
+
+    @top = if delta.positive?
+      last_page_top
+    else
+      [forbidden_top - 1, 0].max
+    end
+  end
+
+  def visible_text(text, cols, offset = 0)
+    return truncate(text, cols) if offset <= 0
+
+    clipped = text[offset..] || ''
+    return truncate(clipped, cols) if cols <= 1
+
+    truncate("«#{clipped}", cols)
+  end
+
+  def terminal_line(text, cols)
+    truncate(text, cols) + "\e[K"
+  end
+
+  def center_text(text, cols)
+    truncated = truncate(text, cols)
+    return truncated if truncated.length >= cols
+
+    left_padding = [(cols - truncated.length) / 2, 0].max
+    (' ' * left_padding) + truncated
+  end
+
+  def truncate(text, cols)
+    return text if text.length <= cols
+    return text[0, cols] if cols <= 1
+
+    text[0, cols - 1] + '…'
+  end
+
+  def env_dimension(name)
+    value = ENV[name].to_i
+    return nil unless value.positive?
+
+    value
+  end
+end
+
+hiiro.add_subcmd(:ls) do |*args|
+  if help_requested?(args)
+    puts command_help(:ls)
+    exit 0
+  end
+
+  scopes = extract_scopes(args)
+  notes = manager.filter(manager.notes(scopes:), *args)
+
+  if notes.empty?
+    puts "No notes found."
+    exit 1
+  end
+
+  notes.each_with_index do |note, idx|
+    puts note.display_string(idx)
+  end
+end
+
+hiiro.add_subcmd(:tasks) do |*args|
+  if help_requested?(args)
+    puts command_help(:tasks)
+    exit 0
+  end
+
+  filters = extract_task_filters(args)
+  tasks = manager.tasks
+  tasks = filter_task_status(tasks, filters)
+  tasks = manager.filter_tasks(tasks, *args)
+
+  if tasks.empty?
+    puts 'No tasks found.'
+    exit 1
+  end
+
+  tasks.each_with_index do |task, idx|
+    puts task.display_string(idx)
+  end
+end
+
+hiiro.add_subcmd(:toggle) do |*args|
+  if help_requested?(args)
+    puts command_help(:toggle)
+    exit 0
+  end
+
+  filters = extract_task_filters(args)
+  tasks = manager.tasks
+  tasks = filter_task_status(tasks, filters)
+  tasks = manager.filter_tasks(tasks, *args)
+
+  if tasks.empty?
+    puts 'No tasks found.'
+    exit 1
+  end
+
+  saved = TaskToggleTui.new(tasks:, manager: manager).run
+  puts(saved ? 'Saved task status changes.' : 'Cancelled.')
+end
+
+hiiro.add_subcmd(:list) do |*args|
+  hiiro.run_subcmd(:ls, *args)
+end
+
+hiiro.add_subcmd(:search) do |*args|
+  hiiro.run_subcmd(:ls, *args)
+end
+
+hiiro.add_subcmd(:select) do |*args|
+  if help_requested?(args)
+    puts command_help(:select)
+    exit 0
+  end
+
+  note = resolve_note(manager, hiiro, args)
+  puts note.url
+rescue ObsidianNotes::AmbiguousSelectionError => e
+  STDERR.puts "Multiple notes matched:"
+  STDERR.puts e.message
+  exit 1
+rescue ObsidianNotes::NoSelectionError
+  STDERR.puts 'No note selected.'
+  exit 1
+rescue StandardError => e
+  raise e
+end
+
+hiiro.add_subcmd(:url) do |*args|
+  if help_requested?(args)
+    puts command_help(:url)
+    exit 0
+  end
+
+  note = resolve_note(manager, hiiro, args)
+  unless note
+    STDERR.puts "No note found."
+    exit 1
+  end
+
+  puts note.url
+rescue ObsidianNotes::AmbiguousSelectionError => e
+  STDERR.puts "Multiple notes matched:"
+  STDERR.puts e.message
+  exit 1
+rescue ObsidianNotes::NoSelectionError
+  STDERR.puts 'No note selected.'
+  exit 1
+end
+
+hiiro.add_subcmd(:open) do |*args|
+  if help_requested?(args)
+    puts command_help(:open)
+    exit 0
+  end
+
+  note = resolve_note(manager, hiiro, args)
+  unless note
+    STDERR.puts "No note found."
+    exit 1
+  end
+
+  system('open', note.url)
+rescue ObsidianNotes::AmbiguousSelectionError => e
+  STDERR.puts "Multiple notes matched:"
+  STDERR.puts e.message
+  exit 1
+rescue ObsidianNotes::NoSelectionError
+  STDERR.puts 'No note selected.'
+  exit 1
+end
+
+hiiro.add_subcmd(:path) do |*args|
+  if help_requested?(args)
+    puts command_help(:path)
+    exit 0
+  end
+
+  puts manager.cld_dir
+end
+
+hiiro.add_subcmd(:vault) do |*args|
+  if help_requested?(args)
+    puts command_help(:vault)
+    exit 0
+  end
+
+  puts manager.vault_dir
+end
+
+hiiro.add_subcmd(:help) do |*args|
+  puts general_help
+end
+
+hiiro.add_default do
+  puts general_help
+end
+
+hiiro.run

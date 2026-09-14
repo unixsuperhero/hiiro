@@ -1,0 +1,475 @@
+#!/usr/bin/env ruby
+# h-loop — manage AI loops (Claude Code /loop) inside a single tmux session.
+#
+# Layout:
+#   ~/ai/loops/info.json                 -> registry + tmux refs
+#   ~/ai/loops/<name>/config.yml         -> {name, frequency, prompt}
+#   ~/ai/loops/<name>/status.json        -> written by the loop's Claude each cycle
+#   ~/ai/home.html                       -> rebuilt by `h-loop render`
+
+require 'hiiro'
+require 'yaml'
+require 'json'
+require 'fileutils'
+require 'tempfile'
+require 'time'
+require 'cgi'
+
+SESSION      = 'loops'
+LOOPS_ROOT   = File.expand_path('~/ai/loops')
+INFO_PATH    = File.join(LOOPS_ROOT, 'info.json')
+HOME_HTML    = File.expand_path('~/ai/home.html')
+RESERVED     = %w[prs slack list add rm start stop tmux render info help].freeze
+BUILTINS     = %w[prs slack].freeze
+CLAUDE_CMD   = 'claude --dangerously-skip-permissions --model sonnet'
+
+# ---------- filesystem helpers ----------
+
+def ensure_dirs
+  FileUtils.mkdir_p(LOOPS_ROOT)
+end
+
+def loop_dir(name)  = File.join(LOOPS_ROOT, name)
+def config_path(name) = File.join(loop_dir(name), 'config.yml')
+def status_path(name) = File.join(loop_dir(name), 'status.json')
+
+def load_info
+  return { 'session' => SESSION, 'loops' => {} } unless File.exist?(INFO_PATH)
+  JSON.parse(File.read(INFO_PATH))
+rescue JSON::ParserError
+  { 'session' => SESSION, 'loops' => {} }
+end
+
+def save_info(info)
+  ensure_dirs
+  File.write(INFO_PATH, JSON.pretty_generate(info))
+end
+
+def load_config(name)
+  path = config_path(name)
+  return nil unless File.exist?(path)
+  YAML.safe_load(File.read(path)) || {}
+end
+
+def load_status(name)
+  path = status_path(name)
+  return nil unless File.exist?(path)
+  JSON.parse(File.read(path))
+rescue JSON::ParserError
+  nil
+end
+
+def all_loops
+  return [] unless Dir.exist?(LOOPS_ROOT)
+  Dir.children(LOOPS_ROOT).select { |c| File.exist?(config_path(c)) }.sort
+end
+
+def resolve_names(args)
+  args = args.flatten.compact
+  args.empty? ? all_loops : args
+end
+
+# ---------- tmux helpers ----------
+
+def tmux_capture(*args)
+  out = IO.popen(['tmux', *args, err: [:child, :out]], &:read)
+  [out.strip, $?.success?]
+end
+
+def session_exists?
+  system('tmux', 'has-session', '-t', SESSION, out: File::NULL, err: File::NULL)
+end
+
+def ensure_session
+  return if session_exists?
+  system('tmux', 'new-session', '-d', '-s', SESSION, '-n', '_home')
+end
+
+def window_exists?(window_id)
+  return false if window_id.nil? || window_id.empty?
+  out, ok = tmux_capture('list-windows', '-a', '-F', '#{window_id}')
+  ok && out.split("\n").include?(window_id)
+end
+
+def kill_window(window_id)
+  return unless window_id && !window_id.empty?
+  system('tmux', 'kill-window', '-t', window_id, out: File::NULL, err: File::NULL)
+end
+
+def new_window(name)
+  ensure_session
+  # -P prints info about the new window; -F formats it. We want its window_id.
+  window_id, _ = tmux_capture('new-window', '-d', '-t', "#{SESSION}:", '-n', name, '-P', '-F', '#{window_id}')
+  pane_id, _   = tmux_capture('list-panes', '-t', window_id, '-F', '#{pane_id}')
+  [window_id, pane_id.split("\n").first]
+end
+
+def send_line(pane_id, line)
+  system('tmux', 'send-keys', '-t', pane_id, line, 'Enter')
+end
+
+def paste_text(pane_id, text)
+  tf = Tempfile.new(['h-loop-paste-', '.txt'])
+  tf.write(text)
+  tf.flush
+  tf.close
+  system('tmux', 'load-buffer', '-b', 'hloop', tf.path)
+  # -d deletes the buffer after paste. -p disables bracketed paste.
+  system('tmux', 'paste-buffer', '-d', '-p', '-b', 'hloop', '-t', pane_id)
+ensure
+  tf&.unlink
+end
+
+# ---------- lifecycle ----------
+
+def compile_prompt(cfg)
+  freq   = cfg['frequency'] || '10m'
+  prompt = cfg['prompt'].to_s.strip
+  <<~MSG.strip
+    /loop #{freq} #{prompt}
+
+    After each cycle: write your findings to ~/ai/loops/#{cfg['name']}/status.json
+    (see the h-loop status.json schema), then run `h-loop render` to refresh
+    ~/ai/home.html.
+  MSG
+end
+
+def start_loop(name)
+  cfg = load_config(name)
+  unless cfg
+    warn "no config: #{name}"
+    return false
+  end
+  cfg['name'] ||= name
+
+  info = load_info
+  existing = info.dig('loops', name)
+  if existing && window_exists?(existing['window_id'])
+    puts "already running: #{name} (#{existing['window_id']} #{existing['pane_id']})"
+    return true
+  end
+
+  window_id, pane_id = new_window(name)
+  send_line(pane_id, CLAUDE_CMD)
+  sleep 2.5 # wait for claude to boot
+
+  paste_text(pane_id, compile_prompt(cfg))
+  sleep 0.3
+  # Leave Vim insert mode before submitting the pasted multiline prompt.
+  system('tmux', 'send-keys', '-t', pane_id, 'Escape')
+  sleep 0.5
+  system('tmux', 'send-keys', '-t', pane_id, 'Enter')
+
+  info['session'] = SESSION
+  info['loops'][name] = {
+    'window_id'  => window_id,
+    'pane_id'    => pane_id,
+    'started_at' => Time.now.iso8601,
+    'frequency'  => cfg['frequency'],
+  }
+  save_info(info)
+  puts "started: #{name} (#{window_id} #{pane_id})"
+  true
+end
+
+def stop_loop(name)
+  info = load_info
+  entry = info.dig('loops', name)
+  if entry
+    kill_window(entry['window_id'])
+    info['loops'].delete(name)
+    save_info(info)
+    puts "stopped: #{name}"
+  else
+    puts "not running: #{name}"
+  end
+end
+
+# ---------- add / rm ----------
+
+ADD_TEMPLATE = <<~YAML
+  # h-loop add — save this file to create a new loop.
+  # Lines starting with # are comments and will be stripped.
+  name: my-loop
+  frequency: 10m    # 30s | 5m | 1h
+  prompt: |
+    Describe what Claude should do on each cycle. Multi-line is fine.
+    End with what to write to status.json and to call `h-loop render`.
+YAML
+
+def cmd_add
+  tf = Tempfile.new(['h-loop-add-', '.yml'])
+  tf.write(ADD_TEMPLATE)
+  tf.flush
+  tf.close
+  system(ENV['EDITOR'] || ENV['VISUAL'] || 'nvim', tf.path)
+
+  raw = File.read(tf.path)
+  tf.unlink
+  cfg = YAML.safe_load(raw) || {}
+
+  name = cfg['name'].to_s.strip
+  if name.empty? || name == 'my-loop'
+    warn 'aborted: name is empty or unchanged from template'
+    return
+  end
+  if RESERVED.include?(name) && !BUILTINS.include?(name)
+    warn "aborted: '#{name}' is reserved"
+    return
+  end
+  if cfg['prompt'].to_s.strip.empty?
+    warn 'aborted: prompt is empty'
+    return
+  end
+
+  FileUtils.mkdir_p(loop_dir(name))
+  File.write(config_path(name), YAML.dump(cfg))
+  puts "added: #{name} -> #{config_path(name)}"
+end
+
+def cmd_rm(names)
+  resolve_names(names).each do |name|
+    stop_loop(name) if load_info.dig('loops', name)
+    dir = loop_dir(name)
+    if Dir.exist?(dir)
+      FileUtils.rm_rf(dir)
+      puts "removed: #{name}"
+    else
+      warn "no such loop: #{name}"
+    end
+  end
+end
+
+# ---------- list ----------
+
+def cmd_list
+  info = load_info
+  loops = all_loops
+  if loops.empty?
+    puts '(no loops — try `h-loop add` or `h-loop start prs`)'
+    return
+  end
+  printf("%-14s %-10s %-8s %-8s %-20s %s\n",
+         'NAME', 'FREQ', 'WINDOW', 'PANE', 'LAST STATUS', 'ITEMS')
+  loops.each do |name|
+    cfg     = load_config(name) || {}
+    entry   = info.dig('loops', name) || {}
+    status  = load_status(name) || {}
+    printf("%-14s %-10s %-8s %-8s %-20s %s\n",
+           name,
+           cfg['frequency'] || '?',
+           entry['window_id'] || '-',
+           entry['pane_id']   || '-',
+           status['updated_at']&.slice(0, 19) || '-',
+           (status['items']&.size || 0).to_s)
+  end
+end
+
+# ---------- status (prs / slack top-level) ----------
+
+def show_status(name)
+  cfg    = load_config(name)
+  entry  = load_info.dig('loops', name) || {}
+  status = load_status(name)
+
+  puts "loop:       #{name}"
+  puts "frequency:  #{cfg&.dig('frequency') || '(no config)'}"
+  puts "tmux:       #{entry['window_id'] || '-'} #{entry['pane_id'] || '-'}"
+  puts "started:    #{entry['started_at'] || '-'}"
+  puts "updated:    #{status&.dig('updated_at') || '(never)'}"
+  puts
+
+  if status.nil?
+    puts '(no status.json yet)'
+    return
+  end
+  items = status['items'] || []
+  puts "items (#{items.size}):"
+  items.each do |it|
+    line = "  - #{it['title'] || it['id']}"
+    line += "  [#{it['task']}]" if it['task']
+    line += "  <#{it['status']}>" if it['status']
+    line += "  #{it['url']}" if it['url']
+    puts line
+  end
+  if (acts = status['action_items']) && !acts.empty?
+    puts
+    puts 'action items:'
+    acts.each { |a| puts "  * #{a['text']}#{a['url'] ? "  #{a['url']}" : ''}" }
+  end
+  if (qs = status['open_questions']) && !qs.empty?
+    puts
+    puts 'open questions:'
+    qs.each { |q| puts "  ? #{q['text']}#{q['url'] ? "  #{q['url']}" : ''}" }
+  end
+end
+
+# ---------- tmux switch ----------
+
+def cmd_tmux(name = nil)
+  ensure_session
+  if name.nil?
+    system('tmux', 'switch-client', '-t', SESSION) || system('tmux', 'attach', '-t', SESSION)
+    return
+  end
+  entry = load_info.dig('loops', name)
+  unless entry && window_exists?(entry['window_id'])
+    warn "not running: #{name}"
+    return
+  end
+  system('tmux', 'switch-client', '-t', entry['window_id']) ||
+    system('tmux', 'attach', '-t', entry['window_id'])
+end
+
+# ---------- render home.html ----------
+
+def html_escape(s) = CGI.escapeHTML(s.to_s)
+
+def render_section(name, status)
+  updated = status&.dig('updated_at')
+  freshness = updated ? "updated #{updated}" : 'no updates yet'
+  body = status&.dig('summary_html')
+
+  inner =
+    if body && !body.strip.empty?
+      body
+    elsif status.nil?
+      "<p class='empty'>Loop has not written status.json yet.</p>"
+    else
+      items = status['items'] || []
+      list = items.map { |it|
+        badge = it['status'] ? "<span class='badge'>#{html_escape(it['status'])}</span>" : ''
+        task  = it['task']   ? "<span class='task'>#{html_escape(it['task'])}</span>"   : ''
+        link  = it['url']    ? "<a href='#{html_escape(it['url'])}'>#{html_escape(it['title'] || it['id'])}</a>"
+                             : html_escape(it['title'] || it['id'])
+        "<li>#{link} #{badge} #{task}</li>"
+      }.join
+      list.empty? ? "<p class='empty'>Nothing to show.</p>" : "<ul>#{list}</ul>"
+    end
+
+  <<~HTML
+    <section id="loop-#{html_escape(name)}" class="loop-section">
+      <header><h2>#{html_escape(name)}</h2><span class="freshness">#{html_escape(freshness)}</span></header>
+      #{inner}
+    </section>
+  HTML
+end
+
+def render_by_task(all_status)
+  grouped = Hash.new { |h, k| h[k] = { items: [], actions: [], questions: [] } }
+  all_status.each do |name, s|
+    next unless s
+    (s['items'] || []).each         { |it| grouped[it['task'] || '_untagged'][:items]     << it.merge('_loop' => name) }
+    (s['action_items'] || []).each  { |it| grouped[it['task'] || '_untagged'][:actions]   << it.merge('_loop' => name) }
+    (s['open_questions'] || []).each { |it| grouped[it['task'] || '_untagged'][:questions] << it.merge('_loop' => name) }
+  end
+  return '' if grouped.empty?
+
+  cards = grouped.sort_by { |k, _| k == '_untagged' ? 'zzz' : k }.map do |task, bucket|
+    title = task == '_untagged' ? '(no task)' : task
+    parts = []
+    unless bucket[:items].empty?
+      parts << '<h4>items</h4><ul>' + bucket[:items].map { |i|
+        link = i['url'] ? "<a href='#{html_escape(i['url'])}'>#{html_escape(i['title'] || i['id'])}</a>" : html_escape(i['title'] || i['id'])
+        "<li>#{link} <span class='src'>#{html_escape(i['_loop'])}</span></li>"
+      }.join + '</ul>'
+    end
+    unless bucket[:actions].empty?
+      parts << '<h4>action items</h4><ul>' + bucket[:actions].map { |a|
+        text = a['url'] ? "<a href='#{html_escape(a['url'])}'>#{html_escape(a['text'])}</a>" : html_escape(a['text'])
+        "<li>#{text} <span class='src'>#{html_escape(a['_loop'])}</span></li>"
+      }.join + '</ul>'
+    end
+    unless bucket[:questions].empty?
+      parts << '<h4>open questions</h4><ul>' + bucket[:questions].map { |q|
+        text = q['url'] ? "<a href='#{html_escape(q['url'])}'>#{html_escape(q['text'])}</a>" : html_escape(q['text'])
+        "<li>#{text} <span class='src'>#{html_escape(q['_loop'])}</span></li>"
+      }.join + '</ul>'
+    end
+    "<article class='task-card'><h3>#{html_escape(title)}</h3>#{parts.join}</article>"
+  end.join
+
+  "<section id='by-task'><header><h2>by task</h2></header>#{cards}</section>"
+end
+
+HOME_STYLES = <<~CSS
+  :root {
+    color-scheme: light dark;
+    --bg: #f7f7f8; --fg: #1a1a1a; --muted: #6a6a72; --card: #fff; --line: #e5e5eb;
+    --accent: #4c6ef5; --badge-bg: #eef2ff; --badge-fg: #3730a3; --task-bg: #f0fdf4; --task-fg: #166534;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f0f11; --fg: #f0f0f2; --muted: #9aa0a6; --card: #17171b; --line: #2a2a30;
+            --badge-bg: #232746; --badge-fg: #c6d0ff; --task-bg: #14261c; --task-fg: #86efac; }
+  }
+  body { margin: 0; font: 15px/1.5 -apple-system, ui-sans-serif, system-ui; background: var(--bg); color: var(--fg); }
+  header.top { padding: 24px 32px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; }
+  header.top h1 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+  header.top .updated { color: var(--muted); font-size: 12px; }
+  main { padding: 24px 32px; display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1100px; margin: 0 auto; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; }
+  section header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--line); margin: -16px -20px 12px; padding: 12px 20px; }
+  section h2 { margin: 0; font-size: 16px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .freshness { color: var(--muted); font-size: 12px; }
+  ul { margin: 8px 0; padding-left: 20px; }
+  li { margin: 4px 0; }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  .badge { display: inline-block; background: var(--badge-bg); color: var(--badge-fg); padding: 1px 8px; border-radius: 999px; font-size: 11px; margin-left: 6px; }
+  .task { display: inline-block; background: var(--task-bg); color: var(--task-fg); padding: 1px 8px; border-radius: 999px; font-size: 11px; margin-left: 4px; }
+  .src { color: var(--muted); font-size: 11px; margin-left: 4px; }
+  .empty { color: var(--muted); font-style: italic; }
+  article.task-card { border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; margin-top: 10px; }
+  article.task-card h3 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); }
+  article.task-card h4 { margin: 8px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+CSS
+
+def cmd_render
+  ensure_dirs
+  loops = all_loops
+  all_status = loops.each_with_object({}) { |n, h| h[n] = load_status(n) }
+  sections = loops.map { |n| render_section(n, all_status[n]) }.join("\n")
+  by_task  = render_by_task(all_status)
+  now = Time.now.iso8601
+
+  html = <<~HTML
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <title>AI Loops · home</title>
+      <meta http-equiv="refresh" content="30">
+      <style>#{HOME_STYLES}</style>
+    </head>
+    <body>
+      <header class="top">
+        <h1>AI Loops</h1>
+        <span class="updated">rendered #{html_escape(now)}</span>
+      </header>
+      <main>
+        #{sections}
+        #{by_task}
+      </main>
+    </body>
+    </html>
+  HTML
+
+  File.write(HOME_HTML, html)
+  puts "rendered: #{HOME_HTML}"
+end
+
+# ---------- dispatch ----------
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:list, :ls) { cmd_list }
+
+  add_subcmd(:add)       { cmd_add }
+  add_subcmd(:rm)        { |*names| cmd_rm(names) }
+  add_subcmd(:start)     { |*names| resolve_names(names).each { |n| start_loop(n) } }
+  add_subcmd(:stop)      { |*names| resolve_names(names).each { |n| stop_loop(n) } }
+  add_subcmd(:restart)   { |*names| resolve_names(names).each { |n| stop_loop(n); start_loop(n) } }
+  add_subcmd(:tmux, :t)  { |name = nil| cmd_tmux(name) }
+  add_subcmd(:render, :r) { cmd_render }
+
+  add_subcmd(:prs)   { show_status('prs') }
+  add_subcmd(:slack) { show_status('slack') }
+end

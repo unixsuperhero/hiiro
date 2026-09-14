@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run do
+
+  add_cmd :install do
+    system('npm i -g @mermaid-js/mermaid-cli')
+  end
+
+  add_cmd :png do
+    files = opts.args
+    files.each do |f|
+      next unless File.file?(f)
+
+      system('mmdc', '-i', f, '-o', format('%s.png', f))
+    end
+  end
+
+  add_cmd :svg do
+    files = opts.args
+    files.each do |f|
+      next unless File.file?(f)
+
+      system('mmdc', '-i', f, '-o', format('%s.svg', f))
+    end
+  end
+end

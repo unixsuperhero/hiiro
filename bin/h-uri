@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run do
+  add_cmd :decode do
+    puts 'python3 -c "import sys,urllib.parse; print(urllib.parse.unquote(sys.stdin.read().strip()))"'
+  end
+end

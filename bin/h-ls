@@ -1,0 +1,69 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+class Globber
+  attr_reader :path
+
+  def initialize(path)
+    @path = path
+  end
+
+  def dir? = File.directory?(path)
+  def file? = File.file?(path)
+  def star? = path.include?('*')
+  def files
+    return absify(*Dir.glob(path)) if star?
+    absify(*Dir.glob(glob))
+  end
+
+  def glob
+    return path if star?
+    return path.sub(/\/*$/, '/*') if dir?
+    return '*' if path.strip.empty?
+    path
+  end
+
+  def recent_files
+    fs = files
+    fs.sort_by do |f|
+      File.mtime(f)
+    rescue => e
+      binding.pry
+    end.reverse
+  end
+
+  def extensions = (files || []).filter_map{|f| x = File.extname(f).strip; next if x.empty?; x }.sort.uniq
+
+  def absify(*files)
+    (files.flatten.map(&File.method(:absolute_path)).sort || []).select{|f| File.file?(f) || File.directory?(f) }
+  end
+end
+
+Hiiro.run do
+  add_subcmd :ext do |*args|
+    puts args.flat_map{|arg| Globber.new(arg).extensions }.sort.uniq
+  end
+
+  add_subcmd :last do |dir,cnt=1,head=nil,*idxs|
+    fs = Globber.new(dir).recent_files
+    fs = fs.first(cnt.to_i)
+    fs = fs.reverse
+
+    if idxs.any?
+      idxs = [head, *idxs]
+      head = nil
+
+      return idxs.uniq.select{|idx| idx.match?(/\d/) }.each do |idx|
+        f = fs[idx.to_i - 1]
+        puts f if f
+      end
+    end
+
+    if head
+      puts fs.first(head.to_i)
+    else
+      puts fs
+    end
+  end
+end

@@ -1,0 +1,118 @@
+#!/usr/bin/env ruby
+
+require 'English'
+require 'hiiro'
+require 'open3'
+
+DEFAULT_APP_BUNDLE = File.join('release', 'CodeHiiro.app')
+COMMANDS = {
+  verify: %w[--verify --deep --strict --verbose=2],
+  info: %w[-dv --verbose=4],
+  requirement: %w[-d -r-],
+}.freeze
+
+def resolve_app_bundle(app_bundle)
+  bundle = app_bundle || DEFAULT_APP_BUNDLE
+
+  unless File.directory?(bundle) && File.extname(bundle) == '.app'
+    warn "h-sign: app bundle not found: #{bundle}"
+    exit 1
+  end
+
+  bundle
+end
+
+def run_codesign(arguments, app_bundle)
+  bundle = resolve_app_bundle(app_bundle)
+  success = system('codesign', *arguments, bundle)
+  exit(success ? 0 : ($CHILD_STATUS&.exitstatus || 1))
+end
+
+def inspect_codesign(arguments, bundle)
+  stdout, stderr, status = Open3.capture3('codesign', *arguments, bundle)
+  {
+    output: [stdout, stderr].reject(&:empty?).join,
+    status: status,
+  }
+end
+
+def field(output, name)
+  output[/^#{Regexp.escape(name)}=(.+)$/, 1]
+end
+
+def print_result(name, result)
+  puts
+  puts "== #{name} (exit #{result[:status].exitstatus}) =="
+  output = result[:output].rstrip
+  puts(output.empty? ? '(no output)' : output)
+end
+
+def print_report(app_bundle)
+  bundle = resolve_app_bundle(app_bundle)
+  results = COMMANDS.transform_values { |arguments| inspect_codesign(arguments, bundle) }
+  details = results[:info][:output]
+  requirement = results[:requirement][:output][/^designated => .+$/, 0]
+  identifier = field(details, 'Identifier')
+  team_identifier = field(details, 'TeamIdentifier')
+  authorities = details.scan(/^Authority=(.+)$/).flatten
+
+  puts "Code-signing permission continuity report"
+  puts "App: #{File.expand_path(bundle)}"
+  print_result('verify', results[:verify])
+  print_result('info', results[:info])
+  print_result('requirement', results[:requirement])
+
+  puts
+  puts '== Summary =='
+  puts "Signature verification: #{results[:verify][:status].success? ? 'PASS' : 'FAIL'}"
+  puts "Bundle identifier: #{identifier || 'NOT FOUND'}"
+  puts "Team identifier: #{team_identifier || 'NOT FOUND'}"
+  puts "Signing authorities: #{authorities.empty? ? 'NOT FOUND' : authorities.join(' -> ')}"
+  puts "Designated requirement: #{requirement || 'NOT FOUND'}"
+
+  puts
+  puts '== What must remain stable across versions =='
+  puts "1. Keep CFBundleIdentifier exactly #{identifier.inspect}." if identifier
+  puts "1. Add a stable CFBundleIdentifier; none was found." unless identifier
+  if team_identifier
+    puts "2. Sign every release with the same Apple Developer team (#{team_identifier})."
+  else
+    puts '2. Sign every release with the same non-ad-hoc Apple Developer identity; no TeamIdentifier was found.'
+  end
+  if requirement
+    puts '3. Keep future builds mutually compatible with the designated requirement shown above.'
+  else
+    puts '3. Establish a stable designated requirement; none was found.'
+  end
+  puts '4. Keep privacy-relevant entitlements stable and notarize distributed builds.'
+  puts '5. Install updates as the same app instead of alternating with unsigned, ad-hoc, or differently signed builds.'
+  puts '6. For sandboxed persistent folder access, store and restore security-scoped bookmarks.'
+
+  puts
+  if results.values.all? { |result| result[:status].success? } &&
+     identifier && team_identifier && requirement
+    puts 'Assessment: this bundle is a suitable signed baseline. Run this report on every release and keep the identity values above compatible.'
+  else
+    puts 'Assessment: changes are required before permission continuity can be relied upon; resolve the missing or failed items above.'
+  end
+
+  exit(results.values.all? { |result| result[:status].success? } ? 0 : 1)
+end
+
+Hiiro.run do
+  add_subcmd(:verify) do |app_bundle = nil|
+    run_codesign(COMMANDS[:verify], app_bundle)
+  end
+
+  add_subcmd(:info) do |app_bundle = nil|
+    run_codesign(COMMANDS[:info], app_bundle)
+  end
+
+  add_subcmd(:requirement) do |app_bundle = nil|
+    run_codesign(COMMANDS[:requirement], app_bundle)
+  end
+
+  add_subcmd(:report) do |app_bundle = nil|
+    print_report(app_bundle)
+  end
+end

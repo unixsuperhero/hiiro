@@ -1,0 +1,289 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'json'
+require 'open3'
+require 'shellwords'
+require 'tempfile'
+require 'yaml'
+
+# Cap the diff we send to the model so we never blow the context window.
+MAX_DIFF_CHARS = 120_000
+
+# Snapshot the whole working tree (tracked edits, deletions, AND untracked
+# files) as a single unified diff, without leaving staging mutated.
+#
+#   git add -A                 -> stage everything (incl. untracked/deleted)
+#   git diff --cached HEAD     -> one diff covering all of it
+#   git reset -q               -> restore the original (unstaged) state
+def snapshot_diff
+  system('git', 'add', '-A')
+  diff = `git diff --cached HEAD`
+ensure
+  system('git', 'reset', '-q')
+  diff
+end
+
+def clean?
+  status = `git status --porcelain -uall`.strip
+  status.empty?
+end
+
+def dirty?
+  !clean?
+end
+
+# Ask Claude (sonnet) to partition the changed files into logical commits.
+# Returns an array of { "message" => String, "files" => [String, ...] }.
+def plan_commits(model:, status:, diff:)
+  truncated = diff.length > MAX_DIFF_CHARS
+  diff = diff[0, MAX_DIFF_CHARS] if truncated
+
+  prompt = build_commit_prompt(status, diff, truncated)
+
+  raw = IO.popen(['claude', '-p', '--model', model], 'r+') do |io|
+    io.write(prompt)
+    io.close_write
+    io.read
+  end
+
+  parse_plan(raw)
+end
+
+# ── The grouping strategy: this prompt is the heart of the command. ──
+def build_commit_prompt(status, diff, truncated)
+  <<~PROMPT
+    You are organizing a git working tree's uncommitted changes into a series of
+    logical commits.
+
+    Respond with ONLY a JSON array (no prose, no markdown fences). Each element:
+      { "message": "<commit message>", "files": ["path/one", "path/two"] }
+
+    Rules:
+    - Every changed file listed below must appear in exactly ONE commit.
+    - Group by logical concern (feature, fix, refactor, docs, tests, config,
+      chore) rather than by directory.
+    - Order the commits so that prerequisite changes come first.
+    - "message" is a Conventional-Commits-style subject line in the imperative
+      mood (e.g. "fix: handle empty diff"). Add a blank line + short body only
+      when it genuinely helps.
+    - Use the exact file paths shown in the status block below.
+
+    Changed files (git status --porcelain):
+    #{status}
+
+    Unified diff#{truncated ? ' (TRUNCATED — some changes omitted)' : ''}:
+    #{diff}
+  PROMPT
+end
+
+# Claude may wrap JSON in ```fences``` or add stray prose — extract the array.
+def parse_plan(raw)
+  text = raw.to_s.strip
+  text = text.gsub(/\A```(?:json)?\n?/, '').gsub(/```\z/, '').strip
+  start = text.index('[')
+  finish = text.rindex(']')
+  raise "no JSON array in model output:\n#{raw}" unless start && finish
+
+  JSON.parse(text[start..finish])
+end
+
+# Files git currently sees as changed (porcelain paths, dequoted).
+def changed_files
+  `git status --porcelain -uall`.lines.map do |line|
+    path = line[3..].to_s.chomp
+    path = path.split(' -> ').last if path.include?(' -> ') # renames
+    path = path.delete_prefix('"').delete_suffix('"')
+    path
+  end.reject(&:empty?)
+end
+
+def untracked_files(repo_root)
+  output, error, status = Open3.capture3(
+    'git', '-C', repo_root, 'ls-files', '--others', '--exclude-standard', '-z'
+  )
+  raise "Could not list untracked files: #{error.strip}" unless status.success?
+
+  output.split("\0").reject(&:empty?).sort
+end
+
+def ignore_candidate_groups(files)
+  extensions = files.each_with_object([]) do |path, patterns|
+    extension = File.extname(path)
+    patterns << "*#{extension}" unless extension.empty? || extension == '.'
+  end.uniq.sort
+
+  directories = files.each_with_object([]) do |path, patterns|
+    directory = File.dirname(path)
+    patterns << "#{directory}/*" unless directory == '.'
+  end.uniq.sort
+
+  {
+    'Exact files' => files,
+    'Extensions' => extensions,
+    'Directories' => directories
+  }
+end
+
+def write_ignore_candidates(path, groups)
+  File.open(path, 'w') do |file|
+    file.puts '# Delete every pattern you do not want, then save and quit.'
+    groups.each do |heading, patterns|
+      next if patterns.empty?
+
+      file.puts
+      file.puts "# #{heading}"
+      patterns.each { |pattern| file.puts "- #{pattern.to_json}" }
+    end
+  end
+end
+
+def load_ignore_patterns(path)
+  patterns = YAML.safe_load(File.read(path), aliases: false) || []
+  raise 'The edited YAML must contain an array of strings.' unless patterns.is_a?(Array) && patterns.all?(String)
+  raise 'Git ignore patterns cannot contain newlines.' if patterns.any? { |pattern| pattern.match?(/[\r\n]/) }
+
+  patterns.map(&:strip).reject(&:empty?).uniq
+end
+
+def append_gitignore(repo_root, patterns)
+  path = File.join(repo_root, '.gitignore')
+  content = File.exist?(path) ? File.binread(path) : ''
+  existing_patterns = content.lines.map(&:chomp)
+  new_patterns = patterns - existing_patterns
+  return [path, []] if new_patterns.empty?
+
+  File.open(path, 'ab') do |file|
+    file.write("\n") unless content.empty? || content.end_with?("\n")
+    new_patterns.each { |pattern| file.puts(pattern) }
+  end
+
+  [path, new_patterns]
+end
+
+Hiiro.run(*ARGV, plugins: [Pins]) do
+  add_flag(:dry_run, short: :n, default: false)
+  add_option(:model, short: :m, default: 'sonnet')
+
+  add_cmd(:clean) do
+    status = `git status --porcelain -uall`.strip
+    exit (clean? ? 0 : 1)
+  end
+
+  add_cmd(:dirty) do
+    status = `git status --porcelain -uall`.strip
+    exit (dirty? ? 0 : 1)
+  end
+
+  add_cmd(:ignore) do
+    repo_root, _error, status = Open3.capture3('git', 'rev-parse', '--show-toplevel')
+    unless status.success?
+      puts 'Not inside a git work tree.'
+      next false
+    end
+
+    files = untracked_files(repo_root.strip)
+    if files.empty?
+      puts 'No untracked files to ignore.'
+      next
+    end
+
+    editor = Shellwords.split(ENV['EDITOR'].to_s)
+    if editor.empty?
+      puts '$EDITOR is not set.'
+      next false
+    end
+
+    Tempfile.create(['h-git-ignore-', '.yml']) do |tempfile|
+      write_ignore_candidates(tempfile.path, ignore_candidate_groups(files))
+      next false unless system(*editor, tempfile.path)
+
+      begin
+        patterns = load_ignore_patterns(tempfile.path)
+      rescue Psych::SyntaxError, RuntimeError => error
+        puts "Could not use edited YAML: #{error.message}"
+        next false
+      end
+
+      gitignore_path, added = append_gitignore(repo_root.strip, patterns)
+      if added.empty?
+        puts 'No new ignore patterns selected.'
+      else
+        puts "Added #{added.size} pattern(s) to #{gitignore_path}:"
+        added.each { |pattern| puts "  #{pattern}" }
+      end
+    end
+  end
+
+  add_cmd(:commit, opts: %i[dry_run yes model]) do
+    unless system('git', 'rev-parse', '--is-inside-work-tree', out: File::NULL, err: File::NULL)
+      puts 'Not inside a git work tree.'
+      next false
+    end
+
+    status = `git status --porcelain -uall`.strip
+    if status.empty?
+      puts 'Nothing to commit — working tree is clean.'
+      exit 0
+    end
+
+    all_changed = changed_files
+    puts "Analyzing #{all_changed.size} changed file(s) with claude (#{@opts.model})..."
+
+    diff = snapshot_diff
+    plan = plan_commits(model: @opts.model, status: status, diff: diff)
+
+    # Validate coverage: warn about files the plan missed or invented.
+    planned = plan.flat_map { |c| c['files'] }
+    missing = all_changed - planned
+    unknown = planned - all_changed
+    puts "WARNING: not committed by plan: #{missing.join(', ')}" if missing.any?
+    puts "WARNING: unknown paths in plan (skipped): #{unknown.join(', ')}" if unknown.any?
+
+    # Show the plan.
+    puts
+    plan.each_with_index do |commit, i|
+      subject = commit['message'].to_s.lines.first.to_s.chomp
+      puts "  [#{i + 1}] #{subject}"
+      commit['files'].each { |f| puts "        - #{f}" }
+    end
+    puts
+
+    if @opts.dry_run
+      puts '(dry run — no commits made)'
+      next
+    end
+
+    next if @opts.dry_run
+
+    # Clean slate, then stage + commit each group independently.
+    system('git', 'reset', '-q')
+
+    plan.each_with_index do |commit, i|
+      files = commit['files'] & all_changed
+      next if files.empty?
+
+      system('git', 'add', '-A', '--', *files)
+      _out, err, st = Open3.capture3('git', 'commit', '-F', '-', stdin_data: commit['message'].to_s)
+
+      if st.success?
+        puts "✓ [#{i + 1}] #{commit['message'].to_s.lines.first.to_s.chomp}"
+      else
+        puts "✗ [#{i + 1}] commit failed: #{err.strip}"
+      end
+    end
+  end
+
+  add_subcmd(:edit) { edit_files(__FILE__) }
+
+  add_default do
+    puts 'Usage: h-git <subcommand>'
+    puts
+    puts 'Subcommands:'
+    puts '  ignore  Edit suggested patterns for untracked files, then add them to .gitignore'
+    puts '  commit  Group dirty files into logical commits via claude sonnet'
+    puts '          -n/--dry-run   show the plan without committing'
+    puts '          -y/--yes       skip the confirmation prompt'
+    puts '          -m/--model M   model to use (default: sonnet)'
+  end
+end

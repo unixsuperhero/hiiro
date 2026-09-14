@@ -1,0 +1,614 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'fileutils'
+require 'time'
+require 'tempfile'
+require 'hiiro'
+
+class ReminderManager
+  REMINDERS_FILE = File.join(Dir.home, '.config/hiiro/reminders.yml')
+  REMINDER_TEMPLATE = {
+    'message' => '',
+    'interval' => '1h',
+    'sound' => nil,
+    'enabled' => true,
+    'once' => false,
+    'trigger_at' => nil,
+    'last_triggered' => nil,
+    'created_at' => Time.now.iso8601,
+  }
+
+  class Reminder
+    attr_accessor :message, :interval, :sound, :enabled, :once, :trigger_at, :last_triggered, :created_at
+
+    def initialize(message:, interval: '1h', sound: nil, enabled: true, once: false, trigger_at: nil, last_triggered: nil, created_at: Time.now.iso8601)
+      @message = message
+      @interval = interval
+      @sound = sound
+      @enabled = enabled
+      @once = once
+      @trigger_at = trigger_at
+      @last_triggered = last_triggered
+      @created_at = created_at
+    end
+
+    def self.from_hash(hash)
+      new(
+        message: hash['message'],
+        interval: hash['interval'] || '1h',
+        sound: hash['sound'],
+        enabled: hash['enabled'] != false,
+        once: hash['once'] == true,
+        trigger_at: hash['trigger_at'],
+        last_triggered: hash['last_triggered'],
+        created_at: hash['created_at'] || Time.now.iso8601
+      )
+    end
+
+    def to_h
+      {
+        'message' => @message,
+        'interval' => @interval,
+        'sound' => @sound,
+        'enabled' => @enabled,
+        'once' => @once,
+        'trigger_at' => @trigger_at,
+        'last_triggered' => @last_triggered,
+        'created_at' => @created_at
+      }
+    end
+
+    def to_yaml
+      to_h.to_yaml
+    end
+
+    def interval_seconds
+      parse_interval(@interval)
+    end
+
+    def parse_interval(str)
+      return 3600 unless str # default 1 hour
+
+      match = str.to_s.match(/^(\d+)([smhdw])$/i)
+      return 3600 unless match
+
+      num = match[1].to_i
+      unit = match[2].downcase
+
+      case unit
+      when 's' then num
+      when 'm' then num * 60
+      when 'h' then num * 3600
+      when 'd' then num * 86400
+      when 'w' then num * 604800
+      else 3600
+      end
+    end
+
+    def one_time?
+      @once == true
+    end
+
+    def should_trigger?
+      return false unless @enabled
+
+      if one_time?
+        # One-time reminder: check if trigger_at time has passed
+        return false if @last_triggered # already triggered
+        return false unless @trigger_at
+
+        trigger_time = Time.parse(@trigger_at) rescue nil
+        return false unless trigger_time
+
+        Time.now >= trigger_time
+      else
+        # Recurring reminder: check interval since last trigger
+        return true if @last_triggered.nil?
+
+        last_time = Time.parse(@last_triggered) rescue Time.at(0)
+        Time.now - last_time >= interval_seconds
+      end
+    end
+
+    def trigger!
+      @last_triggered = Time.now.iso8601
+      # For one-time reminders, disable after triggering
+      @enabled = false if one_time?
+    end
+
+    def display_string(index = nil)
+      num = index ? "#{(index + 1).to_s.rjust(3)}." : ""
+      status = @enabled ? "[ON]" : "[OFF]"
+      sound_str = @sound ? " (#{@sound})" : ""
+
+      if one_time?
+        if @trigger_at
+          trigger_time = Time.parse(@trigger_at) rescue nil
+          time_str = trigger_time ? trigger_time.strftime('%Y-%m-%d %H:%M') : @trigger_at
+          "#{num} #{status} [ONCE @ #{time_str}] #{@message}#{sound_str}".strip
+        else
+          "#{num} #{status} [ONCE] #{@message}#{sound_str}".strip
+        end
+      else
+        "#{num} #{status} [#{@interval}] #{@message}#{sound_str}".strip
+      end
+    end
+  end
+
+  # Parse time argument - returns [is_once, trigger_at, interval]
+  def self.parse_time_arg(time_str)
+    return [false, nil, '1h'] if time_str.nil?
+
+    # Check for absolute time format: YYYYmmddHHMM
+    if time_str =~ /^(\d{12})$/
+      year = $1[0..3].to_i
+      month = $1[4..5].to_i
+      day = $1[6..7].to_i
+      hour = $1[8..9].to_i
+      min = $1[10..11].to_i
+      trigger_at = Time.new(year, month, day, hour, min).iso8601
+      return [true, trigger_at, nil]
+    end
+
+    # Check for relative interval format: 15m, 2h, etc.
+    if time_str =~ /^(\d+)([smhdw])$/i
+      num = $1.to_i
+      unit = $2.downcase
+      seconds = case unit
+      when 's' then num
+      when 'm' then num * 60
+      when 'h' then num * 3600
+      when 'd' then num * 86400
+      when 'w' then num * 604800
+      else num * 60
+      end
+
+      # This is a one-time reminder at a relative time
+      trigger_at = (Time.now + seconds).iso8601
+      return [true, trigger_at, time_str]
+    end
+
+    # Default: treat as recurring interval
+    [false, nil, time_str]
+  end
+
+  attr_reader :reminders_file
+
+  def initialize(reminders_file = REMINDERS_FILE)
+    @reminders_file = reminders_file
+  end
+
+  def ensure_reminders_file
+    dir = File.dirname(@reminders_file)
+    FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
+    File.write(@reminders_file, [].to_yaml) unless File.exist?(@reminders_file)
+  end
+
+  def load_reminders
+    ensure_reminders_file
+    data = YAML.load_file(@reminders_file) || []
+    data.map { |hash| Reminder.from_hash(hash) }
+  end
+
+  def save_reminders(reminders)
+    ensure_reminders_file
+    data = reminders.map(&:to_h)
+    File.write(@reminders_file, data.to_yaml)
+  end
+
+  def load_reminder_hash(reminders = nil)
+    reminders ||= load_reminders
+    reminders.each_with_index.each_with_object({}) do |(reminder, idx), h|
+      h[reminder.display_string(idx)] = reminder
+    end
+  end
+
+  def edit_reminders(reminders = nil)
+    reminders_array = if reminders.nil?
+      [REMINDER_TEMPLATE]
+    elsif reminders.is_a?(Array)
+      reminders.map { |r| r.is_a?(Reminder) ? r.to_h : r }
+    else
+      [reminders.is_a?(Reminder) ? reminders.to_h : reminders]
+    end
+
+    tmpfile = Tempfile.new(['reminder-edit-', '.yml'])
+    tmpfile.write(reminders_array.to_yaml)
+    tmpfile.close
+
+    system(ENV['EDITOR'] || 'vim', tmpfile.path)
+
+    updated_data = YAML.load_file(tmpfile.path)
+    tmpfile.unlink
+
+    updated_array = updated_data.is_a?(Array) ? updated_data : [updated_data]
+    updated_array.map { |hash| Reminder.from_hash(hash) }
+  end
+
+  def find_reminder_by_ref(ref, reminders)
+    if ref =~ /^\d+$/
+      idx = ref.to_i - 1
+      return [idx, reminders[idx]] if idx >= 0 && idx < reminders.length
+    end
+    [nil, nil]
+  end
+end
+
+rm = ReminderManager.new
+o = Hiiro.init(*ARGV, plugins: [Pins], reminders_file: rm.reminders_file)
+
+o.add_subcmd(:add) do |message = nil, time_arg = nil, sound = nil, *args|
+  reminders = rm.load_reminders
+
+  if message.nil?
+    new_reminders = rm.edit_reminders
+
+    reminders.concat(new_reminders)
+    rm.save_reminders(reminders)
+
+    if new_reminders.length == 1
+      puts "Saved reminder ##{reminders.length}: #{new_reminders.first.message}"
+    else
+      puts "Saved #{new_reminders.length} reminders (#{reminders.length - new_reminders.length + 1}-#{reminders.length})"
+    end
+    next
+  end
+
+  is_once, trigger_at, interval = ReminderManager.parse_time_arg(time_arg)
+
+  new_reminder = ReminderManager::Reminder.new(
+    message: message,
+    interval: interval,
+    sound: sound,
+    once: is_once,
+    trigger_at: trigger_at,
+    created_at: Time.now.iso8601
+  )
+
+  reminders << new_reminder
+  rm.save_reminders(reminders)
+
+  if is_once
+    trigger_time = Time.parse(trigger_at)
+    puts "Saved one-time reminder ##{reminders.length}: #{message} (at #{trigger_time.strftime('%Y-%m-%d %H:%M')})"
+  else
+    puts "Saved recurring reminder ##{reminders.length}: #{message} (every #{interval || '1h'})"
+  end
+end
+
+o.add_subcmd(:once) do |message = nil, time_arg = nil, sound = nil, *args|
+  reminders = rm.load_reminders
+
+  if message.nil?
+    puts "Usage: h remind once 'message' <time> [sound]"
+    puts "  time: 15m, 2h, 1d OR YYYYmmddHHMM"
+    next
+  end
+
+  time_arg ||= '1h'
+  is_once, trigger_at, interval = ReminderManager.parse_time_arg(time_arg)
+
+  # Force one-time even if parse didn't detect it
+  unless trigger_at
+    seconds = ReminderManager::Reminder.new(message: '').parse_interval(time_arg)
+    trigger_at = (Time.now + seconds).iso8601
+  end
+
+  new_reminder = ReminderManager::Reminder.new(
+    message: message,
+    interval: interval,
+    sound: sound,
+    once: true,
+    trigger_at: trigger_at,
+    created_at: Time.now.iso8601
+  )
+
+  reminders << new_reminder
+  rm.save_reminders(reminders)
+
+  trigger_time = Time.parse(trigger_at)
+  puts "Saved one-time reminder ##{reminders.length}: #{message} (at #{trigger_time.strftime('%Y-%m-%d %H:%M')})"
+end
+
+o.add_subcmd(:every) do |message = nil, interval = nil, sound = nil, *args|
+  reminders = rm.load_reminders
+
+  if message.nil?
+    puts "Usage: h remind every 'message' <interval> [sound]"
+    puts "  interval: 15m, 2h, 1d, 1w"
+    next
+  end
+
+  new_reminder = ReminderManager::Reminder.new(
+    message: message,
+    interval: interval || '1h',
+    sound: sound,
+    once: false,
+    created_at: Time.now.iso8601
+  )
+
+  reminders << new_reminder
+  rm.save_reminders(reminders)
+
+  puts "Saved recurring reminder ##{reminders.length}: #{message} (every #{interval || '1h'})"
+end
+
+o.add_subcmd(:ls) do |*args|
+  reminders = rm.load_reminders
+  if reminders.empty?
+    puts "No reminders saved."
+  else
+    reminders.each_with_index do |reminder, idx|
+      puts reminder.display_string(idx)
+    end
+  end
+end
+
+o.add_subcmd(:list) do |*args|
+  o.run_subcmd(:ls, *args)
+end
+
+o.add_subcmd(:remove) do |ref = nil, *args|
+  reminders = rm.load_reminders
+
+  if reminders.empty?
+    puts "No reminders to remove."
+    next
+  end
+
+  idx = nil
+  if ref.nil?
+    lines = rm.load_reminder_hash(reminders)
+
+    require 'open3'
+    selected, status = Open3.capture2('sk', stdin_data: lines.keys.join("\n"))
+
+    if status.success? && !selected.strip.empty?
+      reminder = lines[selected.strip]
+      idx = reminders.index(reminder)
+    end
+  else
+    idx, _ = rm.find_reminder_by_ref(ref, reminders)
+  end
+
+  if idx.nil?
+    puts "Reminder not found"
+    next
+  end
+
+  removed = reminders.delete_at(idx)
+  rm.save_reminders(reminders)
+  puts "Removed reminder: #{removed.message}"
+end
+
+o.add_subcmd(:pause) do |ref = nil, *args|
+  reminders = rm.load_reminders
+
+  if reminders.empty?
+    puts "No reminders to pause."
+    next
+  end
+
+  idx = nil
+  if ref.nil?
+    enabled_reminders = reminders.select(&:enabled)
+    if enabled_reminders.empty?
+      puts "No enabled reminders to pause."
+      next
+    end
+
+    lines = enabled_reminders.each_with_index.each_with_object({}) do |(r, i), h|
+      actual_idx = reminders.index(r)
+      h[r.display_string(actual_idx)] = actual_idx
+    end
+
+    require 'open3'
+    selected, status = Open3.capture2('sk', stdin_data: lines.keys.join("\n"))
+
+    if status.success? && !selected.strip.empty?
+      idx = lines[selected.strip]
+    end
+  else
+    idx, _ = rm.find_reminder_by_ref(ref, reminders)
+  end
+
+  if idx.nil?
+    puts "Reminder not found"
+    next
+  end
+
+  reminders[idx].enabled = false
+  rm.save_reminders(reminders)
+  puts "Paused reminder: #{reminders[idx].message}"
+end
+
+o.add_subcmd(:resume) do |ref = nil, *args|
+  reminders = rm.load_reminders
+
+  if reminders.empty?
+    puts "No reminders to resume."
+    next
+  end
+
+  idx = nil
+  if ref.nil?
+    disabled_reminders = reminders.reject(&:enabled)
+    if disabled_reminders.empty?
+      puts "No paused reminders to resume."
+      next
+    end
+
+    lines = disabled_reminders.each_with_index.each_with_object({}) do |(r, i), h|
+      actual_idx = reminders.index(r)
+      h[r.display_string(actual_idx)] = actual_idx
+    end
+
+    require 'open3'
+    selected, status = Open3.capture2('sk', stdin_data: lines.keys.join("\n"))
+
+    if status.success? && !selected.strip.empty?
+      idx = lines[selected.strip]
+    end
+  else
+    idx, _ = rm.find_reminder_by_ref(ref, reminders)
+  end
+
+  if idx.nil?
+    puts "Reminder not found"
+    next
+  end
+
+  reminders[idx].enabled = true
+  rm.save_reminders(reminders)
+  puts "Resumed reminder: #{reminders[idx].message}"
+end
+
+o.add_subcmd(:check) do |*args|
+  reminders = rm.load_reminders
+  triggered_count = 0
+  verbose = args.include?('-v') || args.include?('--verbose')
+
+  reminders.each do |reminder|
+    next unless reminder.should_trigger?
+
+    # Build notification options
+    notification_args = ['-m', reminder.message, '-t', 'Reminder']
+    notification_args += ['-s', reminder.sound] if reminder.sound
+
+    # Use Hiiro::Notification to show the notification
+    notif_hiiro = Hiiro.init(*notification_args)
+    Hiiro::Notification.show(notif_hiiro)
+
+    reminder.trigger!
+    triggered_count += 1
+
+    if verbose
+      if reminder.one_time?
+        puts "Triggered (one-time): #{reminder.message}"
+      else
+        puts "Triggered: #{reminder.message}"
+      end
+    end
+  end
+
+  rm.save_reminders(reminders)
+
+  if verbose
+    enabled_count = reminders.count(&:enabled)
+    one_time_done = reminders.count { |r| r.one_time? && !r.enabled }
+    puts "Checked #{enabled_count} enabled reminders, triggered #{triggered_count}"
+    puts "#{one_time_done} completed one-time reminder(s) (use 'h remind clean' to remove)" if one_time_done > 0
+  end
+end
+
+o.add_subcmd(:clean) do |*args|
+  reminders = rm.load_reminders
+  before_count = reminders.length
+
+  # Remove disabled one-time reminders (already triggered)
+  reminders.reject! { |r| r.one_time? && !r.enabled }
+
+  after_count = reminders.length
+  removed = before_count - after_count
+
+  rm.save_reminders(reminders)
+
+  if removed > 0
+    puts "Removed #{removed} completed one-time reminder(s)"
+  else
+    puts "No completed one-time reminders to clean up"
+  end
+end
+
+o.add_subcmd(:howto) do |*args|
+  puts <<~HOWTO
+    h remind - Reminder notification system
+
+    SETUP FOR CRON:
+    ===============
+    Add the following line to your crontab (run 'crontab -e'):
+
+      * * * * * #{File.expand_path('~/.rbenv/shims/h')} remind check
+
+    Or if you want verbose logging:
+
+      * * * * * #{File.expand_path('~/.rbenv/shims/h')} remind check -v >> ~/.config/hiiro/remind.log 2>&1
+
+    USAGE:
+    ======
+    # One-time reminders (triggers once, then disables)
+    h remind add 'Read the news' 15m             # Remind in 15 minutes
+    h remind add 'Meeting' 202602131430          # Remind at specific time (YYYYmmddHHMM)
+    h remind once 'Call mom' 2h                  # Explicit one-time in 2 hours
+
+    # Recurring reminders
+    h remind every 'Take a break' 30m            # Remind every 30 minutes
+    h remind every 'Stand up' 1h basso           # Remind hourly with 'basso' sound
+
+    # Editor mode
+    h remind add                                 # Open editor to add reminder(s)
+
+    # Management
+    h remind ls                                  # List all reminders
+    h remind remove                              # Select and remove a reminder
+    h remind remove 2                            # Remove reminder #2
+    h remind clean                               # Remove completed one-time reminders
+
+    h remind pause                               # Select and pause a reminder
+    h remind pause 1                             # Pause reminder #1
+    h remind resume                              # Select and resume a reminder
+    h remind resume 1                            # Resume reminder #1
+
+    h remind check                               # Check and trigger due reminders
+    h remind check -v                            # Verbose mode
+
+    TIME FORMATS:
+    =============
+    Relative (one-time): 15m, 2h, 1d  - triggers once after delay
+    Absolute (one-time): YYYYmmddHHMM - triggers at specific date/time
+                         e.g., 202602131430 = Feb 13, 2026 at 14:30
+
+    Use 'h remind every' to create recurring reminders with intervals.
+
+    INTERVAL FORMAT (for recurring):
+    =================================
+    s = seconds (e.g., 30s)
+    m = minutes (e.g., 10m)
+    h = hours   (e.g., 2h)
+    d = days    (e.g., 1d)
+    w = weeks   (e.g., 1w)
+
+    SOUNDS:
+    =======
+    Custom sounds can be placed in: ~/.config/hiiro/sounds/
+    Use the filename (without extension) as the sound name.
+
+    CONFIG FILE:
+    ============
+    Reminders are stored in: #{ReminderManager::REMINDERS_FILE}
+  HOWTO
+end
+
+o.add_subcmd(:path) do |*args|
+  print rm.reminders_file
+end
+
+o.add_subcmd(:editall) do |*args|
+  reminders_before = rm.load_reminders
+  system(ENV['EDITOR'] || 'vim', rm.reminders_file)
+
+  begin
+    rm.load_reminders
+  rescue => e
+    puts "ERROR: Unable to read updated file...reverting."
+    rm.save_reminders(reminders_before)
+  end
+end
+
+begin
+  o.run
+rescue => e
+  require 'pry'
+  binding.pry
+end

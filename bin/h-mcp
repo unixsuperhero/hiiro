@@ -1,0 +1,385 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# h mcp — manage MCP servers from the local registry (http://localhost:15245).
+#
+# Subcommands:
+#   h mcp list                servers served by the registry
+#   h mcp ui                  open the registry web UI
+#   h mcp sync <agent>        write registry servers into an agent's MCP config
+#   h mcp status              drift check: registry vs each agent's config
+#   h mcp test <name>         MCP initialize handshake through the proxy
+#   h mcp url <name>          print a server's local proxy URL
+#   h mcp info <name>         full registry record for a server
+#   h mcp agents              known sync targets and their config paths
+#
+# sync targets: omp, codex, claude, cursor, vscode, gemini, windsurf, opencode
+# Unknown targets fall back to running `omp` headless (web search allowed) to
+# research that agent's MCP config format and apply it.
+
+require 'hiiro'
+require 'json'
+require 'net/http'
+require 'uri'
+require 'fileutils'
+
+DEFAULT_ENDPOINT = 'http://localhost:15245/api/servers'
+OMP_SCHEMA = 'https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json'
+HTTP_ENTRY = ->(url) { { 'type' => 'http', 'url' => url } }
+
+# agent => [user-level config path, container keys, entry builder]
+AGENT_TARGETS = {
+  'omp'      => ->(home) { [File.join(home, '.omp', 'agent', 'mcp.json'), ['mcpServers'], HTTP_ENTRY] },
+  'codex'    => ->(home) { [File.join(home, '.codex', 'config.toml'), nil, nil] },
+  'claude'   => ->(home) { [File.join(home, '.claude.json'), ['mcpServers'], HTTP_ENTRY] },
+  'cursor'   => ->(home) { [File.join(home, '.cursor', 'mcp.json'), ['mcpServers'], ->(u) { { 'url' => u } }] },
+  'vscode'   => ->(_home) { [nil, ['servers'], HTTP_ENTRY] }, # project-only
+  'gemini'   => ->(home) { [File.join(home, '.gemini', 'settings.json'), ['mcpServers'], ->(u) { { 'httpUrl' => u } }] },
+  'windsurf' => ->(home) { [File.join(home, '.codeium', 'windsurf', 'mcp_config.json'), ['mcpServers'], ->(u) { { 'serverUrl' => u } }] },
+  'opencode' => ->(home) { [File.join(home, '.config', 'opencode', 'opencode.json'), ['mcp'], ->(u) { { 'type' => 'remote', 'url' => u, 'enabled' => true } }] },
+}.freeze
+
+def fetch_registry(endpoint)
+  uri = URI.parse(endpoint)
+  res = Net::HTTP.get_response(uri)
+  raise "endpoint #{endpoint} returned HTTP #{res.code}" unless res.is_a?(Net::HTTPSuccess)
+  JSON.parse(res.body, symbolize_names: true)
+end
+
+# agent => project-level config path (relative to cwd); omp/codex/vscode handled inline
+PROJECT_PATHS = {
+  'claude'   => '.mcp.json',
+  'cursor'   => '.cursor/mcp.json',
+  'gemini'   => '.gemini/settings.json',
+  'windsurf' => '.windsurf/mcp_config.json',
+  'opencode' => 'opencode.json',
+}.freeze
+
+def registry_servers(endpoint)
+  fetch_registry(endpoint).each_with_object({}) do |s, h|
+    name = s[:display_name].to_s.strip
+    url = s[:short_url].to_s.strip
+    h[name] = url unless name.empty? || url.empty?
+  end
+end
+
+def registry_url?(value, authority)
+  return false unless value.is_a?(Hash)
+  url = value['url'] || value['httpUrl'] || value['serverUrl']
+  url.is_a?(String) && url.include?(authority)
+end
+
+def backup(path)
+  FileUtils.cp(path, "#{path}.bak-#{Time.now.strftime('%Y%m%d%H%M%S')}") if File.exist?(path)
+end
+
+def sync_json(path:, container_keys:, servers:, authority:, opts:, schema: nil, &entry_for)
+  data = File.exist?(path) ? JSON.parse(File.read(path)) : {}
+  data = { '$schema' => schema }.merge(data) if schema && !data.key?('$schema')
+  container = container_keys.inject(data) { |h, k| h[k] ||= {} }
+
+  before = container.keys.sort
+  servers.each { |name, url| container[name] = entry_for.call(url) }
+  removed = []
+  if opts.prune
+    container.each_key do |name|
+      next if servers.key?(name)
+      next unless registry_url?(container[name], authority)
+      removed << name
+      container.delete(name)
+    end
+  end
+  after = container.keys.sort
+
+  changed = (before != after) || servers.any? { |n, u| container[n] != entry_for.call(u) }
+  if opts.dry_run
+    puts "[dry-run] #{path}"
+    puts JSON.pretty_generate(container)
+  elsif changed || !File.exist?(path)
+    FileUtils.mkdir_p(File.dirname(path))
+    backup(path)
+    File.write(path, JSON.pretty_generate(data) + "\n")
+    puts "wrote #{path}"
+  else
+    puts "unchanged #{path}"
+  end
+  puts "  servers: #{after.join(', ')}"
+  puts "  pruned: #{removed.join(', ')}" unless removed.empty?
+end
+
+def toml_key(name)
+  name =~ /\A[A-Za-z0-9_-]+\z/ ? name : "\"#{name.gsub('"', '\"')}\""
+end
+
+def sync_codex(path:, servers:, authority:, opts:)
+  text = File.exist?(path) ? File.read(path) : ''
+  servers.each do |name, url|
+    key = toml_key(name)
+    header = /^\[mcp_servers\.#{Regexp.escape(key)}\]\s*$/
+    lines = text.lines
+    start = lines.index { |l| l =~ header }
+    if start
+      stop = ((start + 1)...lines.length).find { |i| lines[i] =~ /^\[/ } || lines.length
+      block = lines[start...stop]
+      if block.any? { |l| l =~ /^\s*command\s*=/ }
+        warn "codex: '#{name}' is command-based; leaving untouched"
+        next
+      end
+      if (i = block.index { |l| l =~ /^\s*url\s*=/ })
+        block[i] = "url = #{url.to_json}\n"
+      else
+        block.insert(1, "url = #{url.to_json}\n")
+      end
+      lines[start...stop] = block
+      text = lines.join
+    else
+      text += "\n[mcp_servers.#{key}]\nurl = #{url.to_json}\n"
+    end
+  end
+
+  if opts.prune
+    lines = text.lines
+    ranges = []
+    i = 0
+    while i < lines.length
+      if lines[i] =~ /^\[mcp_servers\.([^\]]+)\]\s*$/
+        name = Regexp.last_match(1).delete('"')
+        j = ((i + 1)...lines.length).find { |k| lines[k] =~ /^\[/ } || lines.length
+        if !servers.key?(name) && lines[i...j].any? { |l| l =~ /^\s*url\s*=.*#{Regexp.escape(authority)}/ }
+          ranges << (i...j)
+          puts "  pruned codex server: #{name}"
+        end
+        i = j
+      else
+        i += 1
+      end
+    end
+    ranges.reverse_each { |r| lines[r] = [] }
+    text = lines.join
+  end
+
+  if opts.dry_run
+    puts "[dry-run] #{path}"
+    puts text
+  elsif !File.exist?(path) || text != File.read(path)
+    backup(path)
+    File.write(path, text)
+    puts "wrote #{path}"
+  else
+    puts "unchanged #{path}"
+  end
+end
+
+def fallback_omp(agent, servers, opts)
+  payload = JSON.pretty_generate(servers.map { |n, u| { name: n, url: u } })
+  prompt = <<~PROMPT
+    Configure MCP (Model Context Protocol) servers for the agent/CLI tool called "#{agent}" on this machine.
+
+    Here is the server list JSON from the local MCP registry. Each entry is a remote
+    streamable-HTTP MCP endpoint reachable locally with no auth headers:
+
+    #{payload}
+
+    Steps:
+    1. Determine where "#{agent}" keeps its MCP server configuration (config file path
+       and exact entry format). Search the web / official docs if you are unsure.
+    2. Merge every server above into that config under its exact name, as a remote
+       HTTP MCP entry pointing at its url. Preserve all unrelated existing entries
+       and settings in the file. Back up the file before modifying it.
+    3. Re-read the file to verify the result parses and contains the new entries.
+    4. Report the file path, the format used, and what changed. Do not modify
+       anything else on this machine.
+  PROMPT
+
+  if opts.dry_run
+    puts '[dry-run] would invoke omp with prompt:'
+    puts prompt
+    return
+  end
+
+  omp = ENV.fetch('OMP_BIN', 'omp')
+  unless system('which', omp, out: File::NULL, err: File::NULL)
+    abort "unknown agent '#{agent}' and no omp binary found to research it"
+  end
+  puts "unknown agent '#{agent}' — handing off to omp to research and apply..."
+  system(omp, '-p', '--yolo', '--no-session', '--max-time', '10m', prompt) or
+    abort 'omp fallback failed'
+end
+
+def config_entries(agent, path)
+  return {} unless path && File.exist?(path)
+  if agent == 'codex'
+    entries = {}
+    File.read(path).scan(/^\[mcp_servers\.(?:\"([^\"]+)\"|([^\]]+))\]\s*\n(.*?)(?=^\[|\z)/m) do |quoted, bare, body|
+      url = body[/^\s*url\s*=\s*"([^"]+)"/, 1]
+      entries[quoted || bare] = url if url
+    end
+    entries
+  else
+    _, keys, = AGENT_TARGETS[agent].call(Dir.home)
+    data = JSON.parse(File.read(path))
+    container = (keys || ['mcpServers']).inject(data) { |h, k| h.is_a?(Hash) ? h[k] : nil } || {}
+    container.transform_values { |v| v.is_a?(Hash) ? (v['url'] || v['httpUrl'] || v['serverUrl']) : nil }.compact
+  end
+rescue JSON::ParserError
+  {}
+end
+
+def print_table(rows)
+  return puts '(no results)' if rows.empty?
+  keys = rows.first.keys
+  widths = keys.map { |k| [k.to_s.length, rows.map { |r| r[k].to_s.length }.max].max.clamp(0, 60) }
+  header = keys.each_with_index.map { |k, i| k.to_s.ljust(widths[i]) }.join('  ')
+  puts header
+  puts '-' * header.length
+  rows.each do |row|
+    puts keys.each_with_index.map { |k, i| row[k].to_s.ljust(widths[i]) }.join('  ')
+  end
+  puts "(#{rows.length} rows)"
+end
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:ls, :list) do |*args|
+    opts = Hiiro::Options.parse(args) { option(:endpoint, default: DEFAULT_ENDPOINT, desc: 'registry endpoint') }
+    rows = fetch_registry(opts[:endpoint]).map do |s|
+      {
+        name: s[:display_name],
+        url: s[:short_url],
+        auth: s[:auth_status],
+        last_used: s[:last_used_at].to_s.sub('T', ' ').sub(/Z.*/, ''),
+      }
+    end
+    print_table(rows)
+  end
+
+  add_subcmd(:ui) do |*args|
+    opts = Hiiro::Options.parse(args) { option(:endpoint, default: DEFAULT_ENDPOINT, desc: 'registry endpoint') }
+    base = "http://#{URI.parse(opts[:endpoint]).authority}"
+    system('open', base)
+  end
+
+  add_subcmd(:sync) do |*args|
+    opts = Hiiro::Options.parse(args) do
+      option(:endpoint, default: DEFAULT_ENDPOINT, desc: 'registry endpoint')
+      option(:profile, desc: 'omp profile name')
+      flag(:project, short: 'P', desc: 'write project-level config in cwd')
+      flag(:prune, short: 'p', desc: 'remove registry-sourced entries gone upstream')
+      flag(:dry_run, short: 'n', desc: 'print changes without writing')
+    end
+    agent = opts.args.first
+    unless agent
+      puts "Usage: h mcp sync <agent> [--prune] [--dry-run] [--project] [--profile NAME] [--endpoint URL]"
+      puts "agents: #{AGENT_TARGETS.keys.join(', ')} (anything else: researched + applied via omp)"
+      next
+    end
+
+    servers = registry_servers(opts[:endpoint])
+    authority = URI.parse(opts[:endpoint]).authority
+    home = Dir.home
+
+    case agent
+    when 'omp'
+      path =
+        if opts.project then File.join(Dir.pwd, '.omp', 'mcp.json')
+        elsif opts.profile then File.join(home, '.omp', 'profiles', opts.profile, 'agent', 'mcp.json')
+        else File.join(home, '.omp', 'agent', 'mcp.json')
+        end
+      sync_json(path: path, container_keys: ['mcpServers'], servers: servers,
+                authority: authority, opts: opts, schema: OMP_SCHEMA, &HTTP_ENTRY)
+    when 'codex'
+      path = opts.project ? File.join(Dir.pwd, '.codex', 'config.toml')
+                          : File.join(home, '.codex', 'config.toml')
+      sync_codex(path: path, servers: servers, authority: authority, opts: opts)
+    when 'vscode'
+      sync_json(path: File.join(Dir.pwd, '.vscode', 'mcp.json'), container_keys: ['servers'],
+                servers: servers, authority: authority, opts: opts, &HTTP_ENTRY)
+    when *AGENT_TARGETS.keys
+      path, keys, builder = AGENT_TARGETS[agent].call(home)
+      if opts.project
+        rel = PROJECT_PATHS[agent] or abort "no project-level config known for #{agent}"
+        path = File.join(Dir.pwd, rel)
+      end
+      sync_json(path: path, container_keys: keys, servers: servers,
+                authority: authority, opts: opts, &builder)
+    else
+      fallback_omp(agent, servers, opts)
+    end
+  end
+
+  add_subcmd(:status) do |*args|
+    opts = Hiiro::Options.parse(args) { option(:endpoint, default: DEFAULT_ENDPOINT, desc: 'registry endpoint') }
+    servers = registry_servers(opts[:endpoint])
+    authority = URI.parse(opts[:endpoint]).authority
+    home = Dir.home
+    rows = []
+    AGENT_TARGETS.each do |agent, target|
+      path, = target.call(home)
+      next unless path
+      next unless File.exist?(path)
+      entries = config_entries(agent, path)
+      missing = servers.keys - entries.keys
+      stale = entries.keys.reject { |n| servers.key?(n) || !entries[n].to_s.include?(authority) }
+      next if missing.empty? && stale.empty?
+      rows << { agent: agent, missing_upstream: missing.join(','), stale_in_config: stale.join(',') }
+    end
+    if rows.empty?
+      puts 'all existing agent configs are in sync with the registry'
+    else
+      print_table(rows)
+      puts "run: h mcp sync <agent> --prune"
+    end
+  end
+
+  add_subcmd(:test) do |*args|
+    opts = Hiiro::Options.parse(args) { option(:endpoint, default: DEFAULT_ENDPOINT, desc: 'registry endpoint') }
+    name = opts.args.first
+    abort 'usage: h mcp test <name>' unless name
+    url = registry_servers(opts[:endpoint])[name]
+    abort "no such server '#{name}' (try: h mcp list)" unless url
+
+    uri = URI.parse(url)
+    body = {
+      jsonrpc: '2.0', id: 1, method: 'initialize',
+      params: { protocolVersion: '2025-03-26', capabilities: {},
+                clientInfo: { name: 'h-mcp', version: '1.0' } },
+    }.to_json
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.read_timeout = 10
+    res = http.post(uri.path, body, 'Content-Type' => 'application/json',
+                                     'Accept' => 'application/json, text/event-stream')
+    payload = res.body[/^data: (.+)$/m, 1] || res.body
+    info = JSON.parse(payload).dig('result', 'serverInfo') || {}
+    if info.empty?
+      puts "FAIL #{name}: HTTP #{res.code}, no serverInfo in response"
+      exit 1
+    end
+    puts "OK   #{name}: #{info['name']} #{info['version']}"
+  end
+
+  add_subcmd(:url) do |*args|
+    opts = Hiiro::Options.parse(args) { option(:endpoint, default: DEFAULT_ENDPOINT, desc: 'registry endpoint') }
+    name = opts.args.first
+    abort 'usage: h mcp url <name>' unless name
+    url = registry_servers(opts[:endpoint])[name]
+    abort "no such server '#{name}'" unless url
+    puts url
+  end
+
+  add_subcmd(:info) do |*args|
+    opts = Hiiro::Options.parse(args) { option(:endpoint, default: DEFAULT_ENDPOINT, desc: 'registry endpoint') }
+    name = opts.args.first
+    abort 'usage: h mcp info <name>' unless name
+    record = fetch_registry(opts[:endpoint]).find { |s| s[:display_name] == name }
+    abort "no such server '#{name}'" unless record
+    puts JSON.pretty_generate(JSON.parse(record.to_json))
+  end
+
+  add_subcmd(:agents) do
+    home = Dir.home
+    rows = AGENT_TARGETS.map do |agent, target|
+      path, = target.call(home)
+      { agent: agent, config: path || '(project-only)', exists: path && File.exist?(path) ? 'yes' : 'no' }
+    end
+    print_table(rows)
+  end
+end

@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+def myip
+  `ifconfig |rg -o '\\b10\\.0\\.0\\.\\d+\\b' | rg -v '255$'`.strip
+end
+
+Hiiro.run do
+  add_cmd :ip do
+    puts myip
+  end
+
+  add_cmd :pair do
+    # TODO: port over ~/bin/pairt3
+    # system 'pairt3'
+
+    token = `t3 auth pairing create --base-dir=~/.t3 --json 2>/dev/null | jq -r '.credential'`.strip
+    puts "http://#{myip}:3774/pair#token=#{token}"
+  end
+end

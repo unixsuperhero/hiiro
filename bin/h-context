@@ -1,0 +1,373 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+require "fileutils"
+require "pathname"
+require "securerandom"
+require "tmpdir"
+require "date"
+
+class ContextBundleManager
+  attr_reader :root_dir, :bundles_dir, :named_bundles_dir, :current_bundle_path
+
+  def initialize(root_dir: ENV["H_CONTEXT_DIR"] || File.join(Dir.home, "notes", "ctx"))
+    @root_dir = File.expand_path(root_dir)
+    @bundles_dir = File.join(@root_dir, "bundles")
+    @named_bundles_dir = File.join(@bundles_dir, "named")
+    @current_bundle_path = File.join(@bundles_dir, "current.bundle")
+    ensure_dirs!
+  end
+
+  def ensure_dirs!
+    FileUtils.mkdir_p(@root_dir)
+    FileUtils.mkdir_p(@bundles_dir)
+    FileUtils.mkdir_p(@named_bundles_dir)
+    File.write(@current_bundle_path, "") unless File.exist?(@current_bundle_path)
+  end
+
+  def today_dir
+    dir = File.join(@root_dir, Date.today.strftime("%Y-%m-%d"))
+    FileUtils.mkdir_p(dir)
+    dir
+  end
+
+  def bundle_entries
+    ensure_dirs!
+    File.readlines(@current_bundle_path, chomp: true)
+        .map(&:strip)
+        .reject(&:empty?)
+        .uniq
+  end
+
+  def bundle_empty?
+    bundle_entries.empty?
+  end
+
+  def write_bundle(entries)
+    ensure_dirs!
+    data = entries.uniq
+    contents = data.empty? ? "" : data.join("\n") + "\n"
+    File.write(@current_bundle_path, contents)
+  end
+
+  def reset_bundle!
+    write_bundle([])
+    @current_bundle_path
+  end
+
+  def append_paths(*paths)
+    entries = bundle_entries
+    normalized = paths.flatten.map { |path| normalize_existing_path(path) }
+    write_bundle(entries + normalized)
+    normalized
+  end
+
+  def save_clipboard_text_as(name)
+    contents = clipboard_text
+    raise "Clipboard text is empty." if contents.empty?
+
+    path = materialize_named_path(name)
+    FileUtils.mkdir_p(File.dirname(path))
+    File.write(path, contents)
+    append_paths(path)
+    path
+  end
+
+  def save_clipboard_text_temp
+    contents = clipboard_text
+    raise "Clipboard text is empty." if contents.empty?
+
+    path = temp_file_path(".txt")
+    File.write(path, contents)
+    append_paths(path)
+    path
+  end
+
+  def save_clipboard_image_as(name = nil)
+    path = ensure_png_extension!(materialize_named_path(name || auto_image_name))
+    FileUtils.mkdir_p(File.dirname(path))
+    save_image_from_clipboard(path)
+    append_paths(path)
+    path
+  end
+
+  def save_clipboard_image_temp
+    path = temp_file_path(".png")
+    save_image_from_clipboard(path)
+    append_paths(path)
+    path
+  end
+
+  def copy_bundle_context!
+    payload = bundle_entries.map { |path| "@#{path}" }.join("\n")
+    IO.popen(["pbcopy"], "w") { |io| io.write(payload) }
+    payload
+  end
+
+  def remove_entries(*targets)
+    entries = bundle_entries
+    to_remove = resolve_targets(entries, targets.flatten)
+    remaining = entries.reject { |entry| to_remove.include?(entry) }
+    write_bundle(remaining)
+    to_remove
+  end
+
+  def add_paths(*paths)
+    append_paths(*paths)
+  end
+
+  def save_named_bundle(name)
+    raise "Bundle is empty." if bundle_empty?
+
+    dest = named_bundle_path(name)
+    FileUtils.cp(@current_bundle_path, dest)
+    dest
+  end
+
+  def load_named_bundle(name)
+    src = named_bundle_lookup(name)
+    FileUtils.cp(src, @current_bundle_path)
+    @current_bundle_path
+  end
+
+  def list_named_bundles
+    Dir.glob(File.join(@named_bundles_dir, "*.bundle")).sort
+  end
+
+  def bundle_lines
+    bundle_entries.each_with_index.map { |entry, idx| "#{idx + 1}. #{entry}" }
+  end
+
+  private
+
+  def clipboard_text
+    `pbpaste`.to_s
+  end
+
+  def materialize_named_path(name)
+    raise "A file name is required." if name.nil? || name.strip.empty?
+
+    if Pathname.new(name).absolute?
+      File.expand_path(name)
+    else
+      File.expand_path(name, today_dir)
+    end
+  end
+
+  def auto_image_name
+    "image-#{Time.now.strftime("%H%M%S")}.png"
+  end
+
+  def ensure_png_extension!(path)
+    return path if File.extname(path).downcase == ".png"
+
+    path << ".png"
+  end
+
+  def temp_file_path(ext)
+    File.join(Dir.tmpdir, "h-context-#{SecureRandom.uuid}#{ext}")
+  end
+
+  def save_image_from_clipboard(path)
+    ok = system("pngpaste", path)
+    raise "Failed to save image from clipboard with pngpaste." unless ok && File.exist?(path)
+  end
+
+  def normalize_existing_path(path)
+    raw = path.to_s.sub(/\A@/, "")
+    expanded = File.expand_path(raw)
+    raise "Path does not exist: #{raw}" unless File.exist?(expanded)
+
+    File.realpath(expanded)
+  end
+
+  def named_bundle_path(name)
+    sanitized = name.to_s.strip
+    raise "Bundle name is required." if sanitized.empty?
+
+    sanitized += ".bundle" unless sanitized.end_with?(".bundle")
+    File.join(@named_bundles_dir, sanitized)
+  end
+
+  def named_bundle_lookup(name)
+    path = named_bundle_path(name)
+    raise "Named bundle not found: #{path}" unless File.exist?(path)
+
+    path
+  end
+
+  def resolve_targets(entries, targets)
+    resolved = []
+
+    targets.each do |target|
+      token = target.to_s.strip
+      next if token.empty?
+
+      if token.match?(/\A\d+\z/)
+        idx = token.to_i - 1
+        entry = entries[idx]
+        raise "No bundle entry at index #{token}." unless entry
+        resolved << entry
+        next
+      end
+
+      cleaned = token.sub(/\A@/, "")
+      expanded = File.expand_path(cleaned)
+
+      matches = entries.select do |entry|
+        entry == cleaned || entry == expanded || File.basename(entry) == cleaned
+      end
+
+      raise "No bundle entry matches #{token.inspect}." if matches.empty?
+
+      resolved.concat(matches)
+    end
+
+    resolved.uniq
+  end
+end
+
+manager = ContextBundleManager.new
+hiiro = Hiiro.init(*ARGV)
+
+def print_lines(lines)
+  lines.each { |line| puts line }
+end
+
+def with_error_handling
+  yield
+rescue => e
+  warn e.message
+  exit 1
+end
+
+[:new, :reset, :clear].each do |name|
+  hiiro.add_subcmd(name) do
+    with_error_handling do
+      puts manager.reset_bundle!
+    end
+  end
+end
+
+hiiro.add_subcmd(:path) do
+  puts manager.current_bundle_path
+end
+
+[:ls, :list, :show].each do |name|
+  hiiro.add_subcmd(name) do
+    lines = manager.bundle_lines
+    if lines.empty?
+      puts "(bundle empty)"
+    else
+      print_lines(lines)
+    end
+  end
+end
+
+hiiro.add_subcmd(:copy) do
+  with_error_handling do
+    puts manager.copy_bundle_context!
+  end
+end
+
+hiiro.add_subcmd(:save) do |name = nil|
+  with_error_handling do
+    puts manager.save_clipboard_text_as(name)
+  end
+end
+
+[:tmp, :temp].each do |name|
+  hiiro.add_subcmd(name) do
+    with_error_handling do
+      puts manager.save_clipboard_text_temp
+    end
+  end
+end
+
+[:img, :imgas].each do |name|
+  hiiro.add_subcmd(name) do |outfile = nil|
+    with_error_handling do
+      puts manager.save_clipboard_image_as(outfile)
+    end
+  end
+end
+
+[:tmpimage, :tmpimg].each do |name|
+  hiiro.add_subcmd(name) do
+    with_error_handling do
+      puts manager.save_clipboard_image_temp
+    end
+  end
+end
+
+hiiro.add_subcmd(:add) do |*paths|
+  with_error_handling do
+    raise "Provide one or more paths to add." if paths.empty?
+    print_lines(manager.add_paths(*paths))
+  end
+end
+
+[:rm, :remove, :delete].each do |name|
+  hiiro.add_subcmd(name) do |*targets|
+    with_error_handling do
+      raise "Provide one or more bundle entries or indices to remove." if targets.empty?
+      print_lines(manager.remove_entries(*targets))
+    end
+  end
+end
+
+[:save_bundle, :bundle_save].each do |name|
+  hiiro.add_subcmd(name) do |bundle_name = nil|
+    with_error_handling do
+      raise "Provide a bundle name." if bundle_name.nil? || bundle_name.strip.empty?
+      puts manager.save_named_bundle(bundle_name)
+    end
+  end
+end
+
+[:load_bundle, :bundle_load, :use].each do |name|
+  hiiro.add_subcmd(name) do |bundle_name = nil|
+    with_error_handling do
+      raise "Provide a bundle name." if bundle_name.nil? || bundle_name.strip.empty?
+      puts manager.load_named_bundle(bundle_name)
+    end
+  end
+end
+
+[:bundles, :list_bundles].each do |name|
+  hiiro.add_subcmd(name) do
+    bundles = manager.list_named_bundles
+    if bundles.empty?
+      puts "(no saved bundles)"
+    else
+      print_lines(bundles)
+    end
+  end
+end
+
+hiiro.add_subcmd(:open) do
+  editor = ENV["EDITOR"] || "vim"
+  exec(editor, manager.current_bundle_path)
+end
+
+hiiro.add_subcmd(:help) do
+  puts <<~TEXT
+    h-context subcommands:
+      new | reset | clear       Reset the current bundle to an empty file
+      path                      Print the current bundle file path
+      ls | list | show          Show current bundle entries
+      copy                      Copy bundle entries to the clipboard as @/abs/path lines
+      save NAME                 Save clipboard text to ~/notes/ctx/YYYY-MM-DD/NAME and add it
+      tmp                       Save clipboard text to a temp file and add it
+      img [NAME]                Save clipboard image to ~/notes/ctx/YYYY-MM-DD/NAME(.png) and add it
+      tmpimage                  Save clipboard image to a temp file and add it
+      add PATH...               Add existing paths to the bundle
+      rm TARGET...              Remove bundle entries by index, absolute path, or basename
+      save_bundle NAME          Save the whole current bundle as a reusable named bundle
+      load_bundle NAME          Replace the current bundle with a saved named bundle
+      bundles                   List saved named bundles
+      open                      Open the current bundle file in $EDITOR
+  TEXT
+end
+
+hiiro.run

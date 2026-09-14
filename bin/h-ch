@@ -1,0 +1,531 @@
+#!/usr/bin/env ruby
+
+require 'tempfile'
+require 'tmpdir'
+require 'time'
+require 'yaml'
+require 'digest'
+require 'fileutils'
+require 'hiiro'
+
+TEMPFILE = Tempfile.new('codehiiro').tap(&:close)
+TMPFILE = File.open(TEMPFILE.path, 'w')
+NULL = '/dev/null'
+
+SCRIPT = '    "dist": "CSC_NAME=\"Joshua Toyota (R78J3KN7M4)\" bun run scripts/build-desktop-artifact.ts --signed --platform mac --target dir --arch arm64",'
+
+DEFAULT_APP = Pathname.new 'release/CodeHiiro.app'
+
+TREE_MAP = {
+  'm' => 'main',
+  'main' => 'main',
+  'd2' => 'd2',
+  'd3' => 'd3',
+  'v' => 'vid',
+  'vid' => 'vid',
+}
+
+# ---------------------------------------------------------------------------
+# Tracked, migration-aware T3CODE_HOME dirs.
+#
+# Each home dir lives at ~/.local/share/codehiiro/<YmdHMS>.<sig>, where <sig>
+# is a 12-char hash of the app's migration list (id + name pairs from
+# migrationEntries in apps/server/src/persistence/Migrations.ts).
+#
+# The DB inside a home dir ($HOME/{userdata,dev}/state.sqlite) records which
+# migrations actually ran, in effect_sql_migrations. A home dir is REUSABLE
+# for an app if every applied (id, name) in its DB matches the app's own
+# (id -> name) map exactly (DB is a subset of the app). In that case the app
+# forward-migrates the rest on startup. Any divergence (an id the app doesn't
+# have, or the same id under a different name) means we mint a fresh dir.
+#
+# Tracked in ~/.config/codehiiro/homedirs.yml alongside projects.yml /
+# worktrees.yml.
+# ---------------------------------------------------------------------------
+module HomeDirs
+  MIGRATIONS_REL = 'apps/server/src/persistence/Migrations.ts'
+  DATA_ROOT      = File.expand_path('~/.local/share/codehiiro')
+  CONFIG         = File.expand_path('~/.config/codehiiro/homedirs.yml')
+
+  module_function
+
+  # Parse [id, "Name", ...] rows out of migrationEntries. Ignores everything
+  # else (imports, comments) — only array rows match.
+  def app_migrations(repo)
+    file = File.join(repo, MIGRATIONS_REL)
+    return [] unless File.file?(file)
+
+    File.readlines(file, chomp: true).filter_map do |line|
+      m = line.match(/^\s*\[\s*(\d+)\s*,\s*"([^"]+)"/)
+      [m[1].to_i, m[2]] if m
+    end
+  end
+
+  # 12-char signature of the ordered (id, name) list.
+  def signature(migs)
+    Digest::SHA256.hexdigest(migs.map { |id, name| "#{id}_#{name}" }.join("\n"))[0, 12]
+  end
+
+  # Applied migrations recorded in a state.sqlite. [] if the file or table is
+  # missing / unreadable.
+  def db_migrations(dbfile)
+    return [] unless File.file?(dbfile)
+
+    sql = 'SELECT migration_id, name FROM effect_sql_migrations ORDER BY migration_id;'
+    out = Hiiro::Shell.capture_output('sqlite3', '-readonly', '-noheader', '-separator', "\t", dbfile, sql)
+    out.to_s.each_line.filter_map do |l|
+      id, name = l.chomp.split("\t", 2)
+      [id.to_i, name] if id && name && !id.empty?
+    end
+  rescue StandardError
+    []
+  end
+
+  # Bundled server entrypoint inside a .app's asar. migrationEntries lives here
+  # (multi-line: `[\n  <id>,\n  "Name",\n  ...`), not in the raw Migrations.ts.
+  BUNDLE_MIGRATIONS_REL = 'apps/server/dist/bin.mjs'
+
+  # Extract just bin.mjs out of the app's asar and return its lines. Uses a
+  # block-scoped temp dir so nothing is left behind. [] if the .app / asar /
+  # entry is missing or extraction fails.
+  def asar_bin_lines(app_path)
+    asar = File.join(app_path, 'Contents/Resources/app.asar')
+    return [] unless File.file?(asar)
+
+    Dir.mktmpdir('chcompat') do |dir|
+      ok  = system('npx', '--yes', '@electron/asar', 'extract-file', asar, BUNDLE_MIGRATIONS_REL,
+                   chdir: dir, out: File::NULL, err: File::NULL)
+      out = File.join(dir, File.basename(BUNDLE_MIGRATIONS_REL))
+      ok && File.file?(out) ? File.readlines(out, chomp: true) : []
+    end
+  end
+
+  # Parse [id, "Name", ...] rows from migrationEntries in a built .app bundle.
+  # The bundler splits each row across lines, so we walk the array block and
+  # pair an `<id>,` line with the `"Name",` line right after it.
+  def app_bundle_migrations(app_path)
+    lines = asar_bin_lines(app_path)
+    start = lines.index { |l| l =~ /const migrationEntries\s*=\s*\[/ }
+    return [] unless start
+
+    migs  = []
+    i     = start + 1
+    depth = 1
+    while i < lines.size && depth.positive?
+      line   = lines[i]
+      depth += line.count('[') - line.count(']')
+      if line =~ /^\s*(\d+),\s*$/
+        id   = Regexp.last_match(1).to_i
+        nxt  = lines[i + 1]
+        migs << [id, Regexp.last_match(1)] if nxt && nxt =~ /^\s*"([^"]+)"/
+      end
+      i += 1
+    end
+    migs
+  end
+
+  # Every state.sqlite under a home dir (run -> userdata, test -> dev).
+  def home_dbs(home)
+    Dir.glob(File.join(home, '*', 'state.sqlite'))
+  end
+
+  # DB subset of app? A fresh/empty home dir is trivially compatible.
+  def compatible?(home, appmap)
+    home_dbs(home).all? do |db|
+      db_migrations(db).all? { |id, name| appmap[id] == name }
+    end
+  end
+
+  def load_records
+    return [] unless File.file?(CONFIG)
+
+    YAML.safe_load_file(CONFIG) || []
+  rescue StandardError
+    []
+  end
+
+  def save_records(records)
+    FileUtils.mkdir_p(File.dirname(CONFIG))
+    File.write(CONFIG, records.to_yaml)
+  end
+
+  # Resolve the T3CODE_HOME to use for `repo`. Reuses the newest compatible
+  # tracked dir, else (when create:) mints and records a new one.
+  # Returns [home_or_nil, :reused | :created | :would_create, sig].
+  def resolve(repo, create: true)
+    migs   = app_migrations(repo)
+    sig    = signature(migs)
+    appmap = migs.to_h
+
+    records = load_records
+    reusable = records
+      .select { |r| Dir.exist?(r['path'].to_s) }
+      .sort_by { |r| r['created'].to_s }
+      .reverse
+      .find { |r| compatible?(r['path'], appmap) }
+
+    if reusable
+      if create
+        reusable['last_used'] = Time.now.strftime('%Y%m%dT%H%M%S')
+        save_records(records)
+      end
+      return [reusable['path'], :reused, sig]
+    end
+
+    return [nil, :would_create, sig] unless create
+
+    stamp = Time.now.strftime('%Y%m%dT%H%M%S')
+    home  = File.join(DATA_ROOT, "#{stamp}.#{sig}")
+    FileUtils.mkdir_p(home)
+    records << {
+      'path'       => home,
+      'sig'        => sig,
+      'created'    => stamp,
+      'last_used'  => stamp,
+      'repo'       => repo,
+      'migrations' => migs.length,
+      'max_id'     => (migs.map(&:first).max || 0),
+    }
+    save_records(records)
+    [home, :created, sig]
+  end
+end
+
+# Resolve + announce the T3CODE_HOME for `repo`. An explicit T3CODE_HOME in the
+# environment always wins (matches the prior override behavior).
+def resolve_home(repo)
+  if (env = ENV['T3CODE_HOME']) && !env.empty?
+    puts "T3CODE_HOME (env override): #{env}"
+    return env
+  end
+
+  home, status, sig = HomeDirs.resolve(repo)
+  label = status == :reused ? 'reusing' : 'created'
+  puts "T3CODE_HOME (#{label}, sig=#{sig}): #{home}"
+  home
+end
+
+class Asarfile < Struct.new(:appfile)
+  def self.from_appfile(appfile) = new appfile
+
+  def path = @path ||= Dir.tmpdir
+
+  def extract
+    return true if @extracted
+    system(*%w[npx --yes @electron/asar extract], appfile.asar_path, path, err: NULL)
+    @extracted = true
+  end
+
+  def package_path = File.join(path, 'package.json')
+  def package = extract && JSON.load_file(package_path)
+
+  def sha = package['t3codeCommitHash']
+end
+
+class Appfile < Struct.new(:path)
+  DEFAULT_PATH = 'release/CodeHiiro.app'
+
+  def self.find_all(dir=Dir.pwd) = Dir.glob(File.join(dir, '**/CodeHiiro.app')).map(&Appfile.method(:new))
+  def self.default(dir=Dir.pwd) = Appfile.new(File.join(dir, DEFAULT_PATH))
+  def self.app(dir=Dir.pwd)
+    default = Appfile.default(dir)
+    return default if default.exists?
+
+    closest = find_all(dir).min { |appfile| appfile.distance_from(dir) }
+    return closest if closest
+  end
+
+  def self.asar_file(path) = new(path).asar_file
+  def self.package_path(path) = new(path).package_path
+  def self.package(path) = new(path).package
+  def self.sha(path=find.path) = Appfile.new(path).sha
+
+  def exists? = File.exist?(path)
+  def basename = File.basename(path)
+  def asar_path = File.join(path, '/Contents/Resources/app.asar')
+  def relative_path_from(base=Dir.pwd) = Pathname.new(path).relative_path_from(base)
+  def distance_from(base=Dir.pwd) = relative_path_from(base).split.count
+
+  def asar_file = @asar_file ||= Asarfile.from_appfile(self)
+  def package_path = asar_file.package_path
+  def package = asar_file.package
+  def sha = asar_file.sha
+end
+
+
+
+
+Hiiro.run do
+  add_subcmd(:bkup, :backup) do |*args|
+    app = Dir.glob('release/CodeHiiro.app').first
+    mtime = File.mtime(app)
+    epoch = mtime.strftime('%Y%m%d%H%M%S')
+    appasar = File.join('/tmp', format('%s.t3code.asar', epoch))
+    new_name = format("%s.%s", app, epoch)
+    File.rename(app, new_name)
+    # system(*%w[npx --yes @electron/asar extract], File.join(new_nam, '/Contents/Resources/app.asar'), appasar)
+    # pkg = File.join(appasar, 'package.json')
+    # sha = `jq -r .t3codeCommitHash #{pkg.inspect}`.strip
+  end
+
+  add_subcmd(:m, :make) do |tree, *args|
+    wt = TREE_MAP[tree]
+
+    if wt.nil?
+      puts 'worktree not found'
+      exit 1
+    end
+
+    Dir.chdir File.join(Dir.home, 'work/ch', wt)
+
+    prev_package = File.readlines('package.json', chomp: true)
+
+    unless prev_package.index{|l| l[/"dist":/] }
+      fmt_line = prev_package.index{|l| l[/fmt.:/] }
+
+      newpkg = prev_package.dup.insert(fmt_line, SCRIPT) << ''
+
+      File.write('package.json', newpkg.join("\n"))
+    end
+
+    puts
+    puts "--TEMPFILE--"
+    puts TEMPFILE.path
+    puts TMPFILE.path
+    puts "--TEMPFILE--"
+    puts
+
+    result =
+      if prev_package.any{|line| line[/\bvp\b/] }
+        Hiiro::Shell.stream_combined('pnpm', 'dist', *args, tee: TMPFILE)
+      else
+        Hiiro::Shell.stream_combined('bun', 'run', 'dist', '--verbose', *args, tee: TMPFILE)
+      end
+
+    unless result.success?
+      puts 'FAIL: dist failed'
+      exit 1
+    end
+
+    # `bun run dist` exports the signed bundle directly to release/CodeHiiro.app.
+    unless File.directory?('release/CodeHiiro.app')
+      puts 'FAIL: dist did not produce release/CodeHiiro.app'
+      exit 1
+    end
+  end
+
+  add_subcmd(:t, :test) do |tree, *args|
+    wt = TREE_MAP.fetch(tree, File.basename(Dir.pwd))
+
+    Dir.chdir File.join(Dir.home, 'work/ch', wt)
+
+    home = resolve_home(Dir.pwd)
+
+    result = system({ 'T3CODE_HOME' => home }, 'open', 'release/CodeHiiro.app', *args)
+
+    unless result
+      puts 'FAIL: opening CodeHiiro.app failed'
+      exit 1
+    end
+  end
+
+  add_subcmd(:home) do |relpath, *apps|
+    pwd = Dir.pwd
+    relpath = File.join(Dir.pwd, 'release/t3code_home') if relpath.nil?
+    homepath = File.join(Dir.pwd, relpath) unless File.absolute_path?(relpath) 
+
+    cmd = %[T3CODE_HOME=#{homepath.inspect}]
+    exec("#{cmd} exec zsh")
+    puts :asdfasdfasdf
+    script = ['#!/usr/bin/env bash', '', cmd].join("\n")
+    src = '/tmp/temp_env'
+    File.write(src, script)
+    `source #{src} | pbcopy`
+    puts format("%s\n", cmd)
+    puts format("# just run the cmd in your clipboard")
+  end
+
+  add_subcmd(:appsha) do |*apps|
+    appfiles = apps.filter_map do |path|
+      next unless File.directory?(path)
+
+      resolved_path = File.realpath(path)
+      next unless File.extname(resolved_path) == '.app'
+
+      Appfile.new(resolved_path)
+    end
+
+    appfiles = [Appfile.app] if appfiles.empty?
+    appfiles.each { |appfile| puts appfile.sha }
+  end
+
+  add_subcmd(:r, :run) do |tree, *args|
+    wt = TREE_MAP.fetch(tree, File.basename(Dir.pwd))
+
+    Dir.chdir File.join(Dir.home, 'work/ch', wt)
+
+    home = resolve_home(Dir.pwd)
+
+    result = Hiiro::Shell.stream_combined(
+      'open', 'release/CodeHiiro.app', *args,
+      'T3CODE_HOME' => home,
+    )
+
+    unless result.success?
+      puts 'FAIL: opening CodeHiiro.app failed'
+      exit 1
+    end
+  end
+
+  # Print the T3CODE_HOME that run/test would use for a worktree, without
+  # running anything or minting a new dir.
+  add_subcmd(:which) do |tree, *args|
+    wt   = TREE_MAP.fetch(tree, File.basename(Dir.pwd))
+    repo = File.join(Dir.home, 'work/ch', wt)
+
+    migs = HomeDirs.app_migrations(repo)
+    sig  = HomeDirs.signature(migs)
+    home, status, _ = HomeDirs.resolve(repo, create: false)
+
+    puts "repo:       #{repo}"
+    puts "migrations: #{migs.length} (max id #{migs.map(&:first).max || 0})"
+    puts "sig:        #{sig}"
+    if status == :reused
+      puts "would:      REUSE  #{home}"
+    else
+      puts "would:      CREATE #{File.join(HomeDirs::DATA_ROOT, "<YmdHMS>.#{sig}")}"
+      puts "            (no compatible tracked dir; app would start on a fresh DB)"
+    end
+  end
+
+  # Given a home dir path, find its dev/userdata state.sqlite files and list
+  # the effect_sql_migrations table (applied migrations) in each.
+  add_subcmd(:migrations, :migs) do |path, *args|
+    if path.nil? || path.empty?
+      puts 'usage: h-ch migrations <home-dir-path>'
+      exit 1
+    end
+
+    home = File.expand_path(path)
+    dbs  = HomeDirs.home_dbs(home)
+
+    if dbs.empty?
+      puts "no state.sqlite under #{home} (expected #{home}/{dev,userdata}/state.sqlite)"
+      next
+    end
+
+    dbs.sort.each do |db|
+      kind = File.basename(File.dirname(db)) # dev | userdata
+      migs = HomeDirs.db_migrations(db)
+      puts
+      puts "#{kind}: #{db} (#{migs.length} applied)"
+      migs.each { |id, name| printf("  %-5s %s\n", id, name) }
+    end
+  end
+
+  # Compare a built .app bundle's migrations against the state.sqlite in a
+  # T3CODE_HOME's dev/ and userdata/ dirs. One section per dir: says whether the
+  # app is a superset of what the DB applied, and if not lists each diverging id
+  # with the app name vs the db name.
+  add_subcmd(:compatible, :compat) do |app, home, *args|
+    if app.nil? || home.nil?
+      puts 'usage: h-ch compatible <path-to-CodeHiiro.app> <T3CODE_HOME>'
+      exit 1
+    end
+
+    app  = File.expand_path(app)
+    home = File.expand_path(home)
+
+    migs   = HomeDirs.app_bundle_migrations(app)
+    appmap = migs.to_h
+
+    if migs.empty?
+      puts "no migrations parsed from #{app}"
+      exit 1
+    end
+
+    puts "app:  #{app} (#{migs.length} migrations, max id #{migs.map(&:first).max})"
+    puts "home: #{home}"
+
+    %w[dev userdata].each do |kind|
+      db = File.join(home, kind, 'state.sqlite')
+      puts
+      puts "#{kind}:"
+
+      unless File.file?(db)
+        puts "  no state.sqlite (#{db})"
+        next
+      end
+
+      dbmigs    = HomeDirs.db_migrations(db)
+      diverging = dbmigs.reject { |id, name| appmap[id] == name }
+
+      if diverging.empty?
+        puts "  compatible (#{dbmigs.length} applied, app is a superset)"
+      else
+        puts "  INCOMPATIBLE (#{diverging.length} diverging of #{dbmigs.length} applied)"
+        diverging.each do |id, dbname|
+          appname = appmap[id] || '<missing in app>'
+          printf("    id %-4s app:%s  db:%s\n", id, appname, dbname)
+        end
+      end
+    end
+  end
+
+  # List tracked home dirs, newest first. With a worktree arg (or from inside
+  # one), marks which are compatible with that app's migration set.
+  add_subcmd(:ls) do |tree, *args|
+    records = HomeDirs.load_records.sort_by { |r| r['created'].to_s }.reverse
+
+    if records.empty?
+      puts "no tracked home dirs yet (#{HomeDirs::CONFIG})"
+      next
+    end
+
+    wt     = TREE_MAP.fetch(tree, File.basename(Dir.pwd))
+    repo   = File.join(Dir.home, 'work/ch', wt)
+    appmap = File.file?(File.join(repo, HomeDirs::MIGRATIONS_REL)) ? HomeDirs.app_migrations(repo).to_h : nil
+
+    puts "against: #{repo}" if appmap
+    records.each do |r|
+      exists = Dir.exist?(r['path'].to_s)
+      mark =
+        if !exists then 'MISSING'
+        elsif appmap.nil? then ''
+        elsif HomeDirs.compatible?(r['path'], appmap) then 'compatible'
+        else 'INCOMPATIBLE'
+        end
+      printf("%-16s %-12s ids<=%-4s used:%-16s %-12s %s\n",
+             r['created'], r['sig'], r['max_id'], r['last_used'], mark, r['path'])
+    end
+  end
+end
+
+__END__
+
+
+
+
+  fd -u CodeHiiro.app -X h ch appsha
+release/CodeHiiro.app/
+release/CodeHiiro.app.20260713133058/
+release/CodeHiiro.app.20260711021306/
+release/CodeHiiro.app.20260711175953/
+release/CodeHiiro.app.20260711150229/
+0db55ff5d4bd
+62b05b7919bb
+145b182ade00
+3c159f87b7b1
+d20de05275f3
+0db55ff5d4bd
+
+
+/Users/unixsuperhero/work/ch/main/../t2-2/package.json:    "my:dist": "CSC_NAME=\"Joshua Toyota (R78J3KN7M4)\" bun run scripts/build-desktop-artifact.ts --signed --platform mac --target dmg --arch arm64",
+/Users/unixsuperhero/work/ch/main/../t2-2/package.json:    "dist:desktop:artifact": "bun run my:dist",
+/Users/unixsuperhero/work/ch/main/../t2-2/package.json:    "dist:desktop:dmg": "bun run my:dist",
+/Users/unixsuperhero/work/ch/main/../t2-2/package.json:    "dist:desktop:dmg:arm64": "bun run my:dist",
+/Users/unixsuperhero/work/ch/main/../t2-2/package.json:    "dist:desktop:dmg:x64": "bun run my:dist",
+/Users/unixsuperhero/work/ch/main/../t2-2/package.json:    "dist:desktop:linux": "bun run my:dist",
+/Users/unixsuperhero/work/ch/main/../t2-2/package.json:    "dist:desktop:win": "bun run my:dist",
+/Users/unixsuperhero/work/ch/main/../t2-2/package.json:    "dist:desktop:win:arm64": "bun run my:dist",
+/Users/unixsuperhero/work/ch/main/../t2-2/package.json:    "dist:desktop:win:x64": "bun run my:dist",

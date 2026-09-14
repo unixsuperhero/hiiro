@@ -1,0 +1,71 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'sequel'
+require 'time'
+
+class Hiiro
+  class ShellCommand < Sequel::Model(:shell_commands)
+    Hiiro::DB.register(self)
+
+    def self.create_table!(db)
+      db.create_table?(:shell_commands) do
+        primary_key :id
+        String :command, text: true, null: false
+        String :created_at, null: false
+      end
+    end
+
+    def self.recent
+      order(Sequel.desc(:id)).all
+    end
+
+    def self.search(query)
+      where(Sequel.lit('instr(lower(command), ?) > 0', query.downcase))
+        .order(Sequel.desc(:id))
+        .all
+    end
+
+    def display
+      "#{id}: #{command}"
+    end
+  end
+end
+
+def latest_zsh_command
+  history_file = ENV['HISTFILE'] || File.expand_path('~/.zsh_history')
+
+  File.readlines(history_file, chomp: true).reverse_each do |line|
+    command = line.sub(/\A: \d+:\d+;/, '').strip
+    next if command.empty?
+    next if command.match?(/\A(?:h\s+cmd|h-cmd)\s+save\z/)
+
+    return command
+  end
+end
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:save) do |*args|
+    command = if args.empty?
+      latest_zsh_command
+    elsif args.one? && File.file?(args.first)
+      File.read(args.first).chomp
+    else
+      args.join(' ').strip
+    end
+    record = Hiiro::ShellCommand.create(command:, created_at: Time.now.iso8601)
+    puts "Saved command #{record.id}"
+  end
+
+  add_subcmd(:ls, :list) do
+    Hiiro::ShellCommand.recent.each do |record|
+      puts record.display
+    end
+  end
+
+  add_subcmd(:search) do |*query|
+    Hiiro::ShellCommand.search(query.join(' ')).each do |record|
+      puts record.display
+    end
+  end
+end

@@ -1,0 +1,776 @@
+#!/usr/bin/env ruby
+
+require 'json'
+require 'fileutils'
+require 'time'
+require 'hiiro'
+
+o = Hiiro.init(*ARGV, plugins: [Tmux, Pins, Project])
+
+def parse_jsonl(file_path)
+  records = []
+  line_num = 0
+
+  File.readlines(file_path).each do |line|
+    line_num += 1
+    line = line.chomp.strip
+    next if line.empty?
+
+    begin
+      record = JSON.parse(line)
+      records << record
+    rescue JSON::ParserError => e
+      warn "Warning: Skipping malformed JSON on line #{line_num}: #{e.message}"
+    end
+  end
+
+  records
+end
+
+def format_timestamp(ts)
+  return '' unless ts
+  begin
+    time = Time.iso8601(ts)
+    time.strftime('%Y-%m-%d %H:%M:%S')
+  rescue
+    ts
+  end
+end
+
+def truncate_text(text, max_len = 500)
+  if text.length <= max_len
+    [text, false]
+  else
+    [text[0...max_len] + '...', true]
+  end
+end
+
+def get_tool_display_name(name)
+  display_names = {
+    'Read' => 'Read File',
+    'Write' => 'Write File',
+    'Edit' => 'Edit File',
+    'Bash' => 'Terminal',
+    'Glob' => 'Find Files',
+    'Grep' => 'Search',
+    'Agent' => 'Subagent',
+    'WebFetch' => 'Fetch URL',
+    'WebSearch' => 'Web Search',
+  }
+  display_names[name] || name
+end
+
+def extract_tool_summary(tool_input, tool_name)
+  case tool_name
+  when 'Read', 'Write', 'Edit'
+    tool_input['file_path'] || ''
+  when 'Bash'
+    cmd = tool_input['command'] || ''
+    cmd.length > 100 ? cmd[0...100] + '...' : cmd
+  when 'Glob'
+    tool_input['pattern'] || ''
+  when 'Grep'
+    "/#{tool_input['pattern'] || ''}/"
+  when 'Agent'
+    (tool_input['description'] || '')[0...50]
+  when 'WebFetch'
+    tool_input['url'] || ''
+  else
+    tool_input.to_s[0...50]
+  end
+end
+
+def generate_html(records, output_path)
+  messages = extract_messages(records)
+  session_info = extract_session_info(records)
+
+  slug = session_info['slug'] || 'JSONL Export'
+  session_id = session_info['sessionId'] || 'N/A'
+  start_time = format_timestamp(session_info['startTime'])
+
+  message_html = messages.map.with_index do |msg, i|
+    role = msg['role'] || msg['type'] || 'unknown'
+    content = msg['content'] || []
+    timestamp = format_timestamp(msg['timestamp'])
+
+    next '' if content.empty?
+
+    content_html = content_to_html(content)
+    role_class = role == 'user' ? 'user' : 'assistant'
+    role_icon = role == 'user' ? '👤' : '🤖'
+    role_label = role == 'user' ? 'User' : 'Claude'
+
+    if msg['model']
+      if msg['model'].downcase.include?('opus')
+        role_label += ' (Opus)'
+      elsif msg['model'].downcase.include?('sonnet')
+        role_label += ' (Sonnet)'
+      elsif msg['model'].downcase.include?('haiku')
+        role_label += ' (Haiku)'
+      end
+    end
+
+    %{
+        <div class="message #{role_class}">
+            <div class="message-header">
+                <span class="role-icon">#{role_icon}</span>
+                <span class="role-label">#{role_label}</span>
+                <span class="timestamp">#{timestamp}</span>
+            </div>
+            <div class="message-content">
+                #{content_html}
+            </div>
+        </div>
+    }
+  end.join("\n")
+
+  html_content = %{<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSONL Export: #{slug}</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f0f1a;
+            --text-primary: #e4e4e7;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --accent-red: #ef4444;
+            --border-color: #27273a;
+            --code-bg: #0d0d14;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .header-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-size: 0.875rem;
+        }
+
+        .header-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+        }
+
+        .header-meta-item code {
+            background: var(--code-bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-blue);
+        }
+
+        .messages {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .message.user {
+            border-left: 3px solid var(--accent-blue);
+        }
+
+        .message.assistant {
+            border-left: 3px solid var(--accent-purple);
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .role-icon {
+            font-size: 1.1rem;
+        }
+
+        .role-label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .timestamp {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .message-content {
+            padding: 16px;
+        }
+
+        .message-text {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.95rem;
+        }
+
+        .message-text code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            color: var(--accent-orange);
+        }
+
+        .message-text pre {
+            background: var(--code-bg);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .message-text pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+
+        .tool-use {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin: 12px 0;
+            overflow: hidden;
+        }
+
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(139, 92, 246, 0.1);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tool-icon {
+            font-size: 0.9rem;
+        }
+
+        .tool-name {
+            font-weight: 600;
+            color: var(--accent-purple);
+        }
+
+        .tool-summary {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background: var(--code-bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tool-input-details {
+            padding: 8px 14px;
+        }
+
+        .tool-input-details summary {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .tool-input {
+            margin-top: 8px;
+            background: var(--code-bg);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.8rem;
+        }
+
+        .tool-result {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+
+        .tool-result.error {
+            border-color: var(--accent-red);
+        }
+
+        .tool-result summary {
+            cursor: pointer;
+            padding: 10px 14px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            background: rgba(34, 197, 94, 0.05);
+        }
+
+        .tool-result.error summary {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+        }
+
+        .result-content {
+            margin: 0;
+            padding: 12px 14px;
+            background: var(--code-bg);
+            overflow-x: auto;
+            font-size: 0.8rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 JSONL Export: #{slug}</h1>
+            <div class="header-meta">
+                <div class="header-meta-item">
+                    <span>📊</span>
+                    <code>#{session_id}</code>
+                </div>
+                <div class="header-meta-item">
+                    <span>📋</span>
+                    <span>#{records.length} records, #{messages.length} messages</span>
+                </div>
+                #{start_time ? "<div class=\"header-meta-item\"><span>🕐</span><span>#{start_time}</span></div>" : ''}
+            </div>
+        </div>
+
+        <div class="messages">
+            #{message_html}
+        </div>
+    </div>
+</body>
+</html>
+}
+
+  File.write(output_path, html_content)
+  puts "✓ HTML exported to #{output_path}"
+end
+
+def extract_messages(records)
+  messages = []
+  current_msg_id = nil
+  current_msg = nil
+
+  records.each do |record|
+    next if !record.is_a?(Hash)
+
+    rec_type = record['type']
+    next unless ['user', 'assistant'].include?(rec_type)
+
+    message = record['message'] || {}
+    next unless message.is_a?(Hash)
+
+    msg_id = message['id']
+
+    if rec_type == 'assistant' && msg_id && msg_id == current_msg_id
+      new_content = message['content'] || []
+      if current_msg && new_content.any?
+        existing_types = {}
+        current_msg['content'].each_with_index do |c, i|
+          next unless c.is_a?(Hash)
+          key = [c['type'], c['id'] || c['tool_use_id'] || '']
+          existing_types[key] = i
+        end
+
+        new_content.each do |block|
+          next unless block.is_a?(Hash)
+          block_key = [block['type'], block['id'] || block['tool_use_id'] || '']
+          if existing_types[block_key] && ['text', 'thinking'].include?(block['type'])
+            idx = existing_types[block_key]
+            current_msg['content'][idx]['text'] = block['text'] if block['type'] == 'text'
+            current_msg['content'][idx]['thinking'] = block['thinking'] if block['type'] == 'thinking'
+          elsif !existing_types[block_key]
+            current_msg['content'] << block
+            existing_types[block_key] = current_msg['content'].length - 1
+          end
+        end
+      end
+      next
+    end
+
+    messages << current_msg if current_msg
+    current_msg = {
+      'type' => rec_type,
+      'role' => message['role'] || rec_type,
+      'content' => message['content'] || [],
+      'timestamp' => record['timestamp'],
+      'cwd' => record['cwd'],
+      'gitBranch' => record['gitBranch'],
+      'model' => message['model'],
+      'uuid' => record['uuid'],
+    }
+    current_msg_id = rec_type == 'assistant' ? msg_id : nil
+  end
+
+  messages << current_msg if current_msg
+  messages
+end
+
+def extract_session_info(records)
+  info = {
+    'sessionId' => '',
+    'slug' => '',
+    'startTime' => nil,
+    'cwd' => '',
+    'gitBranch' => '',
+  }
+
+  records.each do |record|
+    info['sessionId'] = record['sessionId'] if record['sessionId'] && info['sessionId'].empty?
+    info['slug'] = record['slug'] if record['slug'] && info['slug'].empty?
+    info['startTime'] = record['timestamp'] if record['timestamp'] && !info['startTime']
+    info['cwd'] = record['cwd'] if record['cwd'] && info['cwd'].empty?
+    info['gitBranch'] = record['gitBranch'] if record['gitBranch'] && info['gitBranch'].empty?
+  end
+
+  info
+end
+
+def content_to_html(content)
+  parts = []
+
+  return "<div class=\"message-text\">#{escape_html(content)}</div>" if content.is_a?(String)
+
+  return '' unless content.is_a?(Array)
+
+  content.each do |block|
+    next unless block.is_a?(Hash)
+
+    case block['type']
+    when 'text'
+      text = block['text'] || ''
+      parts << "<div class=\"message-text\">#{escape_html(text)}</div>" if text.strip.length > 0
+    when 'tool_use'
+      tool_name = block['name'] || 'Unknown'
+      tool_input = block['input'] || {}
+      summary = extract_tool_summary(tool_input, tool_name)
+      display_name = get_tool_display_name(tool_name)
+
+      input_json = JSON.pretty_generate(tool_input)
+      escaped_json = escape_html(input_json)
+      escaped_summary = escape_html(summary)
+
+      parts << %{
+        <div class="tool-use">
+            <div class="tool-header">
+                <span class="tool-icon">🔧</span>
+                <span class="tool-name">#{display_name}</span>
+                <code class="tool-summary">#{escaped_summary}</code>
+            </div>
+            <details class="tool-input-details">
+                <summary>View Input</summary>
+                <pre class="tool-input"><code>#{escaped_json}</code></pre>
+            </details>
+        </div>
+      }
+    when 'tool_result'
+      content_val = block['content'] || ''
+      is_error = block['is_error'] || false
+
+      result_text = content_val.is_a?(String) ? content_val : JSON.pretty_generate(content_val)
+      result_text = result_text[0...5000] + '\n... [truncated]' if result_text.length > 5000
+
+      escaped_result = escape_html(result_text)
+      error_class = is_error ? 'error' : ''
+      icon = is_error ? '❌ Error' : '📄 Result'
+
+      parts << %{
+        <div class="tool-result #{error_class}">
+            <details open>
+                <summary>#{icon} (#{result_text.length} chars)</summary>
+                <pre class="result-content"><code>#{escaped_result}</code></pre>
+            </details>
+        </div>
+      }
+    end
+  end
+
+  parts.join("\n")
+end
+
+def escape_html(text)
+  text.to_s
+    .gsub('&', '&amp;')
+    .gsub('<', '&lt;')
+    .gsub('>', '&gt;')
+    .gsub('"', '&quot;')
+    .gsub("'", '&#39;')
+end
+
+o.add_subcmd(:export) { |file_path, *args|
+  unless file_path
+    puts "Usage: h jsonl export <file.jsonl> [--output-dir <dir>] [--name <name>]"
+    next
+  end
+
+  output_dir = '.'
+  name = nil
+
+  i = 0
+  while i < args.length
+    case args[i]
+    when '--output-dir', '-o'
+      output_dir = args[i + 1]
+      i += 2
+    when '--name', '-n'
+      name = args[i + 1]
+      i += 2
+    else
+      i += 1
+    end
+  end
+
+  file_path = File.expand_path(file_path)
+  unless File.exist?(file_path)
+    puts "Error: File not found: #{file_path}"
+    next
+  end
+
+  puts "Reading JSONL file: #{file_path}"
+  records = parse_jsonl(file_path)
+  puts "  Found #{records.length} records"
+
+  output_dir = File.expand_path(output_dir)
+  FileUtils.mkdir_p(output_dir)
+
+  base_name = name || File.basename(file_path, '.jsonl') || 'export'
+
+  html_path = File.join(output_dir, "#{base_name}.html")
+  generate_html(records, html_path)
+}
+
+o.add_subcmd(:stats) { |file_path, *args|
+  unless file_path
+    puts "Usage: h jsonl stats <file.jsonl>"
+    next
+  end
+
+  file_path = File.expand_path(file_path)
+  unless File.exist?(file_path)
+    puts "Error: File not found: #{file_path}"
+    next
+  end
+
+  records = parse_jsonl(file_path)
+  messages = extract_messages(records)
+
+  puts
+  puts "📊 JSONL Statistics: #{File.basename(file_path)}"
+  puts "─" * 50
+  puts "Total records:      #{records.length}"
+  puts "Messages:           #{messages.length}"
+
+  user_msgs = messages.select { |m| m['role'] == 'user' }.length
+  assistant_msgs = messages.select { |m| m['role'] == 'assistant' }.length
+  puts "  User messages:    #{user_msgs}"
+  puts "  Assistant msgs:   #{assistant_msgs}"
+
+  tool_uses = messages.flat_map { |m| m['content'] || [] }.select { |c| c.is_a?(Hash) && c['type'] == 'tool_use' }
+  puts "Tool uses:          #{tool_uses.length}"
+
+  if tool_uses.any?
+    tool_names = tool_uses.map { |t| t['name'] }.compact.group_by { |n| n }.map { |n, g| "#{n}(#{g.length})" }
+    puts "  Tools:            #{tool_names.join(', ')}"
+  end
+
+  total_size = File.size(file_path)
+  puts "File size:          #{(total_size / 1024.0).round(2)} KB"
+  puts
+}
+
+o.add_subcmd(:head) { |file_path, *args|
+  unless file_path
+    puts "Usage: h jsonl head <file.jsonl> [-n <lines>]"
+    next
+  end
+
+  lines = 10
+  i = 0
+  while i < args.length
+    case args[i]
+    when '-n'
+      lines = args[i + 1].to_i
+      i += 2
+    else
+      i += 1
+    end
+  end
+
+  file_path = File.expand_path(file_path)
+  unless File.exist?(file_path)
+    puts "Error: File not found: #{file_path}"
+    next
+  end
+
+  line_count = 0
+
+  File.foreach(file_path) do |line|
+    break if line_count >= lines
+    line.strip!
+    next if line.empty?
+
+    begin
+      obj = JSON.parse(line)
+      puts JSON.pretty_generate(obj)
+      puts "─" * 60
+    rescue JSON::ParserError => e
+      puts "ERROR parsing line: #{e.message}"
+    end
+
+    line_count += 1
+  end
+}
+
+o.add_subcmd(:grep) { |pattern, file_path, *args|
+  unless pattern && file_path
+    puts "Usage: h jsonl grep <pattern> <file.jsonl>"
+    next
+  end
+
+  file_path = File.expand_path(file_path)
+  unless File.exist?(file_path)
+    puts "Error: File not found: #{file_path}"
+    next
+  end
+
+  regex = Regexp.new(pattern, Regexp::IGNORECASE)
+  matches = 0
+
+  File.foreach(file_path).with_index do |line, idx|
+    line.strip!
+    next if line.empty?
+
+    begin
+      obj = JSON.parse(line)
+      json_str = JSON.generate(obj)
+      if json_str.match?(regex)
+        matches += 1
+        puts "Line #{idx + 1}:"
+        puts JSON.pretty_generate(obj)
+        puts "─" * 60
+      end
+    rescue JSON::ParserError
+      # skip malformed
+    end
+  end
+
+  puts "Found #{matches} matching records" if matches == 0
+}
+
+o.add_subcmd(:validate) { |file_path, *args|
+  unless file_path
+    puts "Usage: h jsonl validate <file.jsonl>"
+    next
+  end
+
+  file_path = File.expand_path(file_path)
+  unless File.exist?(file_path)
+    puts "Error: File not found: #{file_path}"
+    next
+  end
+
+  valid_count = 0
+  error_count = 0
+
+  File.foreach(file_path).with_index do |line, idx|
+    line.strip!
+    next if line.empty?
+
+    begin
+      JSON.parse(line)
+      valid_count += 1
+    rescue JSON::ParserError => e
+      error_count += 1
+      puts "Line #{idx + 1}: #{e.message}"
+    end
+  end
+
+  puts
+  puts "✓ Valid lines:   #{valid_count}"
+  puts "✗ Error lines:   #{error_count}"
+  puts "Total:           #{valid_count + error_count}"
+
+  if error_count == 0
+    puts "✓ File is valid!"
+  end
+}
+
+if o.runnable?
+  o.run
+else
+  puts format('ERROR: %s', :no_runnable_found)
+  puts
+  o.help
+end
