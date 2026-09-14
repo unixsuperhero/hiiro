@@ -2,11 +2,15 @@
 
 ## [Unreleased]
 
-## [0.1.368] - 2026-09-14
+## [0.1.369] - 2026-09-14
 
 ### Added
 - `t switch NAME` matches live Herdr workspaces that belong to no task, and the fuzzy finder for `switch` lists tasks plus those workspaces, numbering duplicate workspace names
 - `t` opens the fuzzy finder instead of failing when a task prefix is ambiguous or no current task can be resolved, when stdin is a terminal
+
+## [0.1.368] - 2026-09-14
+
+### Added
 - `h herdr`: Herdr plugin exposing `t` through keybound popups for fuzzy task switching, todo capture, todo copying, task shell, and nvim access; `h herdr install` copies and links the plugin, `h herdr keys` prints keybindings
 
 ### Changed
