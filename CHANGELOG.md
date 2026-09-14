@@ -4,6 +4,9 @@
 
 ## [0.1.371] - 2026-09-14
 
+### Changed
+- `h bg run` reuses an idle shell pane in the `h-bg` workspace and opens a new tab only when every pane is busy, instead of one tab per command
+
 ### Added
 - `t ls` lists the panes under every open workspace with directory, agent state, and foreground command via `herdr pane process-info`; `t switch` accepts an exact pane ID and its picker includes panes
 - `Hiiro::Herdr#process_info` and `Pane#foreground_command`
