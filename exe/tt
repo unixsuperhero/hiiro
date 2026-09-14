@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run(*ARGV, external_commands: false, builtin_commands: false) do
+  Hiiro::TaskCli.setup_todo(self)
+end

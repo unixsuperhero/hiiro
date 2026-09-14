@@ -2,7 +2,7 @@ require 'shellwords'
 
 class Hiiro
   class TaskSessions
-    class Error < StandardError; end
+    class Error < Hiiro::Error; end
 
     def initialize(client, workspace:, directory:)
       @client = client
