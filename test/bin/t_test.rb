@@ -692,6 +692,22 @@ class TaskCommandTest < Minitest::Test
     assert_equal ['herdr', 'pane', 'run', 'w1:p2', 'codex'], session_mutations.last
   end
 
+  def test_list_marks_open_task_workspaces_and_lists_loose_workspaces
+    live_workspace('w1', 'prez')
+    live_workspace('w3', 'servers')
+    live_workspace('w4', 'servers')
+    expected = <<~OUT
+        other  active
+      @ prez   active
+
+      Workspaces without a task:
+        servers  w3
+        servers  w4
+    OUT
+    assert_equal expected, command(env: { 'HERDR_WORKSPACE_ID' => 'missing' })
+    assert_equal [], mutations
+  end
+
   def test_switch_matches_loose_herdr_workspaces_after_tasks_and_never_saves_them
     live_workspace('w1', 'prez')
     live_workspace('w3', 'servers')

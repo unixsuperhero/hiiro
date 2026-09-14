@@ -40,7 +40,6 @@ class Hiiro
         add_flag :find, short: :f, desc: 'Choose the task with a fuzzy finder'
       end
 
-      # Exact name, else unique prefix; ambiguous prefixes fail; nil when nothing matches.
       # Exact name, else unique prefix. An ambiguous prefix opens the fuzzy finder
       # over the candidates on a TTY and fails otherwise. nil when nothing matches.
       def lookup_task(reference)
@@ -180,24 +179,43 @@ class Hiiro
           end
       end
 
+      # Live Herdr workspaces, or [] when Herdr is not running.
+      def live_workspaces
+        herdr_client.server_running? ? client.workspaces.to_a : []
+      rescue Hiiro::Error
+        []
+      end
+
+      # Tasks with open todo counts, an @ marker when the task workspace is open,
+      # then any live Herdr workspaces that belong to no task.
       def list_tasks
         tasks = Hiiro::TaskRecord.all_as_list
-        if tasks.empty?
+        workspaces = live_workspaces
+        labels = tasks.map { |task| workspace_label(task) }
+        open_labels = workspaces.map(&:name)
+        loose = workspaces.reject { |workspace| labels.include?(workspace.name) }
+        if tasks.empty? && loose.empty?
           puts 'No tasks. Create one with t new NAME.'
           return
         end
         counts = open_todo_counts
+        attached = tasks.any? { |task| open_labels.include?(workspace_label(task)) }
         rows = tasks.map do |task|
           count = counts[task.name]
           label = count.zero? ? task.name : "#{task.name} (#{count})"
+          label = "#{open_labels.include?(workspace_label(task)) ? '@' : ' '} #{label}" if attached
           detail = []
           detail << "next: #{task.next_action}" if task.next_action
           detail << "waiting: #{task.waiting_on}" if task.waiting_on
           [label, task.task_status, detail.join('  ')]
         end
-        name_col = rows.map { |row| row[0].length }.max
-        status_col = rows.map { |row| row[1].length }.max
+        name_col = rows.map { |row| row[0].length }.max || 0
+        status_col = rows.map { |row| row[1].length }.max || 0
         rows.each { |label, status, detail| puts format("%-#{name_col}s  %-#{status_col}s  %s", label, status, detail).rstrip }
+        return if loose.empty?
+        puts unless rows.empty?
+        puts 'Workspaces without a task:'
+        loose.each { |workspace| puts "  #{workspace.name}  #{workspace.id}" }
       end
 
 
