@@ -1,6 +1,10 @@
 #!/usr/bin/env ruby
 
-require File.expand_path('../lib/hiiro', File.dirname(File.realpath(__FILE__)))
+lib_dir = File.expand_path('../lib', File.dirname(File.realpath(__FILE__)))
+$LOAD_PATH.unshift(lib_dir)
+require File.join(lib_dir, 'hiiro')
+require File.join(lib_dir, 'hiiro/task_scope')
+require File.join(lib_dir, 'hiiro/task_sessions')
 require 'fileutils'
 require 'time'
 require 'uri'
@@ -8,9 +12,8 @@ require 'uri'
 module TaskCommands
   class Error < StandardError; end
 
-  def task_args
-    select_task
-    opts.args
+  def selected_task_scope
+    resolve(:task_scope)
   end
 
   def single(args, optional: false)
@@ -31,43 +34,7 @@ module TaskCommands
   end
 
   def select_task
-    @selected_task ||= resolve_task(@explicit_task = opts.args.shift)
-  end
-
-  def resolve_task(name)
-    if name
-      return Hiiro::TaskRecord.find_by_name(name) || raise(Error, "Task not found: #{name}")
-    end
-
-    tasks = Hiiro::TaskRecord.all_as_list
-    if ENV['HERDR_WORKSPACE_ID'] || ENV['HERDR_PANE_ID'] || ENV['HERDR_ENV'] == '1'
-      herdr = client
-      pane = herdr.get_pane(ENV['HERDR_PANE_ID']) if ENV['HERDR_PANE_ID']
-      if ENV['HERDR_PANE_ID'] && !pane
-        raise Error, 'Cannot resolve the current Herdr pane; supply a task name'
-      end
-      workspace_id = ENV['HERDR_WORKSPACE_ID'] || pane&.workspace_id
-      if pane && workspace_id != pane.workspace_id
-        raise Error, 'Conflicting Herdr pane/workspace context; supply a task name'
-      end
-      workspace = workspace_id ? herdr.get_workspace(workspace_id) : herdr.current_workspace
-      raise Error, 'Cannot resolve the current Herdr workspace; supply a task name' unless workspace
-      matches = tasks.select { |task| workspace_label(task) == workspace.name }
-      raise Error, "Ambiguous workspace task: #{matches.map(&:name).join(', ')}" if matches.length > 1
-      return matches.first if matches.one?
-    end
-
-    cwd = File.realpath(Dir.pwd)
-    matches = tasks.select do |task|
-      paths = [task.home, code_directory(task), *task.resources.where(kind: 'directory').select_map(:target)].compact
-      paths.any? { |path| inside?(cwd, path) }
-    end
-    raise Error, "Ambiguous directory task: #{matches.map(&:name).join(', ')}" if matches.length > 1
-    return matches.first if matches.one?
-
-    saved = Hiiro::PinRecord.find_key('t', 'current_task')
-    raise Error, 'No current task; supply a task name or run t current TASK' unless saved
-    Hiiro::TaskRecord[saved.value] || raise(Error, 'Saved task no longer exists; run t current TASK')
+    selected_task_scope.task!
   end
 
   def save_current(task)
@@ -100,21 +67,57 @@ module TaskCommands
     if record
       ensure_home(record)
       puts "Task already exists: #{name}\n#{record.home}"
-      return
+      return record
     end
     now = Time.now.iso8601
     record = Hiiro::TaskRecord.new(name: name, session: name, status: 'active', created_at: now, updated_at: now)
     ensure_home(record)
     record.save
     puts "Created #{name}\n#{record.home}"
+    record
   end
 
-  def list(args)
-    name = single(args, optional: true)
-    tasks = name ? [resolve_task(name)] : Hiiro::TaskRecord.all_as_list
-    tasks.reject! { |task| %w[done archived].include?(task.task_status) } unless opts.all
+  def list_tasks
+    tasks = Hiiro::TaskRecord.all_as_list
     tasks.each { |task| puts [task.name, task.task_status, task.next_action, task.waiting_on].compact.join("\t") }
-    puts 'No tasks. Create one with t new TASK.' if tasks.empty?
+    puts 'No tasks. Create one with t TASK new or t TASK todo add TEXT.' if tasks.empty?
+  end
+
+
+  def task_todos(task)
+    return Hiiro::TodoItem.where(task_name: nil, subtask_name: nil).order(:id) unless task
+    Hiiro::TodoItem.where(task_name: task.name, subtask_name: nil)
+      .or(Sequel.join([:task_name, :subtask_name], '/') => task.name)
+      .order(:id)
+  end
+
+  def add_todo(args)
+    text = args.join(' ')
+    raise Error, 'Usage: t TASK todo add TEXT...; todo text cannot be blank' if text.strip.empty?
+    scope = selected_task_scope
+    task, item = Hiiro::DB.connection.transaction(mode: :immediate) do
+      selected = scope.task
+      selected ||= create(scope.reference) unless scope.orphan?
+      [selected, Hiiro::TodoItem.create(text: text, task_name: selected&.name)]
+    end
+    puts "Added todo #{item.id} to #{task&.name || '-'}: #{item.text}"
+  end
+
+  def remove_todo(args)
+    id = single(args)
+    raise Error, 'Todo ID must be an exact decimal ID from t TASK todo' unless id.match?(/\A\d+\z/)
+    scope = selected_task_scope
+    task = scope.orphan? ? nil : scope.task!
+    deleted = task_todos(task).where(id: id.to_i).delete
+    name = task&.name || '-'
+    raise Error, "Todo #{id} does not belong to task #{name}" unless deleted == 1
+    puts "Removed todo #{id} from #{name}"
+  end
+
+  def list_todos
+    scope = selected_task_scope
+    task = scope.orphan? ? nil : scope.task!
+    task_todos(task).each { |item| puts "Todo #{item.id} [#{item.status}]: #{item.text}" }
   end
 
   def show(task)
@@ -126,6 +129,7 @@ module TaskCommands
     puts "Workspace label: #{workspace_label(task)}"
     task.resources.each { |resource| print_resource(resource) }
     documents(task).each { |path| puts "Document: #{path}" }
+    task_todos(task).each { |item| puts "Todo #{item.id} [#{item.status}]: #{item.text}" }
   end
 
   def metadata(field, args)
@@ -234,7 +238,7 @@ module TaskCommands
       candidates.concat(home_files(task).map { |path| [path, [path, path.delete_prefix(task.home + '/'), File.basename(path)]] })
     end
     matches = candidates.select { |_, names| reference.nil? || names.include?(reference) }.map(&:first).uniq
-    raise Error, "No matching #{group}; run t #{group} list" if matches.empty?
+    raise Error, "No matching #{group}; run t #{task.name} #{group} list" if matches.empty?
     raise Error, "Ambiguous #{group}; use an ID or full path/URL" unless matches.one?
     path = matches.first
     existing_path(path, directory: group == 'directory') if %w[file directory].include?(group)
@@ -264,7 +268,7 @@ module TaskCommands
       short_name = File.basename(path, '.md').delete_prefix(doc_prefix(task))
       reference.nil? || [path, path.delete_prefix(task.home + '/'), File.basename(path), File.basename(path, '.md'), short_name, "#{short_name}.md"].include?(reference)
     end
-    raise Error, 'No matching document; run t doc list' if matches.empty?
+    raise Error, "No matching document; run t #{task.name} doc list" if matches.empty?
     raise Error, 'Ambiguous document; use its relative or absolute path' unless matches.one?
     check_result(system('mdoc', matches.first), 'mdoc could not open the document; install mdoc and check its configuration')
   end
@@ -298,12 +302,12 @@ module TaskCommands
     raise Error, "Workspace label #{label} is shared by tasks: #{collisions.map(&:name).join(', ')}" unless collisions.one?
     matches = client.workspaces.select { |workspace| workspace.name == label }
     raise Error, "Multiple Herdr workspaces have label #{label}" if matches.length > 1
-    raise Error, "Task workspace is not open; run t workspace #{task.name}" if required && matches.empty?
+    raise Error, "Task workspace is not open; run t #{task.name} switch" if required && matches.empty?
     matches.first
   end
 
   def start_directory(task)
-    path = opts.directory || code_directory(task) || ensure_home(task)
+    path = opts&.fetch(:directory) || code_directory(task) || ensure_home(task)
     existing_path(path, directory: true)
   end
 
@@ -316,7 +320,7 @@ module TaskCommands
       workspace = client.new_workspace(workspace_label(task), start_directory: start_directory(task), focus: true)
       check_result(workspace, 'Herdr did not create the workspace')
     end
-    save_current(task) if @explicit_task
+    save_current(task) if selected_task_scope.explicit?
     puts workspace
   end
 
@@ -367,99 +371,156 @@ module TaskCommands
   def check_result(result, message = 'Herdr command failed')
     raise Error, message unless result
   end
+
+  def run_ai(tool, argv)
+    task = select_task
+    directory = start_directory(task)
+    workspace = workspace_for(task, required: false)
+    workspace ||= client.new_workspace(workspace_label(task), start_directory: directory, focus: true)
+    check_result(workspace, 'Herdr did not create the workspace')
+    puts Hiiro::TaskSessions.new(client, workspace: workspace, directory: directory).run(tool, argv)
+  end
+
+  def run_task_scope(reference, command_args)
+    add_resolver(:task_scope, Hiiro::TaskScope.new(reference, herdr: -> { herdr_client }))
+    run_child(reference, command_args, external_commands: false) do
+      extend TaskCommands
+      task_commands
+    end
+  end
+
+  def task_commands
+    add_default do |*unexpected|
+      no_args!(unexpected)
+      show(select_task)
+    end
+    add_cmd(:help) { help }
+    add_cmd(:show) { no_args!(opts.args); show(select_task) }
+    add_cmd(:current) do
+      no_args!(opts.args)
+      task = select_task
+      save_current(task) if selected_task_scope.explicit?
+      puts task.name
+    end
+    add_cmd(:new) { no_args!(opts.args); create(selected_task_scope.reference) }
+    add_cmd(:next, args: ['text...'], opts: %i[clear]) { metadata(:next_action, opts.args) }
+    add_cmd(:waiting, args: ['text...'], opts: %i[clear]) { metadata(:waiting_on, opts.args) }
+    add_cmd(:status, args: ['state?']) do
+      state = single(opts.args, optional: true)
+      state ? set_status(select_task, state) : puts(select_task.task_status)
+    end
+    %w[done archive].each do |name|
+      add_cmd(name) do
+        no_args!(opts.args)
+        set_status(select_task, name == 'archive' ? 'archived' : 'done')
+      end
+    end
+
+    add_cmd(:todo, args: ['command?'], passthrough: true) do
+      run_child(:todo, args, external_commands: false) do
+        extend TaskCommands
+        add_default { |*unexpected| no_args!(unexpected); list_todos }
+        add_cmd(:help) { help }
+        add_cmd(:list, :ls) { no_args!(opts.args); list_todos }
+        add_cmd(:add, args: ['text...'], passthrough: true) do
+          if %w[-h --help].include?(args.first)
+            puts options.select([]).parse([]).help_text
+          else
+            add_todo(args)
+          end
+        end
+        add_cmd(:rm, args: %i[id]) { remove_todo(opts.args) }
+      end
+    end
+
+    %w[directory link pr file].each do |group|
+      add_cmd(group, args: %i[command], passthrough: true) do
+        run_child(group, args, external_commands: false) do
+          extend TaskCommands
+          add_option :label, desc: 'Resource label'
+          add_option :kind, desc: 'Link kind: general, issue, or thread' if group == 'link'
+          add_options = %i[label]
+          add_options << :primary if group == 'directory'
+          add_options << :kind if group == 'link'
+          read_options = group == 'link' ? %i[kind] : []
+          add_cmd(:help) { help }
+          add_cmd(:add, args: %i[target], opts: add_options) { add_resource(group, single(opts.args)) }
+          add_cmd(:list, :ls, opts: read_options) { no_args!(opts.args); list_resources(group, select_task) }
+          add_cmd(:open, args: ['reference?'], opts: read_options) { open_resource(group, single(opts.args, optional: true)) }
+        end
+      end
+    end
+
+    add_cmd(:doc, args: %i[command], passthrough: true) do
+      run_child(:doc, args, external_commands: false) do
+        extend TaskCommands
+        add_cmd(:help) { help }
+        add_cmd(:new, args: ['name', 'title...']) { new_doc(opts.args) }
+        add_cmd(:list, :ls) { no_args!(opts.args); documents(select_task).each { |path| puts path } }
+        add_cmd(:open, args: ['name?']) { open_doc(single(opts.args, optional: true)) }
+      end
+    end
+
+    add_option :directory, desc: 'Existing start directory'
+    add_cmd(:switch, :workspace, opts: %i[directory show]) do
+      no_args!(opts.args)
+      opts.show ? show_workspace : open_workspace
+    end
+
+    [%w[omp], %w[codex cdx], %w[claude cld]].each do |names|
+      add_cmd(*names, args: ['cli-args...'], passthrough: true) { run_ai(names.first, args) }
+    end
+
+    add_cmd(:tab, args: %i[command], passthrough: true) do
+      run_child(:tab, args, external_commands: false) do
+        extend TaskCommands
+        add_option :directory, desc: 'Existing start directory'
+        add_option :command, desc: 'Command to run in the new tab'
+        add_cmd(:help) { help }
+        add_cmd(:list, :ls) { no_args!(opts.args); client.tabs(workspace: workspace_for(select_task)).each { |tab| puts tab } }
+        add_cmd(:new, args: ['label?'], opts: %i[directory command]) { new_tab(single(opts.args, optional: true)) }
+        add_cmd(:open, args: %i[reference]) do
+          reference = single(opts.args)
+          workspace = workspace_for(select_task)
+          tab = live_item(client.tabs(workspace: workspace), reference)
+          check_result(client.focus_workspace(workspace.id))
+          check_result(client.focus_tab(tab.id))
+        end
+      end
+    end
+
+    add_cmd(:pane, args: %i[command], passthrough: true) do
+      run_child(:pane, args, external_commands: false) do
+        extend TaskCommands
+        add_option :directory, desc: 'Existing start directory'
+        add_option :command, desc: 'Command to run in the new pane'
+        add_option :direction, default: 'right', desc: 'Split direction: right or down'
+        add_cmd(:help) { help }
+        add_cmd(:list, :ls) { no_args!(opts.args); client.panes(workspace: workspace_for(select_task)).each { |pane| puts pane } }
+        %w[open read].each do |action|
+          add_cmd(action, args: %i[pane]) { pane_action(action, opts.args) }
+        end
+        add_cmd(:run, args: ['pane', 'command...']) { pane_action('run', opts.args) }
+        add_cmd(:split, args: %i[pane], opts: %i[directory command direction]) { pane_action('split', opts.args) }
+      end
+    end
+  end
 end
 
 Hiiro.run(*ARGV, external_commands: false) do
   extend TaskCommands
-
-  add_cmd(:help) { help }
-  add_cmd(:list, :ls, args: ['task?'], opts: %i[all]) { list(opts.args) }
-  add_cmd(:show, args: ['task?']) { no_args!(task_args); show(select_task) }
-  add_cmd(:current, args: ['task?']) do
-    no_args!(task_args)
-    save_current(select_task) if @explicit_task
-    puts select_task.name
-  end
-  add_cmd(:new, args: %i[task]) { create(single(opts.args)) }
-  add_cmd(:next, args: ['task?', 'text...'], opts: %i[clear]) { metadata(:next_action, task_args) }
-  add_cmd(:waiting, args: ['task?', 'text...'], opts: %i[clear]) { metadata(:waiting_on, task_args) }
-  add_cmd(:status, args: ['task?', 'state?']) do
-    state = single(task_args, optional: true)
-    state ? set_status(select_task, state) : puts(select_task.task_status)
-  end
-  %w[done archive].each do |name|
-    add_cmd(name, args: ['task?']) do
-      no_args!(task_args)
-      set_status(select_task, name == 'archive' ? 'archived' : 'done')
-    end
-  end
-
-  %w[directory link pr file].each do |group|
-    add_cmd(group, args: %i[command], passthrough: true) do
-      run_child(group, args, external_commands: false) do
-        extend TaskCommands
-        add_option :label, desc: 'Resource label'
-        add_option :kind, desc: 'Link kind: general, issue, or thread' if group == 'link'
-        add_options = %i[label]
-        add_options << :primary if group == 'directory'
-        add_options << :kind if group == 'link'
-        read_options = group == 'link' ? %i[kind] : []
-
-        add_cmd(:help) { help }
-        add_cmd(:add, args: %i[task target], opts: add_options) { add_resource(group, single(task_args)) }
-        add_cmd(:list, :ls, args: ['task?'], opts: read_options) { no_args!(task_args); list_resources(group, select_task) }
-        add_cmd(:open, args: ['task?', 'reference?'], opts: read_options) { open_resource(group, single(task_args, optional: true)) }
-      end
-    end
-  end
-
-  add_cmd(:doc, args: %i[command], passthrough: true) do
-    run_child(:doc, args, external_commands: false) do
-      extend TaskCommands
-      add_cmd(:help) { help }
-      add_cmd(:new, args: ['task', 'name', 'title...']) { new_doc(task_args) }
-      add_cmd(:list, :ls, args: ['task?']) { no_args!(task_args); documents(select_task).each { |path| puts path } }
-      add_cmd(:open, args: ['task?', 'name?']) { open_doc(single(task_args, optional: true)) }
-    end
-  end
-
-  add_option :directory, desc: 'Existing start directory'
-  add_cmd(:workspace, args: ['task?'], opts: %i[directory show]) do
-    no_args!(task_args)
-    opts.show ? show_workspace : open_workspace
-  end
-
-  add_cmd(:tab, args: %i[command], passthrough: true) do
-    run_child(:tab, args, external_commands: false) do
-      extend TaskCommands
-      add_option :directory, desc: 'Existing start directory'
-      add_option :command, desc: 'Command to run in the new tab'
-      add_cmd(:help) { help }
-      add_cmd(:list, :ls, args: ['task?']) { no_args!(task_args); client.tabs(workspace: workspace_for(select_task)).each { |tab| puts tab } }
-      add_cmd(:new, args: ['task?', 'label?'], opts: %i[directory command]) { new_tab(single(task_args, optional: true)) }
-      add_cmd(:open, args: %i[task reference]) do
-        reference = single(task_args)
-        workspace = workspace_for(select_task)
-        tab = live_item(client.tabs(workspace: workspace), reference)
-        check_result(client.focus_workspace(workspace.id))
-        check_result(client.focus_tab(tab.id))
-      end
-    end
-  end
-
-  add_cmd(:pane, args: %i[command], passthrough: true) do
-    run_child(:pane, args, external_commands: false) do
-      extend TaskCommands
-      add_option :directory, desc: 'Existing start directory'
-      add_option :command, desc: 'Command to run in the new pane'
-      add_option :direction, default: 'right', desc: 'Split direction: right or down'
-      add_cmd(:help) { help }
-      add_cmd(:list, :ls, args: ['task?']) { no_args!(task_args); client.panes(workspace: workspace_for(select_task)).each { |pane| puts pane } }
-      %w[open read].each do |action|
-        add_cmd(action, args: %i[task pane]) { pane_action(action, task_args) }
-      end
-      add_cmd(:run, args: ['task', 'pane', 'command...']) { pane_action('run', task_args) }
-      add_cmd(:split, args: %i[task pane], opts: %i[directory command direction]) { pane_action('split', task_args) }
+  runners.subcommands.clear
+  add_default do |reference = nil, *command_args|
+    if reference.nil?
+      list_tasks
+    elsif reference == 'help'
+      no_args!(command_args)
+      puts "Usage: t TASK [COMMAND ...]\n\nBare t lists tasks; t TASK shows one."
+      puts "Use . for the current task, or - for unassigned todos."
+      puts "Todo shortcut: tt TASK [COMMAND ...]\n\nTask commands:"
+      run_task_scope('TASK', ['help'])
+    else
+      run_task_scope(reference, command_args)
     end
   end
 end

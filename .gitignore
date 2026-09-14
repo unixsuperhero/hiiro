@@ -4,4 +4,5 @@ pkg/
 tmp/
 bin/[^h]*
 !/bin/t
+!/bin/tt
 !/test/bin/t_test.rb
