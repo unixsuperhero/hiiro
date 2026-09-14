@@ -29,7 +29,7 @@ Task names may be `parent/child` for subtasks. `t new NAME` creates exactly `NAM
 
 | Command | Behavior |
 |---|---|
-| `t`, `t ls`, `t list` | Lists all tasks alphabetically with open todo counts, e.g. `prez (3)`, plus `next:` and `waiting:` text |
+| `t`, `t ls`, `t list` | Lists all tasks alphabetically with open todo counts, e.g. `prez (3)`, plus `next:` and `waiting:` text. When Herdr is running, tasks whose workspace is open get an `@` marker, and live workspaces that belong to no task are listed afterwards with their IDs |
 | `t show [TASK]` | Status, home, next action, waiting text, code directory, workspace label, resources, documents, and todos |
 | `t current [TASK]` | Prints the resolved task name; never saves |
 | `t use TASK` (alias `pin`) | Saves TASK as the fallback for when no workspace or directory identifies a task |
