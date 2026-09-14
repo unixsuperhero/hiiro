@@ -29,7 +29,7 @@ Task names may be `parent/child` for subtasks. `t new NAME` creates exactly `NAM
 
 | Command | Behavior |
 |---|---|
-| `t`, `t ls`, `t list` | Lists all tasks alphabetically with open todo counts, e.g. `prez (3)`, plus `next:` and `waiting:` text. When Herdr is running, tasks whose workspace is open get an `@` marker, and live workspaces that belong to no task are listed afterwards with their IDs |
+| `t`, `t ls`, `t list` | Lists all tasks alphabetically with open todo counts, e.g. `prez (3)`, plus `next:` and `waiting:` text. When Herdr is running, tasks whose workspace is open get an `@` marker, every open workspace lists its panes as `ID  ~/dir  agent (status)  command` (from `herdr pane process-info`), and live workspaces that belong to no task are listed afterwards with their IDs |
 | `t show [TASK]` | Status, home, next action, waiting text, code directory, workspace label, resources, documents, and todos |
 | `t current [TASK]` | Prints the resolved task name; never saves |
 | `t use TASK` (alias `pin`) | Saves TASK as the fallback for when no workspace or directory identifies a task |
@@ -112,7 +112,7 @@ t pane run [TASK] ID|LABEL [--] COMMAND...
 t pane split [TASK] ID|LABEL [--direction right|down] [--directory PATH] [--command COMMAND]
 ```
 
-These require a running Herdr server. The workspace label is the task session or name with `.` replaced by `_`. `switch` also accepts the name of a live Herdr workspace that belongs to no task, exactly or by unique prefix, and focuses it; a task with the same name wins. When the name is ambiguous, or no task or context is given, a terminal gets a fuzzy finder over tasks and loose workspaces, with duplicate workspace names numbered in the label only. `switch` focuses the existing task workspace or creates it in the start directory (`--directory`, else primary directory, worktree, or home), and saves the task as the fallback when it was named explicitly. `--show` only prints the workspace, tabs, and panes. Tab and pane references match a live ID or label, then a unique prefix; with no reference and several candidates a fuzzy finder opens.
+These require a running Herdr server. The workspace label is the task session or name with `.` replaced by `_`. `switch` also accepts the name of a live Herdr workspace that belongs to no task, exactly or by unique prefix, and focuses it; a task with the same name wins. An exact pane ID such as `w6:p2` focuses that pane, and the picker lists every live pane with its directory and foreground command. When the name is ambiguous, or no task or context is given, a terminal gets a fuzzy finder over tasks and loose workspaces, with duplicate workspace names numbered in the label only. `switch` focuses the existing task workspace or creates it in the start directory (`--directory`, else primary directory, worktree, or home), and saves the task as the fallback when it was named explicitly. `--show` only prints the workspace, tabs, and panes. Tab and pane references match a live ID or label, then a unique prefix; with no reference and several candidates a fuzzy finder opens.
 
 ## Native AI sessions
 
