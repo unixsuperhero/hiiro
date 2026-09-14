@@ -2,9 +2,25 @@
 
 ## [Unreleased]
 
+## [0.1.368] - 2026-09-14
+
+### Added
+- `h herdr`: Herdr plugin exposing `t` through keybound popups for fuzzy task switching, todo capture, todo copying, task shell, and nvim access; `h herdr install` copies and links the plugin, `h herdr keys` prints keybindings
+
+### Changed
+- Task CLI grammar converted to command-first: `t COMMAND [TASK] [ARGS...]` matching the legacy `h task` rule where the first positional word is the task when it names one (exact or unique prefix), otherwise the current task is used and the word stays in the payload
+
+### Removed
+- `Hiiro::TaskScope` class; task resolution logic integrated into `Hiiro::TaskCli`
+
 ## [0.1.367] - 2026-09-14
 
 ### Added
+- `t use TASK` (alias `pin`) saves the fallback task; `t current` now only prints
+- `-t TASK` / `-f` task options on every `t` command that acts on a task
+- `h herdr`: a Herdr plugin (`herdr-plugin/herdr-plugin.toml`) with actions `hiiro.switch`, `hiiro.todo-add`, `hiiro.todos`, `hiiro.shell`, and `hiiro.nvim` that open a popup running `t`; `h herdr install` copies and links it, `h herdr keys` prints keybindings
+- `Hiiro::TestHarness` understands `add_cmd`, `add_option`, `add_flag`, and `opts`
+- `t TASK todo show ID` and `tt TASK show ID` print one todo's text; `todo ls --plain` prints text only
 - Add `h env add NAME VALUE` and `h alias add NAME COMMAND...` to append safely quoted shell definitions, preferring existing zsh module files and falling back to the root dotfiles. Use native Hiiro options, including `opts.global` and `--`.
 - Add `h bin add NAME [COMMAND ...]` to generate executable `Hiiro.run` templates with optional empty `add_cmd` blocks. Serialize command names as Ruby symbols and refuse existing files or symlinks.
 - `t ls` and `t list` root commands list tasks like bare `t`
@@ -20,6 +36,8 @@
 - `h task start` and worktree listing failed with "Not a directory" when `~/work/.git` is a gitfile; git now runs in the parent directory
 
 ### Changed
+- `t` grammar is now command-first, `t COMMAND [TASK] [ARGS...]`, matching the old `h task` rule: the first positional word is the task when it names one (exact or unique prefix), otherwise the current task is used and the word stays in the payload. `.` is the current task, `-` selects orphan todos. `tt ...` is `t todo ...`. `Hiiro::TaskScope` is removed
+- `t todo add` no longer creates tasks; only `t new NAME` does
 - Move the task CLI into `lib/hiiro/task_cli.rb` (`Hiiro::TaskCli`); `exe/t` and `exe/tt` are thin `Hiiro.run` launchers and `bin/t`, `bin/tt` are symlinks
 - `t` requires `hiiro` like other bins instead of editing the load path; `task_scope` and `task_sessions` load with `hiiro`
 - `t` errors print without a backtrace; task, scope, and session errors subclass `Hiiro::Error`
