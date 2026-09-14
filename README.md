@@ -73,7 +73,8 @@ Commands that act on a task take it from the first positional argument when
 that word names a task (exact or unique case-sensitive prefix); otherwise the
 current task is used and the word stays in the payload, exactly like the old
 `h task` commands. `-t TASK` forces a task, `-f` picks one with a fuzzy finder,
-`.` is the current task, and `-` selects orphan todos. Ambiguous prefixes fail.
+`.` is the current task, and `-` selects orphan todos. On a terminal, an ambiguous
+prefix or a missing current task opens the fuzzy finder; non-interactive runs fail.
 
 The current task is the calling Herdr workspace, then the current directory
 inside a task home, code directory, worktree, or registered directory, then the

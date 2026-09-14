@@ -17,11 +17,11 @@ The command comes first. Commands that act on a task take it from the first posi
 
 1. If the first positional word names a task, exactly or by a unique case-sensitive prefix, it is the task and is removed from the arguments.
 2. Otherwise the current task is used and the word stays in the payload. So `t todo add fix build` adds to the current task and `t todo add prez fix build` adds to `prez`.
-3. An ambiguous prefix is an error rather than a guess.
+3. An ambiguous prefix opens the fuzzy finder over the matching tasks when stdin is a terminal, and is an error otherwise.
 
 `-t TASK` / `--task TASK` forces a task and fails if it does not exist. `-f` / `--find` picks one with `sk` or `fzf`. `.` is the current task, useful when a payload could be mistaken for a name: `t next . Finish slides`. `-` selects orphan todos in todo commands only. Words starting with `-` are never treated as task names. Passthrough commands (`todo add`, `sh`, `pane run`, and the AI launchers) accept `-t`, `--task=NAME`, and `-f` only as their leading arguments.
 
-The current task is resolved by `Hiiro::CurrentTask`: the calling Herdr workspace when `HERDR_*` variables identify one, then the working directory inside a task home, primary directory, worktree, or registered directory, then the task saved by `t use`. Ambiguous matches and stale or conflicting Herdr IDs are errors. Commands that only list, create, or show help never resolve the current task.
+The current task is resolved by `Hiiro::CurrentTask`: the calling Herdr workspace when `HERDR_*` variables identify one, then the working directory inside a task home, primary directory, worktree, or registered directory, then the task saved by `t use`. With no context at all, a terminal gets the fuzzy finder over every task; non-interactive runs fail. Ambiguous directory or workspace matches and stale or conflicting Herdr IDs are always errors. Commands that only list, create, or show help never resolve the current task.
 
 Task names may be `parent/child` for subtasks. `t new NAME` creates exactly `NAME`; nothing else creates tasks. Only `help`, `ls`, and `list` are reserved words; a task literally named `show` or `new` is reachable with `-t show`.
 
@@ -112,7 +112,7 @@ t pane run [TASK] ID|LABEL [--] COMMAND...
 t pane split [TASK] ID|LABEL [--direction right|down] [--directory PATH] [--command COMMAND]
 ```
 
-These require a running Herdr server. The workspace label is the task session or name with `.` replaced by `_`. `switch` focuses the existing workspace or creates it in the start directory (`--directory`, else primary directory, worktree, or home), and saves the task as the fallback when it was named explicitly. `--show` only prints the workspace, tabs, and panes. Tab and pane references match a live ID or label, then a unique prefix; with no reference and several candidates a fuzzy finder opens.
+These require a running Herdr server. The workspace label is the task session or name with `.` replaced by `_`. `switch` also accepts the name of a live Herdr workspace that belongs to no task, exactly or by unique prefix, and focuses it; a task with the same name wins. When the name is ambiguous, or no task or context is given, a terminal gets a fuzzy finder over tasks and loose workspaces, with duplicate workspace names numbered in the label only. `switch` focuses the existing task workspace or creates it in the start directory (`--directory`, else primary directory, worktree, or home), and saves the task as the fallback when it was named explicitly. `--show` only prints the workspace, tabs, and panes. Tab and pane references match a live ID or label, then a unique prefix; with no reference and several candidates a fuzzy finder opens.
 
 ## Native AI sessions
 
