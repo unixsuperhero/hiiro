@@ -7,6 +7,12 @@ require_relative 'git/pr'
 
 class Hiiro
   class Git
+    # Directory to pass to `git -C` for a repo path. REPO_PATH points at
+    # ~/work/.git, which is a gitfile in the bare layout, so use its parent.
+    def self.repo_dir(repo_path)
+      File.file?(repo_path.to_s) ? File.dirname(repo_path) : repo_path
+    end
+
     def self.root
       `git rev-parse --show-toplevel 2>/dev/null`.strip
     end
@@ -128,7 +134,7 @@ class Hiiro
 
     def add_worktree_detached(path, repo_path: nil)
       if repo_path
-        run_system('-C', repo_path, 'worktree', 'add', '--detach', path)
+        run_system('-C', self.class.repo_dir(repo_path), 'worktree', 'add', '--detach', path)
       else
         run_system('worktree', 'add', '--detach', path)
       end
@@ -136,7 +142,7 @@ class Hiiro
 
     def move_worktree(from, to, repo_path: nil)
       if repo_path
-        run_system('-C', repo_path, 'worktree', 'move', from, to)
+        run_system('-C', self.class.repo_dir(repo_path), 'worktree', 'move', from, to)
       else
         run_system('worktree', 'move', from, to)
       end

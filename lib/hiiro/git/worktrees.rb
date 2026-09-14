@@ -26,7 +26,7 @@ class Hiiro
 
       def self.fetch(repo_path: nil)
         output = if repo_path
-          `git -C #{repo_path.shellescape} worktree list --porcelain 2>/dev/null`
+          `git -C #{Hiiro::Git.repo_dir(repo_path).shellescape} worktree list --porcelain 2>/dev/null`
         else
           `git worktree list --porcelain 2>/dev/null`
         end
