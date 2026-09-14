@@ -3,3 +3,5 @@ Gemfile.lock
 pkg/
 tmp/
 bin/[^h]*
+!/bin/t
+!/test/bin/t_test.rb
