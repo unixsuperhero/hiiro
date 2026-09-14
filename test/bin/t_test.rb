@@ -692,6 +692,22 @@ class TaskCommandTest < Minitest::Test
     assert_equal ['herdr', 'pane', 'run', 'w1:p2', 'codex'], session_mutations.last
   end
 
+  def test_switch_matches_loose_herdr_workspaces_after_tasks_and_never_saves_them
+    live_workspace('w1', 'prez')
+    live_workspace('w3', 'servers')
+    live_workspace('w4', 'servers')
+    live_workspace('w5', 'scratch')
+    command('use', 'other')
+    assert_includes command('switch', 'scr'), 'w5 scratch'
+    assert_equal [['herdr', 'workspace', 'focus', 'w5']], mutations
+    assert_equal "other\n", command('current')
+    assert_match(/ambiguous/i, failure('switch', 'servers'))
+    assert_match(/no task or workspace/i, failure('switch', 'zzz'))
+    assert_match(/--show/, failure('switch', 'scratch', '--show'))
+    assert_includes command('switch', 'pre'), 'w1 prez'
+    assert_equal "prez\n", command('current')
+  end
+
   def test_todo_show_prints_only_text_and_plain_listing_omits_ids
     command('todo', 'add', 'prez', 'First item')
     command('todo', 'add', 'prez', 'Second item')

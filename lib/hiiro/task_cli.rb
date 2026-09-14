@@ -40,24 +40,37 @@ class Hiiro
         add_flag :find, short: :f, desc: 'Choose the task with a fuzzy finder'
       end
 
-      def task_names
-        Hiiro::TaskRecord.all_as_list.map(&:name)
-      end
-
       # Exact name, else unique prefix; ambiguous prefixes fail; nil when nothing matches.
+      # Exact name, else unique prefix. An ambiguous prefix opens the fuzzy finder
+      # over the candidates on a TTY and fails otherwise. nil when nothing matches.
       def lookup_task(reference)
         result = Hiiro::Matcher.new(Hiiro::TaskRecord.all_as_list, :name).by_prefix(reference.to_s)
         match = result.resolved
-        raise Error, "Ambiguous task #{reference}: #{result.matches.map { |m| m.item.name }.join(', ')}" if !match && result.ambiguous?
-        match&.item
+        return match.item if match
+        return nil unless result.ambiguous?
+        candidates = result.matches.map(&:item)
+        raise Error, "Ambiguous task #{reference}: #{candidates.map(&:name).join(', ')}" unless $stdin.tty?
+        pick_task(candidates)
+      end
+
+      def pick_task(candidates)
+        raise Error, 'No tasks; create one with t new NAME' if candidates.empty?
+        name = fuzzyfind(candidates.map(&:name))
+        raise Error, 'No task selected' if name.nil? || name.strip.empty?
+        candidates.find { |task| task.name == name.strip } || raise(Error, "No task named #{name.strip}")
       end
 
       def lookup_task!(reference)
         lookup_task(reference) || raise(Error, "Task not found: #{reference}; run t new #{reference}")
       end
 
+      # Current task from Herdr, directory, or the saved pin. With no context at all,
+      # a TTY gets the fuzzy finder over every task; ambiguous or stale context still fails.
       def current_task
         Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve!
+      rescue Hiiro::Error => e
+        raise unless $stdin.tty? && e.message.start_with?('No current task')
+        pick_task(Hiiro::TaskRecord.all_as_list)
       end
 
       # Old h task rule: [task, remaining_args]. The first positional is the task
@@ -80,11 +93,7 @@ class Hiiro
           end
         end
         return [lookup_task!(forced), args] if forced
-        if find
-          name = fuzzyfind(task_names)
-          raise Error, 'No task selected' if name.nil? || name.strip.empty?
-          return [lookup_task!(name.strip), args]
-        end
+        return [pick_task(Hiiro::TaskRecord.all_as_list), args] if find
         first = args.first
         if first == '.'
           args.shift
@@ -450,6 +459,65 @@ class Hiiro
         puts workspace
       end
 
+      # --- switch targets: tasks plus live Herdr workspaces that are not task workspaces ---
+
+      def loose_workspaces
+        return [] unless herdr_client.server_running?
+        labels = Hiiro::TaskRecord.all_as_list.map { |task| workspace_label(task) }
+        client.workspaces.reject { |workspace| labels.include?(workspace.name) }
+      end
+
+      # Fuzzy map over tasks and loose workspaces; duplicate workspace names are numbered
+      # in the label only, so the choice still maps to the exact workspace.
+      def pick_switch_target(tasks, workspaces)
+        raise Error, 'No tasks or workspaces to choose from' if tasks.empty? && workspaces.empty?
+        counts = workspaces.group_by(&:name).transform_values(&:length)
+        seen = Hash.new(0)
+        map = tasks.to_h { |task| [task.name, task] }
+        workspaces.each do |workspace|
+          seen[workspace.name] += 1
+          label = counts[workspace.name] > 1 ? "#{workspace.name} ##{seen[workspace.name]}" : workspace.name
+          map["#{label} (workspace)"] = workspace
+        end
+        fuzzyfind_from_map(map) || raise(Error, 'Nothing selected')
+      end
+
+      # [target, explicit]. A task wins over a workspace with the same name.
+      def switch_target(args)
+        args = args.dup
+        return [lookup_task!(opts.task), true] if opts.task
+        return [pick_switch_target(Hiiro::TaskRecord.all_as_list, loose_workspaces), true] if opts.find
+        first = args.first
+        if first && first != '.' && !first.start_with?('-')
+          args.shift
+          no_args!(args)
+          tasks = Hiiro::TaskRecord.all_as_list
+          workspaces = loose_workspaces
+          exact = tasks.find { |task| task.name == first }
+          return [exact, true] if exact
+          exact_ws = workspaces.select { |workspace| workspace.name == first }
+          return [exact_ws.first, false] if exact_ws.one?
+          task_matches = tasks.select { |task| task.name.start_with?(first) }
+          ws_matches = exact_ws.any? ? exact_ws : workspaces.select { |workspace| workspace.name.start_with?(first) }
+          return [task_matches.first, true] if task_matches.one? && ws_matches.empty?
+          return [ws_matches.first, false] if ws_matches.one? && task_matches.empty?
+          raise Error, "No task or workspace matches #{first}" if task_matches.empty? && ws_matches.empty?
+          names = (task_matches.map(&:name) + ws_matches.map { |w| "#{w.name} (workspace)" }).join(', ')
+          raise Error, "Ambiguous #{first}: #{names}" unless $stdin.tty?
+          target = pick_switch_target(task_matches, ws_matches)
+          return [target, target.is_a?(Hiiro::TaskRecord)]
+        end
+        args.shift if first == '.'
+        no_args!(args)
+        begin
+          [Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve!, false]
+        rescue Hiiro::Error => e
+          raise unless $stdin.tty? && e.message.start_with?('No current task')
+          target = pick_switch_target(Hiiro::TaskRecord.all_as_list, loose_workspaces)
+          [target, target.is_a?(Hiiro::TaskRecord)]
+        end
+      end
+
       # --- Worktrees (shared with h task via Hiiro::TaskManager) ---
 
       def tree_manager
@@ -668,10 +736,15 @@ class Hiiro
         end
 
         add_option :directory, desc: 'Existing start directory'
-        add_cmd(:switch, :workspace, args: ['task?'], opts: [*TASK_OPTIONS, :directory, :show]) do
-          explicit = opts.task || opts.find || (opts.args.first && opts.args.first != '.')
-          task = take_task_only(opts.args)
-          opts.show ? show_workspace(task) : open_workspace(task, save: explicit)
+        add_cmd(:switch, :workspace, args: ['task-or-workspace?'], opts: [*TASK_OPTIONS, :directory, :show]) do
+          target, explicit = switch_target(opts.args)
+          if target.is_a?(Hiiro::Herdr::Workspace)
+            raise Error, '--show applies to task workspaces' if opts.show
+            check_result(client.focus_workspace(target.id))
+            puts target
+          else
+            opts.show ? show_workspace(target) : open_workspace(target, save: explicit)
+          end
         end
 
         [%w[omp], %w[codex cdx], %w[claude cld]].each do |names|
