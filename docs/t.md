@@ -1,10 +1,10 @@
 # t command reference
 
-Reference for the repository's `bin/t` executable and `bin/tt` todo shortcut.
+Reference for the `t` executable and `tt` todo shortcut.
 
-`t` manages task records, next actions, todos, waiting-on information, documents, resource references, and task-associated Herdr terminals. It does not create Git worktrees or configure sparse checkout. Those operations belong to the separate `h task` commands.
+`t` manages task records, next actions, todos, waiting-on information, documents, resource references, git worktrees, and task-associated Herdr terminals. `h task` is a symlink to the same executable.
 
-`bin/t` contains the command declarations and `TaskCommands` helpers. `~/bin/t` and `~/bin/tt` are symlinks to the repository launchers. Both resolve their real paths and put the repository library first on Ruby's load path. Installing the Hiiro gem does not install these launchers.
+`exe/t` and `exe/tt` are gem executables installed with Hiiro. Each is a `Hiiro.run` launcher that calls `Hiiro::TaskCli.setup` or `Hiiro::TaskCli.setup_todo`; the command declarations and `Hiiro::TaskCli::Commands` helpers live in `lib/hiiro/task_cli.rb`. `bin/t` and `bin/tt` are symlinks to the `exe/` files. Expected failures raise `Hiiro::Error` and print only `ERROR: message` on stderr with exit status 1.
 
 ## Syntax and task selection
 
@@ -18,7 +18,7 @@ tt TASK [COMMAND...]
 
 Uppercase words are values to supply. Square brackets indicate optional arguments, and `...` means multiple words or arguments.
 
-Bare `t` lists every task, including active, waiting, done, and archived records. It does not select from context. `t TASK` shows the selected task. Only exact root `t help` displays generic usage and native scoped help without task lookup. Other first words are task references, including `new`, `show`, `edit`, `pry`, and `he`. There are no root `add`, `rm`, `list`, `ls`, `new`, or `show` actions.
+Bare `t`, `t ls`, and `t list` list every task, including active, waiting, done, and archived records, in aligned columns: name with the open todo count in parentheses (omitted when zero), status, then any `next:` and `waiting:` text. Open todos are those not done or skipped. The listing does not select from context. `t TASK` shows the selected task. Only exact root `t help` displays generic usage and native scoped help without task lookup. Other first words are task references, including `new`, `show`, `edit`, `pry`, and `he`. Only `help`, `ls`, and `list` are reserved root words; a task named `ls` or `list` must be reached by a unique prefix such as `t lis`. There are no root `add`, `rm`, `new`, or `show` actions.
 
 Named references prefer an exact task name, then a unique case-sensitive prefix. Ambiguous prefixes fail. Unknown names fail except for `t NAME new` and `t NAME todo add TEXT...`. Explicit `new` creates exactly `NAME`, without resolving it as a prefix of another task. Help never creates a task.
 
@@ -115,13 +115,21 @@ Options are scoped to commands, not universally available. `TASK` may be a name,
 
 | Command | Behavior |
 |---|---|
-| `t` | Lists all tasks alphabetically, regardless of status or context |
+| `t`, `t ls`, or `t list` | Lists all tasks alphabetically with open todo counts, regardless of status or context |
 | `t TASK` or `t TASK show` | Shows status, home, next action, todos, waiting text, code directory, workspace label, resources, and home Markdown documents |
 | `t TASK current` | Prints the resolved name; named references also save the fallback without changing focus |
 | `t NAME new` | Creates an active task and notes home; an exact existing name preserves its record and ensures the home exists |
 | `t TASK next [TEXT...]` | Stores text, prints it with no text, or removes it with `--clear` |
 | `t TASK waiting [TEXT...]` | Stores blocking text and sets waiting status; prints with no text; clears with `--clear` |
 | `t TASK status [STATE]` | Prints status or sets `active`, `waiting`, `done`, or `archived` |
+| `t TASK path` | Prints the start directory: primary directory, worktree, or task home |
+| `t TASK branch` | Prints the worktree's git branch, or `(detached)` |
+| `t TASK sh [CMD...]` | Changes to the start directory and execs a shell or the command |
+| `t TASK cd` | Sends `cd` to the current Herdr pane (requires `HERDR_PANE_ID`) |
+| `t TASK tree` | Prints the worktree name and path; fails when the task has none |
+| `t NAME tree new [--app APP] [--sparse GROUP]` | Creates the task if needed, creates or reuses a worktree under `~/work/NAME/main` (or `~/work/parent/child` for a subtask), records it, and opens the workspace when Herdr is running |
+| `t TASK tree rm` | Detaches the worktree from the task and its subtasks, keeping the directory and registering it as a directory resource |
+| `t TASK tree resume [TREE]` | Attaches an unassigned worktree by name, or via fuzzyfind with no name |
 | `t TASK done` | Sets status to done |
 | `t TASK archive` | Sets status to archived |
 
@@ -415,9 +423,11 @@ Hiiro also initializes its database and records CLI invocations. Reading task da
 
 | Source | Responsibility |
 |---|---|
-| `bin/t` | Task-scoped commands, resources, documents, and Herdr actions; target of `~/bin/t` |
-| `bin/tt` | Delegates to the task todo scope |
+| `exe/t`, `exe/tt` | Gem executables; `Hiiro.run` launchers over `Hiiro::TaskCli` (`bin/t`, `bin/tt` are symlinks) |
+| `lib/hiiro/task_cli.rb` | `Hiiro::TaskCli.setup`/`setup_todo` and the `Commands` module: task-scoped commands, resources, documents, and Herdr actions |
+| `lib/hiiro/current_task.rb` | Shared current-task resolution (Herdr workspace, working directory, saved pin) used by `TaskScope` and `Environment#task` |
 | `lib/hiiro/task_scope.rb` | Named/current/orphan reference resolution and cached task context |
+| `lib/hiiro/tasks.rb` | `TaskManager#create_tree` worktree creation shared with `t TASK tree new` |
 | `lib/hiiro/task_sessions.rb` | Native AI launch/resume dispatch and running-pane focus |
 | `lib/hiiro/task_record.rb` | Shared records, states, home naming, and resource identity |
 | `lib/hiiro/todo.rb` | Shared `TodoItem` rows and full-task-name association |

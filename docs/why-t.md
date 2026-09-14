@@ -73,7 +73,7 @@ That saves the explanation and changes the task's status to `waiting`. The next 
 }
 ```
 
-Bare `t` lists every task and status, including done and archived work. Active and waiting rows show their next-action and blocker text, so you can review what needs attention without opening every terminal.
+Bare `t` (or `t ls` / `t list`) lists every task and status, including done and archived work. Each name carries its open todo count, such as `prez (3)`, and active and waiting rows show their next-action and blocker text, so you can review what needs attention without opening every terminal.
 
 When the answer arrives:
 
@@ -303,4 +303,4 @@ Start with task names and useful next actions. Add documents, links, and termina
 
 ## Read next
 
-[The complete t command reference](t.md) covers every subcommand, option, alias, state transition, storage location, and Herdr/worktree side effect. The canonical implementation is the repository's `bin/t`, with `~/bin/t` as its symlink. Gem installation does not install the launcher.
+[The complete t command reference](t.md) covers every subcommand, option, alias, state transition, storage location, and Herdr/worktree side effect. The implementation is `Hiiro::TaskCli` in `lib/hiiro/task_cli.rb`, launched by the `t` and `tt` gem executables in `exe/`.

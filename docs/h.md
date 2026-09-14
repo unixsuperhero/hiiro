@@ -29,8 +29,7 @@ These subcommands are defined directly in `exe/h` or loaded from `lib/`:
 | [`h run`](h-run.md) | Run dev tools (linters, formatters, tests) against changed files | `lib/hiiro/runner_tool.rb` |
 | [`h service`](h-service.md) | Dev service management with Herdr, env files, and service groups | `lib/hiiro/service_manager.rb` |
 | `h setup` | Install plugins and bin scripts to `~/bin` | `exe/h` |
-| [`h subtask`](h-subtask.md) | Subtask management scoped to the current parent task | `lib/hiiro/tasks.rb` |
-| [`h task`](h-task.md) | Task management — worktree + Herdr workspace pairs, including external worktrees | `lib/hiiro/tasks.rb` |
+| [`h task`](h-task.md) | Symlink to `t`: task records, todos, worktrees, and Herdr workspaces | `lib/hiiro/task_cli.rb` |
 | `h version` | Print installed hiiro version (`-a` for all rbenv versions) | `exe/h` |
 
 ## External subcommands

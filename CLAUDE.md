@@ -508,6 +508,7 @@ ALWAYS update `README.md` and any files in `docs/` or other markdown files that 
 ## Key Files
 
 - `exe/h` - Entry point that loads lib/hiiro.rb
+- `exe/t`, `exe/tt` - Task CLI launchers over `Hiiro::TaskCli` (`lib/hiiro/task_cli.rb`)
 - `bin/h-*` - External subcommands (tmux wrappers, git helpers, jumplist, etc.)
 - `plugins/*.rb` - Reusable plugin modules (Pins, Project, Tasks, Notify)
 - `lib/hiiro.rb` - Main Hiiro class and Runners

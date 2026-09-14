@@ -61,13 +61,15 @@ h ping
 
 ### Task CLI
 
-The repository's `bin/t` contains the task commands and helpers, using Hiiro's
-`add_cmd` DSL and existing task records. `~/bin/t` and `~/bin/tt` are symlinks to
-the repository launchers; installing the gem does not install them. `t NAME new`
+`t` and `tt` are gem executables in `exe/`, installed alongside `h`. They are thin
+`Hiiro.run` launchers over `Hiiro::TaskCli` in `lib/hiiro/task_cli.rb`, which uses
+the `add_cmd` DSL and existing task records. `bin/t` and `bin/tt` are symlinks to
+the `exe/` files for running from a checkout with `ruby -Ilib bin/t`. `t NAME new`
 creates a task and its notes directory without creating a Git worktree.
 
-Use `t TASK COMMAND...`. Bare `t` lists every task, including done and archived
-tasks. `t TASK` shows a task. Only exact root `t help` displays generic usage and
+Use `t TASK COMMAND...`. Bare `t`, `t ls`, or `t list` lists every task, including
+done and archived tasks, with the count of open todos after each name. `t TASK`
+shows a task. Only exact root `t help` displays generic usage and
 native scoped help without looking up a task. Other first words are task
 references, even `new`, `show`, `edit`, or `he`.
 
@@ -112,7 +114,7 @@ without creating a task.
 Todos share the existing `todos` table with `h todo`. `t` writes only to the
 database and does not rewrite `todo.yml`. Adding or removing a todo does not
 change the task's next action, status, or saved selection. Task completion and
-archival preserve todos; `h task` behavior is unchanged.
+archival preserve todos. `h task` is a symlink to `t`, so both share one grammar.
 
 `t TASK omp`, `t TASK codex` or `cdx`, and `t TASK claude` or `cld` start fresh
 native CLI sessions in new focused Herdr tabs. Claude always runs `claude`.
@@ -139,18 +141,20 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h setup` | Install plugins and subcommands to system paths |
 | `h edit` | Open the h script in your editor |
 | `h alert` | macOS desktop notifications via terminal-notifier |
-| `h task` | Task management across git worktrees, including existing external worktrees (via Tasks plugin) |
-| `h subtask` | Subtask management within tasks (via Tasks plugin) |
+| `h task` | Same program as `t`: task records, todos, worktrees (`t NAME tree new`), and Herdr workspaces |
 
 ### External Subcommands
 
 | Command | Description |
 |---------|-------------|
+| `h alias` | Append safely quoted zsh aliases |
 | `h app` | Manage app directories within tasks/projects |
+| `h bin` | Create, list, and edit Hiiro executables |
 | `h branch` | Git branch management with fuzzy selection and copy |
 | `h claude` | Claude CLI wrapper with Herdr split support |
 | `h commit` | Select commits using fuzzy finder |
 | `h config` | Open config files (vim, git, Herdr, zsh, starship, claude) |
+| `h env` | Append safely quoted environment variables |
 | `h link` | Manage saved links with URL, description, and shorthand |
 | `h pane` | Herdr pane management |
 | `h plugin` | Manage hiiro plugins (list, edit, search) |
@@ -167,6 +171,33 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h wtree` | Git worktree management |
 
 `h claude agents|commands|skills -a` prints the absolute file path for each matching `.claude` tool, including `SKILL.md` for skills.
+
+### Shell helpers
+
+```sh
+h env add exam ple
+h alias add ll 'ls -al'
+h alias add --global PAGER '| less'
+h bin add scratch
+h bin add josh list show
+```
+
+`h env add NAME VALUE` appends a literal `export NAME="VALUE"` to
+`~/.zshenv.d/vars.zsh` when that file exists, otherwise to `~/.zshenv`.
+`h alias add NAME COMMAND...` similarly prefers `~/.zshrc.d/aliases.zsh`,
+falling back to `~/.zshrc`. Existing contents are preserved. A single quoted
+command string preserves shell syntax; separate command arguments retain their
+argument boundaries. Use `--global` or `-g` for a global zsh alias.
+
+These commands use native Hiiro option parsing and help. Use `--` before
+flag-like data, for example `h env add LABEL -- --literal` or
+`h alias add inspect -- tool --help`. Start a new shell or source the relevant
+configuration file to apply additions.
+
+`h bin add NAME [COMMAND ...]` creates an executable `~/bin/h-NAME` using
+`Hiiro.run`. Without commands its block is empty; each command adds an empty
+`add_cmd` block with a Ruby symbol. Existing files and symlinks are never
+overwritten. See the [bin command reference](docs/h-bin.md).
 
 ## Abbreviations
 
@@ -187,7 +218,7 @@ Plugins are Ruby modules loaded from `~/.config/hiiro/plugins/`:
 |--------|-------------|
 | Pins | Per-command YAML key-value storage |
 | Project | Project directory navigation with Herdr workspace management |
-| Tasks | Task lifecycle management across git worktrees with external-worktree registration and subtask support |
+| Tasks | `Hiiro::TaskManager` worktree creation and current-task environment used by `t`, `h service`, `h run`, and `h file` |
 | Notify | Herdr desktop notifications |
 
 ## Adding Subcommands
@@ -294,6 +325,13 @@ shared with nested groups without consuming its name again.
 For a CLI that should dispatch only registered blocks, pass
 `external_commands: false` to `Hiiro.run` and its `run_child` or `make_child` calls. This
 prevents unrelated same-prefix executables on `PATH` from taking precedence.
+Pass `builtin_commands: false` as well to skip the automatic `pry` and `edit`
+commands, for CLIs whose first word is data rather than a command name.
+
+Raise `Hiiro::Error` (or a subclass) for expected user-facing failures such as
+bad arguments or missing records. `Hiiro#run` prints `ERROR: message` to stderr
+and exits 1 without a backtrace; any other exception still prints its backtrace.
+`open_default(target)` opens a path or URL with the OS handler (`open` or `xdg-open`).
 
 ## Writing Plugins
 
