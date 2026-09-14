@@ -20,7 +20,7 @@ herdr server reload-config
 | `hiiro.todo-add` | `prefix+shift+a` | Fuzzy-pick a task (current task first), type the todo text, then `t NAME todo add TEXT` |
 | `hiiro.todos` | `prefix+shift+y` | Fuzzy-pick an open todo of the current task and copy its text to the clipboard |
 | `hiiro.shell` | `prefix+shift+s` | 90% popup running `t sh` in the current task's start directory |
-| `hiiro.nvim` | `prefix+shift+e` | 90% popup running `$EDITOR` (default `nvim`) in the current task's notes home |
+| `hiiro.nvim` | `prefix+shift+e` | 90% popup running bare `$EDITOR` (default `nvim`) in the working directory of the pane the key was pressed in |
 
 The current task resolves through `Hiiro::CurrentTask`: the popup's Herdr workspace, then the working directory, then the task saved with `t use TASK`. Errors print in the popup for two seconds before it closes.
 

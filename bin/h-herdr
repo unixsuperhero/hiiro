@@ -86,8 +86,20 @@ Hiiro.run(*ARGV, external_commands: false) do
     name = opts.args.first
     raise Hiiro::Error, "Unknown action #{name}; one of #{ACTIONS.join(', ')}" unless ACTIONS.include?(name)
     size = %w[shell nvim].include?(name) ? %w[--width 90% --height 90%] : []
+    extra = []
+    if name == 'nvim' && (cwd = calling_pane_cwd)
+      extra = ['--cwd', cwd, '--env', "HIIRO_HERDR_CWD=#{cwd}"]
+    end
     system(herdr_bin, 'plugin', 'pane', 'open', '--plugin', PLUGIN_ID, '--entrypoint', 'popup',
-           '--env', "HIIRO_HERDR_ACTION=#{name}", *size, '--focus')
+           '--env', "HIIRO_HERDR_ACTION=#{name}", *size, *extra, '--focus')
+  end
+
+  # Working directory of the pane the key was pressed in (HERDR_PANE_ID, else the focused pane).
+  def calling_pane_cwd
+    pane = ENV['HERDR_PANE_ID'] ? herdr_client.get_pane(ENV['HERDR_PANE_ID']) : herdr_client.panes(all: true).find(&:focused?)
+    pane && (pane.foreground_cwd || pane.cwd)
+  rescue StandardError
+    nil
   end
 
   # Runs inside the popup pane (real TTY, HERDR_WORKSPACE_ID set by Herdr).
@@ -144,10 +156,9 @@ Hiiro.run(*ARGV, external_commands: false) do
     when 'shell'
       exec('t', 'sh')
     when 'nvim'
-      task = Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve!
-      FileUtils.mkdir_p(task.home)
-      Dir.chdir(task.home)
-      exec(ENV['EDITOR'] || 'nvim', '.')
+      cwd = ENV['HIIRO_HERDR_CWD']
+      Dir.chdir(cwd) if cwd && Dir.exist?(cwd)
+      exec(ENV['EDITOR'] || 'nvim')
     end
   rescue Hiiro::Error => e
     pause("ERROR: #{e.message}")

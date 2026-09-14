@@ -34,7 +34,7 @@ command = ["h", "herdr", "action", "shell"]
 
 [[actions]]
 id = "nvim"
-title = "nvim in the current task notes"
+title = "nvim in the current pane directory"
 contexts = ["workspace"]
 command = ["h", "herdr", "action", "nvim"]
 
