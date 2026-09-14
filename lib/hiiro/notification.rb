@@ -13,7 +13,8 @@ class Hiiro
 
     def options
       @options ||= Options.parse(args) do
-        option(:sound, short: :s, default: 'basso', desc: 'sound name')
+        option(:sound, short: :s, default: 'Basso', desc: 'macOS system sound name, or none')
+        option(:sound_alias, short: :S, desc: 'alias for -s')
         option(:title, short: :t, desc: 'title')
         option(:message, short: :m, desc: 'message')
         option(:link, short: :l, desc: 'link to open')
@@ -25,32 +26,28 @@ class Hiiro
       @args ||= hiiro.args
     end
 
-    def sounds
-      custom = Dir.glob(File.join(Dir.home, '.config/hiiro/sounds/*'))
-
-      @sounds ||= custom.each_with_object({}) do |fn, h|
-        basename = File.basename(fn, File.extname(fn))
-        h[basename.downcase] = fn
-      end
+    # System sound name for terminal-notifier's -sound, or nil for silent.
+    # Herdr has its own sounds, so no separate afplay process is started.
+    def sound
+      name = (options.sound_alias || options.sound).to_s.strip
+      return nil if name.empty? || name.casecmp?('none')
+      name == 'default' ? name : name.capitalize
     end
 
-    def show
-      return unless has_cmd?
-
+    def command
       cmd = [binpath]
       cmd += ['-message', options.message] if options.message
       cmd += ['-title', options.title.tr('()[]', '')] if options.title
       cmd += ['-open', options.link] if options.link
       cmd += ['-execute', options.command] if options.command
-      Process.detach(spawn(*cmd))
-
-      play_sound
+      cmd += ['-sound', sound] if sound
+      cmd
     end
 
-    def play_sound
-      if options.sound && sounds[options.sound]
-        Process.detach(spawn('afplay', sounds[options.sound.downcase]))
-      end
+    def show
+      return unless has_cmd?
+
+      Process.detach(spawn(*command))
     end
 
     def binpath

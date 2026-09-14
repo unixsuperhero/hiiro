@@ -331,7 +331,7 @@ macOS notification wrapper using terminal-notifier:
 
 ```ruby
 Hiiro::Notification.show(hiiro)   # Show notification based on hiiro.args
-# Supports: -m message, -t title, -l link, -c command, -s sound
+# Supports: -m message, -t title, -l link, -c command, -s sound (macOS system sound name via terminal-notifier -sound; none for silent)
 ```
 
 ### Hiiro::Queue (lib/hiiro/queue.rb)
