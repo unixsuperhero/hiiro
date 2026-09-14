@@ -140,6 +140,26 @@ class Hiiro
       names.each { |name| @subcmds[name.to_sym] = block }
     end
 
+    # Capture add_cmd registrations (same table as add_subcmd); run_subcmd parses
+    # args into `opts` so add_cmd blocks that read opts.args work under the harness.
+    def add_cmd(*names, args: [], opts: [], passthrough: false, &block)
+      names.each { |name| @subcmds[name.to_sym] = block }
+    end
+
+    def add_option(name, **kwargs)
+      options.option(name, **kwargs)
+    end
+
+    def add_flag(name, **kwargs)
+      options.flag(name, **kwargs)
+    end
+
+    def options
+      @options ||= Hiiro::Options.setup {}
+    end
+
+    attr_reader :opts
+
     # Capture default subcommand
     def add_default(&block)
       @default_subcmd = block
@@ -149,6 +169,7 @@ class Hiiro
     def run_subcmd(name, *args)
       block = @subcmds[name.to_sym]
       raise "Unknown subcmd: #{name}. Available: #{@subcmds.keys.inspect}" unless block
+      @opts = options.parse(args)
       instance_exec(*args, &block)
     end
 
