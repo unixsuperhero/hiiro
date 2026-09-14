@@ -121,7 +121,6 @@ class HerdrEffectsTest < Minitest::Test
     assert_equal ['herdr', 'pane', 'run', 'w1:p2', 'claude'], @executor.calls_to(:run).last[:args]
   end
 
-
   def test_default_executor_is_real
     herdr = Hiiro::Herdr.new
     assert_instance_of Hiiro::Effects::Executor, herdr.instance_variable_get(:@executor)
