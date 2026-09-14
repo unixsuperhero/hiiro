@@ -2,10 +2,14 @@
 
 ## [Unreleased]
 
-## [0.1.369] - 2026-09-14
+## [0.1.370] - 2026-09-14
 
 ### Added
 - `t ls` marks tasks with an open Herdr workspace with `@` and lists workspaces that belong to no task
+
+## [0.1.369] - 2026-09-14
+
+### Added
 - `t switch NAME` matches live Herdr workspaces that belong to no task, and the fuzzy finder for `switch` lists tasks plus those workspaces, numbering duplicate workspace names
 - `t` opens the fuzzy finder instead of failing when a task prefix is ambiguous or no current task can be resolved, when stdin is a terminal
 
