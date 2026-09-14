@@ -186,8 +186,31 @@ class Hiiro
         []
       end
 
+      # All live panes grouped by workspace id, or {} when Herdr is not running.
+      def live_panes
+        @live_panes ||= begin
+          herdr_client.server_running? ? client.panes(all: true).to_a.group_by(&:workspace_id) : {}
+        rescue Hiiro::Error
+          {}
+        end
+      end
+
+      # "ID  ~/dir  agent (status)  command line" for listings and pickers.
+      def pane_line(pane)
+        dir = (pane.foreground_cwd || pane.cwd).to_s.sub(/\A#{Regexp.escape(Dir.home)}(?=\/|\z)/, '~')
+        what = []
+        what << "#{pane.agent}#{pane.agent_status ? " (#{pane.agent_status})" : ''}" if pane.agent
+        what << (pane.foreground_command || (pane.agent ? nil : 'shell'))
+        [pane.id, dir, *what.compact].reject(&:empty?).join('  ')
+      end
+
+      def print_panes(workspace_id, indent: '    ')
+        live_panes.fetch(workspace_id, []).each { |pane| puts "#{indent}#{pane_line(pane)}" }
+      end
+
       # Tasks with open todo counts, an @ marker when the task workspace is open,
-      # then any live Herdr workspaces that belong to no task.
+      # then any live Herdr workspaces that belong to no task. Panes are listed
+      # under every open workspace with their directory and foreground command.
       def list_tasks
         tasks = Hiiro::TaskRecord.all_as_list
         workspaces = live_workspaces
@@ -211,11 +234,18 @@ class Hiiro
         end
         name_col = rows.map { |row| row[0].length }.max || 0
         status_col = rows.map { |row| row[1].length }.max || 0
-        rows.each { |label, status, detail| puts format("%-#{name_col}s  %-#{status_col}s  %s", label, status, detail).rstrip }
+        rows.each_with_index do |(label, status, detail), index|
+          puts format("%-#{name_col}s  %-#{status_col}s  %s", label, status, detail).rstrip
+          workspace = workspaces.find { |candidate| candidate.name == workspace_label(tasks[index]) }
+          print_panes(workspace.id) if workspace
+        end
         return if loose.empty?
         puts unless rows.empty?
         puts 'Workspaces without a task:'
-        loose.each { |workspace| puts "  #{workspace.name}  #{workspace.id}" }
+        loose.each do |workspace|
+          puts "  #{workspace.name}  #{workspace.id}"
+          print_panes(workspace.id)
+        end
       end
 
 
@@ -485,10 +515,11 @@ class Hiiro
         client.workspaces.reject { |workspace| labels.include?(workspace.name) }
       end
 
-      # Fuzzy map over tasks and loose workspaces; duplicate workspace names are numbered
-      # in the label only, so the choice still maps to the exact workspace.
-      def pick_switch_target(tasks, workspaces)
-        raise Error, 'No tasks or workspaces to choose from' if tasks.empty? && workspaces.empty?
+      # Fuzzy map over tasks, loose workspaces, and live panes; duplicate workspace
+      # names are numbered in the label only, so the choice still maps to the exact one.
+      def pick_switch_target(tasks, workspaces, panes: nil)
+        panes = live_panes.values.flatten if panes.nil?
+        raise Error, 'No tasks, workspaces, or panes to choose from' if tasks.empty? && workspaces.empty? && panes.empty?
         counts = workspaces.group_by(&:name).transform_values(&:length)
         seen = Hash.new(0)
         map = tasks.to_h { |task| [task.name, task] }
@@ -497,7 +528,14 @@ class Hiiro
           label = counts[workspace.name] > 1 ? "#{workspace.name} ##{seen[workspace.name]}" : workspace.name
           map["#{label} (workspace)"] = workspace
         end
+        panes.each { |pane| map["#{pane_line(pane)} (pane)"] = pane }
         fuzzyfind_from_map(map) || raise(Error, 'Nothing selected')
+      end
+
+      def focus_pane_target(pane)
+        check_result(client.focus_workspace(pane.workspace_id))
+        check_result(client.focus_pane(pane.id), "Could not focus pane #{pane.id}")
+        puts pane_line(pane)
       end
 
       # [target, explicit]. A task wins over a workspace with the same name.
@@ -513,6 +551,8 @@ class Hiiro
           workspaces = loose_workspaces
           exact = tasks.find { |task| task.name == first }
           return [exact, true] if exact
+          pane = live_panes.values.flatten.find { |candidate| candidate.id == first }
+          return [pane, false] if pane
           exact_ws = workspaces.select { |workspace| workspace.name == first }
           return [exact_ws.first, false] if exact_ws.one?
           task_matches = tasks.select { |task| task.name.start_with?(first) }
@@ -522,7 +562,7 @@ class Hiiro
           raise Error, "No task or workspace matches #{first}" if task_matches.empty? && ws_matches.empty?
           names = (task_matches.map(&:name) + ws_matches.map { |w| "#{w.name} (workspace)" }).join(', ')
           raise Error, "Ambiguous #{first}: #{names}" unless $stdin.tty?
-          target = pick_switch_target(task_matches, ws_matches)
+          target = pick_switch_target(task_matches, ws_matches, panes: [])
           return [target, target.is_a?(Hiiro::TaskRecord)]
         end
         args.shift if first == '.'
@@ -756,7 +796,10 @@ class Hiiro
         add_option :directory, desc: 'Existing start directory'
         add_cmd(:switch, :workspace, args: ['task-or-workspace?'], opts: [*TASK_OPTIONS, :directory, :show]) do
           target, explicit = switch_target(opts.args)
-          if target.is_a?(Hiiro::Herdr::Workspace)
+          if target.is_a?(Hiiro::Herdr::Pane)
+            raise Error, '--show applies to task workspaces' if opts.show
+            focus_pane_target(target)
+          elsif target.is_a?(Hiiro::Herdr::Workspace)
             raise Error, '--show applies to task workspaces' if opts.show
             check_result(client.focus_workspace(target.id))
             puts target
