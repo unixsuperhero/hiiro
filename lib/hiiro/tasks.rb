@@ -175,27 +175,8 @@ class Hiiro
       task_name = scope == :subtask ? "#{current_parent_task.name}/#{name}" : name
       subtree_name = scope == :subtask ? "#{current_parent_task.name}/#{name}" : "#{name}/main"
 
-      target_path = File.join(Hiiro::WORK_DIR, subtree_name)
-
-      git = Hiiro::Git.new(nil, Hiiro::REPO_PATH)
-      available = find_available_tree
-      if available
-        puts "Renaming worktree '#{available.name}' to '#{subtree_name}'..."
-        FileUtils.mkdir_p(File.dirname(target_path))
-        unless git.move_worktree(available.path, target_path, repo_path: Hiiro::REPO_PATH)
-          puts "ERROR: Failed to rename worktree"
-          return
-        end
-      else
-        puts "Creating new worktree '#{subtree_name}'..."
-        FileUtils.mkdir_p(File.dirname(target_path))
-        unless git.add_worktree_detached(target_path, repo_path: Hiiro::REPO_PATH)
-          puts "ERROR: Failed to create worktree"
-          return
-        end
-      end
-
-      apply_sparse_checkout(target_path, sparse_groups) if sparse_groups.any?
+      target_path = create_tree(subtree_name, sparse_groups: sparse_groups)
+      return unless target_path
 
       session_name = task_name
       task = Task.new(name: task_name, tree: subtree_name, session: session_name)
@@ -211,6 +192,33 @@ class Hiiro
       hiiro.start_herdr_workspace(session_name, start_directory: Dir.pwd)
 
       puts "Started task '#{task_name}' in worktree '#{subtree_name}'"
+    end
+
+    # Create (or reuse an unassigned) worktree under WORK_DIR and return its path,
+    # or nil on failure. Shared by `h task start` and `t TASK tree new`.
+    def create_tree(subtree_name, sparse_groups: [])
+      target_path = File.join(Hiiro::WORK_DIR, subtree_name)
+
+      git = Hiiro::Git.new(nil, Hiiro::REPO_PATH)
+      available = find_available_tree
+      if available
+        puts "Renaming worktree '#{available.name}' to '#{subtree_name}'..."
+        FileUtils.mkdir_p(File.dirname(target_path))
+        unless git.move_worktree(available.path, target_path, repo_path: Hiiro::REPO_PATH)
+          puts "ERROR: Failed to rename worktree"
+          return nil
+        end
+      else
+        puts "Creating new worktree '#{subtree_name}'..."
+        FileUtils.mkdir_p(File.dirname(target_path))
+        unless git.add_worktree_detached(target_path, repo_path: Hiiro::REPO_PATH)
+          puts "ERROR: Failed to create worktree"
+          return nil
+        end
+      end
+
+      apply_sparse_checkout(target_path, sparse_groups) if sparse_groups.any?
+      target_path
     end
 
     def switch_to_task(task, app_name: nil, force: false)
@@ -1463,10 +1471,11 @@ class Hiiro
     end
 
     def name
-      @name ||= if path.start_with?(Hiiro::WORK_DIR + '/')
-        path.sub(Hiiro::WORK_DIR + '/', '')
-      else
-        File.basename(path)
+      @name ||= begin
+        roots = [Hiiro::WORK_DIR]
+        roots << File.realpath(Hiiro::WORK_DIR) if Dir.exist?(Hiiro::WORK_DIR)
+        root = roots.uniq.find { |dir| path.start_with?(dir + '/') }
+        root ? path.delete_prefix(root + '/') : File.basename(path)
       end
     end
 
@@ -1683,13 +1692,17 @@ class Hiiro
     end
 
     def task
+      return @task if defined?(@task)
+
+      s = session
+      t = tree
+      @task = all_tasks.find { |task|
+        (s && task.session_name == s.name) ||
+          (t && (task.tree_name == t.name || task.tree_name == t.path))
+      }
       @task ||= begin
-        s = session
-        t = tree
-        all_tasks.find { |task|
-          (s && task.session_name == s.name) ||
-            (t && (task.tree_name == t.name || task.tree_name == t.path))
-        }
+        record = CurrentTask.new(herdr: -> { Hiiro::Herdr.client }, cwd: path, pin: false).resolve
+        record && all_tasks.find { |task| task.name == record.name }
       end
     end
 

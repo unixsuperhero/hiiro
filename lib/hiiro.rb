@@ -6,6 +6,7 @@ require "ostruct"
 require 'awesome_print'
 
 require_relative "hiiro/version"
+require_relative "hiiro/error"
 require_relative "hiiro/config"
 require_relative "hiiro/effects"
 require_relative "hiiro/db"
@@ -46,6 +47,10 @@ require_relative "hiiro/pane_home"
 require_relative "hiiro/pin_record"
 require_relative "hiiro/reminder"
 require_relative 'hiiro/registry'
+require_relative 'hiiro/current_task'
+require_relative 'hiiro/task_scope'
+require_relative 'hiiro/task_sessions'
+require_relative 'hiiro/task_cli'
 require_relative 'hiiro/tui'
 
 class String
@@ -65,7 +70,7 @@ class Hiiro
   WORK_DIR = File.join(Dir.home, 'work')
   REPO_PATH = File.join(WORK_DIR, '.git')
 
-  def self.init(*oargs, plugins: [], logging: false, tasks: false, task_scope: nil, **values, &block)
+  def self.init(*oargs, plugins: [], logging: false, tasks: false, task_scope: nil, builtin_commands: true, **values, &block)
     load_env
     Hiiro::DB.setup!
 
@@ -98,24 +103,14 @@ class Hiiro
     new(h_bin, *h_args, logging: logging, tasks: tasks, task_scope: task_scope, **values).tap do |hiiro|
       hiiro.load_plugins(plugins)
 
-      hiiro.add_subcommand(:pry) { |*args|
-        binding.pry
-      }
+      if builtin_commands
+        hiiro.add_subcommand(:pry) { |*args|
+          binding.pry
+        }
 
-      hiiro.add_subcmd(:edit, **values) { |*args|
-        hiiro.edit_files(hiiro.bin)
-      }
-
-      if hiiro.tasks_enabled?
-        hiiro.add_subcmd(:task) do |*args|
-          tm = TaskManager.new(hiiro, scope: :task)
-          Tasks.build_hiiro(hiiro, tm).run
-        end
-
-        hiiro.add_subcmd(:subtask) do |*args|
-          tm = TaskManager.new(hiiro, scope: :subtask)
-          Tasks.build_hiiro(hiiro, tm).run
-        end
+        hiiro.add_subcmd(:edit, **values) { |*args|
+          hiiro.edit_files(hiiro.bin)
+        }
       end
 
       if block
@@ -132,8 +127,8 @@ class Hiiro
     Options.setup(&block)
   end
 
-  def self.run(*args, plugins: [], logging: false, tasks: false, task_scope: nil, **values, &block)
-    hiiro = init(*args, plugins:, logging:, tasks:, task_scope:, **values, &block)
+  def self.run(*args, plugins: [], logging: false, tasks: false, task_scope: nil, builtin_commands: true, **values, &block)
+    hiiro = init(*args, plugins:, logging:, tasks:, task_scope:, builtin_commands:, **values, &block)
 
     hiiro.run
   end
@@ -227,6 +222,12 @@ class Hiiro
     Hiiro::Config.open(file, dir: dir)
   end
 
+  # Open a file, directory, or URL with the OS default handler.
+  def open_default(target)
+    executable = RUBY_PLATFORM.include?('darwin') ? 'open' : 'xdg-open'
+    system(executable, target)
+  end
+
   def herdr_client
     @herdr_client ||= Herdr.client!(self)
   end
@@ -276,6 +277,8 @@ class Hiiro
     handle_result(result)
 
     exit 1
+  rescue Hiiro::Error => e
+    abort "ERROR: #{e.message}"
   rescue => e
     puts "ERROR: #{e.message}"
     puts e.backtrace
