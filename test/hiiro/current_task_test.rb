@@ -10,6 +10,9 @@ class CurrentTaskTest < Minitest::Test
 
   def teardown
     FileUtils.remove_entry(@dir)
+    Hiiro::TaskResource.dataset.delete
+    Hiiro::TaskRecord.dataset.delete
+    Hiiro::PinRecord.dataset.delete
   end
 
   def test_resolves_task_from_working_directory_inside_code_or_registered_directory
