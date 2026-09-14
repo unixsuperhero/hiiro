@@ -2,10 +2,17 @@
 
 ## [Unreleased]
 
+## [0.1.374] - 2026-09-14
+
+### Changed
+- `h alert` plays sounds through terminal-notifier's `-sound` (macOS system sound names, `none` for silent, `-S` accepted as an alias for `-s`) instead of a separate `afplay` process
+
+### Removed
+- Support for custom sound files in `~/.config/hiiro/sounds/`
+
 ## [0.1.372] - 2026-09-14
 
 ### Changed
-- `h alert` plays sounds through terminal-notifier's `-sound` (macOS system sound names, `none` for silent, `-S` accepted as an alias for `-s`) instead of a separate `afplay` process; custom `~/.config/hiiro/sounds` files are no longer used
 - `h bg run` reuses an idle shell pane in the `h-bg` workspace and opens a new tab only when every pane is busy, instead of one tab per command
 
 ## [0.1.371] - 2026-09-14
