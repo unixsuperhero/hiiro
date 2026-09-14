@@ -3,6 +3,26 @@
 require 'hiiro'
 
 Hiiro.run do
+  add_cmd :add, args: ['NAME', 'COMMAND...'] do
+    name, *commands = opts.args
+    name = name&.delete_prefix('h-')
+    abort 'Use a command name containing letters, digits, underscores, or hyphens' unless name&.match?(/\A[A-Za-z0-9][A-Za-z0-9_-]*\z/)
+    abort 'Subcommand names cannot be empty' if commands.any?(&:empty?)
+
+    path = File.join(Dir.home, 'bin', "h-#{name}")
+    body = commands.map { |command| "  add_cmd #{command.to_sym.inspect} do\n  end" }.join("\n\n")
+    template = "#!/usr/bin/env ruby\n\nrequire 'hiiro'\n\nHiiro.run do\n"
+    template << "#{body}\n" unless body.empty?
+    template << "end\n"
+
+    FileUtils.mkdir_p(File.dirname(path))
+    File.open(path, File::WRONLY | File::CREAT | File::EXCL, 0o755) do |file|
+      file.write(template)
+      file.chmod(0o755)
+    end
+    puts path
+  end
+
   add_subcmd(:list) do |*subcmd_names|
     patterns = subcmd_names.flatten.compact.map { |sc|
       sc.sub(/^(?!h-)/, '{h-,}')

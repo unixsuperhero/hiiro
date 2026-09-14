@@ -97,6 +97,7 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
       'github' => %w[pr],
       'claude' => %w[claude],
       'hiiro'  => %w[bin plugin],
+      'task'   => %w[task],
       'other'  => %w[app bg config link misc project todo],
     }
 
