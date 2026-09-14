@@ -66,12 +66,12 @@ class Hiiro
     end
 
     def pinned_task
-      raise Error, 'No current task; supply a task name or run t TASK current' unless @pin
+      raise Error, 'No current task; supply a task name or run t use NAME' unless @pin
 
       saved = PinRecord.find_key('t', 'current_task')
-      raise Error, 'No current task; supply a task name or run t TASK current' unless saved
+      raise Error, 'No current task; supply a task name or run t use NAME' unless saved
 
-      TaskRecord[saved.value] || raise(Error, 'Saved task no longer exists; run t TASK current')
+      TaskRecord[saved.value] || raise(Error, 'Saved task no longer exists; run t use NAME')
     end
 
     def workspace_label(task)
