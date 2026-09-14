@@ -2,6 +2,33 @@
 
 ## [Unreleased]
 
+### Added
+- Add `h env add NAME VALUE` and `h alias add NAME COMMAND...` to append safely quoted shell definitions, preferring existing zsh module files and falling back to the root dotfiles. Use native Hiiro options, including `opts.global` and `--`.
+- Add `h bin add NAME [COMMAND ...]` to generate executable `Hiiro.run` templates with optional empty `add_cmd` blocks. Serialize command names as Ruby symbols and refuse existing files or symlinks.
+- `t ls` and `t list` root commands list tasks like bare `t`
+- `Hiiro::Error`: `Hiiro#run` prints only `ERROR: message` for it, no backtrace
+- `builtin_commands: false` option for `Hiiro.run`/`run_child` to skip the automatic `pry` and `edit` commands
+- `Hiiro#open_default(target)` opens a path or URL with `open`/`xdg-open`
+- `t` and `tt` are gem executables (`exe/t`, `exe/tt`) installed with Hiiro
+- `t TASK tree new|rm|resume`, `t TASK tree`, `t TASK path`, `t TASK branch`, `t TASK sh`, and `t TASK cd` bring worktree and shell commands from `h task` into `t`; subtasks are `parent/child` names
+- `Hiiro::CurrentTask`: one resolver for the current task (Herdr workspace, working directory, saved pin) used by `t` and by `Environment#task`
+- `Hiiro::Git.repo_dir` so worktree commands work when `~/work/.git` is a gitfile pointing at the bare repo
+
+### Fixed
+- `h task start` and worktree listing failed with "Not a directory" when `~/work/.git` is a gitfile; git now runs in the parent directory
+
+### Changed
+- Move the task CLI into `lib/hiiro/task_cli.rb` (`Hiiro::TaskCli`); `exe/t` and `exe/tt` are thin `Hiiro.run` launchers and `bin/t`, `bin/tt` are symlinks
+- `t` requires `hiiro` like other bins instead of editing the load path; `task_scope` and `task_sessions` load with `hiiro`
+- `t` errors print without a backtrace; task, scope, and session errors subclass `Hiiro::Error`
+- `t` saves the current task through the `PinRecord` model and resolves resources, documents, tabs, and panes with `Hiiro::Matcher`, accepting unique prefixes and offering fuzzyfind when no reference is given
+- `tt` runs the todo scope in-process instead of exec'ing `t`
+- `h task` is now a symlink to `t` (`bin/h-task` -> `exe/t`); the inline `h task` and `h subtask` subcommands are gone, and `h task start|stop|resume|switch|sh|cd|path|branch|todo` map to `t` commands (see docs/h-task.md)
+- `Environment#task` also matches the working directory against task homes, primary directories, and registered directories
+- `TaskManager#start_task` uses the extracted `create_tree`
+- Task listing prints aligned columns with the open todo count after each name, e.g. `prez (3)`, plus `next:`/`waiting:` text
+- `ls` and `list` are now reserved root words in `t`; tasks with those exact names need a unique prefix
+
 ## [0.1.366] - 2026-09-14
 
 ### Changed
