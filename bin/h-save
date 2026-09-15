@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+
+require "hiiro"
+require "base64"
+require "digest"
+require "fileutils"
+require "open3"
+
+Hiiro.run(*ARGV, builtin_commands: false) do
+  add_default do |*args|
+    extension = "txt"
+    if args.any?
+      content = args.join(" ")
+    else
+      image, error, status = Open3.capture3("osascript", "-l", "JavaScript", "-e", <<~JS)
+        ObjC.import('AppKit');
+        function run() {
+          const board = $.NSPasteboard.generalPasteboard;
+          let data = board.dataForType('public.png');
+          if (!data || data.isNil()) {
+            data = board.dataForType('public.tiff');
+            if (!data || data.isNil()) data = board.dataForType('public.jpeg');
+            if (!data || data.isNil()) return '';
+            const image = $.NSBitmapImageRep.imageRepWithData(data);
+            if (!image || image.isNil()) throw new Error('Cannot decode clipboard image');
+            data = image.representationUsingTypeProperties($.NSPNGFileType, $({}));
+          }
+          if (!data || data.isNil()) throw new Error('Cannot encode clipboard image');
+          return ObjC.unwrap(data.base64EncodedStringWithOptions(0));
+        }
+      JS
+      abort "h-save: #{error.strip}" unless status.success?
+      if image.strip.empty?
+        content, error, status = Open3.capture3("pbpaste", "-Prefer", "txt")
+        abort "h-save: #{error.strip}" unless status.success?
+      else
+        content = Base64.strict_decode64(image.strip)
+        extension = "png"
+      end
+    end
+
+    abort "h-save: nothing to save" if content.empty?
+    prefix = if extension == "png"
+      "png-#{Digest::MD5.hexdigest(content)}"
+    else
+      content[0, 8].gsub(/[[:space:]\/:\x00-\x1f\x7f]/, "-")
+    end
+    directory = File.join(Dir.home, "saved")
+    FileUtils.mkdir_p(directory)
+    basename = "#{Time.now.strftime('%Y%m%d%H%M%S')}-#{prefix}"
+    path = File.join(directory, "#{basename}.#{extension}")
+    suffix = 1
+    begin
+      File.open(path, "wbx", 0o600) { |file| file.write(content) }
+    rescue Errno::EEXIST
+      suffix += 1
+      path = File.join(directory, "#{basename}-#{suffix}.#{extension}")
+      retry
+    end
+    puts path
+  end
+end

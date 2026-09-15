@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- `h save` / `h-save` saves clipboard text or images to `~/saved/`, accepts text arguments, names files with a timestamp and text prefix or PNG checksum, and preserves existing files on name collisions.
+
 ## [0.1.376] - 2026-09-14
 
 ### Changed

@@ -59,6 +59,23 @@ h ping
 # => pong
 ```
 
+### Save clipboard content
+
+`h save` (or `h-save`) saves the macOS clipboard to `~/saved/` and prints the
+saved path. Text comes from `pbpaste`; PNG, TIFF, and JPEG clipboard images
+are saved as PNG. Arguments override the clipboard and are joined with spaces
+as text, so `h save hello world` saves `hello world`, not a file named by an argument.
+
+Names use local time in `%Y%m%d%H%M%S` format:
+
+- Text: `20260915123456-hello-wo.txt`, using the first eight content characters.
+  Whitespace, slashes, colons, and control characters become `-` in the filename.
+- Images: `20260915123456-png-<md5>.png`, using the saved PNG bytes' MD5 checksum.
+
+The command creates `~/saved/` if needed and rejects empty content. Collisions
+get `-2`, `-3`, and subsequent suffixes before the extension without overwriting
+existing files. Saved content is unchanged apart from image conversion.
+
 ### Task CLI
 
 `t` and `tt` are gem executables in `exe/`, installed alongside `h`. They are thin
