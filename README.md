@@ -108,9 +108,10 @@ t show investigation
 t todo rm 42                          # an ID printed by show or todo list
 t use investigation
 t switch investigation
+t switch investigation frontend          # app name or unique prefix
 t switch --show
 t next . "Write the handoff"
-t tree new investigation
+t start investigation frontend            # tree new + app start directory
 ```
 
 A task has one `next_action` and can have multiple independent todos. `t show`
@@ -129,6 +130,11 @@ archival preserve todos. `h task` is a symlink to `t`, so both share one grammar
 
 `t omp [TASK]`, `t codex` or `cdx`, and `t claude` or `cld` start fresh
 native CLI sessions in new focused Herdr tabs. Claude always runs `claude`.
+
+`t path [TASK] [APP]`, `t cd [TASK] [APP]`, and `t switch [TASK] [APP]`
+resolve APP by exact name or unique prefix and use its configured relative
+directory beneath the task's code directory. `t start NAME [APP]` is the
+direct form of `t tree new NAME [APP]`.
 
 Tasks can share an existing directory, including a worktree. `t` does not change
 Git state or promise task-isolated persisted AI sessions in shared directories.
