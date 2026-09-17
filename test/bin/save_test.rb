@@ -1,29 +1,49 @@
-require_relative "../test_helper"
-require "open3"
-require "rbconfig"
+require "test_helper"
+require "tmpdir"
+require "fileutils"
 
 class SaveTest < Minitest::Test
-  def test_same_second_and_prefix_never_overwrite_existing_content
-    Dir.mktmpdir do |home|
-      env = { "HOME" => home, "HIIRO_TEST_DB" => "sqlite::memory:" }
-      script = <<~RUBY
-        require 'time'
-        fixed = Time.local(2026, 9, 15, 12, 34, 56)
-        Time.define_singleton_method(:now) { fixed }
-        load #{File.expand_path('../../bin/h-save', __dir__).inspect}
-      RUBY
-      paths = ["hello world", "hello wonderful"].map do |text|
-        output, error, status = Open3.capture3(
-          env, RbConfig.ruby, "-I", File.expand_path('../../lib', __dir__),
-          "-e", script, "--", text
-        )
-        assert status.success?, error
-        output.strip
-      end
-      assert_equal ["20260915123456-hello-wo.txt", "20260915123456-hello-wo-2.txt"],
-        paths.map { |path| File.basename(path) }
-      assert_equal ["hello world", "hello wonderful"], paths.map { |path| File.binread(path) }
-      assert paths.all? { |path| File.dirname(path) == File.join(home, "saved") }
+  def setup
+    @dir = Dir.mktmpdir("h-save")
+    @orig_env = ENV["HIIRO_SAVED_DIR"]
+    ENV["HIIRO_SAVED_DIR"] = @dir
+    @harness = Hiiro::TestHarness.load_bin("bin/h-save")
+  end
+
+  def teardown
+    ENV["HIIRO_SAVED_DIR"] = @orig_env
+    FileUtils.rm_rf(@dir)
+  end
+
+  def test_registers_expected_subcommands
+    %i[ls list dir show cat copy open edit rm remove].each do |subcmd|
+      assert @harness.has_subcmd?(subcmd), "Expected subcmd :#{subcmd} to be registered"
     end
+  end
+
+  def test_slug_for_collapses_punctuation
+    assert_equal "some-title-with-slashes", slug_for("  Some   Title: with/slashes ")
+    assert_equal "text", slug_for("   ")
+    assert_equal 32, slug_for("a" * 100).length
+  end
+
+  def test_save_text_writes_file_and_avoids_collisions
+    first = save_text("hello world")
+    second = save_text("hello world")
+
+    assert File.exist?(first)
+    assert File.exist?(second)
+    refute_equal first, second
+    assert_match(/-hello-world\.txt\z/, first)
+    assert_match(/-hello-world-2\.txt\z/, second)
+    assert_equal "hello world", File.read(first)
+  end
+
+  def test_saved_files_lists_newest_first
+    save_text("aaa")
+    File.write(File.join(@dir, "19990101000000-old.txt"), "old")
+
+    assert_equal "19990101000000-old.txt", saved_files.last
+    assert_equal 2, saved_files.size
   end
 end

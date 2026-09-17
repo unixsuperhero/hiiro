@@ -1,62 +1,154 @@
 #!/usr/bin/env ruby
 
-require "hiiro"
-require "base64"
-require "digest"
-require "fileutils"
-require "open3"
+require 'hiiro'
+require 'fileutils'
+require 'tempfile'
 
-Hiiro.run(*ARGV, builtin_commands: false) do
-  add_default do |*args|
-    extension = "txt"
-    if args.any?
-      content = args.join(" ")
-    else
-      image, error, status = Open3.capture3("osascript", "-l", "JavaScript", "-e", <<~JS)
-        ObjC.import('AppKit');
-        function run() {
-          const board = $.NSPasteboard.generalPasteboard;
-          let data = board.dataForType('public.png');
-          if (!data || data.isNil()) {
-            data = board.dataForType('public.tiff');
-            if (!data || data.isNil()) data = board.dataForType('public.jpeg');
-            if (!data || data.isNil()) return '';
-            const image = $.NSBitmapImageRep.imageRepWithData(data);
-            if (!image || image.isNil()) throw new Error('Cannot decode clipboard image');
-            data = image.representationUsingTypeProperties($.NSPNGFileType, $({}));
-          }
-          if (!data || data.isNil()) throw new Error('Cannot encode clipboard image');
-          return ObjC.unwrap(data.base64EncodedStringWithOptions(0));
-        }
-      JS
-      abort "h-save: #{error.strip}" unless status.success?
-      if image.strip.empty?
-        content, error, status = Open3.capture3("pbpaste", "-Prefer", "txt")
-        abort "h-save: #{error.strip}" unless status.success?
-      else
-        content = Base64.strict_decode64(image.strip)
-        extension = "png"
-      end
-    end
+def saved_root
+  ENV.fetch('HIIRO_SAVED_DIR') { File.join(Dir.home, 'saved') }
+end
 
-    abort "h-save: nothing to save" if content.empty?
-    prefix = if extension == "png"
-      "png-#{Digest::MD5.hexdigest(content)}"
-    else
-      content[0, 8].gsub(/[[:space:]\/:\x00-\x1f\x7f]/, "-")
-    end
-    directory = File.join(Dir.home, "saved")
-    FileUtils.mkdir_p(directory)
-    basename = "#{Time.now.strftime('%Y%m%d%H%M%S')}-#{prefix}"
-    path = File.join(directory, "#{basename}.#{extension}")
-    suffix = 1
-    begin
-      File.open(path, "wbx", 0o600) { |file| file.write(content) }
-    rescue Errno::EEXIST
-      suffix += 1
-      path = File.join(directory, "#{basename}-#{suffix}.#{extension}")
-      retry
-    end
-    puts path
+def saved_dir
+  FileUtils.mkdir_p(saved_root)
+  saved_root
+end
+
+def saved_files
+  Dir.children(saved_dir).reject { |f| f.start_with?('.') }.sort.reverse
+end
+
+def clipboard_text
+  `pbpaste`
+end
+
+def clipboard_image
+  tmp = Tempfile.new(['h-save-', '.png'])
+  tmp.close
+  return tmp.path if system('pngpaste', tmp.path, out: File::NULL, err: File::NULL)
+
+  tmp.unlink
+  nil
+end
+
+def slug_for(text)
+  slug = text.strip.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/\A-|-\z/, '')[0, 32]
+  slug = slug.sub(/-\z/, '')
+  slug.empty? ? 'text' : slug
+end
+
+def unique_path(base, ext)
+  path = File.join(saved_dir, "#{base}.#{ext}")
+  n = 1
+  while File.exist?(path)
+    n += 1
+    path = File.join(saved_dir, "#{base}-#{n}.#{ext}")
   end
+  path
+end
+
+def save_text(text)
+  stamp = Time.now.strftime('%Y%m%d%H%M%S')
+  path = unique_path("#{stamp}-#{slug_for(text)}", 'txt')
+  File.write(path, text)
+  path
+end
+
+def save_image(tmp_path)
+  stamp = Time.now.strftime('%Y%m%d%H%M%S')
+  path = unique_path("#{stamp}-image", 'png')
+  FileUtils.mv(tmp_path, path)
+  path
+end
+
+def resolve_saved(name)
+  files = saved_files
+  if files.empty?
+    puts "Nothing saved in #{saved_root}"
+    return nil
+  end
+
+  if name
+    result = Hiiro::Matcher.by_substring(files, name, key: :to_s)
+    if result.ambiguous?
+      match = fuzzyfind(result.matches.map(&:item))
+    else
+      match = result.first&.item
+      puts "No saved file matching '#{name}'" unless match
+    end
+  else
+    match = fuzzyfind(files)
+  end
+
+  match && File.join(saved_root, match)
+end
+
+Hiiro.run(*ARGV) do
+  add_default { |*args|
+    if args.any?
+      puts save_text(args.join(' '))
+      next
+    end
+
+    if (image = clipboard_image)
+      puts save_image(image)
+      next
+    end
+
+    text = clipboard_text
+    if text.empty?
+      puts 'Clipboard is empty'
+      exit 1
+    end
+
+    puts save_text(text)
+  }
+
+  add_subcmd(:ls, :list) {
+    saved_files.each { |f| puts f }
+  }
+
+  add_subcmd(:dir) {
+    puts saved_dir
+  }
+
+  add_subcmd(:show, :cat) { |name = nil|
+    path = resolve_saved(name)
+    next unless path
+
+    if path.end_with?('.png')
+      puts path
+    else
+      print File.read(path)
+    end
+  }
+
+  add_subcmd(:copy) { |name = nil|
+    path = resolve_saved(name)
+    next unless path
+
+    if path.end_with?('.png')
+      system('osascript', '-e', "set the clipboard to (read (POSIX file #{path.inspect}) as «class PNGf»)")
+    else
+      Hiiro::Shell.pipe(File.read(path), 'pbcopy')
+    end
+    puts "Copied #{File.basename(path)} to clipboard"
+  }
+
+  add_subcmd(:open) { |name = nil|
+    path = resolve_saved(name)
+    system('open', path) if path
+  }
+
+  add_subcmd(:edit) { |name = nil|
+    path = resolve_saved(name)
+    edit_files(path) if path
+  }
+
+  add_subcmd(:rm, :remove) { |name = nil|
+    path = resolve_saved(name)
+    next unless path
+
+    File.delete(path)
+    puts "Removed #{File.basename(path)}"
+  }
 end

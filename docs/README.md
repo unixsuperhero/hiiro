@@ -69,6 +69,7 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 |---------|-------------|
 | [h-bg](h-bg.md) | Run commands in background Herdr tabs with history tracking |
 | [h-img](h-img.md) | Save or base64-encode images from clipboard or file |
+| [h-save](h-save.md) | Save clipboard text or images to ~/saved |
 | [h-misc](h-misc.md) | Miscellaneous utilities (symlink destination reporting) |
 | [h-sha](h-sha.md) | Fuzzy-select, show, and copy git commit SHAs |
 
