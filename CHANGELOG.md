@@ -1,9 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.377] - 2026-09-17
+
+### Changed
+- `h save` redesigned with slug-based filenames (`<timestamp>-<slug>.txt` / `<timestamp>-image.png`), image handling via `pngpaste`, and environment-configurable destination via `HIIRO_SAVED_DIR`
 
 ### Added
-- `h save` / `h-save` saves clipboard text or images to `~/saved/`, accepts text arguments, names files with a timestamp and text prefix or PNG checksum, and preserves existing files on name collisions.
+- `h save` subcommands: `ls`/`list`, `dir`, `show`/`cat`, `copy`, `open`, `edit`, `rm`/`remove` for managing saved files
+- `t path`, `t cd`, `t start`, and `t switch` accept optional `APP` argument to select a configured relative directory beneath the task root
+- APP resolves by exact name or unique case-sensitive prefix; fails when ambiguous or missing
 
 ## [0.1.376] - 2026-09-14
 

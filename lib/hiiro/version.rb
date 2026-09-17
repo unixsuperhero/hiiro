@@ -1,4 +1,4 @@
 class Hiiro
-  VERSION = "0.1.376"
+  VERSION = "0.1.377"
   SUPPORTED_RUBY_VERSION = ">= 3.2.0"
 end
