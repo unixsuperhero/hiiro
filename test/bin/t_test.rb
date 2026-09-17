@@ -33,7 +33,7 @@ class TaskCommandTest < Minitest::Test
     FileUtils.mkdir_p([@home, @cwd])
     @db_path = File.join(@root, 'tasks.sqlite3')
     @db = Sequel.sqlite(@db_path)
-    [Hiiro::TaskRecord, Hiiro::TaskResource, Hiiro::PinRecord, Hiiro::TodoItem].each { |model| model.create_table!(@db) }
+    [Hiiro::TaskRecord, Hiiro::TaskResource, Hiiro::PinRecord, Hiiro::TodoItem, Hiiro::AppRecord].each { |model| model.create_table!(@db) }
     Hiiro::TaskRecord.migrate!(@db)
     @db[:tasks].insert(id: 1, name: 'prez', session: 'prez', status: 'active')
     @db[:tasks].insert(id: 2, name: 'other', session: 'other', status: 'active')
@@ -218,6 +218,44 @@ class TaskCommandTest < Minitest::Test
     @stubs['workspace create'] = JSON.generate('result' => {})
     assert_match(/create|failed/i, failure('workspace', 'other'))
     assert_equal "prez\n", command('current')
+  end
+
+  def test_directory_commands_resolve_optional_app_by_exact_or_unique_prefix
+    checkout = File.join(@root, 'checkout')
+    frontend = File.join(checkout, 'apps/frontend')
+    frontoffice = File.join(checkout, 'apps/frontoffice')
+    FileUtils.mkdir_p([frontend, frontoffice])
+    @db[:tasks].where(name: 'prez').update(primary_directory: checkout)
+    @db[:apps].multi_insert([
+      { name: 'frontend', path: 'apps/frontend' },
+      { name: 'frontoffice', path: 'apps/frontoffice' },
+    ])
+
+    assert_equal "#{File.realpath(frontoffice)}\n", command('path', 'prez', 'fronto')
+    assert_equal "#{File.realpath(frontend)}\n", command('path', 'prez', 'frontend')
+    error = failure('path', 'prez', 'front')
+    assert_match(/ambiguous app/i, error)
+    assert_includes error, 'frontend'
+    assert_includes error, 'frontoffice'
+
+    @stubs['workspace create'] = JSON.generate('result' => {
+      'workspace' => workspace_row('w3', 'prez'),
+    })
+    command('switch', 'prez', 'fronto')
+    assert_equal ['herdr', 'workspace', 'create', '--label', 'prez', '--cwd',
+      File.realpath(frontoffice), '--focus'], mutations.last
+
+    live_workspace('w1', 'prez')
+    live_pane('w1:p1', 'w1', 'shell', focused: true)
+    command('switch', 'prez', 'frontend')
+    assert_equal [
+      ['herdr', 'workspace', 'focus', 'w1'],
+      ['herdr', 'pane', 'run', 'w1:p1', "cd #{File.realpath(frontend)}"],
+    ], mutations
+
+    command('cd', 'prez', 'frontend', env: { 'HERDR_PANE_ID' => 'w0:p1' })
+    assert_equal ['herdr', 'pane', 'run', 'w0:p1', "cd #{File.realpath(frontend)}"], mutations.last
+    assert_match(/app not found/i, failure('path', 'prez', 'missing'))
   end
 
   def test_workspace_show_and_implicit_open_do_not_save_selection
@@ -758,18 +796,21 @@ class TaskCommandTest < Minitest::Test
 
   def test_tree_commands_create_detach_and_resume_worktrees_without_herdr
     seed = File.join(@root, 'seed')
-    FileUtils.mkdir_p(seed)
+    FileUtils.mkdir_p(File.join(seed, 'apps/web'))
+    File.write(File.join(seed, 'apps/web/.keep'), '')
     git = %w[git -c user.email=t@example.com -c user.name=t -c init.defaultBranch=main]
     system(*git, '-C', seed, 'init', '-q', out: File::NULL, err: File::NULL)
-    system(*git, '-C', seed, 'commit', '-q', '--allow-empty', '-m', 'init', out: File::NULL, err: File::NULL)
+    system(*git, '-C', seed, 'add', '.', out: File::NULL, err: File::NULL)
+    system(*git, '-C', seed, 'commit', '-q', '-m', 'init', out: File::NULL, err: File::NULL)
     work = File.join(@home, 'work')
     FileUtils.mkdir_p(work)
     system(*git, 'clone', '-q', '--bare', seed, File.join(work, '.bare'), out: File::NULL, err: File::NULL)
     File.write(File.join(work, '.git'), "gitdir: .bare\n")
     tree = File.join(work, 'demo/main')
     @stubs['status server'] = false
+    @db[:apps].insert(name: 'web', path: 'apps/web')
 
-    output = command('tree', 'new', 'demo')
+    output = command('start', 'demo', 'we')
     assert Dir.exist?(tree)
     assert_includes output, 'Created worktree demo/main'
     assert_includes output, 'Herdr is not running'
@@ -863,9 +904,9 @@ class TaskCommandTest < Minitest::Test
     @stubs["workspace get #{id}"] = JSON.generate('result' => { 'workspace' => row })
   end
 
-  def live_pane(id, workspace_id, label, agent: nil, agent_status: nil, cwd: nil)
+  def live_pane(id, workspace_id, label, agent: nil, agent_status: nil, cwd: nil, focused: false)
     row = { 'pane_id' => id, 'workspace_id' => workspace_id, 'tab_id' => "#{workspace_id}:t1",
-      'label' => label, 'agent' => agent, 'agent_status' => agent_status, 'cwd' => cwd, 'foreground_cwd' => cwd }.compact
+      'label' => label, 'agent' => agent, 'agent_status' => agent_status, 'cwd' => cwd, 'foreground_cwd' => cwd, 'focused' => focused }.compact
     @panes ||= {}
     (@panes[workspace_id] ||= []) << row
     @stubs["pane list --workspace #{workspace_id}"] = JSON.generate('result' => { 'panes' => @panes[workspace_id] })

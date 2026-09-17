@@ -23,7 +23,7 @@ The command comes first. Commands that act on a task take it from the first posi
 
 The current task is resolved by `Hiiro::CurrentTask`: the calling Herdr workspace when `HERDR_*` variables identify one, then the working directory inside a task home, primary directory, worktree, or registered directory, then the task saved by `t use`. With no context at all, a terminal gets the fuzzy finder over every task; non-interactive runs fail. Ambiguous directory or workspace matches and stale or conflicting Herdr IDs are always errors. Commands that only list, create, or show help never resolve the current task.
 
-Task names may be `parent/child` for subtasks. `t new NAME` creates exactly `NAME`; nothing else creates tasks. Only `help`, `ls`, and `list` are reserved words; a task literally named `show` or `new` is reachable with `-t show`.
+Task names may be `parent/child` for subtasks. `t new NAME` creates exactly `NAME`; nothing else creates tasks. `help`, `ls`, `list`, and `start` are reserved words; a task with one of those names is reachable with `-t NAME`.
 
 ## Task record commands
 
@@ -88,20 +88,23 @@ t doc open [TASK] [NAME]
 | Command | Behavior |
 |---|---|
 | `t tree [TASK]` | Prints the worktree name and path |
-| `t tree new [NAME] [--app APP] [--sparse GROUP]` | NAME may be an existing task, a new task to create, or omitted for the current task. Creates or reuses a worktree under `~/work/NAME/main` (or `~/work/parent/child`), records it, and opens the workspace when Herdr is running |
+| `t tree new [NAME] [APP] [--app APP] [--sparse GROUP]` | NAME may be an existing task, a new task to create, or omitted for the current task. Creates or reuses a worktree under `~/work/NAME/main` (or `~/work/parent/child`), records it, and opens the workspace when Herdr is running |
+| `t start NAME [APP] [--app APP] [--sparse GROUP]` | Direct alias for `t tree new`; creates the task when needed |
 | `t tree rm [TASK]` | Detaches the worktree from the task and its subtasks; the directory stays and is registered as a directory resource |
 | `t tree resume [TASK] [TREE]` | Attaches an unassigned worktree by name, or via fuzzy finder |
-| `t path [TASK]` | Start directory: primary directory, worktree, or task home |
+| `t path [TASK] [APP]` | Start directory, optionally beneath the configured relative directory for APP |
 | `t branch [TASK]` | Worktree branch or `(detached)` |
 | `t sh [TASK] [CMD...]` | Changes to the start directory and execs a shell or CMD |
-| `t cd [TASK]` | Sends `cd` to the calling Herdr pane |
+| `t cd [TASK] [APP]` | Sends `cd` to the calling Herdr pane |
 
 Worktree creation is `Hiiro::TaskManager#create_tree`, shared with the legacy `h task start` code path.
+
+APP resolves against configured Hiiro apps by exact name or unique case-sensitive prefix. Its relative path is joined beneath the task's primary directory, worktree, or task home and must exist. An ambiguous or missing app fails without changing directories. Use either positional APP or `--app APP` for `start` / `tree new`, not both.
 
 ## Herdr workspaces, tabs, and panes
 
 ```text
-t switch [TASK] [--directory PATH] [--show]      alias: workspace
+t switch [TASK] [APP] [--directory PATH] [--show]      alias: workspace
 t tab ls [TASK]
 t tab new [TASK] [LABEL] [--directory PATH] [--command COMMAND]
 t tab open [TASK] [ID|LABEL]
@@ -112,7 +115,7 @@ t pane run [TASK] ID|LABEL [--] COMMAND...
 t pane split [TASK] ID|LABEL [--direction right|down] [--directory PATH] [--command COMMAND]
 ```
 
-These require a running Herdr server. The workspace label is the task session or name with `.` replaced by `_`. `switch` also accepts the name of a live Herdr workspace that belongs to no task, exactly or by unique prefix, and focuses it; a task with the same name wins. An exact pane ID such as `w6:p2` focuses that pane, and the picker lists every live pane with its directory and foreground command. When the name is ambiguous, or no task or context is given, a terminal gets a fuzzy finder over tasks and loose workspaces, with duplicate workspace names numbered in the label only. Commands that jump somewhere never assume the current task: `t switch`, `t tab open`, and `t pane open` with no task open the picker instead (or fail when stdin is not a terminal); `.` still names the current task explicitly. `t pane open PANE_ID` and `t tab open TAB_ID` jump to any live pane or tab. `switch` focuses the existing task workspace or creates it in the start directory (`--directory`, else primary directory, worktree, or home), and saves the task as the fallback when it was named explicitly. `--show` only prints the workspace, tabs, and panes. Tab and pane references match a live ID or label, then a unique prefix; with no reference and several candidates a fuzzy finder opens.
+These require a running Herdr server. The workspace label is the task session or name with `.` replaced by `_`. For a task, optional APP selects its configured relative directory when creating the workspace; when the workspace already exists, `switch` focuses it and sends `cd` to its focused pane. APP and `--directory` cannot be combined. `switch` also accepts the name of a live Herdr workspace that belongs to no task, exactly or by unique prefix, and focuses it; APP is invalid for loose workspaces and panes. A task with the same name wins. An exact pane ID such as `w6:p2` focuses that pane, and the picker lists every live pane with its directory and foreground command. When the name is ambiguous, or no task or context is given, a terminal gets a fuzzy finder over tasks and loose workspaces, with duplicate workspace names numbered in the label only. Commands that jump somewhere never assume the current task: `t switch`, `t tab open`, and `t pane open` with no task open the picker instead (or fail when stdin is not a terminal); use `.` explicitly for the current task.
 
 ## Native AI sessions
 

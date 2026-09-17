@@ -18,13 +18,13 @@ Worktree operations that used to live only under `h task` are now task commands:
 
 | Old | Now |
 |---|---|
-| `h task start NAME [APP] [-s GROUP]` | `t tree new NAME [--app APP] [--sparse GROUP]` (creates the task record if needed, then the worktree, then the Herdr workspace) |
-| `h task switch NAME [APP]` | `t switch NAME [--directory DIR]` |
+| `h task start NAME [APP] [-s GROUP]` | `t start NAME [APP] [--sparse GROUP]` or `t tree new NAME [APP] [--sparse GROUP]` |
+| `h task switch NAME [APP]` | `t switch NAME [APP] [--directory DIR]` |
 | `h task stop NAME` | `t tree rm NAME` (detaches the worktree, keeps the directory, registers it as a directory resource) |
 | `h task resume [TREE]` | `t tree resume NAME [TREE]` |
-| `h task path`, `h task branch`, `h task tree` | `t path [TASK]`, `t branch [TASK]`, `t tree [TASK]` |
+| `h task path`, `h task branch`, `h task tree` | `t path [TASK] [APP]`, `t branch [TASK]`, `t tree [TASK]` |
 | `h task sh [CMD...]` | `t sh [TASK] [CMD...]` |
-| `h task cd` | `t cd [TASK]` |
+| `h task cd [APP]` | `t cd [TASK] [APP]` |
 | `h task todo ...` | `t todo ... [TASK]` or `tt ...` |
 | `h task ls` | `t ls` |
 | `h task current` | `t current` |
