@@ -92,8 +92,11 @@ prefix or a missing current task opens the fuzzy finder; non-interactive runs fa
 
 The current task is the calling Herdr workspace, then the current directory
 inside a task home, code directory, worktree, or registered directory, then the
-task saved with `t use TASK`. `t switch TASK` focuses or creates the task
-workspace and also saves it. `t current` only prints.
+task saved with `t use TASK`. `t switch TASK [APP]` focuses or creates the task
+workspace and also saves it; APP (exact name or unique prefix from the apps
+registry) opens the workspace in that app's directory under the task worktree.
+`t cd TASK [APP]` sends the same `cd` to the calling Herdr pane. `t current`
+only prints.
 
 ```sh
 t new investigation
@@ -105,7 +108,7 @@ t show investigation
 t todo rm 42                          # an ID printed by show or todo list
 t use investigation
 t switch investigation
-t switch investigation frontend          # app name or unique prefix
+t switch investigation frontend        # open in an app directory (unique prefix)
 t switch --show
 t next . "Write the handoff"
 t start investigation frontend            # tree new + app start directory

@@ -10,6 +10,9 @@
 - `t path`, `t cd`, `t start`, and `t switch` accept optional `APP` argument to select a configured relative directory beneath the task root
 - APP resolves by exact name or unique case-sensitive prefix; fails when ambiguous or missing
 
+### Added
+- `t switch` / `t workspace` and `t cd` accept an optional APP positional (or `--app`) resolving through the apps registry by exact name or unique prefix; the workspace or pane cd targets the app directory under the task worktree, e.g. `t switch aldi cpm` opens `~/work/aldi/main/retailer-tools/content-page-migrator`
+
 ## [0.1.376] - 2026-09-14
 
 ### Changed

@@ -63,6 +63,18 @@ class Hiiro
         lookup_task(reference) || raise(Error, "Task not found: #{reference}; run t new #{reference}")
       end
 
+      # [name, relative_path] from the apps registry: exact name wins, else a
+      # unique prefix; ambiguity and no-match are errors.
+      def lookup_app!(reference)
+        apps = Hiiro::AppRecord.all_as_hash
+        raise Error, 'No apps are configured' if apps.empty?
+        return [reference, apps[reference]] if apps[reference]
+        found = Hiiro::Matcher.by_prefix(apps.keys.sort, reference).matches.map(&:item)
+        raise Error, "No app matches #{reference}" if found.empty?
+        raise Error, "Ambiguous app #{reference}: #{found.join(', ')}" unless found.one?
+        [found.first, apps[found.first]]
+      end
+
       # Current task from Herdr, directory, or the saved pin. With no context at all,
       # a TTY gets the fuzzy finder over every task; ambiguous or stale context still fails.
       def current_task
@@ -469,6 +481,26 @@ class Hiiro
           herdr
         end
       end
+      # App reference (positional or --app) resolves through the apps registry
+      # under the task worktree; explicit param wins over the option.
+      def start_directory(task, app: nil)
+        app = opts&.fetch(:app) if app.nil?
+        path = opts&.fetch(:directory) || (app && app_directory(task, app)) || code_directory(task) || ensure_home(task)
+        existing_path(path, directory: true)
+      end
+
+      # Registry app directory under the task worktree.
+      def app_directory(task, reference)
+        _name, relative = lookup_app!(reference)
+        root = code_directory(task)
+        raise Error, "#{task.name} has no worktree; run t tree new #{task.name} first" unless root
+        File.join(root, relative)
+      end
+
+      def open_workspace(task, save:, app: nil)
+        open_task_workspace(task, start_directory(task, app: app))
+        save_current(task) if save
+      end
 
       def workspace_for(task, required: true)
         label = workspace_label(task)
@@ -478,29 +510,6 @@ class Hiiro
         raise Error, "Multiple Herdr workspaces have label #{label}" if matches.length > 1
         raise Error, "Task workspace is not open; run t switch #{task.name}" if required && matches.empty?
         matches.first
-      end
-
-      def app_directory(path, app_name)
-        return path unless app_name
-        result = Hiiro::Matcher.new(Hiiro::AppRecord.all, :name).by_prefix(app_name)
-        app = result.resolved&.item
-        if !app && result.ambiguous?
-          raise Error, "Ambiguous app #{app_name}: #{result.matches.map { |match| match.item.name }.join(', ')}"
-        end
-        raise Error, "App not found: #{app_name}" unless app
-        File.join(path, app.path)
-      end
-
-      def start_directory(task, app_name = nil)
-        path = opts&.fetch(:directory)
-        raise Error, 'Use an app or --directory, not both' if path && app_name
-        path ||= code_directory(task) || ensure_home(task)
-        existing_path(app_directory(path, app_name), directory: true)
-      end
-
-      def open_workspace(task, save:, app_name: nil)
-        open_task_workspace(task, start_directory(task, app_name), chdir: !app_name.nil?)
-        save_current(task) if save
       end
 
       # Focus the task workspace or create it at directory. With optional: true,
@@ -556,51 +565,47 @@ class Hiiro
         puts pane_line(pane)
       end
 
-      # [target, explicit, app_name]. A task wins over a workspace with the same name.
+      # [target, explicit, rest]. A task wins over a workspace with the same name.
+      # The first positional names the target; any remaining positional is the app.
       def switch_target(args)
         args = args.dup
-        return [lookup_task!(opts.task), true, single(args, optional: true)] if opts.task
-        return [pick_switch_target(Hiiro::TaskRecord.all_as_list, loose_workspaces), true, single(args, optional: true)] if opts.find
-        first = args.first
+        first = args.shift
+        rest = args
+        if opts.task || opts.find
+          # Flag forces the target, so the first positional is the app.
+          app = [first].compact
+          no_args!(rest)
+          return [lookup_task!(opts.task), true, app] if opts.task
+          return [pick_switch_target(Hiiro::TaskRecord.all_as_list, loose_workspaces), true, app] if opts.find
+        end
+        no_args!(rest.drop(1))
         if first && first != '.' && !first.start_with?('-')
-          args.shift
-          app_name = single(args, optional: true)
           tasks = Hiiro::TaskRecord.all_as_list
           workspaces = loose_workspaces
           exact = tasks.find { |task| task.name == first }
-          return [exact, true, app_name] if exact
+          return [exact, true, rest] if exact
           pane = live_panes.values.flatten.find { |candidate| candidate.id == first }
-          raise Error, 'An app applies only to task workspaces' if pane && app_name
-          return [pane, false, nil] if pane
+          return [pane, false, rest] if pane
           exact_ws = workspaces.select { |workspace| workspace.name == first }
-          if exact_ws.one?
-            raise Error, 'An app applies only to task workspaces' if app_name
-            return [exact_ws.first, false, nil]
-          end
+          return [exact_ws.first, false, rest] if exact_ws.one?
           task_matches = tasks.select { |task| task.name.start_with?(first) }
           ws_matches = exact_ws.any? ? exact_ws : workspaces.select { |workspace| workspace.name.start_with?(first) }
-          return [task_matches.first, true, app_name] if task_matches.one? && ws_matches.empty?
-          if ws_matches.one? && task_matches.empty?
-            raise Error, 'An app applies only to task workspaces' if app_name
-            return [ws_matches.first, false, nil]
-          end
+          return [task_matches.first, true, rest] if task_matches.one? && ws_matches.empty?
+          return [ws_matches.first, false, rest] if ws_matches.one? && task_matches.empty?
           raise Error, "No task or workspace matches #{first}" if task_matches.empty? && ws_matches.empty?
           names = (task_matches.map(&:name) + ws_matches.map { |w| "#{w.name} (workspace)" }).join(', ')
           raise Error, "Ambiguous #{first}: #{names}" unless $stdin.tty?
           target = pick_switch_target(task_matches, ws_matches, panes: [])
-          raise Error, 'An app applies only to task workspaces' if app_name && !target.is_a?(Hiiro::TaskRecord)
-          return [target, target.is_a?(Hiiro::TaskRecord), app_name]
+          return [target, target.is_a?(Hiiro::TaskRecord), rest]
         end
+        no_args!(rest)
         if first == '.'
-          args.shift
-          app_name = single(args, optional: true)
-          return [Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve!, false, app_name]
+          return [Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve!, false, rest]
         end
-        no_args!(args)
         # Jumping somewhere never assumes the current task: pick a destination.
         raise Error, 'Name a task, workspace, or pane to switch to, or use . for the current task' unless $stdin.tty?
         target = pick_switch_target(Hiiro::TaskRecord.all_as_list, loose_workspaces)
-        [target, target.is_a?(Hiiro::TaskRecord), nil]
+        [target, target.is_a?(Hiiro::TaskRecord), rest]
       end
 
       def require_picker!(what)
@@ -707,10 +712,10 @@ class Hiiro
         command.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*command)
       end
 
-      def cd_to(task, app_name = nil)
+      def cd_to(task, app: nil)
         pane = ENV['HERDR_PANE_ID']
         raise Error, 'Not running inside a Herdr pane' unless pane
-        check_result(client.run_in_pane(pane, "cd #{start_directory(task, app_name).shellescape}"))
+        check_result(client.run_in_pane(pane, "cd #{start_directory(task, app: app).shellescape}"))
       end
 
       def show_workspace(task)
@@ -850,44 +855,35 @@ class Hiiro
           end
         end
 
-        add_cmd(:path, args: ['task?', 'app?'], opts: TASK_OPTIONS) do
-          task, rest = take_task(opts.args)
-          puts start_directory(task, single(rest, optional: true))
-        end
-        add_cmd(:branch, args: ['task?'], opts: TASK_OPTIONS) { puts current_branch(take_task_only(opts.args)) }
-        add_cmd(:cd, args: ['task?', 'app?'], opts: TASK_OPTIONS) do
-          task, rest = take_task(opts.args)
-          cd_to(task, single(rest, optional: true))
-        end
-        add_cmd(:sh, args: ['task?', 'command...'], passthrough: true) do
-          task, rest = take_task(args, options: nil)
-          run_shell(task, rest)
-        end
-
         add_option :directory, desc: 'Existing start directory'
-        add_option :app, desc: 'App directory to open in the workspace'
-        add_option :sparse, short: :s, desc: 'Sparse checkout group (repeatable)', multi: true
-        add_cmd(:start, args: %i[name app?], opts: [*TASK_OPTIONS, :app, :sparse]) do
-          if opts.task
-            new_tree([lookup_task!(opts.task).name, *opts.args], opts.app, opts.sparse)
-          elsif opts.find
-            new_tree([pick_task(Hiiro::TaskRecord.all_as_list).name, *opts.args], opts.app, opts.sparse)
-          else
-            new_tree(opts.args, opts.app, opts.sparse)
-          end
-        end
-        add_cmd(:switch, :workspace, args: ['task-or-workspace?', 'app?'], opts: [*TASK_OPTIONS, :directory, :show]) do
-          target, explicit, app_name = switch_target(opts.args)
+        add_option :app, desc: 'Registry app directory under the task worktree'
+        add_cmd(:switch, :workspace, args: ['task-or-workspace?', 'app?'], opts: [*TASK_OPTIONS, :directory, :app, :show]) do
+          target, explicit, rest = switch_target(opts.args)
+          app = opts.app || rest.first
           if target.is_a?(Hiiro::Herdr::Pane)
             raise Error, '--show applies to task workspaces' if opts.show
+            raise Error, 'An APP only applies to task workspaces' if app
             focus_pane_target(target)
           elsif target.is_a?(Hiiro::Herdr::Workspace)
             raise Error, '--show applies to task workspaces' if opts.show
+            raise Error, 'An APP only applies to task workspaces' if app
             check_result(client.focus_workspace(target.id))
             puts target
           else
-            opts.show ? show_workspace(target) : open_workspace(target, save: explicit, app_name: app_name)
+            opts.show ? show_workspace(target) : open_workspace(target, save: explicit, app: app)
           end
+        end
+        add_cmd(:path, args: ['task?'], opts: TASK_OPTIONS) { puts start_directory(take_task_only(opts.args)) }
+        add_cmd(:branch, args: ['task?'], opts: TASK_OPTIONS) { puts current_branch(take_task_only(opts.args)) }
+        add_cmd(:cd, args: ['task?', 'app?'], opts: TASK_OPTIONS) do
+          task, rest = take_task(opts.args)
+          no_args!(rest.drop(1))
+          cd_to(task, app: rest.first)
+        end
+
+        add_cmd(:sh, args: ['task?', 'command...'], passthrough: true) do
+          task, rest = take_task(args, options: nil)
+          run_shell(task, rest)
         end
 
         [%w[omp], %w[codex cdx], %w[claude cld]].each do |names|

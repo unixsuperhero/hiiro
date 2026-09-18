@@ -95,7 +95,7 @@ t doc open [TASK] [NAME]
 | `t path [TASK] [APP]` | Start directory, optionally beneath the configured relative directory for APP |
 | `t branch [TASK]` | Worktree branch or `(detached)` |
 | `t sh [TASK] [CMD...]` | Changes to the start directory and execs a shell or CMD |
-| `t cd [TASK] [APP]` | Sends `cd` to the calling Herdr pane |
+| `t cd [TASK] [APP]` | Sends `cd` to the calling Herdr pane; APP narrows to a registry app directory under the task worktree |
 
 Worktree creation is `Hiiro::TaskManager#create_tree`, shared with the legacy `h task start` code path.
 
@@ -104,7 +104,7 @@ APP resolves against configured Hiiro apps by exact name or unique case-sensitiv
 ## Herdr workspaces, tabs, and panes
 
 ```text
-t switch [TASK] [APP] [--directory PATH] [--show]      alias: workspace
+t switch [TASK] [APP] [--directory PATH] [--show]   alias: workspace
 t tab ls [TASK]
 t tab new [TASK] [LABEL] [--directory PATH] [--command COMMAND]
 t tab open [TASK] [ID|LABEL]
@@ -116,6 +116,10 @@ t pane split [TASK] ID|LABEL [--direction right|down] [--directory PATH] [--comm
 ```
 
 These require a running Herdr server. The workspace label is the task session or name with `.` replaced by `_`. For a task, optional APP selects its configured relative directory when creating the workspace; when the workspace already exists, `switch` focuses it and sends `cd` to its focused pane. APP and `--directory` cannot be combined. `switch` also accepts the name of a live Herdr workspace that belongs to no task, exactly or by unique prefix, and focuses it; APP is invalid for loose workspaces and panes. A task with the same name wins. An exact pane ID such as `w6:p2` focuses that pane, and the picker lists every live pane with its directory and foreground command. When the name is ambiguous, or no task or context is given, a terminal gets a fuzzy finder over tasks and loose workspaces, with duplicate workspace names numbered in the label only. Commands that jump somewhere never assume the current task: `t switch`, `t tab open`, and `t pane open` with no task open the picker instead (or fail when stdin is not a terminal); use `.` explicitly for the current task.
+
+### App directories
+
+`t switch TASK APP` and `t cd TASK APP` accept APP as an exact name or unique prefix from the apps registry (`Hiiro::AppRecord`); `--app APP` is the flag form. The workspace opens (or the pane cds) into the app's directory under the task worktree, e.g. with `aldi` registered as `retailer-tools/content-page-migrator`, `t switch aldi cpm` opens `~/work/aldi/main/retailer-tools/content-page-migrator`. An ambiguous prefix is an error; APP only applies to task workspaces, not panes or loose workspaces.
 
 ## Native AI sessions
 
