@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run do
+  add_cmd(:ls) do
+    cmd = 'herdr', 'session', 'list', *opts.original_args
+    temp = Tempfile.new('asdf')
+    system(*cmd)
+  end
+
+  add_cmd(:switch, :start) do
+    cmd = 'herdr', 'session', 'list'
+    temp = Tempfile.new('asdf')
+    system(*cmd, out: temp.path)
+
+    lines = File.readlines(temp.path, chomp: true)
+
+    sessions = lines.filter_map.with_index{|x, i| next if i == 0; [x, x.split(/\s+/, 2).first] }.to_h
+
+    ses = 
+      if opts.args.empty?
+        fuzzyfind_from_map(sessions)
+      else
+        opts.args.first
+      end
+
+    use = sessions.values.find{|ss| ss.start_with?(ses) }
+
+    system('herdr', '--session', use)
+  end
+
+  add_cmd(:kill, :stop, :rm, :remove) do
+    tmp = Tempfile.new 'asdf'
+    result = system 'herdr', 'session' ,'stop', *opts.args, err: tmp.path
+
+    if result
+      result = system 'herdr', 'session' ,'delete', *opts.args 
+    else
+      reason = File.read tmp.path
+      if reason[/running/]
+        result = system 'herdr', 'session' ,'delete', *opts.args 
+      end
+    end
+  end
+
+  add_default do |*args|
+    system 'herdr', *args
+  end
+end
