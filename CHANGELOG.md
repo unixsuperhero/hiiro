@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.381] - 2026-09-20
+
+### Added
+- `Hiiro::Options` now includes file/directory filtering methods: `files`, `dirs`, `file_or_dirs`, `not_files`, and `not_file_or_dirs` for convenient argument classification
+
 ## [0.1.377] - 2026-09-17
 
 ### Changed
