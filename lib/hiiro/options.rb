@@ -124,6 +124,12 @@ class Hiiro
         do_parse(raw_args.dup)
       end
 
+      def files = @files ||= args.select{|x| File.file?(x) }
+      def dirs = @dirs ||= args.select{|x| File.directory?(x) }
+      def file_or_dirs = @file_or_dirs ||= args.select{|x| File.file?(x) || File.directory?(x) }
+      def not_files = args - files
+      def not_file_or_dirs = args - file_or_dirs
+
       def [](name)
         @values[name.to_sym]
       end
