@@ -8,7 +8,6 @@ class Hiiro
       stdout, status = Open3.capture2(env, *command)
       stdout
     end
-    self.alias capture capture_output
 
     def self.pipe_lines(lines, *command)
       content = lines.is_a?(Array) ? lines.join("\n") : lines.to_s
