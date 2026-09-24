@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `h herdr` and `hh` pane controls for Vim-style focus, two-pane reflow, resize, swap, and zoom
+- `prefix+shift+h/j/k/l` reflows a two-pane tab toward an edge; `prefix+alt+h/j/k/l` resizes the current pane
+
 ## [0.1.384] - 2026-09-23
 
 ### Added

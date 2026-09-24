@@ -152,7 +152,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h setup` | Install plugins and subcommands to system paths |
 | `h edit` | Open the h script in your editor |
 | `h alert` | macOS desktop notifications via terminal-notifier |
-| `h herdr` | Herdr plugin for `t`: fuzzy task switcher, todo capture, todo copy, task shell and nvim popups (`h herdr install`) |
+| `h herdr` | Herdr task popups plus Vim-style pane focus, movement, resize, swap, and zoom controls (`h herdr install`) |
 | `h task` | Same program as `t`: task records, todos, worktrees (`t NAME tree new`), and Herdr workspaces |
 
 ### External Subcommands

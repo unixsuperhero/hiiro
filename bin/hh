@@ -44,6 +44,10 @@ Hiiro.run do
     end
   end
 
+  %i[focus resize swap move layout arrange zoom].each do |name|
+    add_cmd(name) { |*args| system('h', 'herdr', name.to_s, *args) }
+  end
+
   add_default do |*args|
     system 'herdr', *args
   end

@@ -10,6 +10,16 @@ require 'fileutils'
 
 PLUGIN_ID = 'hiiro'
 ACTIONS = %w[switch todo-add todos shell nvim].freeze
+PANE_DIRECTIONS = {
+  'h' => 'left',
+  'j' => 'down',
+  'k' => 'up',
+  'l' => 'right',
+  'left' => 'left',
+  'down' => 'down',
+  'up' => 'up',
+  'right' => 'right',
+}.freeze
 INSTALL_DIR = Hiiro::Config.config_dir('herdr-plugin')
 SOURCE_DIR = File.expand_path('../herdr-plugin', File.dirname(File.realpath(__FILE__)))
 KEYS_SNIPPET = <<~TOML
@@ -43,6 +53,56 @@ KEYS_SNIPPET = <<~TOML
   type = "plugin_action"
   command = "hiiro.nvim"
   description = "task notes in nvim"
+
+  # Vim-style pane layout controls. Herdr already uses prefix+h/j/k/l for focus.
+  # Uppercase rotates a two-pane tab so the current pane lands on that edge.
+  [[keys.command]]
+  key = "prefix+shift+h"
+  type = "shell"
+  command = "h herdr move left"
+  description = "move current pane to the left"
+
+  [[keys.command]]
+  key = "prefix+shift+j"
+  type = "shell"
+  command = "h herdr move down"
+  description = "move current pane to the bottom"
+
+  [[keys.command]]
+  key = "prefix+shift+k"
+  type = "shell"
+  command = "h herdr move up"
+  description = "move current pane to the top"
+
+  [[keys.command]]
+  key = "prefix+shift+l"
+  type = "shell"
+  command = "h herdr move right"
+  description = "move current pane to the right"
+
+  [[keys.command]]
+  key = "prefix+alt+h"
+  type = "shell"
+  command = "h herdr resize left"
+  description = "resize current pane left"
+
+  [[keys.command]]
+  key = "prefix+alt+j"
+  type = "shell"
+  command = "h herdr resize down"
+  description = "resize current pane down"
+
+  [[keys.command]]
+  key = "prefix+alt+k"
+  type = "shell"
+  command = "h herdr resize up"
+  description = "resize current pane up"
+
+  [[keys.command]]
+  key = "prefix+alt+l"
+  type = "shell"
+  command = "h herdr resize right"
+  description = "resize current pane right"
 TOML
 
 def herdr_bin
@@ -53,6 +113,45 @@ def source_dir
   return SOURCE_DIR if File.exist?(File.join(SOURCE_DIR, 'herdr-plugin.toml'))
   gem_root = Gem.loaded_specs['hiiro']&.full_gem_path
   gem_root && File.join(gem_root, 'herdr-plugin')
+end
+
+def pane_direction!(value)
+  PANE_DIRECTIONS.fetch(value.to_s) do
+    raise Hiiro::Error, 'Direction must be h, j, k, l, left, down, up, or right'
+  end
+end
+
+def pane_ratio!(value)
+  return nil if value.nil?
+  ratio = Float(value, exception: false)
+  raise Hiiro::Error, 'Ratio must be greater than 0 and less than 1' unless ratio && ratio.positive? && ratio < 1
+  ratio
+end
+
+def move_current_pane(direction, ratio = nil)
+  current = herdr_client.current_pane
+  raise Hiiro::Error, 'No current Herdr pane' unless current
+  panes = herdr_client.panes(workspace: current.workspace_id).select { |pane| pane.tab_id == current.tab_id }
+  raise Hiiro::Error, "Move requires exactly two panes in the current tab; found #{panes.length}" unless panes.length == 2
+  other = panes.find { |pane| pane.id != current.id }
+
+  if %w[left up].include?(direction)
+    source, target = other, current
+    split = direction == 'left' ? 'right' : 'down'
+    move_ratio = ratio && 1.0 - ratio
+    focus = '--no-focus'
+  else
+    source, target = current, other
+    split = direction
+    move_ratio = ratio
+    focus = '--focus'
+  end
+
+  detached = system(herdr_bin, 'pane', 'move', source.id, '--new-tab', '--no-focus')
+  raise Hiiro::Error, 'Herdr could not detach the pane for reflow' unless detached
+  args = ['pane', 'move', source.id, '--tab', target.tab_id, '--target-pane', target.id, '--split', split]
+  args += ['--ratio', move_ratio.to_s] if move_ratio
+  raise Hiiro::Error, 'Herdr could not reflow the pane' unless system(herdr_bin, *args, focus)
 end
 
 Hiiro.run(*ARGV, external_commands: false) do
@@ -80,6 +179,33 @@ Hiiro.run(*ARGV, external_commands: false) do
   add_cmd(:keys) { puts KEYS_SNIPPET }
 
   add_cmd(:actions) { ACTIONS.each { |name| puts "hiiro.#{name}" } }
+
+  add_cmd(:focus, args: %i[direction]) do
+    direction = pane_direction!(opts.args.first)
+    raise Hiiro::Error, 'Herdr could not focus the pane' unless system(herdr_bin, 'pane', 'focus', '--current', '--direction', direction)
+  end
+
+  add_cmd(:resize, args: %i[direction amount?]) do
+    direction = pane_direction!(opts.args.shift)
+    amount = opts.args.shift
+    args = ['pane', 'resize', '--current', '--direction', direction]
+    args += ['--amount', amount] if amount
+    raise Hiiro::Error, 'Herdr could not resize the pane' unless system(herdr_bin, *args)
+  end
+
+  add_cmd(:swap, args: %i[direction]) do
+    direction = pane_direction!(opts.args.first)
+    raise Hiiro::Error, 'Herdr could not swap the pane' unless system(herdr_bin, 'pane', 'swap', '--current', '--direction', direction)
+  end
+
+  add_cmd(:move, :layout, :arrange, args: %i[direction ratio?]) do
+    move_current_pane(pane_direction!(opts.args.shift), pane_ratio!(opts.args.shift))
+  end
+
+  add_cmd(:zoom) do
+    raise Hiiro::Error, 'h herdr zoom takes no arguments' unless opts.args.empty?
+    raise Hiiro::Error, 'Herdr could not zoom the pane' unless system(herdr_bin, 'pane', 'zoom', '--current', '--toggle')
+  end
 
   # Headless: bound to a key, opens the popup with the chosen action.
   add_cmd(:action, args: %i[name]) do
