@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.384] - 2026-09-23
+
+### Added
+- `h plist` command for working with property lists
+
+### Fixed
+- publish script now requires hiiro unconditionally at startup instead of only when falling back to local version
+
 ## [0.1.381] - 2026-09-20
 
 ### Added
@@ -14,8 +22,6 @@
 - `h save` subcommands: `ls`/`list`, `dir`, `show`/`cat`, `copy`, `open`, `edit`, `rm`/`remove` for managing saved files
 - `t path`, `t cd`, `t start`, and `t switch` accept optional `APP` argument to select a configured relative directory beneath the task root
 - APP resolves by exact name or unique case-sensitive prefix; fails when ambiguous or missing
-
-### Added
 - `t switch` / `t workspace` and `t cd` accept an optional APP positional (or `--app`) resolving through the apps registry by exact name or unique prefix; the workspace or pane cd targets the app directory under the task worktree, e.g. `t switch aldi cpm` opens `~/work/aldi/main/retailer-tools/content-page-migrator`
 
 ## [0.1.376] - 2026-09-14
@@ -144,13 +150,3 @@
 ### Removed
 - Remove tmux paste-buffer, jumplist, task-color, focus-hook, and arbitrary-layout features that Herdr 0.8.2 does not support.
 - Remove the old `Hiiro::Tmux` adapter and tmux-specific command tests.
-
-### Fixed
-- Strip the desktop notifier executable path and run notifications and sounds as detached processes instead of creating persistent Herdr tabs.
-- Preserve `add_cmd` declaration locations and argument metadata in generated help; allow command groups to pass arguments and help through to child commands.
-- Make undeclared `add_cmd opts:` entries boolean flags without consuming positional arguments; preserve explicit options and reserve conflicting short aliases.
-- Show selected command options for `add_cmd -h`/`--help` without executing the command block.
-- Focus the exact Herdr pane through the socket API and read the CLI's plain-text pane output without JSON parsing.
-- Restore the missing `Hiiro::Bins` helper so `require "hiiro"` boots and commands like `h jumplist record` dispatch correctly.
-- Make Hiiro's Ruby requirement explicit as Ruby 3.2+ and have rbenv-wide gem installs skip incompatible Ruby versions.
-- Update the publish script to preserve the Ruby support constant, run only on supported Ruby, and install releases only into compatible rbenv versions.
