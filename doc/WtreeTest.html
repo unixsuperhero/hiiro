@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>class WtreeTest - RDoc Documentation</title>
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script src="./js/navigation.js" defer></script>
+<script src="./js/search.js" defer></script>
+<script src="./js/search_index.js" defer></script>
+<script src="./js/searcher.js" defer></script>
+<script src="./js/darkfish.js" defer></script>
+
+<link href="./css/fonts.css" rel="stylesheet">
+<link href="./css/rdoc.css" rel="stylesheet">
+
+
+
+
+<body id="top" role="document" class="class">
+<nav role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="./index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="./table_of_contents.html#pages">Pages</a>
+    <a href="./table_of_contents.html#classes">Classes</a>
+    <a href="./table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search" spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+
+  <div id="class-metadata">
+    
+    <div id="parent-class-section" class="nav-section">
+  <h3>Parent</h3>
+
+  
+  <p class="link">Minitest::Test
+  
+</div>
+
+    
+    
+    <!-- Method Quickref -->
+<div id="method-list-section" class="nav-section">
+  <h3>Methods</h3>
+
+  <ul class="link-list" role="directory">
+    
+    <li ><a href="#method-i-setup">#setup</a>
+    
+    <li ><a href="#method-i-test_add_calls_git_worktree_add">#test_add_calls_git_worktree_add</a>
+    
+    <li ><a href="#method-i-test_list_is_alias_for_ls">#test_list_is_alias_for_ls</a>
+    
+    <li ><a href="#method-i-test_lock_calls_git_worktree_lock">#test_lock_calls_git_worktree_lock</a>
+    
+    <li ><a href="#method-i-test_ls_calls_git_worktree_list">#test_ls_calls_git_worktree_list</a>
+    
+    <li ><a href="#method-i-test_ls_passes_extra_args">#test_ls_passes_extra_args</a>
+    
+    <li ><a href="#method-i-test_move_calls_git_worktree_move">#test_move_calls_git_worktree_move</a>
+    
+    <li ><a href="#method-i-test_prune_calls_git_worktree_prune">#test_prune_calls_git_worktree_prune</a>
+    
+    <li ><a href="#method-i-test_registers_expected_subcommands">#test_registers_expected_subcommands</a>
+    
+    <li ><a href="#method-i-test_remove_calls_git_worktree_remove">#test_remove_calls_git_worktree_remove</a>
+    
+    <li ><a href="#method-i-test_repair_calls_git_worktree_repair">#test_repair_calls_git_worktree_repair</a>
+    
+    <li ><a href="#method-i-test_unlock_calls_git_worktree_unlock">#test_unlock_calls_git_worktree_unlock</a>
+    
+  </ul>
+</div>
+
+  </div>
+</nav>
+
+<main role="main" aria-labelledby="class-WtreeTest">
+  <h1 id="class-WtreeTest" class="class">
+    class WtreeTest
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+  
+  <section id="5Buntitled-5D" class="documentation-section">
+    
+
+    
+
+    
+
+    
+
+    
+     <section id="public-instance-5Buntitled-5D-method-details" class="method-section">
+       <header>
+         <h3>Public Instance Methods</h3>
+       </header>
+
+    
+      <div id="method-i-setup" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">setup</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="setup-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 4</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">setup</span>
+  <span class="ruby-ivar">@harness</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TestHarness</span>.<span class="ruby-identifier">load_bin</span>(<span class="ruby-string">&quot;bin/h-wtree&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_add_calls_git_worktree_add" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_add_calls_git_worktree_add</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_add_calls_git_worktree_add-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 28</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_add_calls_git_worktree_add</span>
+  <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">run_subcmd</span>(<span class="ruby-value">:add</span>, <span class="ruby-string">&#39;../new-tree&#39;</span>, <span class="ruby-string">&#39;my-branch&#39;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> [[<span class="ruby-string">&#39;git&#39;</span>, <span class="ruby-string">&#39;worktree&#39;</span>, <span class="ruby-string">&#39;add&#39;</span>, <span class="ruby-string">&#39;../new-tree&#39;</span>, <span class="ruby-string">&#39;my-branch&#39;</span>]], <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_list_is_alias_for_ls" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_list_is_alias_for_ls</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_list_is_alias_for_ls-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 70</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_list_is_alias_for_ls</span>
+  <span class="ruby-comment"># list should call run_subcmd(:ls, ...)</span>
+  <span class="ruby-comment"># Since it delegates, we need to check it exists</span>
+  <span class="ruby-identifier">assert</span> <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">has_subcmd?</span>(<span class="ruby-value">:list</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_lock_calls_git_worktree_lock" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_lock_calls_git_worktree_lock</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_lock_calls_git_worktree_lock-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 40</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_lock_calls_git_worktree_lock</span>
+  <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">run_subcmd</span>(<span class="ruby-value">:lock</span>, <span class="ruby-string">&#39;../my-tree&#39;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> [[<span class="ruby-string">&#39;git&#39;</span>, <span class="ruby-string">&#39;worktree&#39;</span>, <span class="ruby-string">&#39;lock&#39;</span>, <span class="ruby-string">&#39;../my-tree&#39;</span>]], <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_ls_calls_git_worktree_list" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_ls_calls_git_worktree_list</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_ls_calls_git_worktree_list-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 15</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_ls_calls_git_worktree_list</span>
+  <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">run_subcmd</span>(<span class="ruby-value">:ls</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">1</span>, <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>.<span class="ruby-identifier">size</span>
+  <span class="ruby-identifier">assert_equal</span> [<span class="ruby-string">&#39;git&#39;</span>, <span class="ruby-string">&#39;worktree&#39;</span>, <span class="ruby-string">&#39;list&#39;</span>], <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>.<span class="ruby-identifier">first</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_ls_passes_extra_args" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_ls_passes_extra_args</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_ls_passes_extra_args-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 22</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_ls_passes_extra_args</span>
+  <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">run_subcmd</span>(<span class="ruby-value">:ls</span>, <span class="ruby-string">&#39;--porcelain&#39;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> [[<span class="ruby-string">&#39;git&#39;</span>, <span class="ruby-string">&#39;worktree&#39;</span>, <span class="ruby-string">&#39;list&#39;</span>, <span class="ruby-string">&#39;--porcelain&#39;</span>]], <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_move_calls_git_worktree_move" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_move_calls_git_worktree_move</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_move_calls_git_worktree_move-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 52</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_move_calls_git_worktree_move</span>
+  <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">run_subcmd</span>(<span class="ruby-value">:move</span>, <span class="ruby-string">&#39;../old-path&#39;</span>, <span class="ruby-string">&#39;../new-path&#39;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> [[<span class="ruby-string">&#39;git&#39;</span>, <span class="ruby-string">&#39;worktree&#39;</span>, <span class="ruby-string">&#39;move&#39;</span>, <span class="ruby-string">&#39;../old-path&#39;</span>, <span class="ruby-string">&#39;../new-path&#39;</span>]], <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_prune_calls_git_worktree_prune" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_prune_calls_git_worktree_prune</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_prune_calls_git_worktree_prune-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 58</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_prune_calls_git_worktree_prune</span>
+  <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">run_subcmd</span>(<span class="ruby-value">:prune</span>)
+
+  <span class="ruby-identifier">assert_equal</span> [[<span class="ruby-string">&#39;git&#39;</span>, <span class="ruby-string">&#39;worktree&#39;</span>, <span class="ruby-string">&#39;prune&#39;</span>]], <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_registers_expected_subcommands" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_registers_expected_subcommands</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_registers_expected_subcommands-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 8</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_registers_expected_subcommands</span>
+  <span class="ruby-identifier">expected</span> = <span class="ruby-node">%i[ls list add lock move prune remove repair unlock select copy]</span>
+  <span class="ruby-identifier">expected</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">subcmd</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">assert</span> <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">has_subcmd?</span>(<span class="ruby-identifier">subcmd</span>), <span class="ruby-node">&quot;Expected subcmd :#{subcmd} to be registered&quot;</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_remove_calls_git_worktree_remove" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_remove_calls_git_worktree_remove</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_remove_calls_git_worktree_remove-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 34</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_remove_calls_git_worktree_remove</span>
+  <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">run_subcmd</span>(<span class="ruby-value">:remove</span>, <span class="ruby-string">&#39;../old-tree&#39;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> [[<span class="ruby-string">&#39;git&#39;</span>, <span class="ruby-string">&#39;worktree&#39;</span>, <span class="ruby-string">&#39;remove&#39;</span>, <span class="ruby-string">&#39;../old-tree&#39;</span>]], <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_repair_calls_git_worktree_repair" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_repair_calls_git_worktree_repair</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_repair_calls_git_worktree_repair-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 64</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_repair_calls_git_worktree_repair</span>
+  <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">run_subcmd</span>(<span class="ruby-value">:repair</span>, <span class="ruby-string">&#39;../my-tree&#39;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> [[<span class="ruby-string">&#39;git&#39;</span>, <span class="ruby-string">&#39;worktree&#39;</span>, <span class="ruby-string">&#39;repair&#39;</span>, <span class="ruby-string">&#39;../my-tree&#39;</span>]], <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_unlock_calls_git_worktree_unlock" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_unlock_calls_git_worktree_unlock</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_unlock_calls_git_worktree_unlock-source">
+            <pre><span class="ruby-comment"># File test/bin/wtree_test.rb, line 46</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_unlock_calls_git_worktree_unlock</span>
+  <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">run_subcmd</span>(<span class="ruby-value">:unlock</span>, <span class="ruby-string">&#39;../my-tree&#39;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> [[<span class="ruby-string">&#39;git&#39;</span>, <span class="ruby-string">&#39;worktree&#39;</span>, <span class="ruby-string">&#39;unlock&#39;</span>, <span class="ruby-string">&#39;../my-tree&#39;</span>]], <span class="ruby-ivar">@harness</span>.<span class="ruby-identifier">system_calls</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+    </section>
+  
+  </section>
+
+</main>
+
+
+<footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.1.2.1.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+

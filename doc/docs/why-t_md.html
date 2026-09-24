@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>why-t - RDoc Documentation</title>
+
+  <meta name="keywords" content="ruby,documentation,why-t">
+  <meta name="description" content="why-t: Why t belongs in your daily workflow The best reason to use `t` is the time between deciding to return to a task and actually doing useful work. You ">
+
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "../";
+  var index_rel_prefix = "../";
+</script>
+
+<script src="../js/navigation.js" defer></script>
+<script src="../js/search.js" defer></script>
+<script src="../js/search_index.js" defer></script>
+<script src="../js/searcher.js" defer></script>
+<script src="../js/darkfish.js" defer></script>
+
+<link href="../css/fonts.css" rel="stylesheet">
+<link href="../css/rdoc.css" rel="stylesheet">
+
+
+<body id="top" role="document" class="file">
+<div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
+  <span aria-hidden="true">&#9776;</span>
+</div>
+
+
+<nav id="navigation" role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="../index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="../table_of_contents.html#pages">Pages</a>
+    <a href="../table_of_contents.html#classes">Classes</a>
+    <a href="../table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search (/) for a class, method, ..." spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+<div class="nav-section">
+  <h3>Table of Contents</h3>
+
+
+
+  <ul class="link-list" role="directory">
+              <li>
+            <details open>
+              <summary>      <a href="#label-Why+t+belongs+in+your+daily+workflow">Why t belongs in your daily workflow</a>
+</summary>
+              <ul class="link-list" role="directory">
+                          <li>      <a href="#label-Your+next+action+survives+an+interruption">Your next action survives an interruption</a>
+          <li>      <a href="#label-Waiting+becomes+visible+instead+of+forgotten">Waiting becomes visible instead of forgotten</a>
+          <li>      <a href="#label-The+issue-2C+PR-2C+code-2C+and+notes+stay+together">The issue, PR, code, and notes stay together</a>
+          <li>      <a href="#label-Your+working+notes+remain+ordinary+files">Your working notes remain ordinary files</a>
+          <li>      <a href="#label-You+can+return+to+the+task-27s+terminals+by+name">You can return to the task’s terminals by name</a>
+          <li>      <a href="#label-AI+sessions+start+fresh+unless+you+ask+to+resume">AI sessions start fresh unless you ask to resume</a>
+          <li>      <a href="#label-Context+can+save+typing+without+making+scripts+guess">Context can save typing without making scripts guess</a>
+          <li>      <a href="#label-An+agent+can+leave+you+a+useful+place+to+resume">An agent can leave you a useful place to resume</a>
+          <li>      <a href="#label-Organization+does+not+require+changing+your+checkout">Organization does not require changing your checkout</a>
+          <li>      <a href="#label-Completing+work+preserves+its+context">Completing work preserves its context</a>
+          <li>      <a href="#label-The+smallest+routine+worth+adopting">The smallest routine worth adopting</a>
+          <li>      <a href="#label-Read+next">Read next</a>
+
+              </ul>
+            </details>
+          </li>
+
+  </ul>
+</div>
+
+  
+<div id="fileindex-section" class="nav-section">
+  <h3>Pages</h3>
+
+  <ul class="link-list">
+    <li><a href="../AGENTS_md.html">AGENTS</a>
+    <li><a href="../CHANGELOG_md.html">CHANGELOG</a>
+    <li><a href="../CLAUDE_md.html">CLAUDE</a>
+    <li><a href="../Gemfile.html">Gemfile</a>
+    <li><a href="../Gemfile_lock.html">Gemfile.lock</a>
+    <li><a href="../LICENSE.html">LICENSE</a>
+    <li><a href="../README_md.html">README</a>
+    <li><a href="../Rakefile.html">Rakefile</a>
+    <li><a href="../TODO_md.html">TODO</a>
+    <li><details><summary>bin</summary>
+    <ul class="link-list">
+      <li><a href="../bin/h-_config.html">h-.config</a>
+      <li><a href="../bin/h-dsstore-read.html">h-dsstore-read</a>
+    </ul></details>
+    <li><a href="../demo_sh.html">demo.sh</a>
+    <li><details open><summary>docs</summary>
+    <ul class="link-list">
+      <li><a href="../docs/README_md.html">README</a>
+      <li><a href="../docs/coupling-and-extraction-plan_txt.html">coupling-and-extraction-plan</a>
+      <li><a href="../docs/docker-testing-guide_md.html">docker-testing-guide</a>
+      <li><a href="../docs/h-app_md.html">h-app</a>
+      <li><a href="../docs/h-bg_md.html">h-bg</a>
+      <li><a href="../docs/h-bin_md.html">h-bin</a>
+      <li><a href="../docs/h-branch_md.html">h-branch</a>
+      <li><a href="../docs/h-claude_md.html">h-claude</a>
+      <li><a href="../docs/h-commit_md.html">h-commit</a>
+      <li><a href="../docs/h-config_md.html">h-config</a>
+      <li><a href="../docs/h-cpr_md.html">h-cpr</a>
+      <li><a href="../docs/h-db_md.html">h-db</a>
+      <li><a href="../docs/h-file_md.html">h-file</a>
+      <li><a href="../docs/h-herdr_md.html">h-herdr</a>
+      <li><a href="../docs/h-img_md.html">h-img</a>
+      <li><a href="../docs/h-link_md.html">h-link</a>
+      <li><a href="../docs/h-misc_md.html">h-misc</a>
+      <li><a href="../docs/h-notify_md.html">h-notify</a>
+      <li><a href="../docs/h-pane_md.html">h-pane</a>
+      <li><a href="../docs/h-plugin_md.html">h-plugin</a>
+      <li><a href="../docs/h-pm_md.html">h-pm</a>
+      <li><a href="../docs/h-pr-monitor_md.html">h-pr-monitor</a>
+      <li><a href="../docs/h-pr_md.html">h-pr</a>
+      <li><a href="../docs/h-project_md.html">h-project</a>
+      <li><a href="../docs/h-queue_md.html">h-queue</a>
+      <li><a href="../docs/h-registry_md.html">h-registry</a>
+      <li><a href="../docs/h-run_md.html">h-run</a>
+      <li><a href="../docs/h-save_md.html">h-save</a>
+      <li><a href="../docs/h-service_md.html">h-service</a>
+      <li><a href="../docs/h-session_md.html">h-session</a>
+      <li><a href="../docs/h-sha_md.html">h-sha</a>
+      <li><a href="../docs/h-sparse_md.html">h-sparse</a>
+      <li><a href="../docs/h-subtask_md.html">h-subtask</a>
+      <li><a href="../docs/h-tags_md.html">h-tags</a>
+      <li><a href="../docs/h-task_md.html">h-task</a>
+      <li><a href="../docs/h-title_md.html">h-title</a>
+      <li><a href="../docs/h-todo_md.html">h-todo</a>
+      <li><a href="../docs/h-window_md.html">h-window</a>
+      <li><a href="../docs/h-wtree_md.html">h-wtree</a>
+      <li><a href="../docs/h_md.html">h</a>
+      <li><a href="../docs/t_md.html">t</a>
+      <li><a href="../docs/why-t_md.html">why-t</a>
+    </ul></details>
+    <li><a href="../h-tmux-plugins_tmux.html">h-tmux-plugins.tmux</a>
+    <li><a href="../herdr-plugin/herdr-plugin_toml.html">herdr-plugin.toml</a>
+    <li><a href="../merge.html">merge</a>
+    <li><a href="../notes.html">notes</a>
+    <li><a href="../obsidian_slides_md.html">obsidian_slides</a>
+    <li><a href="../record-demo_sh.html">record-demo.sh</a>
+    <li><details><summary>reports</summary>
+    <ul class="link-list">
+      <li><a href="../reports/ruby-concepts/README_md.html">README</a>
+      <li><a href="../reports/ruby-concepts/api-outline_md.html">api-outline</a>
+      <li><a href="../reports/ruby-concepts/api-proposal_md.html">api-proposal</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-_config_md.html">h-.config</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-alias_md.html">h-alias</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-app_md.html">h-app</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-bg_md.html">h-bg</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-bin_md.html">h-bin</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-branch_md.html">h-branch</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-buffer_md.html">h-buffer</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-capture_md.html">h-capture</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-ch_md.html">h-ch</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-claude_md.html">h-claude</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-cmd_md.html">h-cmd</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-commit_md.html">h-commit</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-config_md.html">h-config</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-context_md.html">h-context</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-cpr_md.html">h-cpr</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-date_md.html">h-date</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-db_md.html">h-db</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-demo_md.html">h-demo</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-docs_md.html">h-docs</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-dot_md.html">h-dot</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-dotenv_md.html">h-dotenv</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-dotfiles_md.html">h-dotfiles</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-dsstore_md.html">h-dsstore</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-env_md.html">h-env</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-git_md.html">h-git</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-herdr_md.html">h-herdr</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-home_md.html">h-home</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-html_md.html">h-html</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-img_md.html">h-img</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-js_md.html">h-js</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-jsonl_md.html">h-jsonl</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-jumplist_md.html">h-jumplist</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-link_md.html">h-link</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-loop_md.html">h-loop</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-ls_md.html">h-ls</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-mcp_md.html">h-mcp</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-mermaid_md.html">h-mermaid</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-mic_md.html">h-mic</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-misc_md.html">h-misc</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-note_md.html">h-note</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-notify_md.html">h-notify</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-obsidian_md.html">h-obsidian</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-osubtask_md.html">h-osubtask</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-otask_md.html">h-otask</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pane_md.html">h-pane</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pgsync_md.html">h-pgsync</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-plugin_md.html">h-plugin</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pm_md.html">h-pm</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pr-monitor_md.html">h-pr-monitor</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pr_md.html">h-pr</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-project_md.html">h-project</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-ps_md.html">h-ps</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-registry_md.html">h-registry</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-remind_md.html">h-remind</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-save_md.html">h-save</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-session_md.html">h-session</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-sha_md.html">h-sha</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-sign_md.html">h-sign</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-sparse_md.html">h-sparse</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-strip_md.html">h-strip</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-t3_md.html">h-t3</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-tags_md.html">h-tags</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-task_md.html">h-task</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-time_md.html">h-time</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-title_md.html">h-title</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-todo_md.html">h-todo</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-uri_md.html">h-uri</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-video_md.html">h-video</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-vim_md.html">h-vim</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-window_md.html">h-window</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-wtree_md.html">h-wtree</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-xxserve_md.html">h-xxserve</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-zosubtask_md.html">h-zosubtask</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h_md.html">h</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/hh_md.html">hh</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/t_md.html">t</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/tt_md.html">tt</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro_rb_md.html">hiiro.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/any_struct_rb_md.html">any_struct.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/app_files_rb_md.html">app_files.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/app_record_rb_md.html">app_record.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/assignment_rb_md.html">assignment.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/background_rb_md.html">background.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/bins_rb_md.html">bins.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/branch_rb_md.html">branch.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/capture_rb_md.html">capture.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/check_run_rb_md.html">check_run.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/config_rb_md.html">config.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/current_task_rb_md.html">current_task.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/db_rb_md.html">db.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/effects_rb_md.html">effects.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/error_rb_md.html">error.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/fuzzyfind_rb_md.html">fuzzyfind.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git_rb_md.html">git.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/branch_rb_md.html">branch.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/branches_rb_md.html">branches.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/pr_rb_md.html">pr.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/remote_rb_md.html">remote.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/worktree_rb_md.html">worktree.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/worktrees_rb_md.html">worktrees.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/glob_rb_md.html">glob.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/herdr_rb_md.html">herdr.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/input_file_rb_md.html">input_file.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/invocation_rb_md.html">invocation.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/link_rb_md.html">link.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/matcher_rb_md.html">matcher.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/notification_rb_md.html">notification.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/options_rb_md.html">options.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/pane_home_rb_md.html">pane_home.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/paths_rb_md.html">paths.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/pin_record_rb_md.html">pin_record.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/pinned_pr_rb_md.html">pinned_pr.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/pinned_pr_manager_rb_md.html">pinned_pr_manager.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/project_rb_md.html">project.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/projects_rb_md.html">projects.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/ps_process_rb_md.html">ps_process.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/queue_rb_md.html">queue.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/rbenv_rb_md.html">rbenv.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/registry_rb_md.html">registry.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/reminder_rb_md.html">reminder.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/runner_tool_rb_md.html">runner_tool.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/service_manager_rb_md.html">service_manager.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/shell_rb_md.html">shell.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/tags_rb_md.html">tags.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/task_cli_rb_md.html">task_cli.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/task_record_rb_md.html">task_record.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/task_sessions_rb_md.html">task_sessions.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/tasks_rb_md.html">tasks.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/todo_rb_md.html">todo.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/tui_rb_md.html">tui.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/version_rb_md.html">version.rb</a>
+      <li><a href="../reports/ruby-concepts/concepts-keys.html">concepts-keys</a>
+      <li><a href="../reports/ruby-concepts/concepts_json.html">concepts.json</a>
+      <li><a href="../reports/ruby-concepts/concepts_md.html">concepts</a>
+      <li><a href="../reports/ruby-concepts/coverage_json.html">coverage.json</a>
+      <li><a href="../reports/ruby-concepts/duplicates_json.html">duplicates.json</a>
+      <li><a href="../reports/ruby-concepts/duplicates_md.html">duplicates</a>
+      <li><a href="../reports/ruby-concepts/file-defaults_tsv.html">file-defaults.tsv</a>
+      <li><a href="../reports/ruby-concepts/files_md.html">files</a>
+      <li><a href="../reports/ruby-concepts/files_tsv.html">files.tsv</a>
+      <li><a href="../reports/ruby-concepts/findings_md.html">findings</a>
+      <li><a href="../reports/ruby-concepts/inventory_json.html">inventory.json</a>
+      <li><a href="../reports/ruby-concepts/lines_tsv.html">lines.tsv</a>
+      <li><a href="../reports/ruby-concepts/review-baseline_json.html">review-baseline.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/core-findings_md.html">core-findings</a>
+      <li><a href="../reports/ruby-concepts/reviews/core-inventory_json.html">core-inventory.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/core-labels_json.html">core-labels.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/core-labels_py.html">core-labels.py</a>
+      <li><a href="../reports/ruby-concepts/reviews/git-build-labels_py.html">git-build-labels.py</a>
+      <li><a href="../reports/ruby-concepts/reviews/git-findings_md.html">git-findings</a>
+      <li><a href="../reports/ruby-concepts/reviews/git-inventory_json.html">git-inventory.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/git-labels_json.html">git-labels.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/tasks-build-labels_py.html">tasks-build-labels.py</a>
+      <li><a href="../reports/ruby-concepts/reviews/tasks-findings_md.html">tasks-findings</a>
+      <li><a href="../reports/ruby-concepts/reviews/tasks-inventory_json.html">tasks-inventory.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/tasks-labels_json.html">tasks-labels.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/utilities-findings_md.html">utilities-findings</a>
+      <li><a href="../reports/ruby-concepts/reviews/utilities-inventory_json.html">utilities-inventory.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/utilities-labels_json.html">utilities-labels.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/utilities-map_py.html">utilities-map.py</a>
+      <li><a href="../reports/ruby-concepts/scripts/render_py.html">render.py</a>
+    </ul></details>
+    <li><details><summary>script</summary>
+    <ul class="link-list">
+      <li><a href="../script/compare.html">compare</a>
+      <li><a href="../script/install.html">install</a>
+      <li><a href="../script/sync.html">sync</a>
+      <li><a href="../script/test.html">test</a>
+      <li><a href="../script/update.html">update</a>
+    </ul></details>
+    <li><a href="../side-effect-separation-plan_md.html">side-effect-separation-plan</a>
+    <li><a href="../slides_md.html">slides</a>
+    <li><details><summary>tmp</summary>
+    <ul class="link-list">
+      <li><a href="../tmp/core-history.html">core-history</a>
+      <li><a href="../tmp/publish_output/20260913154219_json.html">20260913154219.json</a>
+      <li><a href="../tmp/publish_output/20260913154439_json.html">20260913154439.json</a>
+      <li><a href="../tmp/publish_output/20260913161551_json.html">20260913161551.json</a>
+      <li><a href="../tmp/publish_output/20260914012045_json.html">20260914012045.json</a>
+      <li><a href="../tmp/publish_output/20260914030807_json.html">20260914030807.json</a>
+      <li><a href="../tmp/publish_output/20260914035113_json.html">20260914035113.json</a>
+      <li><a href="../tmp/publish_output/20260914052543_json.html">20260914052543.json</a>
+      <li><a href="../tmp/publish_output/20260914060149_json.html">20260914060149.json</a>
+      <li><a href="../tmp/publish_output/20260914061052_json.html">20260914061052.json</a>
+      <li><a href="../tmp/publish_output/20260914062133_json.html">20260914062133.json</a>
+      <li><a href="../tmp/publish_output/20260914063655_json.html">20260914063655.json</a>
+      <li><a href="../tmp/publish_output/20260914064312_json.html">20260914064312.json</a>
+      <li><a href="../tmp/publish_output/20260914064702_json.html">20260914064702.json</a>
+      <li><a href="../tmp/publish_output/20260917150540_json.html">20260917150540.json</a>
+      <li><a href="../tmp/publish_output/20260920174122_json.html">20260920174122.json</a>
+    </ul></details>
+  </ul>
+</div>
+
+
+  <footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.14.2.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+
+</nav>
+
+<main role="main" aria-label="Page docs/why-t.md">
+
+<h1 id="label-Why+t+belongs+in+your+daily+workflow">Why t belongs in your daily workflow<span><a href="#label-Why+t+belongs+in+your+daily+workflow">&para;</a> <a href="#top">&uarr;</a></span></h1>
+
+<p>The best reason to use <code>t</code> is the time between deciding to return to a task and actually doing useful work.</p>
+
+<p>You already have the code, the issue, the PR, the notes, and a terminal somewhere. The hard part is remembering which ones belong together and what you meant to do next. That gets harder when you switch between projects, wait for reviews, or hand work to an agent.</p>
+
+<p><strong><code>t</code> gives each task a named record you can return to.</strong> It keeps the next action and supporting references together, and connects that record to a Herdr workspace when you need terminals.</p>
+
+<p>This is the case for using the current tool, with examples of what it already does. For every command and option, see the <a href="t_md.html">complete t reference</a>.</p>
+
+<h2 id="label-Your+next+action+survives+an+interruption">Your next action survives an interruption<span><a href="#label-Your+next+action+survives+an+interruption">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>A task name tells you the subject. A useful next action tells you how to resume.</p>
+
+<p>Compare these two descriptions of the same work:</p>
+
+<pre>// Enough to remember that work exists.
+{ task: &quot;fix-checkout&quot; }
+
+// Enough to start doing something useful.
+{
+  task: &quot;fix-checkout&quot;,
+  status: &quot;active&quot;,
+  next: &quot;Reproduce the timeout with the saved checkout payload&quot;
+}</pre>
+
+<p>The second version takes one command:</p>
+
+<pre>t fix-checkout next &#39;Reproduce the timeout with the saved checkout payload&#39;</pre>
+
+<p>When a meeting interrupts you, or another bug takes priority, that instruction stays with the task. Tomorrow, <code>t fix-checkout</code> tells you where to pick up.</p>
+
+<p><strong>The habit that makes this useful is updating <code>next</code> before you switch away.</strong> It can be one sentence. It does not need to become a project plan.</p>
+
+<p><code>next</code> is one current action, not an accumulating checklist. Replace it as you make progress. Separate todos can hold the other steps without replacing that next action:</p>
+
+<pre>t fix-checkout todo add Compare the retry settings
+tt fix-checkout add Inspect --help output
+t fix-checkout todo</pre>
+
+<p>Task display and todo listing show every todo with its ID, status, and text. To remove one, use its displayed ID, such as <code>t todo rm fix-checkout 42</code>, or print just its text with <code>t todo show 42</code>. The ID must belong to that scope. Adding or removing todos does not change the task’s next action or status, and <code>t</code> does not choose the next todo for you.</p>
+
+<p>Task references prefer an exact name, then a unique case-sensitive prefix. Ambiguous prefixes fail. A first word that names no task is treated as payload for the current task, so <code>t todo add fix build</code> never creates a task named <code>fix</code>. Only <code>t new NAME</code> creates tasks, and it creates that exact name rather than resolving a prefix.</p>
+
+<p><code>tt ...</code> is <code>t todo ...</code>. Bare <code>tt</code> lists current-task todos, and <code>tt help</code> shows todo help. Use <code>t todo -</code> or <code>tt add - TEXT</code> for orphan todos. <code>-</code> is not a task and works only for todos.</p>
+
+<p>Every word after the task in <code>add</code> is literal text, including flags and <code>--</code>, except a leading <code>-h</code> or <code>--help</code>, which shows help. Empty text fails.</p>
+
+<p>Todos share the existing database table with <code>h todo</code>. <code>t</code> does not rewrite <code>todo.yml</code> or change <code>h task</code> behavior. Keep the longer investigation in a document.</p>
+
+<h2 id="label-Waiting+becomes+visible+instead+of+forgotten">Waiting becomes visible instead of forgotten<span><a href="#label-Waiting+becomes+visible+instead+of+forgotten">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>Some unfinished work is actionable. Some is waiting on someone else. Treating both as the same pile makes it harder to decide what deserves your attention.</p>
+
+<pre>t fix-checkout waiting &#39;Payments team to confirm the retry behavior&#39;</pre>
+
+<p>That saves the explanation and changes the task’s status to <code>waiting</code>. The next action remains available, so you can retain what you intend to do after the blocker clears.</p>
+
+<pre class="ruby">{
+  <span class="ruby-value">task:</span> <span class="ruby-string">&quot;fix-checkout&quot;</span>,
+  <span class="ruby-value">status:</span> <span class="ruby-string">&quot;waiting&quot;</span>,
+  <span class="ruby-value">waiting_on:</span> <span class="ruby-string">&quot;Payments team to confirm the retry behavior&quot;</span>,
+  <span class="ruby-value">next:</span> <span class="ruby-string">&quot;Add a regression case once the expected behavior is confirmed&quot;</span>
+}
+</pre>
+
+<p>Bare <code>t</code> (or <code>t ls</code> / <code>t list</code>) lists every task and status, including done and archived work. Each name carries its open todo count, such as <code>prez (3)</code>, and active and waiting rows show their next-action and blocker text, so you can review what needs attention without opening every terminal.</p>
+
+<p>When the answer arrives:</p>
+
+<pre>t fix-checkout waiting --clear</pre>
+
+<p>A waiting task becomes active again. There is no automatic reminder or follow-up scheduler; the benefit is having the blocker written down where you review the work.</p>
+
+<h2 id="label-The+issue-2C+PR-2C+code-2C+and+notes+stay+together">The issue, PR, code, and notes stay together<span><a href="#label-The+issue-2C+PR-2C+code-2C+and+notes+stay+together">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>You should not need to remember whether the useful link is in a browser tab, a chat message, or a terminal’s scrollback.</p>
+
+<p>A task can hold references to each of those pieces:</p>
+
+<pre class="ruby">{
+  <span class="ruby-value">task:</span> <span class="ruby-string">&quot;fix-checkout&quot;</span>,
+  <span class="ruby-value">code:</span> <span class="ruby-string">&quot;the existing store checkout directory&quot;</span>,
+  <span class="ruby-value">issue:</span> <span class="ruby-string">&quot;the original failure report&quot;</span>,
+  <span class="ruby-value">pr:</span> <span class="ruby-string">&quot;the proposed fix&quot;</span>,
+  <span class="ruby-value">notes:</span> <span class="ruby-string">&quot;what we tried and what we learned&quot;</span>
+}
+</pre>
+
+<p>For example, using an existing local directory and illustrative URLs:</p>
+
+<pre>t fix-checkout directory add ~/proj/store --primary --label code
+t fix-checkout link add https://example.com/issues/123 --kind issue --label ticket
+t fix-checkout pr add https://example.com/pulls/456 --label implementation
+t fix-checkout doc new investigation &#39;Checkout investigation&#39;</pre>
+
+<p>You can then return directly to a named resource:</p>
+
+<pre>t fix-checkout link open ticket
+t fix-checkout pr open implementation
+t fix-checkout doc open investigation</pre>
+
+<p>The primary directory also becomes the default code location for terminals you create through <code>t</code>.</p>
+
+<p><a href="../Directory.html"><code>Directory</code></a> and file attachments are references. Your files stay where they already live. Links are saved URLs, not a second issue tracker that needs to be kept in sync. <code>t</code> does not fetch PR review status or infer whether the linked issue is complete.</p>
+
+<h2 id="label-Your+working+notes+remain+ordinary+files">Your working notes remain ordinary files<span><a href="#label-Your+working+notes+remain+ordinary+files">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>Each task has a home under <code>~/notes/work/</code>. Documents created through <code>t</code> are ordinary Markdown files, and existing Markdown documents placed in that home are discoverable without registration.</p>
+
+<p>A task home might look like this:</p>
+
+<pre>~/notes/work/fix-checkout/
+  task-42-investigation.md
+  task-42-handoff.md
+  failing-payload.json
+  screenshot.png</pre>
+
+<p>The task ID in generated filenames helps keep document names distinct when <code>mdoc</code> renders them.</p>
+
+<p>This gives you room for the details that do not belong in a one-line next action:</p>
+<ul><li>
+<p>A reproduction and the exact inputs that trigger it.</p>
+</li><li>
+<p>Approaches you ruled out, with the reason each one failed.</p>
+</li><li>
+<p>A decision and the evidence behind it.</p>
+</li><li>
+<p>A handoff note for your next session or another agent.</p>
+</li></ul>
+
+<p><code>t fix-checkout file list</code> discovers files in the task home. <code>t fix-checkout doc open</code> uses <code>mdoc</code>, so you can read the notes through the same rendered-document workflow.</p>
+
+<p>The database holds the task metadata and resource references; the notes remain files you can read and edit with your existing tools.</p>
+
+<h2 id="label-You+can+return+to+the+task-27s+terminals+by+name">You can return to the task’s terminals by name<span><a href="#label-You+can+return+to+the+task-27s+terminals+by+name">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>Herdr makes terminal work persistent. <code>t</code> gives that workspace a relationship to the task you are trying to finish.</p>
+
+<pre>t fix-checkout switch</pre>
+
+<p>If the task’s workspace is already open, this focuses it. If it is missing, <code>t</code> creates one using the task’s starting-directory rules. Only after the explicit switch succeeds does <code>t</code> save the task as your fallback.</p>
+
+<p><code>t fix-checkout workspace</code> is the same operation. Add <code>--show</code> to either command to inspect without creating a workspace, focusing it, or changing the saved task. These are direct commands, not groups. Native command abbreviations remain available inside the task scope, such as <code>t fix-checkout wor</code>.</p>
+
+<p>Within that workspace, you can create a labelled tab for a particular activity:</p>
+
+<pre>t fix-checkout tab new tests --command &#39;bundle exec rake test&#39;</pre>
+
+<p>Later:</p>
+
+<pre>t fix-checkout tab open tests</pre>
+
+<p>You can also list panes, read their output, split one, or submit a command to an existing pane. That is useful when an agent needs to inspect the same working context rather than start an unrelated terminal elsewhere.</p>
+
+<p>There are important limits. <code>t</code> does not restore a closed workspace’s old layout or restart all its former processes. Creating a tab creates another terminal; it does not reuse one merely because the label matches. Terminals remain open after their commands finish.</p>
+
+<p>The useful guarantee is narrower: <strong>you can find or open the workspace associated with a task without remembering its position in the sidebar.</strong></p>
+
+<h2 id="label-AI+sessions+start+fresh+unless+you+ask+to+resume">AI sessions start fresh unless you ask to resume<span><a href="#label-AI+sessions+start+fresh+unless+you+ask+to+resume">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>The tool commands open a new focused tab in the task workspace:</p>
+
+<pre>t fix-checkout omp
+t fix-checkout codex
+t fix-checkout claude</pre>
+
+<p><code>cdx</code> is an alias for <code>codex</code>, and <code>cld</code> is an alias for <code>claude</code>. Each command runs its native executable. Claude runs <code>claude</code>, never <code>omp</code>.</p>
+
+<p>Only the first tool argument can switch to resume mode. It must be a nonempty prefix of <code>resume</code>, such as <code>r</code>, <code>res</code>, or <code>resume</code>:</p>
+
+<pre>t fix-checkout cdx r
+t fix-checkout cld resume SESSION_ID
+t fix-checkout omp resume --help</pre>
+
+<p>With nothing after the resume selector, <code>t</code> focuses the unique running instance of that tool in the task workspace. It checks Herdr’s agent metadata, not the tab name. Multiple matches produce an error with IDs. If none is running, a new tab opens the native resume picker.</p>
+
+<p>With a session ID or any other arguments after the selector, <code>t</code> always creates a tab and passes those arguments to the native resume command. OMP and Claude receive <code>--resume</code>; Codex receives <code>resume</code>. All other arguments pass unchanged, including <code>--help</code>, <code>--</code>, and native tool options. There is no wrapper <code>--new</code> or automatic last-session resume.</p>
+
+<p>The workspace identifies running terminals, not a separate persisted-session store. If tasks share a directory, native resume discovery is not necessarily task-isolated. The launcher does not inject model or permission settings or make auth/API requests.</p>
+
+<h2 id="label-Context+can+save+typing+without+making+scripts+guess">Context can save typing without making scripts guess<span><a href="#label-Context+can+save+typing+without+making+scripts+guess">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>The command comes first, and the task is optional: <code>t show fix-checkout</code> names it, <code>t show</code> uses the current task. A first word that names a task, exactly or by unique prefix, is the task; anything else is payload for the current task, the same rule the old <code>h task</code> commands used. <code>-t TASK</code> forces a task, <code>-f</code> picks one with a fuzzy finder, and <code>.</code> stands for the current task when a payload could look like a name:</p>
+
+<pre>t current
+t show
+t next
+t next . &#39;Check the new test against the original failing payload&#39;</pre>
+
+<p>The calling Herdr workspace wins over a conflicting current directory. The directory is next, followed by the saved task. Ambiguous matches and invalid, stale, or conflicting Herdr IDs are errors.</p>
+
+<p>You can set that fallback without moving terminal focus:</p>
+
+<pre class="ruby"><span class="ruby-identifier">t</span> <span class="ruby-identifier">use</span> <span class="ruby-identifier">fix</span><span class="ruby-operator">-</span><span class="ruby-identifier">checkout</span>
+</pre>
+
+<p><code>t current</code> only prints the selected name. Reads leave the saved fallback unchanged; <code>t switch NAME</code> saves it after a successful switch. A deleted saved task causes an error if selection reaches it. Bare <code>t</code> always lists all tasks rather than selecting one.</p>
+
+<h2 id="label-An+agent+can+leave+you+a+useful+place+to+resume">An agent can leave you a useful place to resume<span><a href="#label-An+agent+can+leave+you+a+useful+place+to+resume">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>An agent’s final chat message can be hard to find later. A task’s next action and document home are predictable places to leave the result.</p>
+
+<p>For example, an agent working on a selected task can create a handoff document and update what remains:</p>
+
+<pre>t fix-checkout doc new handoff &#39;Checkout handoff&#39;
+t fix-checkout next &#39;Review the retry test and decide whether to merge&#39;</pre>
+
+<p>The agent still needs to write its findings into the document. <code>doc new</code> creates the file and heading; it does not generate the handoff content.</p>
+
+<p>This is a shared convention, not an agent orchestration system. <code>t</code> does not launch an autonomous workflow, merge competing updates, or guarantee that an agent’s claims are correct. It gives you both the same named task and the same place to record the result.</p>
+
+<h2 id="label-Organization+does+not+require+changing+your+checkout">Organization does not require changing your checkout<span><a href="#label-Organization+does+not+require+changing+your+checkout">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>You can start tracking work immediately:</p>
+
+<pre>t fix-checkout new</pre>
+
+<p>That creates a record and notes directory. It does not create a worktree, switch branches, modify sparse checkout, or open Herdr.</p>
+
+<p>You can attach an existing repository or worktree afterward. If that directory already uses sparse checkout, <code>t</code> leaves the configuration alone.</p>
+
+<p>This matters for small investigations and noncoding tasks. You can track an invoice review or a design decision without pretending it needs a branch and a terminal workspace.</p>
+
+<p>The separate <code>h task</code> commands still own their coding-worktree operations. The <a href="t_md.html#worktrees-branches-and-sparse-checkout">reference explains that boundary</a>, including the different behavior of <code>h task start</code> and <code>h task switch</code>.</p>
+
+<h2 id="label-Completing+work+preserves+its+context">Completing work preserves its context<span><a href="#label-Completing+work+preserves+its+context">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<pre>t fix-checkout done</pre>
+
+<p>Completed work stays in bare <code>t</code> output with its <code>done</code> status. Its record, todos, notes, links, and directory references remain available. Archiving also preserves those resources.</p>
+
+<pre class="ruby"><span class="ruby-identifier">t</span>
+<span class="ruby-identifier">t</span> <span class="ruby-identifier">fix</span><span class="ruby-operator">-</span><span class="ruby-identifier">checkout</span>
+</pre>
+
+<p>If the problem returns, you can reopen the task:</p>
+
+<pre>t fix-checkout status active</pre>
+
+<p>Completion does not close terminals or clean up Git worktrees. It means the task is complete, not that every resource associated with it should be destroyed.</p>
+
+<h2 id="label-The+smallest+routine+worth+adopting">The smallest routine worth adopting<span><a href="#label-The+smallest+routine+worth+adopting">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p>You do not need to use every command for this to pay off.</p>
+
+<table role="table">
+<thead>
+<tr>
+<th>Moment</th>
+<th>Useful command</th>
+<th>What it gives you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>You capture a new piece of work</td>
+<td><code>t new TASK</code></td>
+<td>An exact named record and notes home</td>
+</tr>
+<tr>
+<td>You capture another step</td>
+<td><code>tt add &#39;Compare the retry settings&#39;</code></td>
+<td>A todo on the current task without replacing the next action</td>
+</tr>
+<tr>
+<td>You decide what to work on</td>
+<td><code>t</code></td>
+<td>Every task and status, with next-action and blocker text</td>
+</tr>
+<tr>
+<td>You resume a task</td>
+<td><code>t show TASK</code></td>
+<td>The context you recorded for it</td>
+</tr>
+<tr>
+<td>You want a fallback outside task directories and Herdr</td>
+<td><code>t use TASK</code></td>
+<td>Saved selection without moving terminal focus</td>
+</tr>
+<tr>
+<td>You need its terminals</td>
+<td><code>t switch TASK</code></td>
+<td>The associated workspace and a saved fallback after success</td>
+</tr>
+<tr>
+<td>You want a fresh AI session</td>
+<td><code>t omp TASK</code></td>
+<td>A new focused tab running the native tool</td>
+</tr>
+<tr>
+<td>You are about to switch away</td>
+<td><code>t next &#39;The next concrete action&#39;</code></td>
+<td>An instruction for your next session</td>
+</tr>
+<tr>
+<td>Someone else is blocking progress</td>
+<td><code>t waiting &#39;Who or what I need&#39;</code></td>
+<td>A waiting state and explanation</td>
+</tr>
+<tr>
+<td>The work is complete</td>
+<td><code>t done TASK</code></td>
+<td>A done status without deleting the supporting context</td>
+</tr>
+</tbody>
+</table>
+
+<p>Start with task names and useful next actions. Add documents, links, and terminal organization when they make a particular task easier to resume.</p>
+
+<p><code>t</code> will not choose your priorities or keep itself accurate. Its value comes from making a small update at the moment you know the answer, so you do not have to reconstruct it later.</p>
+
+<p><strong>The strongest feature is the combination: a named task, a concrete next action, and direct access to the material you need to act on it.</strong></p>
+
+<h2 id="label-Read+next">Read next<span><a href="#label-Read+next">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<p><a href="t_md.html">The complete t command reference</a> covers every subcommand, option, alias, state transition, storage location, and Herdr/worktree side effect. The implementation is <a href="../Hiiro/TaskCli.html"><code>Hiiro::TaskCli</code></a> in <code>lib/hiiro/task_cli.rb</code>, launched by the <code>t</code> and <code>tt</code> gem executables in <code>exe/</code>.</p>
+
+</main>
+

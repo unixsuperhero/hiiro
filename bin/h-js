@@ -5,6 +5,27 @@ require 'hiiro'
 # sed -n '/scripts.*[{]/,/[}]/p' package.json
 
 Hiiro.run do
+  add_cmd :add, args: ['NAME', 'COMMAND...'] do
+    abort 'Usage: h-js add NAME COMMAND... (use -- before command flags)' unless opts.args.length >= 2
+    name, *command_args = opts.args
+    abort 'Script name cannot be blank' if name.strip.empty?
+    command = command_args.length == 1 ? command_args.first : Shellwords.join(command_args)
+    abort 'Script command cannot be blank' if command.strip.empty?
+    abort 'No package.json in the current directory' unless File.file?('package.json')
+
+    package = JSON.parse(File.read('package.json'))
+    abort 'package.json must contain an object' unless package.is_a?(Hash)
+    package['scripts'] = {} unless package.key?('scripts')
+    abort 'package.json scripts must be an object' unless package['scripts'].is_a?(Hash)
+    abort "Script #{name.inspect} already exists" if package['scripts'].key?(name)
+
+    package['scripts'][name] = command
+    File.write('package.json', JSON.pretty_generate(package) + "\n")
+    puts "Added script #{name.inspect} to package.json"
+  rescue JSON::ParserError => error
+    abort "Invalid package.json: #{error.message}"
+  end
+
   add_cmd :pkg do
     file, *_other = Dir.glob('package.json')
 

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>class HiiroAddCmdTest - RDoc Documentation</title>
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script src="./js/navigation.js" defer></script>
+<script src="./js/search.js" defer></script>
+<script src="./js/search_index.js" defer></script>
+<script src="./js/searcher.js" defer></script>
+<script src="./js/darkfish.js" defer></script>
+
+<link href="./css/fonts.css" rel="stylesheet">
+<link href="./css/rdoc.css" rel="stylesheet">
+
+
+
+
+<body id="top" role="document" class="class">
+<nav role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="./index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="./table_of_contents.html#pages">Pages</a>
+    <a href="./table_of_contents.html#classes">Classes</a>
+    <a href="./table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search" spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+
+  <div id="class-metadata">
+    
+    <div id="parent-class-section" class="nav-section">
+  <h3>Parent</h3>
+
+  
+  <p class="link">Minitest::Test
+  
+</div>
+
+    
+    
+    <!-- Method Quickref -->
+<div id="method-list-section" class="nav-section">
+  <h3>Methods</h3>
+
+  <ul class="link-list" role="directory">
+    
+    <li ><a href="#method-i-test_auto_flags_and_explicit_task_option_reach_handler">#test_auto_flags_and_explicit_task_option_reach_handler</a>
+    
+    <li ><a href="#method-i-test_generated_help_uses_command_declarations_not_wrapper_metadata">#test_generated_help_uses_command_declarations_not_wrapper_metadata</a>
+    
+    <li ><a href="#method-i-test_generated_help_with_locations_under_different_root_directories">#test_generated_help_with_locations_under_different_root_directories</a>
+    
+    <li ><a href="#method-i-test_help_lists_only_selected_options_without_running_handler">#test_help_lists_only_selected_options_without_running_handler</a>
+    
+    <li ><a href="#method-i-test_nested_add_cmd_preserves_leaf_options_and_help">#test_nested_add_cmd_preserves_leaf_options_and_help</a>
+    
+  </ul>
+</div>
+
+  </div>
+</nav>
+
+<main role="main" aria-labelledby="class-HiiroAddCmdTest">
+  <h1 id="class-HiiroAddCmdTest" class="class">
+    class HiiroAddCmdTest
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+  
+  <section id="5Buntitled-5D" class="documentation-section">
+    
+
+    
+
+    
+
+    
+
+    
+     <section id="public-instance-5Buntitled-5D-method-details" class="method-section">
+       <header>
+         <h3>Public Instance Methods</h3>
+       </header>
+
+    
+      <div id="method-i-test_auto_flags_and_explicit_task_option_reach_handler" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_auto_flags_and_explicit_task_option_reach_handler</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_auto_flags_and_explicit_task_option_reach_handler-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 177</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_auto_flags_and_explicit_task_option_reach_handler</span>
+  <span class="ruby-identifier">hiiro</span> = <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;testbin-zzz&quot;</span>)
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_option</span>(<span class="ruby-value">:task</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:t</span>)
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_cmd</span>(<span class="ruby-value">:example</span>, <span class="ruby-value">opts:</span> <span class="ruby-node">%i[a b c d task]</span>) <span class="ruby-keyword">do</span>
+    [<span class="ruby-identifier">opts</span>.<span class="ruby-identifier">to_h</span>, <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">args</span>]
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">result</span> = <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">run_subcommand</span>(<span class="ruby-value">:example</span>, <span class="ruby-string">&quot;--a&quot;</span>, <span class="ruby-string">&quot;first&quot;</span>, <span class="ruby-string">&quot;-b&quot;</span>, <span class="ruby-string">&quot;second&quot;</span>, <span class="ruby-string">&quot;--task&quot;</span>, <span class="ruby-string">&quot;feature&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> [
+    { <span class="ruby-value">help:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">a:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">b:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">c:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">d:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">task:</span> <span class="ruby-string">&quot;feature&quot;</span> },
+    <span class="ruby-node">%w[first second]</span>
+  ], <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_generated_help_uses_command_declarations_not_wrapper_metadata" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_generated_help_uses_command_declarations_not_wrapper_metadata</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_generated_help_uses_command_declarations_not_wrapper_metadata-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 241</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_generated_help_uses_command_declarations_not_wrapper_metadata</span>
+  <span class="ruby-identifier">hiiro</span> = <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;testbin-zzz&quot;</span>, <span class="ruby-value">external_commands:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_cmd</span>(<span class="ruby-value">:list</span>) { <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;listed&quot;</span> }
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_cmd</span>(<span class="ruby-value">:show</span>, <span class="ruby-value">args:</span> <span class="ruby-node">%i[payload]</span>) { <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;shown&quot;</span> }
+
+  <span class="ruby-identifier">output</span>, = <span class="ruby-identifier">capture_io</span> { <span class="ruby-identifier">assert_raises</span>(<span class="ruby-constant">SystemExit</span>) { <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">help</span> } }
+  <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/show\s+&lt;payload&gt;/</span>, <span class="ruby-identifier">output</span>)
+  <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/hiiro_test\.rb:/</span>, <span class="ruby-identifier">output</span>)
+  <span class="ruby-identifier">refute_match</span>(<span class="ruby-regexp">/\[\*raw_args\]/</span>, <span class="ruby-identifier">output</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_generated_help_with_locations_under_different_root_directories" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_generated_help_with_locations_under_different_root_directories</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_generated_help_with_locations_under_different_root_directories-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 252</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_generated_help_with_locations_under_different_root_directories</span>
+  <span class="ruby-identifier">hiiro</span> = <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;testbin-zzz&quot;</span>, <span class="ruby-value">external_commands:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">instance_eval</span>(<span class="ruby-string">&quot;add_cmd(:users) {}&quot;</span>, <span class="ruby-string">&quot;/Users/unixsuperhero/bin/t&quot;</span>, <span class="ruby-value">1</span>)
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">instance_eval</span>(<span class="ruby-string">&quot;add_cmd(:volumes) {}&quot;</span>, <span class="ruby-string">&quot;/Volumes/yaba/homedir/gems/hiiro/lib/hiiro.rb&quot;</span>, <span class="ruby-value">1</span>)
+
+  <span class="ruby-identifier">output</span>, = <span class="ruby-identifier">capture_io</span> <span class="ruby-keyword">do</span>
+    <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">1</span>, <span class="ruby-identifier">assert_raises</span>(<span class="ruby-constant">SystemExit</span>) { <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">help</span> }.<span class="ruby-identifier">status</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&#39;export BIN=&quot;/Users/unixsuperhero/bin&quot;&#39;</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&#39;export LIB=&quot;/Volumes/yaba/homedir/gems/hiiro/lib&quot;&#39;</span>
+  <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/users\s+.*\$BIN\/t:1/</span>, <span class="ruby-identifier">output</span>)
+  <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/volumes\s+.*\$LIB\/hiiro.rb:1/</span>, <span class="ruby-identifier">output</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_help_lists_only_selected_options_without_running_handler" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_help_lists_only_selected_options_without_running_handler</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_help_lists_only_selected_options_without_running_handler-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 192</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_help_lists_only_selected_options_without_running_handler</span>
+  <span class="ruby-identifier">hiiro</span> = <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;testbin-zzz&quot;</span>)
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_option</span>(<span class="ruby-value">:task</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:t</span>)
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_flag</span>(<span class="ruby-value">:unselected</span>)
+  <span class="ruby-identifier">calls</span> = []
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_cmd</span>(<span class="ruby-value">:example</span>, <span class="ruby-value">opts:</span> <span class="ruby-node">%i[a history task]</span>) { <span class="ruby-identifier">calls</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">args</span> }
+
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">run_subcommand</span>(<span class="ruby-value">:example</span>, <span class="ruby-string">&quot;payload&quot;</span>)
+  <span class="ruby-identifier">assert_equal</span> [[<span class="ruby-string">&quot;payload&quot;</span>]], <span class="ruby-identifier">calls</span>
+  <span class="ruby-identifier">calls</span>.<span class="ruby-identifier">clear</span>
+
+  <span class="ruby-node">%w[-h --help]</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">help</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">output</span>, = <span class="ruby-identifier">capture_io</span> { <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">run_subcommand</span>(<span class="ruby-value">:example</span>, <span class="ruby-identifier">help</span>) }
+
+    <span class="ruby-identifier">assert_empty</span> <span class="ruby-identifier">calls</span>
+    <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/-a, --a/</span>, <span class="ruby-identifier">output</span>)
+    <span class="ruby-identifier">refute_match</span>(<span class="ruby-regexp">/--a[^\n]*&lt;value&gt;/</span>, <span class="ruby-identifier">output</span>)
+    <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/--history/</span>, <span class="ruby-identifier">output</span>)
+    <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/-t, --task[^\n]*&lt;value&gt;/</span>, <span class="ruby-identifier">output</span>)
+    <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/-h, --help/</span>, <span class="ruby-identifier">output</span>)
+    <span class="ruby-identifier">refute_match</span>(<span class="ruby-regexp">/--unselected/</span>, <span class="ruby-identifier">output</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_nested_add_cmd_preserves_leaf_options_and_help" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_nested_add_cmd_preserves_leaf_options_and_help</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_nested_add_cmd_preserves_leaf_options_and_help-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 216</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_nested_add_cmd_preserves_leaf_options_and_help</span>
+  <span class="ruby-identifier">calls</span> = []
+  <span class="ruby-identifier">dispatch</span> = <span class="ruby-identifier">lambda</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">arguments</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">parent</span> = <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;testbin-zzz&quot;</span>, <span class="ruby-string">&quot;group&quot;</span>, <span class="ruby-string">&quot;leaf&quot;</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">arguments</span>, <span class="ruby-value">external_commands:</span> <span class="ruby-keyword">false</span>)
+    <span class="ruby-identifier">parent</span>.<span class="ruby-identifier">add_cmd</span>(<span class="ruby-value">:group</span>, <span class="ruby-value">passthrough:</span> <span class="ruby-keyword">true</span>) <span class="ruby-keyword">do</span>
+      <span class="ruby-identifier">child</span> = <span class="ruby-identifier">make_child</span>(<span class="ruby-value">:group</span>, <span class="ruby-identifier">args</span>, <span class="ruby-value">external_commands:</span> <span class="ruby-keyword">false</span>) <span class="ruby-keyword">do</span>
+        <span class="ruby-identifier">add_option</span> <span class="ruby-value">:task</span>, <span class="ruby-value">short:</span> <span class="ruby-value">:t</span>
+        <span class="ruby-identifier">add_cmd</span>(<span class="ruby-value">:leaf</span>, <span class="ruby-value">opts:</span> <span class="ruby-node">%i[task all]</span>) <span class="ruby-keyword">do</span>
+          <span class="ruby-identifier">calls</span> <span class="ruby-operator">&lt;&lt;</span> { <span class="ruby-value">task:</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">task</span>, <span class="ruby-value">all:</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">all</span>, <span class="ruby-value">args:</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">args</span> }
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-identifier">child</span>.<span class="ruby-identifier">runner</span>.<span class="ruby-identifier">run</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">child</span>.<span class="ruby-identifier">args</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">parent</span>.<span class="ruby-identifier">runner</span>.<span class="ruby-identifier">run</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">parent</span>.<span class="ruby-identifier">args</span>)
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">dispatch</span>.<span class="ruby-identifier">call</span>(<span class="ruby-string">&quot;-t&quot;</span>, <span class="ruby-string">&quot;demo&quot;</span>, <span class="ruby-string">&quot;--all&quot;</span>, <span class="ruby-string">&quot;payload&quot;</span>)
+  <span class="ruby-identifier">assert_equal</span> [{ <span class="ruby-value">task:</span> <span class="ruby-string">&quot;demo&quot;</span>, <span class="ruby-value">all:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">args:</span> [<span class="ruby-string">&quot;payload&quot;</span>] }], <span class="ruby-identifier">calls</span>
+
+  <span class="ruby-identifier">output</span>, = <span class="ruby-identifier">capture_io</span> { <span class="ruby-identifier">dispatch</span>.<span class="ruby-identifier">call</span>(<span class="ruby-string">&quot;--help&quot;</span>) }
+  <span class="ruby-identifier">assert_equal</span> [{ <span class="ruby-value">task:</span> <span class="ruby-string">&quot;demo&quot;</span>, <span class="ruby-value">all:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">args:</span> [<span class="ruby-string">&quot;payload&quot;</span>] }], <span class="ruby-identifier">calls</span>
+  <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/-t, --task/</span>, <span class="ruby-identifier">output</span>)
+  <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/--all/</span>, <span class="ruby-identifier">output</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+    </section>
+  
+  </section>
+
+</main>
+
+
+<footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.1.2.1.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+

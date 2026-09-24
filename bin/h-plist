@@ -1,0 +1,214 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'open3'
+require 'json'
+
+PLIST_TYPES = %w[bool integer float date string data xml json dictionary array].freeze
+PLIST_FORMATS = %w[xml1 binary1 json swift objc].freeze
+
+def require_plist(path)
+  unless path && !path.empty?
+    STDERR.puts 'A plist path is required.'
+    exit 1
+  end
+  expanded = File.expand_path(path)
+  unless File.file?(expanded)
+    STDERR.puts "Plist not found: #{expanded}"
+    exit 1
+  end
+  expanded
+end
+
+def run_plutil(*arguments, allow_failure: false)
+  stdout, stderr, status = Open3.capture3('plutil', *arguments)
+  unless status.success? || allow_failure
+    STDERR.print(stderr.empty? ? stdout : stderr)
+    exit status.exitstatus
+  end
+  [stdout, stderr, status]
+end
+
+def print_plutil(*arguments)
+  stdout, stderr, = run_plutil(*arguments)
+  STDOUT.print(stdout)
+  STDERR.print(stderr)
+end
+
+def validate_type(type)
+  return type if PLIST_TYPES.include?(type)
+  STDERR.puts "Unknown type #{type.inspect}. Use: #{PLIST_TYPES.join(', ')}"
+  exit 1
+end
+
+def mutation_arguments(verb, key, type, values)
+  args = [verb, key, "-#{validate_type(type)}"]
+  unless %w[dictionary array].include?(type)
+    if values.empty?
+      STDERR.puts "A value is required for type #{type}."
+      exit 1
+    end
+    args << values.join(' ')
+  end
+  args
+end
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:show, :print) do |path=nil|
+    print_plutil('-p', '--', require_plist(path))
+  end
+
+  add_subcmd(:get) do |path=nil, key=nil, format='raw'|
+    unless key
+      STDERR.puts 'Usage: h plist get <file> <keypath> [raw|json|xml1|binary1]'
+      exit 1
+    end
+    unless %w[raw json xml1 binary1].include?(format)
+      STDERR.puts 'Format must be raw, json, xml1, or binary1.'
+      exit 1
+    end
+    print_plutil('-extract', key, format, '-o', '-', '--', require_plist(path))
+  end
+
+  add_subcmd(:keys) do |path=nil, key=nil|
+    plist = require_plist(path)
+    stdout, = if key
+                run_plutil('-extract', key, 'json', '-expect', 'dictionary', '-o', '-', '--', plist)
+              else
+                run_plutil('-convert', 'json', '-o', '-', '--', plist)
+              end
+    value = JSON.parse(stdout)
+    unless value.is_a?(Hash)
+      STDERR.puts(key ? "Not a dictionary: #{key}" : 'The plist root is not a dictionary.')
+      exit 1
+    end
+    puts value.keys.sort
+  end
+
+  add_subcmd(:type) do |path=nil, key=nil|
+    unless key
+      STDERR.puts 'Usage: h plist type <file> <keypath>'
+      exit 1
+    end
+    print_plutil('-type', key, '--', require_plist(path))
+  end
+
+  add_subcmd(:lint) do |*paths|
+    if paths.empty?
+      STDERR.puts 'Usage: h plist lint <file...>'
+      exit 1
+    end
+    expanded = paths.map { |path| require_plist(path) }
+    print_plutil('-lint', '--', *expanded)
+  end
+
+  add_subcmd(:set) do |path=nil, key=nil, *arguments|
+    unless key
+      STDERR.puts 'Usage: h plist set <file> <keypath> [type] <value>'
+      exit 1
+    end
+    type = PLIST_TYPES.include?(arguments.first) ? arguments.shift : 'string'
+    values = arguments
+    plist = require_plist(path)
+    _, _, status = run_plutil('-type', key, '--', plist, allow_failure: true)
+    verb = status.success? ? '-replace' : '-insert'
+    print_plutil(*mutation_arguments(verb, key, type, values), '--', plist)
+  end
+
+  add_subcmd(:add, :insert) do |path=nil, key=nil, *arguments|
+    unless key
+      STDERR.puts 'Usage: h plist add <file> <keypath> [type] <value>'
+      exit 1
+    end
+    type = PLIST_TYPES.include?(arguments.first) ? arguments.shift : 'string'
+    values = arguments
+    print_plutil(*mutation_arguments('-insert', key, type, values), '--', require_plist(path))
+  end
+
+  add_subcmd(:rm, :remove, :delete) do |path=nil, key=nil|
+    unless key
+      STDERR.puts 'Usage: h plist rm <file> <keypath>'
+      exit 1
+    end
+    print_plutil('-remove', key, '--', require_plist(path))
+  end
+
+  add_subcmd(:convert) do |path=nil, format=nil, output=nil|
+    plist = require_plist(path)
+    unless PLIST_FORMATS.include?(format)
+      STDERR.puts "Usage: h plist convert <file> <#{PLIST_FORMATS.join('|')}> [output]"
+      exit 1
+    end
+    args = ['-convert', format]
+    args.concat(['-o', File.expand_path(output)]) if output
+    print_plutil(*args, '--', plist)
+  end
+
+  add_subcmd(:json) do |path=nil|
+    print_plutil('-convert', 'json', '-r', '-o', '-', '--', require_plist(path))
+  end
+
+  add_subcmd(:xml) do |path=nil|
+    print_plutil('-convert', 'xml1', '-o', '-', '--', require_plist(path))
+  end
+
+  add_subcmd(:create) do |path=nil, format='xml1'|
+    unless path
+      STDERR.puts 'Usage: h plist create <file> [xml1|binary1|json]'
+      exit 1
+    end
+    unless %w[xml1 binary1 json].include?(format)
+      STDERR.puts 'Create format must be xml1, binary1, or json.'
+      exit 1
+    end
+    expanded = File.expand_path(path)
+    if File.exist?(expanded)
+      STDERR.puts "Refusing to overwrite existing file: #{expanded}"
+      exit 1
+    end
+    print_plutil('-create', format, expanded)
+  end
+
+  add_subcmd(:edit) do |path=nil|
+    exec('safe_nvim', require_plist(path))
+  end
+
+  add_subcmd(:help) do
+    puts <<~HELP
+      h-plist — inspect and modify Apple property lists with plutil
+
+      READ:
+        h plist <file>                         Pretty-print a plist
+        h plist show <file>                    Pretty-print a plist
+        h plist get <file> <keypath> [format]  Extract a value
+        h plist keys <file> [dict-keypath]     List dictionary keys
+        h plist type <file> <keypath>          Print a value's type
+        h plist lint <file...>                 Validate plist syntax
+        h plist json <file>                    Emit readable JSON
+        h plist xml <file>                     Emit XML
+
+      WRITE:
+        h plist set <file> <keypath> [type] <value>  Insert or replace
+        h plist add <file> <keypath> [type] <value>  Insert only
+        h plist rm <file> <keypath>                  Remove a value
+        h plist convert <file> <format> [output]     Convert in place or copy
+        h plist create <file> [format]               Create without overwrite
+        h plist edit <file>                          Open with safe_nvim
+
+      TYPES:
+        bool, integer, float, date, string (default), data, xml, json,
+        dictionary, array
+
+      Key paths use plutil syntax. Numeric components address array indexes.
+      Quote values containing spaces. Mutating commands edit the file in place.
+    HELP
+  end
+
+  add_default do |path=nil|
+    if path
+      print_plutil('-p', '--', require_plist(path))
+    else
+      run_subcmd(:help)
+    end
+  end
+end

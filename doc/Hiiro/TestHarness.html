@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>class Hiiro::TestHarness - RDoc Documentation</title>
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "../";
+  var index_rel_prefix = "../";
+</script>
+
+<script src="../js/navigation.js" defer></script>
+<script src="../js/search.js" defer></script>
+<script src="../js/search_index.js" defer></script>
+<script src="../js/searcher.js" defer></script>
+<script src="../js/darkfish.js" defer></script>
+
+<link href="../css/fonts.css" rel="stylesheet">
+<link href="../css/rdoc.css" rel="stylesheet">
+
+
+
+
+<body id="top" role="document" class="class">
+<nav role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="../index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="../table_of_contents.html#pages">Pages</a>
+    <a href="../table_of_contents.html#classes">Classes</a>
+    <a href="../table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search" spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+
+  <div id="class-metadata">
+    
+    <div id="parent-class-section" class="nav-section">
+  <h3>Parent</h3>
+
+  
+  <p class="link"><a href="../Object.html">Object</a>
+  
+</div>
+
+    
+    
+    <!-- Method Quickref -->
+<div id="method-list-section" class="nav-section">
+  <h3>Methods</h3>
+
+  <ul class="link-list" role="directory">
+    
+    <li ><a href="#method-c-load_bin">::load_bin</a>
+    
+    <li ><a href="#method-c-new">::new</a>
+    
+    <li ><a href="#method-i-60">#`</a>
+    
+    <li ><a href="#method-i-add_cmd">#add_cmd</a>
+    
+    <li ><a href="#method-i-add_default">#add_default</a>
+    
+    <li ><a href="#method-i-add_flag">#add_flag</a>
+    
+    <li ><a href="#method-i-add_option">#add_option</a>
+    
+    <li ><a href="#method-i-add_resolver">#add_resolver</a>
+    
+    <li ><a href="#method-i-add_subcmd">#add_subcmd</a>
+    
+    <li ><a href="#method-i-edit_files">#edit_files</a>
+    
+    <li ><a href="#method-i-has_subcmd-3F">#has_subcmd?</a>
+    
+    <li ><a href="#method-i-null_fs">#null_fs</a>
+    
+    <li ><a href="#method-i-null_git">#null_git</a>
+    
+    <li ><a href="#method-i-null_herdr">#null_herdr</a>
+    
+    <li ><a href="#method-i-options">#options</a>
+    
+    <li ><a href="#method-i-reset_calls-21">#reset_calls!</a>
+    
+    <li ><a href="#method-i-resolve">#resolve</a>
+    
+    <li ><a href="#method-i-run_default">#run_default</a>
+    
+    <li ><a href="#method-i-run_subcmd">#run_subcmd</a>
+    
+    <li ><a href="#method-i-setup_effects">#setup_effects</a>
+    
+    <li ><a href="#method-i-stub_backtick">#stub_backtick</a>
+    
+    <li ><a href="#method-i-stub_method">#stub_method</a>
+    
+    <li ><a href="#method-i-subcmd_names">#subcmd_names</a>
+    
+    <li ><a href="#method-i-system">#system</a>
+    
+  </ul>
+</div>
+
+  </div>
+</nav>
+
+<main role="main" aria-labelledby="class-Hiiro::TestHarness">
+  <h1 id="class-Hiiro::TestHarness" class="class">
+    class Hiiro::TestHarness
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+  
+  <section id="5Buntitled-5D" class="documentation-section">
+    
+
+    
+
+    
+
+    
+    <section class="attribute-method-details" class="method-section">
+      <header>
+        <h3>Attributes</h3>
+      </header>
+
+      
+      <div id="attribute-i-backtick_calls" class="method-detail">
+        <div class="method-heading attribute-method-heading">
+          <span class="method-name">backtick_calls</span><span
+            class="attribute-access-type">[R]</span>
+        </div>
+
+        <div class="method-description">
+        
+        
+        
+        </div>
+      </div>
+      
+      <div id="attribute-i-executor" class="method-detail">
+        <div class="method-heading attribute-method-heading">
+          <span class="method-name">executor</span><span
+            class="attribute-access-type">[R]</span>
+        </div>
+
+        <div class="method-description">
+        
+        
+        
+        </div>
+      </div>
+      
+      <div id="attribute-i-fs" class="method-detail">
+        <div class="method-heading attribute-method-heading">
+          <span class="method-name">fs</span><span
+            class="attribute-access-type">[R]</span>
+        </div>
+
+        <div class="method-description">
+        
+        
+        
+        </div>
+      </div>
+      
+      <div id="attribute-i-opts" class="method-detail">
+        <div class="method-heading attribute-method-heading">
+          <span class="method-name">opts</span><span
+            class="attribute-access-type">[R]</span>
+        </div>
+
+        <div class="method-description">
+        
+        
+        
+        </div>
+      </div>
+      
+      <div id="attribute-i-subcmds" class="method-detail">
+        <div class="method-heading attribute-method-heading">
+          <span class="method-name">subcmds</span><span
+            class="attribute-access-type">[R]</span>
+        </div>
+
+        <div class="method-description">
+        
+        
+        
+        </div>
+      </div>
+      
+      <div id="attribute-i-system_calls" class="method-detail">
+        <div class="method-heading attribute-method-heading">
+          <span class="method-name">system_calls</span><span
+            class="attribute-access-type">[R]</span>
+        </div>
+
+        <div class="method-description">
+        
+        
+        
+        </div>
+      </div>
+      
+    </section>
+    
+
+    
+     <section id="public-class-5Buntitled-5D-method-details" class="method-section">
+       <header>
+         <h3>Public Class Methods</h3>
+       </header>
+
+    
+      <div id="method-c-load_bin" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">load_bin</span><span
+            class="method-args">(bin_path, &amp;setup_block)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Load a bin file and capture its block Pass a block to pre-configure stubs before the bin&#39;s block is evaled</p>
+          
+          
+
+          
+          <div class="method-source-code" id="load_bin-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 200</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">load_bin</span>(<span class="ruby-identifier">bin_path</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">setup_block</span>)
+  <span class="ruby-identifier">harness</span> = <span class="ruby-identifier">new</span>
+  <span class="ruby-identifier">block</span> = <span class="ruby-keyword">nil</span>
+
+  <span class="ruby-comment"># Apply pre-setup stubs (e.g., herdr_client) before loading</span>
+  <span class="ruby-identifier">harness</span>.<span class="ruby-identifier">instance_eval</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">setup_block</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">setup_block</span>
+
+  <span class="ruby-comment"># Temporarily replace Hiiro.run to capture the block</span>
+  <span class="ruby-identifier">original_run</span> = <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">method</span>(<span class="ruby-value">:run</span>)
+  <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-value">:run</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">blk</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">block</span> = <span class="ruby-identifier">blk</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-comment"># Load the bin file — anchor to project root, not Dir.pwd (which may differ)</span>
+  <span class="ruby-identifier">full_path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">expand_path</span>(<span class="ruby-identifier">bin_path</span>, <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">__dir__</span>, <span class="ruby-string">&#39;..&#39;</span>))
+  <span class="ruby-identifier">load</span> <span class="ruby-identifier">full_path</span>
+
+  <span class="ruby-comment"># Restore original Hiiro.run</span>
+  <span class="ruby-constant">Hiiro</span>.<span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-value">:run</span>, <span class="ruby-identifier">original_run</span>)
+
+  <span class="ruby-comment"># Eval the block in our harness context</span>
+  <span class="ruby-identifier">harness</span>.<span class="ruby-identifier">instance_eval</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">block</span>
+  <span class="ruby-identifier">harness</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-c-new" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">new</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="new-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 114</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>
+  <span class="ruby-ivar">@system_calls</span> = []
+  <span class="ruby-ivar">@backtick_calls</span> = []
+  <span class="ruby-ivar">@backtick_responses</span> = {}
+  <span class="ruby-ivar">@subcmds</span> = {}
+  <span class="ruby-ivar">@default_subcmd</span> = <span class="ruby-keyword">nil</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+    </section>
+  
+     <section id="public-instance-5Buntitled-5D-method-details" class="method-section">
+       <header>
+         <h3>Public Instance Methods</h3>
+       </header>
+
+    
+      <div id="method-i-60" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">`</span><span
+            class="method-args">(cmd)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Stub backticks - call <a href="TestHarness.html#method-i-stub_backtick"><code>stub_backtick</code></a> to set responses</p>
+          
+          
+
+          
+          <div class="method-source-code" id="60-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 129</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">`</span>(<span class="ruby-identifier">cmd</span>)
+  <span class="ruby-ivar">@backtick_calls</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">cmd</span>
+  <span class="ruby-ivar">@backtick_responses</span>[<span class="ruby-identifier">cmd</span>] <span class="ruby-operator">||</span> <span class="ruby-string">&quot;&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-add_cmd" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">add_cmd</span><span
+            class="method-args">(*names, args: [], opts: [], passthrough: false, &amp;block)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p><a href="Capture.html"><code>Capture</code></a> <a href="TestHarness.html#method-i-add_cmd"><code>add_cmd</code></a> registrations (same table as <a href="TestHarness.html#method-i-add_subcmd"><code>add_subcmd</code></a>); <a href="TestHarness.html#method-i-run_subcmd"><code>run_subcmd</code></a> parses args into `opts` so <a href="TestHarness.html#method-i-add_cmd"><code>add_cmd</code></a> blocks that read opts.args work under the harness.</p>
+          
+          
+
+          
+          <div class="method-source-code" id="add_cmd-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 145</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_cmd</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">names</span>, <span class="ruby-value">args:</span> [], <span class="ruby-value">opts:</span> [], <span class="ruby-value">passthrough:</span> <span class="ruby-keyword">false</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">names</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-ivar">@subcmds</span>[<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>] = <span class="ruby-identifier">block</span> }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-add_default" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">add_default</span><span
+            class="method-args">(&amp;block)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p><a href="Capture.html"><code>Capture</code></a> default subcommand</p>
+          
+          
+
+          
+          <div class="method-source-code" id="add_default-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 164</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_default</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-ivar">@default_subcmd</span> = <span class="ruby-identifier">block</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-add_flag" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">add_flag</span><span
+            class="method-args">(name, **kwargs)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="add_flag-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 153</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_flag</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+  <span class="ruby-identifier">options</span>.<span class="ruby-identifier">flag</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-add_option" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">add_option</span><span
+            class="method-args">(name, **kwargs)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="add_option-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 149</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_option</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+  <span class="ruby-identifier">options</span>.<span class="ruby-identifier">option</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kwargs</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-add_resolver" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">add_resolver</span><span
+            class="method-args">(name, current = nil, &amp;lookup)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Stubs for <a href="../Hiiro.html#method-i-add_resolver"><code>Hiiro#add_resolver</code></a> / <a href="TestHarness.html#method-i-resolve"><code>resolve</code></a> — called by Hiiro::Herdr.add_resolvers during load_bin.</p>
+          
+          
+
+          
+          <div class="method-source-code" id="add_resolver-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 231</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_resolver</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">current</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">lookup</span>)
+  <span class="ruby-ivar">@resolvers</span> <span class="ruby-operator">||=</span> {}
+  <span class="ruby-ivar">@resolvers</span>[<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>] = { <span class="ruby-value">current:</span>, <span class="ruby-value">lookup:</span> }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-add_subcmd" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">add_subcmd</span><span
+            class="method-args">(*names, **opts, &amp;block)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p><a href="Capture.html"><code>Capture</code></a> subcommand registrations</p>
+          
+          
+
+          
+          <div class="method-source-code" id="add_subcmd-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 139</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_subcmd</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">names</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">names</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-ivar">@subcmds</span>[<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>] = <span class="ruby-identifier">block</span> }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-edit_files" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">edit_files</span><span
+            class="method-args">(*files, max_splits: 3)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Stub for <a href="../Hiiro.html#method-i-edit_files"><code>Hiiro#edit_files</code></a> — routes through system() so <a href="TestHarness.html#attribute-i-system_calls"><code>system_calls</code></a> is populated, matching the real implementation&#39;s behavior. Uses $EDITOR or &#39;vim&#39; as fallback.</p>
+          
+          
+
+          
+          <div class="method-source-code" id="edit_files-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 249</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">edit_files</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">files</span>, <span class="ruby-value">max_splits:</span> <span class="ruby-value">3</span>)
+  <span class="ruby-identifier">system</span>(<span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;EDITOR&#39;</span>] <span class="ruby-operator">||</span> <span class="ruby-string">&#39;vim&#39;</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">files</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-has_subcmd-3F" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">has_subcmd?</span><span
+            class="method-args">(name)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Check if a subcommand exists</p>
+          
+          
+
+          
+          <div class="method-source-code" id="has_subcmd-3F-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 183</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">has_subcmd?</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-ivar">@subcmds</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-null_fs" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">null_fs</span><span
+            class="method-args">(= @fs)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="null_fs-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 268</span>
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">null_fs</span>   = <span class="ruby-ivar">@fs</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-null_git" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">null_git</span><span
+            class="method-args">(= Hiiro::Git.new(nil, &#39;/fake/root&#39;, executor: @executor))</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="null_git-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 267</span>
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">null_git</span>  = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Git</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">nil</span>, <span class="ruby-string">&#39;/fake/root&#39;</span>, <span class="ruby-value">executor:</span> <span class="ruby-ivar">@executor</span>)
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">null_fs</span>   = <span class="ruby-ivar">@fs</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-null_herdr" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">null_herdr</span><span
+            class="method-args">(= Hiiro::Herdr.new(executor: @executor))</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="null_herdr-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 266</span>
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">null_herdr</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Herdr</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">executor:</span> <span class="ruby-ivar">@executor</span>)
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">null_git</span>  = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Git</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">nil</span>, <span class="ruby-string">&#39;/fake/root&#39;</span>, <span class="ruby-value">executor:</span> <span class="ruby-ivar">@executor</span>)
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">null_fs</span>   = <span class="ruby-ivar">@fs</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-options" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">options</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="options-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 157</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">options</span>
+  <span class="ruby-ivar">@options</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Options</span>.<span class="ruby-identifier">setup</span> {}
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-reset_calls-21" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">reset_calls!</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Clear recorded calls (useful between tests)</p>
+          
+          
+
+          
+          <div class="method-source-code" id="reset_calls-21-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 193</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">reset_calls!</span>
+  <span class="ruby-ivar">@system_calls</span>.<span class="ruby-identifier">clear</span>
+  <span class="ruby-ivar">@backtick_calls</span>.<span class="ruby-identifier">clear</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-resolve" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">resolve</span><span
+            class="method-args">(name, ref = nil)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="resolve-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 236</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">resolve</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">ref</span> = <span class="ruby-keyword">nil</span>)
+  <span class="ruby-ivar">@resolvers</span> <span class="ruby-operator">||=</span> {}
+  <span class="ruby-identifier">r</span> = <span class="ruby-ivar">@resolvers</span>[<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>] <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-node">&quot;No resolver registered for :#{name}&quot;</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">ref</span>.<span class="ruby-identifier">nil?</span>
+    <span class="ruby-identifier">c</span> = <span class="ruby-identifier">r</span>[<span class="ruby-value">:current</span>]
+    <span class="ruby-identifier">c</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:call</span>) <span class="ruby-operator">?</span> <span class="ruby-identifier">c</span>.<span class="ruby-identifier">call</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">c</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">r</span>[<span class="ruby-value">:lookup</span>]&amp;.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">ref</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-run_default" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">run_default</span><span
+            class="method-args">(*args)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Run the default subcommand</p>
+          
+          
+
+          
+          <div class="method-source-code" id="run_default-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 177</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">run_default</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-identifier">raise</span> <span class="ruby-string">&quot;No default subcmd defined&quot;</span> <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@default_subcmd</span>
+  <span class="ruby-identifier">instance_exec</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-ivar">@default_subcmd</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-run_subcmd" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">run_subcmd</span><span
+            class="method-args">(name, *args)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Run a specific subcommand with args</p>
+          
+          
+
+          
+          <div class="method-source-code" id="run_subcmd-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 169</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">run_subcmd</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-identifier">block</span> = <span class="ruby-ivar">@subcmds</span>[<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>]
+  <span class="ruby-identifier">raise</span> <span class="ruby-node">&quot;Unknown subcmd: #{name}. Available: #{@subcmds.keys.inspect}&quot;</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block</span>
+  <span class="ruby-ivar">@opts</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">args</span>)
+  <span class="ruby-identifier">instance_exec</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-setup_effects" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">setup_effects</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Initialize <a href="Effects.html"><code>Effects</code></a> doubles. After calling this:</p>
+
+<pre class="ruby"><span class="ruby-identifier">harness</span>.<span class="ruby-identifier">executor</span>        <span class="ruby-identifier">→</span> <span class="ruby-constant">NullExecutor</span> (<span class="ruby-identifier">shared</span> <span class="ruby-identifier">by</span> <span class="ruby-identifier">null_herdr</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">null_git</span>)
+<span class="ruby-identifier">harness</span>.<span class="ruby-identifier">fs</span>              <span class="ruby-identifier">→</span> <span class="ruby-constant">NullFilesystem</span>
+<span class="ruby-identifier">harness</span>.<span class="ruby-identifier">null_herdr</span>      <span class="ruby-identifier">→</span> <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Herdr</span> <span class="ruby-identifier">with</span> <span class="ruby-identifier">executor</span> <span class="ruby-identifier">injected</span>
+<span class="ruby-identifier">harness</span>.<span class="ruby-identifier">null_git</span>        <span class="ruby-identifier">→</span> <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Git</span>  <span class="ruby-identifier">with</span> <span class="ruby-identifier">executor</span> <span class="ruby-identifier">injected</span>
+<span class="ruby-identifier">harness</span>.<span class="ruby-identifier">null_fs</span>         <span class="ruby-identifier">→</span> <span class="ruby-identifier">the</span> <span class="ruby-identifier">same</span> <span class="ruby-constant">NullFilesystem</span> <span class="ruby-identifier">instance</span>
+</pre>
+          
+          
+
+          
+          <div class="method-source-code" id="setup_effects-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 259</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">setup_effects</span>
+  <span class="ruby-ivar">@executor</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Effects</span><span class="ruby-operator">::</span><span class="ruby-constant">NullExecutor</span>.<span class="ruby-identifier">new</span>
+  <span class="ruby-ivar">@fs</span>       = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Effects</span><span class="ruby-operator">::</span><span class="ruby-constant">NullFilesystem</span>.<span class="ruby-identifier">new</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-stub_backtick" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">stub_backtick</span><span
+            class="method-args">(cmd, response)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="stub_backtick-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 134</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">stub_backtick</span>(<span class="ruby-identifier">cmd</span>, <span class="ruby-identifier">response</span>)
+  <span class="ruby-ivar">@backtick_responses</span>[<span class="ruby-identifier">cmd</span>] = <span class="ruby-identifier">response</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-stub_method" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">stub_method</span><span
+            class="method-args">(name, &amp;block)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Allow tests to add stub methods to the harness</p>
+          
+          
+
+          
+          <div class="method-source-code" id="stub_method-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 226</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">stub_method</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-subcmd_names" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">subcmd_names</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>List all registered subcommands</p>
+          
+          
+
+          
+          <div class="method-source-code" id="subcmd_names-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 188</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">subcmd_names</span>
+  <span class="ruby-ivar">@subcmds</span>.<span class="ruby-identifier">keys</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-system" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">system</span><span
+            class="method-args">(*args)</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>Stub system to capture calls</p>
+          
+          
+
+          
+          <div class="method-source-code" id="system-source">
+            <pre><span class="ruby-comment"># File test/test_helper.rb, line 123</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">system</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-ivar">@system_calls</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">args</span>
+  <span class="ruby-keyword">true</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+    </section>
+  
+  </section>
+
+</main>
+
+
+<footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.1.2.1.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+

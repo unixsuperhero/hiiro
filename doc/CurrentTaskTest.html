@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>class CurrentTaskTest - RDoc Documentation</title>
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script src="./js/navigation.js" defer></script>
+<script src="./js/search.js" defer></script>
+<script src="./js/search_index.js" defer></script>
+<script src="./js/searcher.js" defer></script>
+<script src="./js/darkfish.js" defer></script>
+
+<link href="./css/fonts.css" rel="stylesheet">
+<link href="./css/rdoc.css" rel="stylesheet">
+
+
+
+
+<body id="top" role="document" class="class">
+<nav role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="./index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="./table_of_contents.html#pages">Pages</a>
+    <a href="./table_of_contents.html#classes">Classes</a>
+    <a href="./table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search" spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+
+  <div id="class-metadata">
+    
+    <div id="parent-class-section" class="nav-section">
+  <h3>Parent</h3>
+
+  
+  <p class="link">Minitest::Test
+  
+</div>
+
+    
+    
+    <!-- Method Quickref -->
+<div id="method-list-section" class="nav-section">
+  <h3>Methods</h3>
+
+  <ul class="link-list" role="directory">
+    
+    <li ><a href="#method-i-setup">#setup</a>
+    
+    <li ><a href="#method-i-teardown">#teardown</a>
+    
+    <li ><a href="#method-i-test_ambiguous_directory_raises_hiiro_error_and_resolve_returns_nil">#test_ambiguous_directory_raises_hiiro_error_and_resolve_returns_nil</a>
+    
+    <li ><a href="#method-i-test_resolves_task_from_working_directory_inside_code_or_registered_directory">#test_resolves_task_from_working_directory_inside_code_or_registered_directory</a>
+    
+    <li ><a href="#method-i-test_saved_pin_is_used_only_when_enabled">#test_saved_pin_is_used_only_when_enabled</a>
+    
+  </ul>
+</div>
+
+  </div>
+</nav>
+
+<main role="main" aria-labelledby="class-CurrentTaskTest">
+  <h1 id="class-CurrentTaskTest" class="class">
+    class CurrentTaskTest
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+  
+  <section id="5Buntitled-5D" class="documentation-section">
+    
+
+    
+
+    
+
+    
+
+    
+     <section id="public-instance-5Buntitled-5D-method-details" class="method-section">
+       <header>
+         <h3>Public Instance Methods</h3>
+       </header>
+
+    
+      <div id="method-i-setup" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">setup</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="setup-source">
+            <pre><span class="ruby-comment"># File test/hiiro/current_task_test.rb, line 4</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">setup</span>
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskResource</span>.<span class="ruby-identifier">dataset</span>.<span class="ruby-identifier">delete</span>
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskRecord</span>.<span class="ruby-identifier">dataset</span>.<span class="ruby-identifier">delete</span>
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">PinRecord</span>.<span class="ruby-identifier">dataset</span>.<span class="ruby-identifier">delete</span>
+  <span class="ruby-ivar">@dir</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">realpath</span>(<span class="ruby-constant">Dir</span>.<span class="ruby-identifier">mktmpdir</span>(<span class="ruby-string">&quot;hiiro-current-task-&quot;</span>))
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-teardown" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">teardown</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="teardown-source">
+            <pre><span class="ruby-comment"># File test/hiiro/current_task_test.rb, line 11</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">teardown</span>
+  <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">remove_entry</span>(<span class="ruby-ivar">@dir</span>)
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskResource</span>.<span class="ruby-identifier">dataset</span>.<span class="ruby-identifier">delete</span>
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskRecord</span>.<span class="ruby-identifier">dataset</span>.<span class="ruby-identifier">delete</span>
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">PinRecord</span>.<span class="ruby-identifier">dataset</span>.<span class="ruby-identifier">delete</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_ambiguous_directory_raises_hiiro_error_and_resolve_returns_nil" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_ambiguous_directory_raises_hiiro_error_and_resolve_returns_nil</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_ambiguous_directory_raises_hiiro_error_and_resolve_returns_nil-source">
+            <pre><span class="ruby-comment"># File test/hiiro/current_task_test.rb, line 31</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_ambiguous_directory_raises_hiiro_error_and_resolve_returns_nil</span>
+  <span class="ruby-identifier">shared</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-ivar">@dir</span>, <span class="ruby-string">&quot;shared&quot;</span>)
+  <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkdir_p</span>(<span class="ruby-identifier">shared</span>)
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskRecord</span>.<span class="ruby-identifier">create</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;a&quot;</span>, <span class="ruby-value">primary_directory:</span> <span class="ruby-identifier">shared</span>)
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskRecord</span>.<span class="ruby-identifier">create</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;b&quot;</span>, <span class="ruby-value">primary_directory:</span> <span class="ruby-identifier">shared</span>)
+
+  <span class="ruby-identifier">error</span> = <span class="ruby-identifier">assert_raises</span>(<span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>) { <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">CurrentTask</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">cwd:</span> <span class="ruby-identifier">shared</span>, <span class="ruby-value">pin:</span> <span class="ruby-keyword">false</span>).<span class="ruby-identifier">resolve!</span> }
+  <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/ambiguous/i</span>, <span class="ruby-identifier">error</span>.<span class="ruby-identifier">message</span>)
+  <span class="ruby-identifier">assert_nil</span> <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">CurrentTask</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">cwd:</span> <span class="ruby-identifier">shared</span>, <span class="ruby-value">pin:</span> <span class="ruby-keyword">false</span>).<span class="ruby-identifier">resolve</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_resolves_task_from_working_directory_inside_code_or_registered_directory" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_resolves_task_from_working_directory_inside_code_or_registered_directory</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_resolves_task_from_working_directory_inside_code_or_registered_directory-source">
+            <pre><span class="ruby-comment"># File test/hiiro/current_task_test.rb, line 18</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_resolves_task_from_working_directory_inside_code_or_registered_directory</span>
+  <span class="ruby-identifier">code</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-ivar">@dir</span>, <span class="ruby-string">&quot;code&quot;</span>)
+  <span class="ruby-identifier">registered</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-ivar">@dir</span>, <span class="ruby-string">&quot;registered&quot;</span>)
+  <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkdir_p</span>([<span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">code</span>, <span class="ruby-string">&quot;deep&quot;</span>), <span class="ruby-identifier">registered</span>])
+  <span class="ruby-identifier">task</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskRecord</span>.<span class="ruby-identifier">create</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;one&quot;</span>, <span class="ruby-value">primary_directory:</span> <span class="ruby-identifier">code</span>)
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskRecord</span>.<span class="ruby-identifier">create</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;two&quot;</span>)
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskResource</span>.<span class="ruby-identifier">create</span>(<span class="ruby-value">task_id:</span> <span class="ruby-identifier">task</span>.<span class="ruby-identifier">id</span>, <span class="ruby-value">kind:</span> <span class="ruby-string">&quot;directory&quot;</span>, <span class="ruby-value">target:</span> <span class="ruby-identifier">registered</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;one&quot;</span>, <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">CurrentTask</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">cwd:</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">code</span>, <span class="ruby-string">&quot;deep&quot;</span>), <span class="ruby-value">pin:</span> <span class="ruby-keyword">false</span>).<span class="ruby-identifier">resolve!</span>.<span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;one&quot;</span>, <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">CurrentTask</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">cwd:</span> <span class="ruby-identifier">registered</span>, <span class="ruby-value">pin:</span> <span class="ruby-keyword">false</span>).<span class="ruby-identifier">resolve!</span>.<span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">assert_nil</span> <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">CurrentTask</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">cwd:</span> <span class="ruby-ivar">@dir</span>, <span class="ruby-value">pin:</span> <span class="ruby-keyword">false</span>).<span class="ruby-identifier">resolve</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_saved_pin_is_used_only_when_enabled" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_saved_pin_is_used_only_when_enabled</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_saved_pin_is_used_only_when_enabled-source">
+            <pre><span class="ruby-comment"># File test/hiiro/current_task_test.rb, line 42</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_saved_pin_is_used_only_when_enabled</span>
+  <span class="ruby-identifier">task</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TaskRecord</span>.<span class="ruby-identifier">create</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;pinned&quot;</span>)
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">PinRecord</span>.<span class="ruby-identifier">create</span>(<span class="ruby-value">command:</span> <span class="ruby-string">&quot;t&quot;</span>, <span class="ruby-value">key:</span> <span class="ruby-string">&quot;current_task&quot;</span>, <span class="ruby-value">value_json:</span> <span class="ruby-identifier">task</span>.<span class="ruby-identifier">id</span>.<span class="ruby-identifier">to_s</span>)
+
+  <span class="ruby-identifier">assert_nil</span> <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">CurrentTask</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">cwd:</span> <span class="ruby-ivar">@dir</span>, <span class="ruby-value">pin:</span> <span class="ruby-keyword">false</span>).<span class="ruby-identifier">resolve</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;pinned&quot;</span>, <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">CurrentTask</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">cwd:</span> <span class="ruby-ivar">@dir</span>, <span class="ruby-value">pin:</span> <span class="ruby-keyword">true</span>).<span class="ruby-identifier">resolve!</span>.<span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">error</span> = <span class="ruby-identifier">assert_raises</span>(<span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>) { <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">CurrentTask</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">cwd:</span> <span class="ruby-ivar">@dir</span>, <span class="ruby-value">pin:</span> <span class="ruby-keyword">false</span>).<span class="ruby-identifier">resolve!</span> }
+  <span class="ruby-identifier">assert_match</span>(<span class="ruby-regexp">/no current task/i</span>, <span class="ruby-identifier">error</span>.<span class="ruby-identifier">message</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+    </section>
+  
+  </section>
+
+</main>
+
+
+<footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.1.2.1.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+

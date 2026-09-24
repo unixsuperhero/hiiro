@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>h-registry - RDoc Documentation</title>
+
+  <meta name="keywords" content="ruby,documentation,h-registry">
+  <meta name="description" content="h-registry: h-registry Store and look up named resources by type with optional short aliases. remove &lt;ref&gt; [type]` | Remove an entry | | `get &lt;ref&gt; [type]` | Pri">
+
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "../";
+  var index_rel_prefix = "../";
+</script>
+
+<script src="../js/navigation.js" defer></script>
+<script src="../js/search.js" defer></script>
+<script src="../js/search_index.js" defer></script>
+<script src="../js/searcher.js" defer></script>
+<script src="../js/darkfish.js" defer></script>
+
+<link href="../css/fonts.css" rel="stylesheet">
+<link href="../css/rdoc.css" rel="stylesheet">
+
+
+<body id="top" role="document" class="file">
+<div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
+  <span aria-hidden="true">&#9776;</span>
+</div>
+
+
+<nav id="navigation" role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="../index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="../table_of_contents.html#pages">Pages</a>
+    <a href="../table_of_contents.html#classes">Classes</a>
+    <a href="../table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search (/) for a class, method, ..." spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+<div class="nav-section">
+  <h3>Table of Contents</h3>
+
+
+
+  <ul class="link-list" role="directory">
+              <li>
+            <details open>
+              <summary>      <a href="#label-h-registry">h-registry</a>
+</summary>
+              <ul class="link-list" role="directory">
+                          <li>      <a href="#label-Synopsis">Synopsis</a>
+          <li>
+            <details open>
+              <summary>      <a href="#label-Subcommands">Subcommands</a>
+</summary>
+              <ul class="link-list" role="directory">
+                          <li>      <a href="#label-add">add</a>
+          <li>      <a href="#label-get">get</a>
+          <li>      <a href="#label-ls+-2F+list">ls / list</a>
+          <li>      <a href="#label-rm+-2F+remove">rm / remove</a>
+          <li>      <a href="#label-select">select</a>
+          <li>      <a href="#label-set-alias">set-alias</a>
+          <li>      <a href="#label-show">show</a>
+          <li>      <a href="#label-types">types</a>
+
+              </ul>
+            </details>
+          </li>
+
+              </ul>
+            </details>
+          </li>
+
+  </ul>
+</div>
+
+  
+<div id="fileindex-section" class="nav-section">
+  <h3>Pages</h3>
+
+  <ul class="link-list">
+    <li><a href="../AGENTS_md.html">AGENTS</a>
+    <li><a href="../CHANGELOG_md.html">CHANGELOG</a>
+    <li><a href="../CLAUDE_md.html">CLAUDE</a>
+    <li><a href="../Gemfile.html">Gemfile</a>
+    <li><a href="../Gemfile_lock.html">Gemfile.lock</a>
+    <li><a href="../LICENSE.html">LICENSE</a>
+    <li><a href="../README_md.html">README</a>
+    <li><a href="../Rakefile.html">Rakefile</a>
+    <li><a href="../TODO_md.html">TODO</a>
+    <li><details><summary>bin</summary>
+    <ul class="link-list">
+      <li><a href="../bin/h-_config.html">h-.config</a>
+      <li><a href="../bin/h-dsstore-read.html">h-dsstore-read</a>
+    </ul></details>
+    <li><a href="../demo_sh.html">demo.sh</a>
+    <li><details open><summary>docs</summary>
+    <ul class="link-list">
+      <li><a href="../docs/README_md.html">README</a>
+      <li><a href="../docs/coupling-and-extraction-plan_txt.html">coupling-and-extraction-plan</a>
+      <li><a href="../docs/docker-testing-guide_md.html">docker-testing-guide</a>
+      <li><a href="../docs/h-app_md.html">h-app</a>
+      <li><a href="../docs/h-bg_md.html">h-bg</a>
+      <li><a href="../docs/h-bin_md.html">h-bin</a>
+      <li><a href="../docs/h-branch_md.html">h-branch</a>
+      <li><a href="../docs/h-claude_md.html">h-claude</a>
+      <li><a href="../docs/h-commit_md.html">h-commit</a>
+      <li><a href="../docs/h-config_md.html">h-config</a>
+      <li><a href="../docs/h-cpr_md.html">h-cpr</a>
+      <li><a href="../docs/h-db_md.html">h-db</a>
+      <li><a href="../docs/h-file_md.html">h-file</a>
+      <li><a href="../docs/h-herdr_md.html">h-herdr</a>
+      <li><a href="../docs/h-img_md.html">h-img</a>
+      <li><a href="../docs/h-link_md.html">h-link</a>
+      <li><a href="../docs/h-misc_md.html">h-misc</a>
+      <li><a href="../docs/h-notify_md.html">h-notify</a>
+      <li><a href="../docs/h-pane_md.html">h-pane</a>
+      <li><a href="../docs/h-plugin_md.html">h-plugin</a>
+      <li><a href="../docs/h-pm_md.html">h-pm</a>
+      <li><a href="../docs/h-pr-monitor_md.html">h-pr-monitor</a>
+      <li><a href="../docs/h-pr_md.html">h-pr</a>
+      <li><a href="../docs/h-project_md.html">h-project</a>
+      <li><a href="../docs/h-queue_md.html">h-queue</a>
+      <li><a href="../docs/h-registry_md.html">h-registry</a>
+      <li><a href="../docs/h-run_md.html">h-run</a>
+      <li><a href="../docs/h-save_md.html">h-save</a>
+      <li><a href="../docs/h-service_md.html">h-service</a>
+      <li><a href="../docs/h-session_md.html">h-session</a>
+      <li><a href="../docs/h-sha_md.html">h-sha</a>
+      <li><a href="../docs/h-sparse_md.html">h-sparse</a>
+      <li><a href="../docs/h-subtask_md.html">h-subtask</a>
+      <li><a href="../docs/h-tags_md.html">h-tags</a>
+      <li><a href="../docs/h-task_md.html">h-task</a>
+      <li><a href="../docs/h-title_md.html">h-title</a>
+      <li><a href="../docs/h-todo_md.html">h-todo</a>
+      <li><a href="../docs/h-window_md.html">h-window</a>
+      <li><a href="../docs/h-wtree_md.html">h-wtree</a>
+      <li><a href="../docs/h_md.html">h</a>
+      <li><a href="../docs/t_md.html">t</a>
+      <li><a href="../docs/why-t_md.html">why-t</a>
+    </ul></details>
+    <li><a href="../h-tmux-plugins_tmux.html">h-tmux-plugins.tmux</a>
+    <li><a href="../herdr-plugin/herdr-plugin_toml.html">herdr-plugin.toml</a>
+    <li><a href="../merge.html">merge</a>
+    <li><a href="../notes.html">notes</a>
+    <li><a href="../obsidian_slides_md.html">obsidian_slides</a>
+    <li><a href="../record-demo_sh.html">record-demo.sh</a>
+    <li><details><summary>reports</summary>
+    <ul class="link-list">
+      <li><a href="../reports/ruby-concepts/README_md.html">README</a>
+      <li><a href="../reports/ruby-concepts/api-outline_md.html">api-outline</a>
+      <li><a href="../reports/ruby-concepts/api-proposal_md.html">api-proposal</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-_config_md.html">h-.config</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-alias_md.html">h-alias</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-app_md.html">h-app</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-bg_md.html">h-bg</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-bin_md.html">h-bin</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-branch_md.html">h-branch</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-buffer_md.html">h-buffer</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-capture_md.html">h-capture</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-ch_md.html">h-ch</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-claude_md.html">h-claude</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-cmd_md.html">h-cmd</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-commit_md.html">h-commit</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-config_md.html">h-config</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-context_md.html">h-context</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-cpr_md.html">h-cpr</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-date_md.html">h-date</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-db_md.html">h-db</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-demo_md.html">h-demo</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-docs_md.html">h-docs</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-dot_md.html">h-dot</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-dotenv_md.html">h-dotenv</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-dotfiles_md.html">h-dotfiles</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-dsstore_md.html">h-dsstore</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-env_md.html">h-env</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-git_md.html">h-git</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-herdr_md.html">h-herdr</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-home_md.html">h-home</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-html_md.html">h-html</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-img_md.html">h-img</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-js_md.html">h-js</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-jsonl_md.html">h-jsonl</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-jumplist_md.html">h-jumplist</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-link_md.html">h-link</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-loop_md.html">h-loop</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-ls_md.html">h-ls</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-mcp_md.html">h-mcp</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-mermaid_md.html">h-mermaid</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-mic_md.html">h-mic</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-misc_md.html">h-misc</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-note_md.html">h-note</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-notify_md.html">h-notify</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-obsidian_md.html">h-obsidian</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-osubtask_md.html">h-osubtask</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-otask_md.html">h-otask</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pane_md.html">h-pane</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pgsync_md.html">h-pgsync</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-plugin_md.html">h-plugin</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pm_md.html">h-pm</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pr-monitor_md.html">h-pr-monitor</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-pr_md.html">h-pr</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-project_md.html">h-project</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-ps_md.html">h-ps</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-registry_md.html">h-registry</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-remind_md.html">h-remind</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-save_md.html">h-save</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-session_md.html">h-session</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-sha_md.html">h-sha</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-sign_md.html">h-sign</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-sparse_md.html">h-sparse</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-strip_md.html">h-strip</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-t3_md.html">h-t3</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-tags_md.html">h-tags</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-task_md.html">h-task</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-time_md.html">h-time</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-title_md.html">h-title</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-todo_md.html">h-todo</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-uri_md.html">h-uri</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-video_md.html">h-video</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-vim_md.html">h-vim</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-window_md.html">h-window</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-wtree_md.html">h-wtree</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-xxserve_md.html">h-xxserve</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h-zosubtask_md.html">h-zosubtask</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/h_md.html">h</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/hh_md.html">hh</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/t_md.html">t</a>
+      <li><a href="../reports/ruby-concepts/by-file/bin/tt_md.html">tt</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro_rb_md.html">hiiro.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/any_struct_rb_md.html">any_struct.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/app_files_rb_md.html">app_files.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/app_record_rb_md.html">app_record.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/assignment_rb_md.html">assignment.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/background_rb_md.html">background.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/bins_rb_md.html">bins.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/branch_rb_md.html">branch.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/capture_rb_md.html">capture.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/check_run_rb_md.html">check_run.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/config_rb_md.html">config.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/current_task_rb_md.html">current_task.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/db_rb_md.html">db.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/effects_rb_md.html">effects.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/error_rb_md.html">error.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/fuzzyfind_rb_md.html">fuzzyfind.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git_rb_md.html">git.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/branch_rb_md.html">branch.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/branches_rb_md.html">branches.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/pr_rb_md.html">pr.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/remote_rb_md.html">remote.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/worktree_rb_md.html">worktree.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/git/worktrees_rb_md.html">worktrees.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/glob_rb_md.html">glob.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/herdr_rb_md.html">herdr.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/input_file_rb_md.html">input_file.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/invocation_rb_md.html">invocation.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/link_rb_md.html">link.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/matcher_rb_md.html">matcher.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/notification_rb_md.html">notification.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/options_rb_md.html">options.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/pane_home_rb_md.html">pane_home.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/paths_rb_md.html">paths.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/pin_record_rb_md.html">pin_record.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/pinned_pr_rb_md.html">pinned_pr.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/pinned_pr_manager_rb_md.html">pinned_pr_manager.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/project_rb_md.html">project.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/projects_rb_md.html">projects.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/ps_process_rb_md.html">ps_process.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/queue_rb_md.html">queue.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/rbenv_rb_md.html">rbenv.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/registry_rb_md.html">registry.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/reminder_rb_md.html">reminder.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/runner_tool_rb_md.html">runner_tool.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/service_manager_rb_md.html">service_manager.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/shell_rb_md.html">shell.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/tags_rb_md.html">tags.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/task_cli_rb_md.html">task_cli.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/task_record_rb_md.html">task_record.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/task_sessions_rb_md.html">task_sessions.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/tasks_rb_md.html">tasks.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/todo_rb_md.html">todo.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/tui_rb_md.html">tui.rb</a>
+      <li><a href="../reports/ruby-concepts/by-file/lib/hiiro/version_rb_md.html">version.rb</a>
+      <li><a href="../reports/ruby-concepts/concepts-keys.html">concepts-keys</a>
+      <li><a href="../reports/ruby-concepts/concepts_json.html">concepts.json</a>
+      <li><a href="../reports/ruby-concepts/concepts_md.html">concepts</a>
+      <li><a href="../reports/ruby-concepts/coverage_json.html">coverage.json</a>
+      <li><a href="../reports/ruby-concepts/duplicates_json.html">duplicates.json</a>
+      <li><a href="../reports/ruby-concepts/duplicates_md.html">duplicates</a>
+      <li><a href="../reports/ruby-concepts/file-defaults_tsv.html">file-defaults.tsv</a>
+      <li><a href="../reports/ruby-concepts/files_md.html">files</a>
+      <li><a href="../reports/ruby-concepts/files_tsv.html">files.tsv</a>
+      <li><a href="../reports/ruby-concepts/findings_md.html">findings</a>
+      <li><a href="../reports/ruby-concepts/inventory_json.html">inventory.json</a>
+      <li><a href="../reports/ruby-concepts/lines_tsv.html">lines.tsv</a>
+      <li><a href="../reports/ruby-concepts/review-baseline_json.html">review-baseline.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/core-findings_md.html">core-findings</a>
+      <li><a href="../reports/ruby-concepts/reviews/core-inventory_json.html">core-inventory.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/core-labels_json.html">core-labels.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/core-labels_py.html">core-labels.py</a>
+      <li><a href="../reports/ruby-concepts/reviews/git-build-labels_py.html">git-build-labels.py</a>
+      <li><a href="../reports/ruby-concepts/reviews/git-findings_md.html">git-findings</a>
+      <li><a href="../reports/ruby-concepts/reviews/git-inventory_json.html">git-inventory.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/git-labels_json.html">git-labels.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/tasks-build-labels_py.html">tasks-build-labels.py</a>
+      <li><a href="../reports/ruby-concepts/reviews/tasks-findings_md.html">tasks-findings</a>
+      <li><a href="../reports/ruby-concepts/reviews/tasks-inventory_json.html">tasks-inventory.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/tasks-labels_json.html">tasks-labels.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/utilities-findings_md.html">utilities-findings</a>
+      <li><a href="../reports/ruby-concepts/reviews/utilities-inventory_json.html">utilities-inventory.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/utilities-labels_json.html">utilities-labels.json</a>
+      <li><a href="../reports/ruby-concepts/reviews/utilities-map_py.html">utilities-map.py</a>
+      <li><a href="../reports/ruby-concepts/scripts/render_py.html">render.py</a>
+    </ul></details>
+    <li><details><summary>script</summary>
+    <ul class="link-list">
+      <li><a href="../script/compare.html">compare</a>
+      <li><a href="../script/install.html">install</a>
+      <li><a href="../script/sync.html">sync</a>
+      <li><a href="../script/test.html">test</a>
+      <li><a href="../script/update.html">update</a>
+    </ul></details>
+    <li><a href="../side-effect-separation-plan_md.html">side-effect-separation-plan</a>
+    <li><a href="../slides_md.html">slides</a>
+    <li><details><summary>tmp</summary>
+    <ul class="link-list">
+      <li><a href="../tmp/core-history.html">core-history</a>
+      <li><a href="../tmp/publish_output/20260913154219_json.html">20260913154219.json</a>
+      <li><a href="../tmp/publish_output/20260913154439_json.html">20260913154439.json</a>
+      <li><a href="../tmp/publish_output/20260913161551_json.html">20260913161551.json</a>
+      <li><a href="../tmp/publish_output/20260914012045_json.html">20260914012045.json</a>
+      <li><a href="../tmp/publish_output/20260914030807_json.html">20260914030807.json</a>
+      <li><a href="../tmp/publish_output/20260914035113_json.html">20260914035113.json</a>
+      <li><a href="../tmp/publish_output/20260914052543_json.html">20260914052543.json</a>
+      <li><a href="../tmp/publish_output/20260914060149_json.html">20260914060149.json</a>
+      <li><a href="../tmp/publish_output/20260914061052_json.html">20260914061052.json</a>
+      <li><a href="../tmp/publish_output/20260914062133_json.html">20260914062133.json</a>
+      <li><a href="../tmp/publish_output/20260914063655_json.html">20260914063655.json</a>
+      <li><a href="../tmp/publish_output/20260914064312_json.html">20260914064312.json</a>
+      <li><a href="../tmp/publish_output/20260914064702_json.html">20260914064702.json</a>
+      <li><a href="../tmp/publish_output/20260917150540_json.html">20260917150540.json</a>
+      <li><a href="../tmp/publish_output/20260920174122_json.html">20260920174122.json</a>
+    </ul></details>
+  </ul>
+</div>
+
+
+  <footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.14.2.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+
+</nav>
+
+<main role="main" aria-label="Page docs/h-registry.md">
+
+<h1 id="label-h-registry">h-registry<span><a href="#label-h-registry">&para;</a> <a href="#top">&uarr;</a></span></h1>
+
+<p>Store and look up named resources by type with optional short aliases.</p>
+
+<h2 id="label-Synopsis">Synopsis<span><a href="#label-Synopsis">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<pre class="ruby"><span class="ruby-identifier">h</span> <span class="ruby-identifier">registry</span> <span class="ruby-operator">&lt;</span><span class="ruby-identifier">subcommand</span><span class="ruby-operator">&gt;</span> [<span class="ruby-identifier">args</span>]
+</pre>
+
+<h2 id="label-Subcommands">Subcommands<span><a href="#label-Subcommands">&para;</a> <a href="#top">&uarr;</a></span></h2>
+
+<table role="table">
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ls</code> / <code>list [type]</code></td>
+<td>List all entries (or entries of a specific type)</td>
+</tr>
+<tr>
+<td><code>types</code></td>
+<td>List all known resource types</td>
+</tr>
+<tr>
+<td><code>add &lt;type&gt; &lt;name&gt;</code></td>
+<td>Register a new entry</td>
+</tr>
+<tr>
+<td><code>rm</code> / <code>remove &lt;ref&gt; [type]</code></td>
+<td>Remove an entry</td>
+</tr>
+<tr>
+<td><code>get &lt;ref&gt; [type]</code></td>
+<td>Print canonical name (scriptable)</td>
+</tr>
+<tr>
+<td><code>show &lt;ref&gt; [type]</code></td>
+<td>Print human-readable entry detail</td>
+</tr>
+<tr>
+<td><code>select [type]</code></td>
+<td>Fuzzy-select an entry and print canonical name</td>
+</tr>
+<tr>
+<td><code>set-alias &lt;ref&gt; &lt;alias&gt; [type]</code></td>
+<td>Update an entry’s short alias</td>
+</tr>
+</tbody>
+</table>
+
+<p>References (<code>ref</code>) can be the canonical name or the short alias. <code>type</code> is optional when names are unique across types.</p>
+
+<h3 id="label-add">add<span><a href="#label-add">&para;</a> <a href="#top">&uarr;</a></span></h3>
+
+<p>Register a new entry with type and canonical name. Optionally add a short alias and description.</p>
+
+<p><strong>Options</strong></p>
+
+<table role="table">
+<thead>
+<tr>
+<th>Flag</th>
+<th>Short</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--alias</code></td>
+<td><code>-a</code></td>
+<td>Short alias</td>
+</tr>
+<tr>
+<td><code>--desc</code></td>
+<td><code>-d</code></td>
+<td>Description</td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>Examples</strong></p>
+
+<pre>h registry add service my-rails-app
+h registry add service my-rails-app --alias rails --desc &quot;Main Rails API&quot;
+h registry add jira IC-12345 --desc &quot;Fix login bug&quot;</pre>
+
+<h3 id="label-get">get<span><a href="#label-get">&para;</a> <a href="#top">&uarr;</a></span></h3>
+
+<p>Print the canonical name for a ref. Exits non-zero if not found. Useful for scripting.</p>
+
+<p><strong>Examples</strong></p>
+
+<pre>h registry get rails
+name=$(h registry get rails service)</pre>
+
+<h3 id="label-ls+-2F+list">ls / list<span><a href="#label-ls+-2F+list">&para;</a> <a href="#top">&uarr;</a></span></h3>
+
+<p>List all entries grouped by type, showing short alias and description. Optionally filter to a single type.</p>
+
+<p><strong>Examples</strong></p>
+
+<pre class="ruby"><span class="ruby-identifier">h</span> <span class="ruby-identifier">registry</span> <span class="ruby-identifier">ls</span>
+<span class="ruby-identifier">h</span> <span class="ruby-identifier">registry</span> <span class="ruby-identifier">list</span> <span class="ruby-identifier">service</span>
+</pre>
+
+<h3 id="label-rm+-2F+remove">rm / remove<span><a href="#label-rm+-2F+remove">&para;</a> <a href="#top">&uarr;</a></span></h3>
+
+<p>Remove an entry by name or alias.</p>
+
+<p><strong>Examples</strong></p>
+
+<pre class="ruby"><span class="ruby-identifier">h</span> <span class="ruby-identifier">registry</span> <span class="ruby-identifier">rm</span> <span class="ruby-identifier">my</span><span class="ruby-operator">-</span><span class="ruby-identifier">rails</span><span class="ruby-operator">-</span><span class="ruby-identifier">app</span>
+<span class="ruby-identifier">h</span> <span class="ruby-identifier">registry</span> <span class="ruby-identifier">rm</span> <span class="ruby-identifier">rails</span> <span class="ruby-identifier">service</span>
+</pre>
+
+<h3 id="label-select">select<span><a href="#label-select">&para;</a> <a href="#top">&uarr;</a></span></h3>
+
+<p>Fuzzy-select an entry and print its canonical name. Optionally filter to a type.</p>
+
+<p><strong>Examples</strong></p>
+
+<pre>h registry select
+h registry select service
+name=$(h registry select)</pre>
+
+<h3 id="label-set-alias">set-alias<span><a href="#label-set-alias">&para;</a> <a href="#top">&uarr;</a></span></h3>
+
+<p>Update the short alias for an existing entry.</p>
+
+<p><strong>Examples</strong></p>
+
+<pre>h registry set-alias my-rails-app rails
+h registry set-alias my-rails-app rails service</pre>
+
+<h3 id="label-show">show<span><a href="#label-show">&para;</a> <a href="#top">&uarr;</a></span></h3>
+
+<p>Print full entry details (type, name, alias, description).</p>
+
+<p><strong>Examples</strong></p>
+
+<pre>h registry show rails
+h registry show my-rails-app service</pre>
+
+<h3 id="label-types">types<span><a href="#label-types">&para;</a> <a href="#top">&uarr;</a></span></h3>
+
+<p>Print all known resource types.</p>
+
+<p><strong>Examples</strong></p>
+
+<pre class="ruby"><span class="ruby-identifier">h</span> <span class="ruby-identifier">registry</span> <span class="ruby-identifier">types</span>
+</pre>
+
+</main>
+

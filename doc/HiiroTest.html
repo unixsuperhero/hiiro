@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>class HiiroTest - RDoc Documentation</title>
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script src="./js/navigation.js" defer></script>
+<script src="./js/search.js" defer></script>
+<script src="./js/search_index.js" defer></script>
+<script src="./js/searcher.js" defer></script>
+<script src="./js/darkfish.js" defer></script>
+
+<link href="./css/fonts.css" rel="stylesheet">
+<link href="./css/rdoc.css" rel="stylesheet">
+
+
+
+
+<body id="top" role="document" class="class">
+<nav role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="./index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="./table_of_contents.html#pages">Pages</a>
+    <a href="./table_of_contents.html#classes">Classes</a>
+    <a href="./table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search" spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+
+  <div id="class-metadata">
+    
+    <div id="parent-class-section" class="nav-section">
+  <h3>Parent</h3>
+
+  
+  <p class="link">Minitest::Test
+  
+</div>
+
+    <div id="includes-section" class="nav-section">
+  <h3>Included Modules</h3>
+
+  <ul class="link-list">
+  
+  
+    <li><a class="include" href="TestHelpers.html">TestHelpers</a>
+  
+  
+  </ul>
+</div>
+
+    
+    <!-- Method Quickref -->
+<div id="method-list-section" class="nav-section">
+  <h3>Methods</h3>
+
+  <ul class="link-list" role="directory">
+    
+    <li ><a href="#method-i-test_args_combined_flags">#test_args_combined_flags</a>
+    
+    <li ><a href="#method-i-test_args_flag_value">#test_args_flag_value</a>
+    
+    <li ><a href="#method-i-test_args_flags_parsing">#test_args_flags_parsing</a>
+    
+    <li ><a href="#method-i-test_args_values">#test_args_values</a>
+    
+    <li ><a href="#method-i-test_config_config_dir">#test_config_config_dir</a>
+    
+    <li ><a href="#method-i-test_config_plugin_dir">#test_config_plugin_dir</a>
+    
+    <li ><a href="#method-i-test_string_underscore_already_underscored">#test_string_underscore_already_underscored</a>
+    
+    <li ><a href="#method-i-test_string_underscore_basic">#test_string_underscore_basic</a>
+    
+    <li ><a href="#method-i-test_string_underscore_with_acronyms">#test_string_underscore_with_acronyms</a>
+    
+    <li ><a href="#method-i-test_string_underscore_with_namespace">#test_string_underscore_with_namespace</a>
+    
+    <li ><a href="#method-i-test_version_is_defined">#test_version_is_defined</a>
+    
+  </ul>
+</div>
+
+  </div>
+</nav>
+
+<main role="main" aria-labelledby="class-HiiroTest">
+  <h1 id="class-HiiroTest" class="class">
+    class HiiroTest
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+  
+  <section id="5Buntitled-5D" class="documentation-section">
+    
+
+    
+
+    
+
+    
+
+    
+     <section id="public-instance-5Buntitled-5D-method-details" class="method-section">
+       <header>
+         <h3>Public Instance Methods</h3>
+       </header>
+
+    
+      <div id="method-i-test_args_combined_flags" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_args_combined_flags</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_args_combined_flags-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 46</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_args_combined_flags</span>
+  <span class="ruby-identifier">args</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Args</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;-abc&quot;</span>, <span class="ruby-string">&quot;-d&quot;</span>, <span class="ruby-string">&quot;val&quot;</span>)
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flag?</span>(<span class="ruby-string">&quot;a&quot;</span>)
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flag?</span>(<span class="ruby-string">&quot;b&quot;</span>)
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flag?</span>(<span class="ruby-string">&quot;c&quot;</span>)
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flag?</span>(<span class="ruby-string">&quot;d&quot;</span>)
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;val&quot;</span>, <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flag_value</span>(<span class="ruby-string">&quot;d&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_args_flag_value" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_args_flag_value</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_args_flag_value-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 41</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_args_flag_value</span>
+  <span class="ruby-identifier">args</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Args</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;-f&quot;</span>, <span class="ruby-string">&quot;test.txt&quot;</span>, <span class="ruby-string">&quot;other&quot;</span>)
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;test.txt&quot;</span>, <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flag_value</span>(<span class="ruby-string">&quot;f&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_args_flags_parsing" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_args_flags_parsing</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_args_flags_parsing-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 28</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_args_flags_parsing</span>
+  <span class="ruby-identifier">args</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Args</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;-abc&quot;</span>, <span class="ruby-string">&quot;value&quot;</span>)
+  <span class="ruby-identifier">assert_equal</span> [<span class="ruby-string">&quot;a&quot;</span>, <span class="ruby-string">&quot;b&quot;</span>, <span class="ruby-string">&quot;c&quot;</span>], <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flags</span>
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flag?</span>(<span class="ruby-string">&quot;a&quot;</span>)
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flag?</span>(<span class="ruby-string">&quot;b&quot;</span>)
+  <span class="ruby-identifier">refute</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">flag?</span>(<span class="ruby-string">&quot;d&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_args_values" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_args_values</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_args_values-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 36</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_args_values</span>
+  <span class="ruby-identifier">args</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Args</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;-f&quot;</span>, <span class="ruby-string">&quot;value1&quot;</span>, <span class="ruby-string">&quot;value2&quot;</span>)
+  <span class="ruby-identifier">assert_equal</span> [<span class="ruby-string">&quot;value1&quot;</span>, <span class="ruby-string">&quot;value2&quot;</span>], <span class="ruby-identifier">args</span>.<span class="ruby-identifier">values</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_config_config_dir" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_config_config_dir</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_config_config_dir-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 55</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_config_config_dir</span>
+  <span class="ruby-identifier">config_path</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Config</span>.<span class="ruby-identifier">config_dir</span>
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">config_path</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-string">&quot;.config/hiiro&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_config_plugin_dir" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_config_plugin_dir</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_config_plugin_dir-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 60</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_config_plugin_dir</span>
+  <span class="ruby-identifier">plugin_path</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Config</span>.<span class="ruby-identifier">plugin_dir</span>
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">plugin_path</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-string">&quot;plugins&quot;</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_string_underscore_already_underscored" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_string_underscore_already_underscored</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_string_underscore_already_underscored-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 19</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_string_underscore_already_underscored</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;foo_bar&quot;</span>, <span class="ruby-string">&quot;foo_bar&quot;</span>.<span class="ruby-identifier">underscore</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_string_underscore_basic" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_string_underscore_basic</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_string_underscore_basic-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 10</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_string_underscore_basic</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;foo_bar&quot;</span>, <span class="ruby-string">&quot;FooBar&quot;</span>.<span class="ruby-identifier">underscore</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;foo_bar_baz&quot;</span>, <span class="ruby-string">&quot;FooBarBaz&quot;</span>.<span class="ruby-identifier">underscore</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_string_underscore_with_acronyms" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_string_underscore_with_acronyms</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_string_underscore_with_acronyms-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 23</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_string_underscore_with_acronyms</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;html_parser&quot;</span>, <span class="ruby-string">&quot;HTMLParser&quot;</span>.<span class="ruby-identifier">underscore</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;api_request&quot;</span>, <span class="ruby-string">&quot;APIRequest&quot;</span>.<span class="ruby-identifier">underscore</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_string_underscore_with_namespace" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_string_underscore_with_namespace</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_string_underscore_with_namespace-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 15</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_string_underscore_with_namespace</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;foo/bar_baz&quot;</span>, <span class="ruby-string">&quot;Foo::BarBaz&quot;</span>.<span class="ruby-identifier">underscore</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_version_is_defined" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_version_is_defined</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_version_is_defined-source">
+            <pre><span class="ruby-comment"># File test/hiiro_test.rb, line 6</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_version_is_defined</span>
+  <span class="ruby-identifier">refute_nil</span> <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">VERSION</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+    </section>
+  
+  </section>
+
+</main>
+
+
+<footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.1.2.1.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+

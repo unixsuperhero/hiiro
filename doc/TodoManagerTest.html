@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>class TodoManagerTest - RDoc Documentation</title>
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script src="./js/navigation.js" defer></script>
+<script src="./js/search.js" defer></script>
+<script src="./js/search_index.js" defer></script>
+<script src="./js/searcher.js" defer></script>
+<script src="./js/darkfish.js" defer></script>
+
+<link href="./css/fonts.css" rel="stylesheet">
+<link href="./css/rdoc.css" rel="stylesheet">
+
+
+
+
+<body id="top" role="document" class="class">
+<nav role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="./index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="./table_of_contents.html#pages">Pages</a>
+    <a href="./table_of_contents.html#classes">Classes</a>
+    <a href="./table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search" spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+
+  <div id="class-metadata">
+    
+    <div id="parent-class-section" class="nav-section">
+  <h3>Parent</h3>
+
+  
+  <p class="link">Minitest::Test
+  
+</div>
+
+    <div id="includes-section" class="nav-section">
+  <h3>Included Modules</h3>
+
+  <ul class="link-list">
+  
+  
+    <li><a class="include" href="TestHelpers.html">TestHelpers</a>
+  
+  
+  </ul>
+</div>
+
+    
+    <!-- Method Quickref -->
+<div id="method-list-section" class="nav-section">
+  <h3>Methods</h3>
+
+  <ul class="link-list" role="directory">
+    
+    <li ><a href="#method-i-setup">#setup</a>
+    
+    <li ><a href="#method-i-teardown">#teardown</a>
+    
+    <li ><a href="#method-i-test_active_returns_not_started_and_started">#test_active_returns_not_started_and_started</a>
+    
+    <li ><a href="#method-i-test_add_creates_item_and_saves">#test_add_creates_item_and_saves</a>
+    
+    <li ><a href="#method-i-test_add_with_task_info">#test_add_with_task_info</a>
+    
+    <li ><a href="#method-i-test_change_updates_item">#test_change_updates_item</a>
+    
+    <li ><a href="#method-i-test_completed_returns_done_and_skip">#test_completed_returns_done_and_skip</a>
+    
+    <li ><a href="#method-i-test_done_changes_status">#test_done_changes_status</a>
+    
+    <li ><a href="#method-i-test_filter_by_status">#test_filter_by_status</a>
+    
+    <li ><a href="#method-i-test_filter_by_tag">#test_filter_by_tag</a>
+    
+    <li ><a href="#method-i-test_filter_by_task">#test_filter_by_task</a>
+    
+    <li ><a href="#method-i-test_find_by_id">#test_find_by_id</a>
+    
+    <li ><a href="#method-i-test_find_by_id_prefix">#test_find_by_id_prefix</a>
+    
+    <li ><a href="#method-i-test_find_by_index">#test_find_by_index</a>
+    
+    <li ><a href="#method-i-test_format_item_includes_tags">#test_format_item_includes_tags</a>
+    
+    <li ><a href="#method-i-test_format_item_includes_task_name">#test_format_item_includes_task_name</a>
+    
+    <li ><a href="#method-i-test_initialize_loads_existing_items">#test_initialize_loads_existing_items</a>
+    
+    <li ><a href="#method-i-test_initialize_with_empty_file">#test_initialize_with_empty_file</a>
+    
+    <li ><a href="#method-i-test_list_empty_returns_message">#test_list_empty_returns_message</a>
+    
+    <li ><a href="#method-i-test_list_returns_formatted_string">#test_list_returns_formatted_string</a>
+    
+    <li ><a href="#method-i-test_list_shows_status_icons">#test_list_shows_status_icons</a>
+    
+    <li ><a href="#method-i-test_remove_by_id">#test_remove_by_id</a>
+    
+    <li ><a href="#method-i-test_reset_changes_status">#test_reset_changes_status</a>
+    
+    <li ><a href="#method-i-test_search">#test_search</a>
+    
+    <li ><a href="#method-i-test_skip_changes_status">#test_skip_changes_status</a>
+    
+    <li ><a href="#method-i-test_start_changes_status">#test_start_changes_status</a>
+    
+  </ul>
+</div>
+
+  </div>
+</nav>
+
+<main role="main" aria-labelledby="class-TodoManagerTest">
+  <h1 id="class-TodoManagerTest" class="class">
+    class TodoManagerTest
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+  
+  <section id="5Buntitled-5D" class="documentation-section">
+    
+
+    
+
+    
+
+    
+
+    
+     <section id="public-instance-5Buntitled-5D-method-details" class="method-section">
+       <header>
+         <h3>Public Instance Methods</h3>
+       </header>
+
+    
+      <div id="method-i-setup" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">setup</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="setup-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 219</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">setup</span>
+  <span class="ruby-ivar">@temp_dir</span> = <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">mktmpdir</span>
+  <span class="ruby-ivar">@todo_file</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-ivar">@temp_dir</span>, <span class="ruby-string">&quot;todo.yml&quot;</span>)
+  <span class="ruby-comment"># Clear DB between tests since all TodoManagerTests share the same in-memory DB</span>
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TodoItem</span>.<span class="ruby-identifier">dataset</span>.<span class="ruby-identifier">delete</span>
+  <span class="ruby-ivar">@manager</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TodoManager</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">file_path:</span> <span class="ruby-ivar">@todo_file</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-teardown" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">teardown</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="teardown-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 227</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">teardown</span>
+  <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">rm_rf</span>(<span class="ruby-ivar">@temp_dir</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_active_returns_not_started_and_started" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_active_returns_not_started_and_started</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_active_returns_not_started_and_started-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 380</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_active_returns_not_started_and_started</span>
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Not started&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Started&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">start</span>(<span class="ruby-value">1</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Done&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">done</span>(<span class="ruby-value">2</span>)
+
+  <span class="ruby-identifier">results</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">active</span>
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">2</span>, <span class="ruby-identifier">results</span>.<span class="ruby-identifier">length</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_add_creates_item_and_saves" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_add_creates_item_and_saves</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_add_creates_item_and_saves-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 244</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_add_creates_item_and_saves</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;New task&quot;</span>, <span class="ruby-value">tags:</span> <span class="ruby-string">&quot;test&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;New task&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">text</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;test&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">tags</span>
+  <span class="ruby-identifier">assert</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-ivar">@todo_file</span>)
+
+  <span class="ruby-comment"># Reload and verify persistence</span>
+  <span class="ruby-identifier">reloaded</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TodoManager</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">file_path:</span> <span class="ruby-ivar">@todo_file</span>)
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">1</span>, <span class="ruby-identifier">reloaded</span>.<span class="ruby-identifier">all</span>.<span class="ruby-identifier">length</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;New task&quot;</span>, <span class="ruby-identifier">reloaded</span>.<span class="ruby-identifier">all</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">text</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_add_with_task_info" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_add_with_task_info</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_add_with_task_info-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 257</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_add_with_task_info</span>
+  <span class="ruby-identifier">task_info</span> = { <span class="ruby-value">task_name:</span> <span class="ruby-string">&quot;feature&quot;</span>, <span class="ruby-value">tree:</span> <span class="ruby-string">&quot;feature-tree&quot;</span> }
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Task with context&quot;</span>, <span class="ruby-value">task_info:</span> <span class="ruby-identifier">task_info</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;feature&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">task_name</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;feature-tree&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">tree</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_change_updates_item" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_change_updates_item</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_change_updates_item-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 299</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_change_updates_item</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Original&quot;</span>)
+
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">change</span>(<span class="ruby-identifier">item</span>.<span class="ruby-identifier">id</span>, <span class="ruby-value">text:</span> <span class="ruby-string">&quot;Updated&quot;</span>, <span class="ruby-value">tags:</span> <span class="ruby-string">&quot;new-tag&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;Updated&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">text</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;new-tag&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">tags</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_completed_returns_done_and_skip" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_completed_returns_done_and_skip</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_completed_returns_done_and_skip-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 392</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_completed_returns_done_and_skip</span>
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Active&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Done&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">done</span>(<span class="ruby-value">1</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Skipped&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">skip</span>(<span class="ruby-value">2</span>)
+
+  <span class="ruby-identifier">results</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">completed</span>
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">2</span>, <span class="ruby-identifier">results</span>.<span class="ruby-identifier">length</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_done_changes_status" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_done_changes_status</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_done_changes_status-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 315</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_done_changes_status</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Task&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">done</span>(<span class="ruby-identifier">item</span>.<span class="ruby-identifier">id</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;done&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">status</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_filter_by_status" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_filter_by_status</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_filter_by_status-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 348</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_filter_by_status</span>
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Not started&quot;</span>)
+  <span class="ruby-identifier">item2</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Started&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">start</span>(<span class="ruby-value">1</span>)
+  <span class="ruby-identifier">item3</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Done&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">done</span>(<span class="ruby-value">2</span>)
+
+  <span class="ruby-identifier">results</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">filter_by_status</span>(<span class="ruby-string">&quot;started&quot;</span>, <span class="ruby-string">&quot;done&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">2</span>, <span class="ruby-identifier">results</span>.<span class="ruby-identifier">length</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_filter_by_tag" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_filter_by_tag</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_filter_by_tag-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 360</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_filter_by_tag</span>
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Tagged&quot;</span>, <span class="ruby-value">tags:</span> <span class="ruby-string">&quot;urgent&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Not tagged&quot;</span>)
+
+  <span class="ruby-identifier">results</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">filter_by_tag</span>(<span class="ruby-string">&quot;urgent&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">1</span>, <span class="ruby-identifier">results</span>.<span class="ruby-identifier">length</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;Tagged&quot;</span>, <span class="ruby-identifier">results</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">text</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_filter_by_task" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_filter_by_task</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_filter_by_task-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 370</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_filter_by_task</span>
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Task 1&quot;</span>, <span class="ruby-value">task_info:</span> { <span class="ruby-value">task_name:</span> <span class="ruby-string">&quot;feature&quot;</span> })
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Task 2&quot;</span>, <span class="ruby-value">task_info:</span> { <span class="ruby-value">task_name:</span> <span class="ruby-string">&quot;bugfix&quot;</span> })
+
+  <span class="ruby-identifier">results</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">filter_by_task</span>(<span class="ruby-string">&quot;feature&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">1</span>, <span class="ruby-identifier">results</span>.<span class="ruby-identifier">length</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;Task 1&quot;</span>, <span class="ruby-identifier">results</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">text</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_by_id" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_by_id</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_by_id-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 265</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_by_id</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Find me&quot;</span>)
+  <span class="ruby-identifier">found</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">find</span>(<span class="ruby-identifier">item</span>.<span class="ruby-identifier">id</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-identifier">item</span>.<span class="ruby-identifier">text</span>, <span class="ruby-identifier">found</span>.<span class="ruby-identifier">text</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_by_id_prefix" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_by_id_prefix</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_by_id_prefix-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 272</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_by_id_prefix</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Find me&quot;</span>)
+  <span class="ruby-identifier">prefix</span> = <span class="ruby-identifier">item</span>.<span class="ruby-identifier">id</span>[<span class="ruby-value">0</span><span class="ruby-operator">..</span><span class="ruby-value">3</span>]
+  <span class="ruby-identifier">found</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">find</span>(<span class="ruby-identifier">prefix</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-identifier">item</span>.<span class="ruby-identifier">text</span>, <span class="ruby-identifier">found</span>.<span class="ruby-identifier">text</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_by_index" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_by_index</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_by_index-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 280</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_by_index</span>
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;First&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Second&quot;</span>)
+
+  <span class="ruby-identifier">found</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">find_by_index</span>(<span class="ruby-value">1</span>)
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;Second&quot;</span>, <span class="ruby-identifier">found</span>.<span class="ruby-identifier">text</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_format_item_includes_tags" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_format_item_includes_tags</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_format_item_includes_tags-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 438</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_format_item_includes_tags</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Task&quot;</span>, <span class="ruby-value">tags:</span> <span class="ruby-string">&quot;urgent&quot;</span>)
+  <span class="ruby-identifier">output</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">format_item</span>(<span class="ruby-identifier">item</span>)
+
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&quot;[urgent]&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_format_item_includes_task_name" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_format_item_includes_task_name</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_format_item_includes_task_name-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 445</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_format_item_includes_task_name</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Task&quot;</span>, <span class="ruby-value">task_info:</span> { <span class="ruby-value">task_name:</span> <span class="ruby-string">&quot;feature&quot;</span> })
+  <span class="ruby-identifier">output</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">format_item</span>(<span class="ruby-identifier">item</span>)
+
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&quot;(feature)&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_initialize_loads_existing_items" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_initialize_loads_existing_items</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_initialize_loads_existing_items-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 235</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_initialize_loads_existing_items</span>
+  <span class="ruby-comment"># TodoManager now reads from SQLite (not YAML file), so seed via DB directly</span>
+  <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TodoItem</span>.<span class="ruby-identifier">create</span>(<span class="ruby-value">id:</span> <span class="ruby-value">99</span>, <span class="ruby-value">text:</span> <span class="ruby-string">&#39;Existing task&#39;</span>, <span class="ruby-value">status:</span> <span class="ruby-string">&#39;not_started&#39;</span>)
+
+  <span class="ruby-identifier">manager</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">TodoManager</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">file_path:</span> <span class="ruby-ivar">@todo_file</span>)
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">1</span>, <span class="ruby-identifier">manager</span>.<span class="ruby-identifier">all</span>.<span class="ruby-identifier">length</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&#39;Existing task&#39;</span>, <span class="ruby-identifier">manager</span>.<span class="ruby-identifier">all</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">text</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_initialize_with_empty_file" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_initialize_with_empty_file</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_initialize_with_empty_file-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 231</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_initialize_with_empty_file</span>
+  <span class="ruby-identifier">assert_equal</span> [], <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">all</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_list_empty_returns_message" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_list_empty_returns_message</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_list_empty_returns_message-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 432</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_list_empty_returns_message</span>
+  <span class="ruby-identifier">output</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">list</span>
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;No todo items found.&quot;</span>, <span class="ruby-identifier">output</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_list_returns_formatted_string" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_list_returns_formatted_string</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_list_returns_formatted_string-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 404</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_list_returns_formatted_string</span>
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;First task&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Second task&quot;</span>)
+
+  <span class="ruby-identifier">output</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">list</span>
+
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&quot;First task&quot;</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&quot;Second task&quot;</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&quot;[ ]&quot;</span>  <span class="ruby-comment"># not_started icon</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_list_shows_status_icons" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_list_shows_status_icons</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_list_shows_status_icons-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 415</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_list_shows_status_icons</span>
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Not started&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Started&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">start</span>(<span class="ruby-value">1</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Done&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">done</span>(<span class="ruby-value">2</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Skipped&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">skip</span>(<span class="ruby-value">3</span>)
+
+  <span class="ruby-identifier">output</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">list</span>(<span class="ruby-value">show_all:</span> <span class="ruby-keyword">true</span>)
+
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&quot;[ ]&quot;</span>  <span class="ruby-comment"># not_started</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&quot;[&gt;]&quot;</span>  <span class="ruby-comment"># started</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&quot;[x]&quot;</span>  <span class="ruby-comment"># done</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">output</span>, <span class="ruby-string">&quot;[-]&quot;</span>  <span class="ruby-comment"># skip</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_remove_by_id" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_remove_by_id</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_remove_by_id-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 288</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_remove_by_id</span>
+  <span class="ruby-identifier">first</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;First&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Second&quot;</span>)
+
+  <span class="ruby-identifier">removed</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">remove</span>(<span class="ruby-identifier">first</span>.<span class="ruby-identifier">id</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;First&quot;</span>, <span class="ruby-identifier">removed</span>.<span class="ruby-identifier">text</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">1</span>, <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">all</span>.<span class="ruby-identifier">length</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;Second&quot;</span>, <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">all</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">text</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_reset_changes_status" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_reset_changes_status</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_reset_changes_status-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 329</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_reset_changes_status</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Task&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">start</span>(<span class="ruby-identifier">item</span>.<span class="ruby-identifier">id</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">reset</span>(<span class="ruby-identifier">item</span>.<span class="ruby-identifier">id</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;not_started&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">status</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_search" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_search</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_search-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 337</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_search</span>
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Fix login bug&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Add signup feature&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Update login tests&quot;</span>)
+
+  <span class="ruby-identifier">results</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">search</span>(<span class="ruby-string">&quot;login&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">2</span>, <span class="ruby-identifier">results</span>.<span class="ruby-identifier">length</span>
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">results</span>.<span class="ruby-identifier">all?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">item</span><span class="ruby-operator">|</span> <span class="ruby-identifier">item</span>.<span class="ruby-identifier">text</span>.<span class="ruby-identifier">downcase</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-string">&quot;login&quot;</span>) }
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_skip_changes_status" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_skip_changes_status</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_skip_changes_status-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 322</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_skip_changes_status</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Task&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">skip</span>(<span class="ruby-identifier">item</span>.<span class="ruby-identifier">id</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;skip&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">status</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_start_changes_status" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_start_changes_status</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_start_changes_status-source">
+            <pre><span class="ruby-comment"># File test/hiiro/todo_test.rb, line 308</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_start_changes_status</span>
+  <span class="ruby-identifier">item</span> = <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">add</span>(<span class="ruby-string">&quot;Task&quot;</span>)
+  <span class="ruby-ivar">@manager</span>.<span class="ruby-identifier">start</span>(<span class="ruby-identifier">item</span>.<span class="ruby-identifier">id</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;started&quot;</span>, <span class="ruby-identifier">item</span>.<span class="ruby-identifier">status</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+    </section>
+  
+  </section>
+
+</main>
+
+
+<footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.1.2.1.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+

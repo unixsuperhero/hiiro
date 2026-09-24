@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>class ProjectPluginTest - RDoc Documentation</title>
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script src="./js/navigation.js" defer></script>
+<script src="./js/search.js" defer></script>
+<script src="./js/search_index.js" defer></script>
+<script src="./js/searcher.js" defer></script>
+<script src="./js/darkfish.js" defer></script>
+
+<link href="./css/fonts.css" rel="stylesheet">
+<link href="./css/rdoc.css" rel="stylesheet">
+
+
+
+
+<body id="top" role="document" class="class">
+<nav role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="./index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="./table_of_contents.html#pages">Pages</a>
+    <a href="./table_of_contents.html#classes">Classes</a>
+    <a href="./table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search" spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+
+  <div id="class-metadata">
+    
+    <div id="parent-class-section" class="nav-section">
+  <h3>Parent</h3>
+
+  
+  <p class="link">Minitest::Test
+  
+</div>
+
+    <div id="includes-section" class="nav-section">
+  <h3>Included Modules</h3>
+
+  <ul class="link-list">
+  
+  
+    <li><a class="include" href="TestHelpers.html">TestHelpers</a>
+  
+  
+  </ul>
+</div>
+
+    
+    <!-- Method Quickref -->
+<div id="method-list-section" class="nav-section">
+  <h3>Methods</h3>
+
+  <ul class="link-list" role="directory">
+    
+    <li ><a href="#method-i-test_load_attaches_project_dirs_method">#test_load_attaches_project_dirs_method</a>
+    
+    <li ><a href="#method-i-test_load_attaches_projects_from_config_method">#test_load_attaches_projects_from_config_method</a>
+    
+    <li ><a href="#method-i-test_load_registers_project_subcommand">#test_load_registers_project_subcommand</a>
+    
+    <li ><a href="#method-i-test_project_dirs_returns_hash">#test_project_dirs_returns_hash</a>
+    
+    <li ><a href="#method-i-test_project_module_responds_to_add_subcommands">#test_project_module_responds_to_add_subcommands</a>
+    
+    <li ><a href="#method-i-test_project_module_responds_to_attach_methods">#test_project_module_responds_to_attach_methods</a>
+    
+    <li ><a href="#method-i-test_project_module_responds_to_load">#test_project_module_responds_to_load</a>
+    
+    <li ><a href="#method-i-test_projects_from_config_loads_yaml_file">#test_projects_from_config_loads_yaml_file</a>
+    
+    <li ><a href="#method-i-test_projects_from_config_returns_empty_hash_when_no_file">#test_projects_from_config_returns_empty_hash_when_no_file</a>
+    
+  </ul>
+</div>
+
+  </div>
+</nav>
+
+<main role="main" aria-labelledby="class-ProjectPluginTest">
+  <h1 id="class-ProjectPluginTest" class="class">
+    class ProjectPluginTest
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+  
+  <section id="5Buntitled-5D" class="documentation-section">
+    
+
+    
+
+    
+
+    
+
+    
+     <section id="public-instance-5Buntitled-5D-method-details" class="method-section">
+       <header>
+         <h3>Public Instance Methods</h3>
+       </header>
+
+    
+      <div id="method-i-test_load_attaches_project_dirs_method" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_load_attaches_project_dirs_method</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_load_attaches_project_dirs_method-source">
+            <pre><span class="ruby-comment"># File test/plugins/project_test.rb, line 19</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_load_attaches_project_dirs_method</span>
+  <span class="ruby-identifier">mock</span> = <span class="ruby-constant">MockHiiro</span>.<span class="ruby-identifier">new</span>
+
+  <span class="ruby-constant">Project</span>.<span class="ruby-identifier">load</span>(<span class="ruby-identifier">mock</span>)
+
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">mock</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:project_dirs</span>), <span class="ruby-string">&quot;Expected hiiro to have project_dirs method&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_load_attaches_projects_from_config_method" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_load_attaches_projects_from_config_method</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_load_attaches_projects_from_config_method-source">
+            <pre><span class="ruby-comment"># File test/plugins/project_test.rb, line 27</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_load_attaches_projects_from_config_method</span>
+  <span class="ruby-identifier">mock</span> = <span class="ruby-constant">MockHiiro</span>.<span class="ruby-identifier">new</span>
+
+  <span class="ruby-constant">Project</span>.<span class="ruby-identifier">load</span>(<span class="ruby-identifier">mock</span>)
+
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">mock</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:projects_from_config</span>), <span class="ruby-string">&quot;Expected hiiro to have projects_from_config method&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_load_registers_project_subcommand" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_load_registers_project_subcommand</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_load_registers_project_subcommand-source">
+            <pre><span class="ruby-comment"># File test/plugins/project_test.rb, line 35</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_load_registers_project_subcommand</span>
+  <span class="ruby-identifier">mock</span> = <span class="ruby-constant">MockHiiro</span>.<span class="ruby-identifier">new</span>
+
+  <span class="ruby-constant">Project</span>.<span class="ruby-identifier">load</span>(<span class="ruby-identifier">mock</span>)
+
+  <span class="ruby-identifier">assert</span> <span class="ruby-identifier">mock</span>.<span class="ruby-identifier">subcmds</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:project</span>), <span class="ruby-string">&quot;Expected :project subcommand to be registered&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_project_dirs_returns_hash" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_project_dirs_returns_hash</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_project_dirs_returns_hash-source">
+            <pre><span class="ruby-comment"># File test/plugins/project_test.rb, line 43</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_project_dirs_returns_hash</span>
+  <span class="ruby-identifier">mock</span> = <span class="ruby-constant">MockHiiro</span>.<span class="ruby-identifier">new</span>
+
+  <span class="ruby-constant">Project</span>.<span class="ruby-identifier">attach_methods</span>(<span class="ruby-identifier">mock</span>)
+
+  <span class="ruby-identifier">with_temp_dir</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">dir</span><span class="ruby-operator">|</span>
+    <span class="ruby-comment"># Create mock proj directory with projects</span>
+    <span class="ruby-identifier">proj_dir</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dir</span>, <span class="ruby-string">&#39;proj&#39;</span>)
+    <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkdir_p</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">proj_dir</span>, <span class="ruby-string">&#39;project1&#39;</span>))
+    <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkdir_p</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">proj_dir</span>, <span class="ruby-string">&#39;project2&#39;</span>))
+
+    <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">stub</span>(<span class="ruby-value">:home</span>, <span class="ruby-identifier">dir</span>) <span class="ruby-keyword">do</span>
+      <span class="ruby-identifier">dirs</span> = <span class="ruby-identifier">mock</span>.<span class="ruby-identifier">project_dirs</span>
+
+      <span class="ruby-identifier">assert_kind_of</span> <span class="ruby-constant">Hash</span>, <span class="ruby-identifier">dirs</span>
+      <span class="ruby-identifier">assert</span> <span class="ruby-identifier">dirs</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-string">&#39;project1&#39;</span>)
+      <span class="ruby-identifier">assert</span> <span class="ruby-identifier">dirs</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-string">&#39;project2&#39;</span>)
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_project_module_responds_to_add_subcommands" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_project_module_responds_to_add_subcommands</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_project_module_responds_to_add_subcommands-source">
+            <pre><span class="ruby-comment"># File test/plugins/project_test.rb, line 11</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_project_module_responds_to_add_subcommands</span>
+  <span class="ruby-identifier">assert_respond_to</span> <span class="ruby-constant">Project</span>, <span class="ruby-value">:add_subcommands</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_project_module_responds_to_attach_methods" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_project_module_responds_to_attach_methods</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_project_module_responds_to_attach_methods-source">
+            <pre><span class="ruby-comment"># File test/plugins/project_test.rb, line 15</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_project_module_responds_to_attach_methods</span>
+  <span class="ruby-identifier">assert_respond_to</span> <span class="ruby-constant">Project</span>, <span class="ruby-value">:attach_methods</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_project_module_responds_to_load" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_project_module_responds_to_load</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_project_module_responds_to_load-source">
+            <pre><span class="ruby-comment"># File test/plugins/project_test.rb, line 7</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_project_module_responds_to_load</span>
+  <span class="ruby-identifier">assert_respond_to</span> <span class="ruby-constant">Project</span>, <span class="ruby-value">:load</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_projects_from_config_loads_yaml_file" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_projects_from_config_loads_yaml_file</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_projects_from_config_loads_yaml_file-source">
+            <pre><span class="ruby-comment"># File test/plugins/project_test.rb, line 78</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_projects_from_config_loads_yaml_file</span>
+  <span class="ruby-identifier">mock</span> = <span class="ruby-constant">MockHiiro</span>.<span class="ruby-identifier">new</span>
+
+  <span class="ruby-constant">Project</span>.<span class="ruby-identifier">attach_methods</span>(<span class="ruby-identifier">mock</span>)
+
+  <span class="ruby-identifier">with_temp_dir</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">dir</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">config_dir</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">dir</span>, <span class="ruby-string">&#39;.config&#39;</span>, <span class="ruby-string">&#39;hiiro&#39;</span>)
+    <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkdir_p</span>(<span class="ruby-identifier">config_dir</span>)
+
+    <span class="ruby-identifier">projects_file</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">config_dir</span>, <span class="ruby-string">&#39;projects.yml&#39;</span>)
+    <span class="ruby-constant">File</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">projects_file</span>, <span class="ruby-constant">YAML</span>.<span class="ruby-identifier">dump</span>({
+      <span class="ruby-string">&#39;myproject&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-string">&#39;/path/to/myproject&#39;</span>,
+      <span class="ruby-string">&#39;another&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-string">&#39;/path/to/another&#39;</span>
+    }))
+
+    <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">stub</span>(<span class="ruby-value">:home</span>, <span class="ruby-identifier">dir</span>) <span class="ruby-keyword">do</span>
+      <span class="ruby-identifier">projects</span> = <span class="ruby-identifier">mock</span>.<span class="ruby-identifier">projects_from_config</span>
+
+      <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&#39;/path/to/myproject&#39;</span>, <span class="ruby-identifier">projects</span>[<span class="ruby-string">&#39;myproject&#39;</span>]
+      <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&#39;/path/to/another&#39;</span>, <span class="ruby-identifier">projects</span>[<span class="ruby-string">&#39;another&#39;</span>]
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_projects_from_config_returns_empty_hash_when_no_file" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_projects_from_config_returns_empty_hash_when_no_file</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_projects_from_config_returns_empty_hash_when_no_file-source">
+            <pre><span class="ruby-comment"># File test/plugins/project_test.rb, line 64</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_projects_from_config_returns_empty_hash_when_no_file</span>
+  <span class="ruby-identifier">mock</span> = <span class="ruby-constant">MockHiiro</span>.<span class="ruby-identifier">new</span>
+
+  <span class="ruby-constant">Project</span>.<span class="ruby-identifier">attach_methods</span>(<span class="ruby-identifier">mock</span>)
+
+  <span class="ruby-identifier">with_temp_dir</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">dir</span><span class="ruby-operator">|</span>
+    <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">stub</span>(<span class="ruby-value">:home</span>, <span class="ruby-identifier">dir</span>) <span class="ruby-keyword">do</span>
+      <span class="ruby-identifier">projects</span> = <span class="ruby-identifier">mock</span>.<span class="ruby-identifier">projects_from_config</span>
+
+      <span class="ruby-identifier">assert_equal</span>({}, <span class="ruby-identifier">projects</span>)
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+    </section>
+  
+  </section>
+
+</main>
+
+
+<footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.1.2.1.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+

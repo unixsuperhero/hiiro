@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="UTF-8">
+
+<title>class MatcherTest - RDoc Documentation</title>
+
+<script type="text/javascript">
+  var rdoc_rel_prefix = "./";
+  var index_rel_prefix = "./";
+</script>
+
+<script src="./js/navigation.js" defer></script>
+<script src="./js/search.js" defer></script>
+<script src="./js/search_index.js" defer></script>
+<script src="./js/searcher.js" defer></script>
+<script src="./js/darkfish.js" defer></script>
+
+<link href="./css/fonts.css" rel="stylesheet">
+<link href="./css/rdoc.css" rel="stylesheet">
+
+
+
+
+<body id="top" role="document" class="class">
+<nav role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="./index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="./table_of_contents.html#pages">Pages</a>
+    <a href="./table_of_contents.html#classes">Classes</a>
+    <a href="./table_of_contents.html#methods">Methods</a>
+  </div>
+</div>
+
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search" spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
+
+  
+
+  <div id="class-metadata">
+    
+    <div id="parent-class-section" class="nav-section">
+  <h3>Parent</h3>
+
+  
+  <p class="link">Minitest::Test
+  
+</div>
+
+    
+    
+    <!-- Method Quickref -->
+<div id="method-list-section" class="nav-section">
+  <h3>Methods</h3>
+
+  <ul class="link-list" role="directory">
+    
+    <li ><a href="#method-i-test_backward_compatibility_prefix_matcher_alias">#test_backward_compatibility_prefix_matcher_alias</a>
+    
+    <li ><a href="#method-i-test_by_prefix_explicit_method">#test_by_prefix_explicit_method</a>
+    
+    <li ><a href="#method-i-test_by_substring_class_method">#test_by_substring_class_method</a>
+    
+    <li ><a href="#method-i-test_by_substring_finds_match_at_end">#test_by_substring_finds_match_at_end</a>
+    
+    <li ><a href="#method-i-test_by_substring_finds_match_in_middle">#test_by_substring_finds_match_in_middle</a>
+    
+    <li ><a href="#method-i-test_by_substring_with_key">#test_by_substring_with_key</a>
+    
+    <li ><a href="#method-i-test_find_all_paths">#test_find_all_paths</a>
+    
+    <li ><a href="#method-i-test_find_all_with_prefix">#test_find_all_with_prefix</a>
+    
+    <li ><a href="#method-i-test_find_path_with_abbreviated_segments">#test_find_path_with_abbreviated_segments</a>
+    
+    <li ><a href="#method-i-test_find_path_with_simple_path">#test_find_path_with_simple_path</a>
+    
+    <li ><a href="#method-i-test_find_with_block">#test_find_with_block</a>
+    
+    <li ><a href="#method-i-test_find_with_exact_match">#test_find_with_exact_match</a>
+    
+    <li ><a href="#method-i-test_find_with_key">#test_find_with_key</a>
+    
+    <li ><a href="#method-i-test_find_with_no_match">#test_find_with_no_match</a>
+    
+    <li ><a href="#method-i-test_find_with_prefix">#test_find_with_prefix</a>
+    
+    <li ><a href="#method-i-test_resolve_path_single_match">#test_resolve_path_single_match</a>
+    
+    <li ><a href="#method-i-test_resolve_path_with_exact_match">#test_resolve_path_with_exact_match</a>
+    
+    <li ><a href="#method-i-test_resolve_returns_exact_match_when_ambiguous">#test_resolve_returns_exact_match_when_ambiguous</a>
+    
+    <li ><a href="#method-i-test_resolve_returns_nil_when_ambiguous_no_exact">#test_resolve_returns_nil_when_ambiguous_no_exact</a>
+    
+    <li ><a href="#method-i-test_resolve_returns_single_match">#test_resolve_returns_single_match</a>
+    
+  </ul>
+</div>
+
+  </div>
+</nav>
+
+<main role="main" aria-labelledby="class-MatcherTest">
+  <h1 id="class-MatcherTest" class="class">
+    class MatcherTest
+  </h1>
+
+  <section class="description">
+    
+  </section>
+
+  
+  <section id="5Buntitled-5D" class="documentation-section">
+    
+
+    
+
+    
+
+    
+
+    
+     <section id="public-instance-5Buntitled-5D-method-details" class="method-section">
+       <header>
+         <h3>Public Instance Methods</h3>
+       </header>
+
+    
+      <div id="method-i-test_backward_compatibility_prefix_matcher_alias" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_backward_compatibility_prefix_matcher_alias</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_backward_compatibility_prefix_matcher_alias-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 163</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_backward_compatibility_prefix_matcher_alias</span>
+  <span class="ruby-comment"># Ensure old code still works</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[apple apricot banana]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">PrefixMatcher</span>.<span class="ruby-identifier">find</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;ap&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;apple&quot;</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_by_prefix_explicit_method" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_by_prefix_explicit_method</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_by_prefix_explicit_method-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 154</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_by_prefix_explicit_method</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[apple apricot banana]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">by_prefix</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;ap&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">2</span>, <span class="ruby-identifier">result</span>.<span class="ruby-identifier">count</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:item</span>), <span class="ruby-string">&quot;apple&quot;</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:item</span>), <span class="ruby-string">&quot;apricot&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_by_substring_class_method" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_by_substring_class_method</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_by_substring_class_method-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 131</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_by_substring_class_method</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[hello world hello_world]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">by_substring</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;world&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">2</span>, <span class="ruby-identifier">result</span>.<span class="ruby-identifier">count</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:item</span>), <span class="ruby-string">&quot;world&quot;</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:item</span>), <span class="ruby-string">&quot;hello_world&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_by_substring_finds_match_at_end" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_by_substring_finds_match_at_end</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_by_substring_finds_match_at_end-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 122</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_by_substring_finds_match_at_end</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[apple application]</span>
+  <span class="ruby-identifier">matcher</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">items</span>)
+  <span class="ruby-identifier">result</span> = <span class="ruby-identifier">matcher</span>.<span class="ruby-identifier">by_substring</span>(<span class="ruby-string">&quot;tion&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">1</span>, <span class="ruby-identifier">result</span>.<span class="ruby-identifier">count</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;application&quot;</span>, <span class="ruby-identifier">result</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">item</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_by_substring_finds_match_in_middle" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_by_substring_finds_match_in_middle</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          <p>New substring matching tests</p>
+          
+          
+
+          
+          <div class="method-source-code" id="test_by_substring_finds_match_in_middle-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 112</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_by_substring_finds_match_in_middle</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[apple pineapple banana]</span>
+  <span class="ruby-identifier">matcher</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">items</span>)
+  <span class="ruby-identifier">result</span> = <span class="ruby-identifier">matcher</span>.<span class="ruby-identifier">by_substring</span>(<span class="ruby-string">&quot;apple&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">2</span>, <span class="ruby-identifier">result</span>.<span class="ruby-identifier">count</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:item</span>), <span class="ruby-string">&quot;apple&quot;</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:item</span>), <span class="ruby-string">&quot;pineapple&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_by_substring_with_key" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_by_substring_with_key</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_by_substring_with_key-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 140</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_by_substring_with_key</span>
+  <span class="ruby-identifier">items</span> = [
+    <span class="ruby-constant">OpenStruct</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;alice_smith&quot;</span>),
+    <span class="ruby-constant">OpenStruct</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;bob_jones&quot;</span>),
+    <span class="ruby-constant">OpenStruct</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;charlie_smith&quot;</span>),
+  ]
+  <span class="ruby-identifier">matcher</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">items</span>, <span class="ruby-value">:name</span>)
+  <span class="ruby-identifier">result</span> = <span class="ruby-identifier">matcher</span>.<span class="ruby-identifier">by_substring</span>(<span class="ruby-string">&quot;smith&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-value">2</span>, <span class="ruby-identifier">result</span>.<span class="ruby-identifier">count</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;alice_smith&quot;</span>, <span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>[<span class="ruby-value">0</span>].<span class="ruby-identifier">item</span>.<span class="ruby-identifier">name</span>
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;charlie_smith&quot;</span>, <span class="ruby-identifier">result</span>.<span class="ruby-identifier">matches</span>[<span class="ruby-value">1</span>].<span class="ruby-identifier">item</span>.<span class="ruby-identifier">name</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_all_paths" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_all_paths</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_all_paths-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 89</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_all_paths</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[src/main.rb src/models/main.rb test/main_test.rb]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">find_all_paths</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;s/m&quot;</span>)
+
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">result</span>, <span class="ruby-string">&quot;src/main.rb&quot;</span>
+  <span class="ruby-identifier">assert_includes</span> <span class="ruby-identifier">result</span>, <span class="ruby-string">&quot;src/models/main.rb&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_all_with_prefix" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_all_with_prefix</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_all_with_prefix-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 18</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_all_with_prefix</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[apple apricot banana]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">find_all</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;ap&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-node">%w[apple apricot]</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_path_with_abbreviated_segments" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_path_with_abbreviated_segments</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_path_with_abbreviated_segments-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 82</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_path_with_abbreviated_segments</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[src/controllers/main.rb src/models/user.rb]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">find_path</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;src/c/m&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;src/controllers/main.rb&quot;</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_path_with_simple_path" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_path_with_simple_path</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_path_with_simple_path-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 75</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_path_with_simple_path</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[src/main.rb src/lib.rb test/main_test.rb]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">find_path</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;src/main&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;src/main.rb&quot;</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_with_block" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_with_block</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_with_block-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 64</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_with_block</span>
+  <span class="ruby-identifier">items</span> = [
+    { <span class="ruby-value">name:</span> <span class="ruby-string">&quot;alice&quot;</span>, <span class="ruby-value">age:</span> <span class="ruby-value">30</span> },
+    { <span class="ruby-value">name:</span> <span class="ruby-string">&quot;bob&quot;</span>, <span class="ruby-value">age:</span> <span class="ruby-value">25</span> },
+    { <span class="ruby-value">name:</span> <span class="ruby-string">&quot;charlie&quot;</span>, <span class="ruby-value">age:</span> <span class="ruby-value">35</span> },
+  ]
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">find</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;bo&quot;</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">item</span><span class="ruby-operator">|</span> <span class="ruby-identifier">item</span>[<span class="ruby-value">:name</span>] }
+
+  <span class="ruby-identifier">assert_equal</span>({ <span class="ruby-value">name:</span> <span class="ruby-string">&quot;bob&quot;</span>, <span class="ruby-value">age:</span> <span class="ruby-value">25</span> }, <span class="ruby-identifier">result</span>)
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_with_exact_match" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_with_exact_match</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_with_exact_match-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 4</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_with_exact_match</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[apple apricot banana]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">find</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;apple&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;apple&quot;</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_with_key" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_with_key</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_with_key-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 53</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_with_key</span>
+  <span class="ruby-identifier">items</span> = [
+    <span class="ruby-constant">OpenStruct</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;alice&quot;</span>, <span class="ruby-value">age:</span> <span class="ruby-value">30</span>),
+    <span class="ruby-constant">OpenStruct</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;bob&quot;</span>, <span class="ruby-value">age:</span> <span class="ruby-value">25</span>),
+    <span class="ruby-constant">OpenStruct</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-string">&quot;charlie&quot;</span>, <span class="ruby-value">age:</span> <span class="ruby-value">35</span>),
+  ]
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">find</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;al&quot;</span>, <span class="ruby-value">key:</span> <span class="ruby-value">:name</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;alice&quot;</span>, <span class="ruby-identifier">result</span>.<span class="ruby-identifier">name</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_with_no_match" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_with_no_match</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_with_no_match-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 25</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_with_no_match</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[apple apricot banana]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">find</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;xyz&quot;</span>)
+
+  <span class="ruby-identifier">assert_nil</span> <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_find_with_prefix" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_find_with_prefix</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_find_with_prefix-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 11</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_find_with_prefix</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[apple apricot banana]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">find</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;ap&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;apple&quot;</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_resolve_path_single_match" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_resolve_path_single_match</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_resolve_path_single_match-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 104</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_resolve_path_single_match</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[src/main.rb test/main.rb]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">resolve_path</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;src/m&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;src/main.rb&quot;</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_resolve_path_with_exact_match" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_resolve_path_with_exact_match</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_resolve_path_with_exact_match-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 97</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_resolve_path_with_exact_match</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[main main/sub main/other]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">resolve_path</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;main&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;main&quot;</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_resolve_returns_exact_match_when_ambiguous" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_resolve_returns_exact_match_when_ambiguous</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_resolve_returns_exact_match_when_ambiguous-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 32</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_resolve_returns_exact_match_when_ambiguous</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[test testing tested]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">resolve</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;test&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;test&quot;</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_resolve_returns_nil_when_ambiguous_no_exact" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_resolve_returns_nil_when_ambiguous_no_exact</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_resolve_returns_nil_when_ambiguous_no_exact-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 39</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_resolve_returns_nil_when_ambiguous_no_exact</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[testing tested]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">resolve</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;test&quot;</span>)
+
+  <span class="ruby-identifier">assert_nil</span> <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+      <div id="method-i-test_resolve_returns_single_match" class="method-detail ">
+        
+        <div class="method-heading">
+          <span class="method-name">test_resolve_returns_single_match</span><span
+            class="method-args">()</span>
+          
+          <span class="method-click-advice">click to toggle source</span>
+          
+        </div>
+        
+
+        <div class="method-description">
+          
+          
+          
+          
+
+          
+          <div class="method-source-code" id="test_resolve_returns_single_match-source">
+            <pre><span class="ruby-comment"># File test/hiiro/matcher_test.rb, line 46</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">test_resolve_returns_single_match</span>
+  <span class="ruby-identifier">items</span> = <span class="ruby-node">%w[apple banana cherry]</span>
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Matcher</span>.<span class="ruby-identifier">resolve</span>(<span class="ruby-identifier">items</span>, <span class="ruby-string">&quot;ban&quot;</span>)
+
+  <span class="ruby-identifier">assert_equal</span> <span class="ruby-string">&quot;banana&quot;</span>, <span class="ruby-identifier">result</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+        
+
+        
+      </div>
+
+    
+    </section>
+  
+  </section>
+
+</main>
+
+
+<footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.1.2.1.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
+

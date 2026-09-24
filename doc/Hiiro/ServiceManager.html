@@ -3,51 +3,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <title>class Hiiro::ServiceManager - RDoc Documentation</title>
 
+  <meta name="keywords" content="ruby,class,Hiiro::ServiceManager">
 
-  <meta
-    name="keywords"
-    content="ruby,class,Hiiro::ServiceManager"
-  >
-
-    <meta
-      name="description"
-      content="Documentation for the Hiiro::ServiceManager class"
-    >
-
-
-
-
-
-<!-- Open Graph / Facebook -->
-<meta property="og:type" content="website">
-<meta property="og:title" content="class Hiiro::ServiceManager - RDoc Documentation">
-
-
-
-    <meta
-      property="og:description"
-      content="Documentation for Hiiro::ServiceManager class - API reference and code examples"
-    >
-
-
-
-
-
-<!-- Twitter -->
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="class Hiiro::ServiceManager - RDoc Documentation">
-
-
-
-    <meta
-      name="twitter:description"
-      content="Documentation for Hiiro::ServiceManager class - API reference and code examples"
-    >
-
+    <meta name="description" content="Documentation for the Hiiro::ServiceManager class">
 
 
 <script type="text/javascript">
@@ -55,751 +17,115 @@
   var index_rel_prefix = "../";
 </script>
 
-<script
-  src="../js/theme-toggle.js?v=7.2.0"
-></script>
+<script src="../js/navigation.js" defer></script>
+<script src="../js/search.js" defer></script>
+<script src="../js/search_index.js" defer></script>
+<script src="../js/searcher.js" defer></script>
+<script src="../js/darkfish.js" defer></script>
 
-<script
-  src="../js/search_navigation.js?v=7.2.0"
-  defer
-></script>
-
-<script
-  src="../js/search_data.js?v=7.2.0"
-  defer
-></script>
-
-<script
-  src="../js/search_ranker.js?v=7.2.0"
-  defer
-></script>
-
-<script
-  src="../js/search_controller.js?v=7.2.0"
-  defer
-></script>
-
-<script
-  src="../js/c_highlighter.js?v=7.2.0"
-  defer
-></script>
-
-<script
-  src="../js/bash_highlighter.js?v=7.2.0"
-  defer
-></script>
-
-<script
-  src="../js/aliki.js?v=7.2.0"
-  defer
-></script>
-
-<link
-  href="../css/rdoc.css?v=7.2.0"
-  rel="stylesheet"
->
+<link href="../css/fonts.css" rel="stylesheet">
+<link href="../css/rdoc.css" rel="stylesheet">
 
 
-
-
-<body role="document" class="class has-toc">
-<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
-  <!-- Chevron (right arrow) - used for expand/collapse -->
-  <symbol
-    id="icon-chevron"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <polyline points="9 18 15 12 9 6"></polyline>
-  </symbol>
-
-  <!-- File/Document - Pages section -->
-  <symbol
-    id="icon-file"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path
-      d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"
-    ></path>
-
-    <polyline points="14 2 14 8 20 8"></polyline>
-  </symbol>
-
-  <!-- Layers/Stack - Classes and Modules section -->
-  <symbol
-    id="icon-layers"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-    <polyline points="2 17 12 22 22 17"></polyline>
-    <polyline points="2 12 12 17 22 12"></polyline>
-  </symbol>
-
-  <!-- Curly braces with C - Class Methods section -->
-  <symbol
-    id="icon-class-methods"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
-    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
-
-    <text
-      x="12"
-      y="17"
-      text-anchor="middle"
-      font-size="13"
-      font-weight="bold"
-      fill="currentColor"
-      stroke="none"
-    >
-      C
-    </text>
-  </symbol>
-
-  <!-- Curly braces with I - Instance Methods section -->
-  <symbol
-    id="icon-instance-methods"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path d="M6 3C3.5 3 2 4.5 2 7v3c0 1.5-1 2-1 2s1 .5 1 2v5c0 2.5 1.5 4 4 4"></path>
-    <path d="M18 3c2.5 0 4 1.5 4 4v3c0 1.5 1 2 1 2s-1 .5-1 2v5c0 2.5-1.5 4-4 4"></path>
-
-    <text
-      x="12"
-      y="17"
-      text-anchor="middle"
-      font-size="13"
-      font-weight="bold"
-      fill="currentColor"
-      stroke="none"
-    >
-      I
-    </text>
-  </symbol>
-
-  <!-- Double chevrons up - Ancestors section -->
-  <symbol
-    id="icon-ancestors"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <polyline points="17 11 12 6 7 11"></polyline>
-    <polyline points="17 18 12 13 7 18"></polyline>
-  </symbol>
-
-  <!-- User with plus - Included Modules section -->
-  <symbol
-    id="icon-includes"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-    <circle cx="8.5" cy="7" r="4"></circle>
-
-    <line
-      x1="20"
-      y1="8"
-      x2="20"
-      y2="14"
-    ></line>
-
-    <line
-      x1="23"
-      y1="11"
-      x2="17"
-      y2="11"
-    ></line>
-  </symbol>
-
-  <!-- User with check - Extended Modules section -->
-  <symbol
-    id="icon-extends"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-    <circle cx="8.5" cy="7" r="4"></circle>
-    <polyline points="17 11 19 13 23 9"></polyline>
-  </symbol>
-
-  <!-- List - Sections section -->
-  <symbol
-    id="icon-list"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <line
-      x1="8"
-      y1="6"
-      x2="21"
-      y2="6"
-    ></line>
-
-    <line
-      x1="8"
-      y1="12"
-      x2="21"
-      y2="12"
-    ></line>
-
-    <line
-      x1="8"
-      y1="18"
-      x2="21"
-      y2="18"
-    ></line>
-
-    <line
-      x1="3"
-      y1="6"
-      x2="3.01"
-      y2="6"
-    ></line>
-
-    <line
-      x1="3"
-      y1="12"
-      x2="3.01"
-      y2="12"
-    ></line>
-
-    <line
-      x1="3"
-      y1="18"
-      x2="3.01"
-      y2="18"
-    ></line>
-  </symbol>
-</svg>
-
-<header class="top-navbar">
-  <a href="../index.html" class="navbar-brand">
-    RDoc Documentation
-  </a>
-
-  <!-- Desktop search bar -->
-  <div class="navbar-search navbar-search-desktop" role="search">
-    <form action="#" method="get" accept-charset="utf-8">
-      <input id="search-field" role="combobox" aria-label="Search"
-             aria-autocomplete="list" aria-controls="search-results-desktop"
-             type="text" name="search" placeholder="Search (/) for a class, method..."
-             spellcheck="false" autocomplete="off"
-             title="Type to search, Up and Down to navigate, Enter to load">
-      <ul id="search-results-desktop" aria-label="Search Results"
-          aria-busy="false" aria-expanded="false"
-          aria-atomic="false" class="initially-hidden search-results"></ul>
-    </form>
-  </div>
-
-  <!-- Mobile search icon button -->
-  <button id="search-toggle" class="navbar-search-mobile" aria-label="Open search" type="button">
-    <span aria-hidden="true">🔍</span>
-  </button>
-
-  <!-- Theme toggle button -->
-  <button id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode" type="button">
-    <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
-  </button>
-</header>
-
-<!-- Search Modal (Mobile) -->
-<div id="search-modal" class="search-modal" hidden aria-modal="true" role="dialog" aria-label="Search">
-  <div class="search-modal-backdrop"></div>
-  <div class="search-modal-content">
-    <div class="search-modal-header">
-      <form class="search-modal-form" action="#" method="get" accept-charset="utf-8">
-        <span class="search-modal-icon" aria-hidden="true">🔍</span>
-        <input id="search-field-mobile" role="combobox" aria-label="Search"
-               aria-autocomplete="list" aria-controls="search-results-mobile"
-               type="text" name="search" placeholder="Search documentation"
-               spellcheck="false" autocomplete="off">
-        <button type="button" class="search-modal-close" aria-label="Close search" id="search-modal-close">
-          <span aria-hidden="true">esc</span>
-        </button>
-      </form>
-    </div>
-    <div class="search-modal-body">
-      <ul id="search-results-mobile" aria-label="Search Results"
-          aria-busy="false" aria-expanded="false"
-          aria-atomic="false" class="search-results search-modal-results initially-hidden"></ul>
-      <div class="search-modal-empty">
-        <p>No recent searches</p>
-      </div>
-    </div>
-  </div>
-</div>
-
+<body id="top" role="document" class="class">
 <div id="navigation-toggle" role="button" tabindex="0" aria-label="Toggle sidebar" aria-expanded="true" aria-controls="navigation">
   <span aria-hidden="true">&#9776;</span>
 </div>
 
 
-<nav id="navigation" role="navigation" hidden>
-  
-
-
-
-
-  <div id="fileindex-section" class="nav-section">
-    <details class="nav-section-collapsible" >
-      <summary class="nav-section-header">
-        <span class="nav-section-icon">
-          <svg>
-            <use href="#icon-file"></use>
-          </svg>
-        </span>
-
-        <span class="nav-section-title">Pages</span>
-
-        <span class="nav-section-chevron">
-          <svg>
-            <use href="#icon-chevron"></use>
-          </svg>
-        </span>
-      </summary>
-
-      <ul class="nav-list">
-
-
-
-
-
-
-            <li>
-              <a href="../CLAUDE_md.html">
-                CLAUDE
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../Gemfile.html">
-                Gemfile
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../Gemfile_lock.html">
-                Gemfile.lock
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../LICENSE.html">
-                LICENSE
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../README_md.html">
-                README
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../Rakefile.html">
-                Rakefile
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../TODO_md.html">
-                TODO
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../demo_sh.html">
-                demo.sh
-              </a>
-            </li>
-
-
-
-
-
-          <li>
-            <details >
-              <summary>
-                
-                  docs
-                  
-                
-              </summary>
-
-              <ul class="link-list">
-
-                  <li>
-                    <a href="../docs/README_md.html">
-                      README
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../docs/docker-testing-guide_md.html">
-                      docker-testing-guide
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../docs/h-buffer_md.html">
-                      h-buffer
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../docs/h-pane_md.html">
-                      h-pane
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../docs/h-plugin_md.html">
-                      h-plugin
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../docs/h-session_md.html">
-                      h-session
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../docs/h-window_md.html">
-                      h-window
-                    </a>
-                  </li>
-
-              </ul>
-            </details>
-          </li>
-
-
-
-
-            <li>
-              <a href="../h-tmux-plugins_tmux.html">
-                h-tmux-plugins.tmux
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../notes.html">
-                notes
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../obsidian_slides_md.html">
-                obsidian_slides
-              </a>
-            </li>
-
-
-
-
-            <li>
-              <a href="../record-demo_sh.html">
-                record-demo.sh
-              </a>
-            </li>
-
-
-
-
-
-          <li>
-            <details >
-              <summary>
-                
-                  script
-                  
-                
-              </summary>
-
-              <ul class="link-list">
-
-                  <li>
-                    <a href="../script/compare.html">
-                      compare
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../script/install.html">
-                      install
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../script/sync.html">
-                      sync
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../script/test.html">
-                      test
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../script/update.html">
-                      update
-                    </a>
-                  </li>
-
-              </ul>
-            </details>
-          </li>
-
-
-
-
-            <li>
-              <a href="../slides_md.html">
-                slides
-              </a>
-            </li>
-
-
-
-
-
-          <li>
-            <details >
-              <summary>
-                
-                  tmp
-                  
-                
-              </summary>
-
-              <ul class="link-list">
-
-                  <li>
-                    <a href="../tmp/gql-error_message_json.html">
-                      gql-error_message.json
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../tmp/sync_sh.html">
-                      sync.sh
-                    </a>
-                  </li>
-
-                  <li>
-                    <a href="../tmp/yaml_files.html">
-                      yaml_files
-                    </a>
-                  </li>
-
-              </ul>
-            </details>
-          </li>
-
-      </ul>
-    </details>
+<nav id="navigation" role="navigation">
+  <div id="project-navigation">
+    <div id="home-section" role="region" title="Quick navigation" class="nav-section">
+  <h2>
+    <a href="../index.html" rel="home">Home</a>
+  </h2>
+
+  <div id="table-of-contents-navigation">
+    <a href="../table_of_contents.html#pages">Pages</a>
+    <a href="../table_of_contents.html#classes">Classes</a>
+    <a href="../table_of_contents.html#methods">Methods</a>
   </div>
-
-
-  
-
-  
-<div id="parent-class-section" class="nav-section">
-  <details class="nav-section-collapsible" open>
-    <summary class="nav-section-header">
-      <span class="nav-section-icon">
-        <svg><use href="#icon-ancestors"></use></svg>
-      </span>
-      <span class="nav-section-title">Ancestors</span>
-      <span class="nav-section-chevron">
-        <svg><use href="#icon-chevron"></use></svg>
-      </span>
-    </summary>
-    <ul><li><a href="../Object.html">Object</a><ul><li>BasicObject</li></ul></li></ul>
-  </details>
 </div>
 
+    <div id="search-section" role="search" class="project-section initially-hidden">
+  <form action="#" method="get" accept-charset="utf-8">
+    <div id="search-field-wrapper">
+      <input id="search-field" role="combobox" aria-label="Search"
+             aria-autocomplete="list" aria-controls="search-results"
+             type="text" name="search" placeholder="Search (/) for a class, method, ..." spellcheck="false"
+             title="Type to search, Up and Down to navigate, Enter to load">
+    </div>
+
+    <ul id="search-results" aria-label="Search Results"
+        aria-busy="false" aria-expanded="false"
+        aria-atomic="false" class="initially-hidden"></ul>
+  </form>
+</div>
+
+  </div>
 
   
+  
+  <div id="parent-class-section" class="nav-section">
+  <h3>Ancestors</h3>
+  <ul><li><a href="../Object.html">Object</a><ul><li>BasicObject</li></ul></li></ul>
+</div>
 
   
-
+  
   
   <div class="nav-section">
-    <details class="nav-section-collapsible" open>
-      <summary class="nav-section-header">
-        <span class="nav-section-icon">
-          <svg><use href="#icon-class-methods"></use></svg>
-        </span>
-        <span class="nav-section-title">Class Methods</span>
-        <span class="nav-section-chevron">
-          <svg><use href="#icon-chevron"></use></svg>
-        </span>
-      </summary>
-      <ul class="nav-list" role="directory">
-
-        <li ><a href="#method-c-build_hiiro">build_hiiro</a></li>
-
-        <li ><a href="#method-c-new">new</a></li>
-
-      </ul>
-    </details>
+    <h3>Class Methods</h3>
+    <ul class="link-list" role="directory">
+      <li ><a href="#method-c-add_resolvers">add_resolvers</a></li>
+      <li ><a href="#method-c-build_hiiro">build_hiiro</a></li>
+      <li ><a href="#method-c-new">new</a></li>
+    </ul>
   </div>
 
 
 
   <div class="nav-section">
-    <details class="nav-section-collapsible" open>
-      <summary class="nav-section-header">
-        <span class="nav-section-icon">
-          <svg><use href="#icon-instance-methods"></use></svg>
-        </span>
-        <span class="nav-section-title">Instance Methods</span>
-        <span class="nav-section-chevron">
-          <svg><use href="#icon-chevron"></use></svg>
-        </span>
-      </summary>
-      <ul class="nav-list" role="directory">
-
-        <li ><a href="#method-i-add_service">add_service</a></li>
-
-        <li ><a href="#method-i-attach">attach</a></li>
-
-        <li ><a href="#method-i-clean">clean</a></li>
-
-        <li ><a href="#method-i-find_group">find_group</a></li>
-
-        <li ><a href="#method-i-find_service">find_service</a></li>
-
-        <li ><a href="#method-i-host">host</a></li>
-
-        <li ><a href="#method-i-port">port</a></li>
-
-        <li ><a href="#method-i-prepare_env">prepare_env</a></li>
-
-        <li ><a href="#method-i-remove_service">remove_service</a></li>
-
-        <li ><a href="#method-i-reset">reset</a></li>
-
-        <li ><a href="#method-i-reset_group">reset_group</a></li>
-
-        <li ><a href="#method-i-running-3F">running?</a></li>
-
-        <li ><a href="#method-i-running_services">running_services</a></li>
-
-        <li ><a href="#method-i-services">services</a></li>
-
-        <li ><a href="#method-i-services_for_dir">services_for_dir</a></li>
-
-        <li ><a href="#method-i-start">start</a></li>
-
-        <li ><a href="#method-i-start_group">start_group</a></li>
-
-        <li ><a href="#method-i-status">status</a></li>
-
-        <li ><a href="#method-i-stop">stop</a></li>
-
-        <li ><a href="#method-i-stop_group">stop_group</a></li>
-
-        <li ><a href="#method-i-url">url</a></li>
-
-      </ul>
-    </details>
+    <h3>Instance Methods</h3>
+    <ul class="link-list" role="directory">
+      <li ><a href="#method-i-add_service">add_service</a></li>
+      <li ><a href="#method-i-attach">attach</a></li>
+      <li ><a href="#method-i-clean">clean</a></li>
+      <li ><a href="#method-i-find_group">find_group</a></li>
+      <li ><a href="#method-i-find_service">find_service</a></li>
+      <li ><a href="#method-i-host">host</a></li>
+      <li ><a href="#method-i-port">port</a></li>
+      <li ><a href="#method-i-prepare_env">prepare_env</a></li>
+      <li ><a href="#method-i-remove_service">remove_service</a></li>
+      <li ><a href="#method-i-reset">reset</a></li>
+      <li ><a href="#method-i-reset_group">reset_group</a></li>
+      <li ><a href="#method-i-running-3F">running?</a></li>
+      <li ><a href="#method-i-running_services">running_services</a></li>
+      <li ><a href="#method-i-services">services</a></li>
+      <li ><a href="#method-i-services_for_dir">services_for_dir</a></li>
+      <li ><a href="#method-i-start">start</a></li>
+      <li ><a href="#method-i-start_group">start_group</a></li>
+      <li ><a href="#method-i-status">status</a></li>
+      <li ><a href="#method-i-stop">stop</a></li>
+      <li ><a href="#method-i-stop_group">stop_group</a></li>
+      <li ><a href="#method-i-url">url</a></li>
+    </ul>
   </div>
 
 
-  <div id="classindex-section" class="nav-section">
-  <details class="nav-section-collapsible" open>
-    <summary class="nav-section-header">
-      <span class="nav-section-icon">
-        <svg><use href="#icon-layers"></use></svg>
-      </span>
-      <span class="nav-section-title">Classes and Modules</span>
-      <span class="nav-section-chevron">
-        <svg><use href="#icon-chevron"></use></svg>
-      </span>
-    </summary>
 
-    <ul class="link-list nav-list"><li><code><a href="../App.html">App</a></code></li><li><code><a href="../BranchManager.html">BranchManager</a></code></li><li><code><a href="../Directory.html">Directory</a></code></li><li><code><a href="../Environment.html">Environment</a></code></li><li><details><summary><code><a href="../Hiiro.html">Hiiro</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/AnyStruct.html">AnyStruct</a></code></li><li><code><a href="../Hiiro/App.html">App</a></code></li><li><code><a href="../Hiiro/AppFiles.html">AppFiles</a></code></li><li><code><a href="../Hiiro/Args.html">Args</a></code></li><li><code><a href="../Hiiro/Bins.html">Bins</a></code></li><li><code><a href="../Hiiro/Config.html">Config</a></code></li><li><code><a href="../Hiiro/Environment.html">Environment</a></code></li><li><code><a href="../Hiiro/Fuzzyfind.html">Fuzzyfind</a></code></li><li><details><summary><code><a href="../Hiiro/Git.html">Git</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Git/Branch.html">Branch</a></code></li><li><code><a href="../Hiiro/Git/Branches.html">Branches</a></code></li><li><code><a href="../Hiiro/Git/Pr.html">Pr</a></code></li><li><code><a href="../Hiiro/Git/Remote.html">Remote</a></code></li><li><code><a href="../Hiiro/Git/Worktree.html">Worktree</a></code></li><li><code><a href="../Hiiro/Git/Worktrees.html">Worktrees</a></code></li></ul></details></li><li><code><a href="../Hiiro/Glob.html">Glob</a></code></li><li><details><summary><code><a href="../Hiiro/Matcher.html">Matcher</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Matcher/Item.html">Item</a></code></li><li><code><a href="../Hiiro/Matcher/PathResult.html">PathResult</a></code></li><li><code><a href="../Hiiro/Matcher/Result.html">Result</a></code></li></ul></details></li><li><code><a href="../Hiiro/Notification.html">Notification</a></code></li><li><details><summary><code><a href="../Hiiro/Options.html">Options</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Options/Args.html">Args</a></code></li><li><code><a href="../Hiiro/Options/Definition.html">Definition</a></code></li></ul></details></li><li><details><summary><code><a href="../Hiiro/Paths.html">Paths</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Paths/Symlink.html">Symlink</a></code></li></ul></details></li><li><code><a href="../Hiiro/Matcher.html">PrefixMatcher</a></code></li><li><details><summary><code><a href="../Hiiro/Queue.html">Queue</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Queue/Prompt.html">Prompt</a></code></li></ul></details></li><li><code><a href="../Hiiro/Rbenv.html">Rbenv</a></code></li><li><code><a href="../Hiiro/RunnerTool.html">RunnerTool</a></code></li><li><details><summary><code><a href="../Hiiro/Runners.html">Runners</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Runners/Bin.html">Bin</a></code></li><li><code><a href="../Hiiro/Runners/Subcommand.html">Subcommand</a></code></li></ul></details></li><li><code><a href="../Hiiro/ServiceManager.html">ServiceManager</a></code></li><li><code><a href="../Hiiro/Shell.html">Shell</a></code></li><li><code><a href="../Hiiro/SparseGroups.html">SparseGroups</a></code></li><li><code><a href="../Hiiro/Tags.html">Tags</a></code></li><li><code><a href="../Hiiro/Task.html">Task</a></code></li><li><details><summary><code><a href="../Hiiro/TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="../Hiiro/Tasks.html">Tasks</a></code></li><li><details><summary><code><a href="../Hiiro/Tmux.html">Tmux</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Hiiro/Tmux/Buffer.html">Buffer</a></code></li><li><code><a href="../Hiiro/Tmux/Buffers.html">Buffers</a></code></li><li><code><a href="../Hiiro/Tmux/Pane.html">Pane</a></code></li><li><code><a href="../Hiiro/Tmux/Panes.html">Panes</a></code></li><li><code><a href="../Hiiro/Tmux/Session.html">Session</a></code></li><li><code><a href="../Hiiro/Tmux/Sessions.html">Sessions</a></code></li><li><code><a href="../Hiiro/Tmux/Window.html">Window</a></code></li><li><code><a href="../Hiiro/Tmux/Windows.html">Windows</a></code></li></ul></details></li><li><code><a href="../Hiiro/TodoItem.html">TodoItem</a></code></li><li><code><a href="../Hiiro/TodoManager.html">TodoManager</a></code></li><li><code><a href="../Hiiro/Tree.html">Tree</a></code></li></ul></details></li><li><details><summary><code><a href="../LinkManager.html">LinkManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../LinkManager/Link.html">Link</a></code></li></ul></details></li><li><code><a href="../Notify.html">Notify</a></code></li><li><code><a href="../Object.html">Object</a></code></li><li><code><a href="../PinnedPRManager.html">PinnedPRManager</a></code></li><li><details><summary><code><a href="../Pins.html">Pins</a></code></summary><ul class="link-list nav-list"><li><code><a href="../Pins/Pin.html">Pin</a></code></li></ul></details></li><li><code><a href="../Project.html">Project</a></code></li><li><code><a href="../String.html">String</a></code></li><li><code><a href="../Task.html">Task</a></code></li><li><details><summary><code><a href="../TaskManager.html">TaskManager</a></code></summary><ul class="link-list nav-list"><li><code><a href="../TaskManager/Config.html">Config</a></code></li></ul></details></li><li><code><a href="../Tasks.html">Tasks</a></code></li><li><code><a href="../TmuxSession.html">TmuxSession</a></code></li><li><code><a href="../Tree.html">Tree</a></code></li></ul>
-  </details>
-</div>
+  <footer id="validator-badges" role="contentinfo">
+  <p><a href="https://validator.w3.org/check/referer">Validate</a>
+  <p>Generated by <a href="https://ruby.github.io/rdoc/">RDoc</a> 6.14.2.
+  <p>Based on <a href="http://deveiate.org/projects/Darkfish-RDoc/">Darkfish</a> by <a href="http://deveiate.org">Michael Granger</a>.
+</footer>
 
 </nav>
 
-<main role="main" aria-labelledby="class-hiiro-servicemanager">
+<main role="main" aria-labelledby="class-Hiiro::ServiceManager">
   
   
-    <ol role="navigation" aria-label="Breadcrumb navigation" class="breadcrumb">
+    <ol role="navigation" aria-label="breadcrumb" class="breadcrumb">
       
       <li>
         
@@ -816,8 +142,7 @@
     </ol>
   
 
-  <span id="class-Hiiro::ServiceManager" class="legacy-anchor"></span>
-  <h1 id="class-hiiro-servicemanager" class="anchor-link class">
+  <h1 id="class-Hiiro::ServiceManager" class="anchor-link class">
     class Hiiro::ServiceManager
   </h1>
 
@@ -825,62 +150,33 @@
     
   </section>
 
-
-  <span id="5Buntitled-5D" class="legacy-anchor"></span>
-  <section class="documentation-section anchor-link">
-
-
-
+  <section id="5Buntitled-5D" class="documentation-section anchor-link">
 
 
     <section class="constants-list">
       <header>
-        <h3 id="untitled-constants"><a href="#untitled-constants">Constants</a></h3>
+        <h3>Constants</h3>
       </header>
       <dl>
-
-        <dt id="CONFIG_FILE">CONFIG_FILE</dt>
-
+        <dt id="CONFIG_FILE">CONFIG_FILE
         <dd>
-
           
-        </dd>
-
-
-        <dt id="ENV_TEMPLATES_DIR">ENV_TEMPLATES_DIR</dt>
-
+        <dt id="ENV_TEMPLATES_DIR">ENV_TEMPLATES_DIR
         <dd>
-
           
-        </dd>
-
-
-        <dt id="STATE_DIR">STATE_DIR</dt>
-
+        <dt id="STATE_DIR">STATE_DIR
         <dd>
-
           
-        </dd>
-
-
-        <dt id="STATE_FILE">STATE_FILE</dt>
-
+        <dt id="STATE_FILE">STATE_FILE
         <dd>
-
           
-        </dd>
-
-
       </dl>
     </section>
 
-
-
-    <section class="attribute-method-details method-section">
+    <section class="attribute-method-details" class="method-section">
       <header>
-        <h3 id="untitled-attributes"><a href="#untitled-attributes">Attributes</a></h3>
+        <h3>Attributes</h3>
       </header>
-
 
       <div id="attribute-i-config_file" class="method-detail anchor-link">
         <div class="method-heading attribute-method-heading">
@@ -891,13 +187,21 @@
         </div>
 
         <div class="method-description">
-
-
         
-
         </div>
       </div>
+      <div id="attribute-i-herdr" class="method-detail anchor-link">
+        <div class="method-heading attribute-method-heading">
+          <a href="#attribute-i-herdr" title="Link to this attribute">
+            <span class="method-name">herdr</span>
+            <span class="attribute-access-type">[W]</span>
+          </a>
+        </div>
 
+        <div class="method-description">
+        
+        </div>
+      </div>
       <div id="attribute-i-state_file" class="method-detail anchor-link">
         <div class="method-heading attribute-method-heading">
           <a href="#attribute-i-state_file" title="Link to this attribute">
@@ -907,46 +211,68 @@
         </div>
 
         <div class="method-description">
-
-
         
-
         </div>
       </div>
-
     </section>
 
 
-
-
-
-
-     <section id="public-class-untitled-method-details" class="method-section anchor-link">
+     <section id="public-class-5Buntitled-5D-method-details" class="method-section anchor-link">
        <header>
-         <h3 id="public-class-untitled-methods"><a href="#public-class-untitled-methods">Public Class Methods</a></h3>
+         <h3>Public Class Methods</h3>
        </header>
 
-
-      <div id="method-c-build_hiiro" class="method-detail anchor-link ">
+      <div id="method-c-add_resolvers" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
-              <a href="#method-c-build_hiiro" title="Link to this method">
-                <span class="method-name">build_hiiro</span>
-                <span class="method-args">(parent_hiiro, sm, task_manager: nil)</span>
+              <a href="#method-c-add_resolvers" title="Link to this method">
+                <span class="method-name">add_resolvers</span>
+                <span class="method-args">(hiiro)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
+          <div class="method-source-code" id="add_resolvers-source">
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 16</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">add_resolvers</span>(<span class="ruby-identifier">hiiro</span>)
+  <span class="ruby-identifier">sm</span> = <span class="ruby-identifier">new</span>
+  <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">add_resolver</span>(<span class="ruby-value">:service</span>, <span class="ruby-operator">-&gt;</span> { <span class="ruby-identifier">hiiro</span>.<span class="ruby-identifier">fuzzyfind</span>(<span class="ruby-identifier">sm</span>.<span class="ruby-identifier">services</span>.<span class="ruby-identifier">keys</span>) }) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">sm</span>.<span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">name</span>)&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-value">:name</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
+          
+        </div>
+
+
+      </div>
+
+      <div id="method-c-build_hiiro" class="method-detail anchor-link ">
+        <div class="method-header">
+            <div class="method-heading">
+              <a href="#method-c-build_hiiro" title="Link to this method">
+                <span class="method-name">build_hiiro</span>
+                <span class="method-args">(parent_hiiro, sm, task_manager: nil)</span>
+              </a>
+            </div>
+        </div>
+
+          <div class="method-controls">
+            <details class="method-source-toggle">
+              <summary>Source</summary>
+            </details>
+          </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="build_hiiro-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 432</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 417</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">build_hiiro</span>(<span class="ruby-identifier">parent_hiiro</span>, <span class="ruby-identifier">sm</span>, <span class="ruby-value">task_manager:</span> <span class="ruby-keyword">nil</span>)
   <span class="ruby-identifier">parent_hiiro</span>.<span class="ruby-identifier">make_child</span>(<span class="ruby-value">:service</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">h</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">h</span>.<span class="ruby-identifier">add_subcmd</span>(<span class="ruby-value">:ls</span>) <span class="ruby-keyword">do</span>
@@ -1006,8 +332,9 @@
         <span class="ruby-keyword">end</span>
       <span class="ruby-keyword">end</span>
 
-      <span class="ruby-identifier">tmux_info</span> = {
-        <span class="ruby-value">session:</span> <span class="ruby-identifier">h</span>.<span class="ruby-identifier">tmux_client</span>.<span class="ruby-identifier">current_session</span>&amp;.<span class="ruby-identifier">name</span>,
+      <span class="ruby-identifier">sm</span>.<span class="ruby-identifier">herdr</span> = <span class="ruby-identifier">h</span>.<span class="ruby-identifier">herdr_client</span>
+      <span class="ruby-identifier">herdr_info</span> = {
+        <span class="ruby-value">workspace:</span> <span class="ruby-identifier">h</span>.<span class="ruby-identifier">herdr_client</span>.<span class="ruby-identifier">current_workspace</span>,
       }
 
       <span class="ruby-identifier">task_info</span> = {}
@@ -1026,9 +353,9 @@
       <span class="ruby-comment"># Check if it&#39;s a group or individual service</span>
       <span class="ruby-identifier">group</span> = <span class="ruby-identifier">sm</span>.<span class="ruby-identifier">find_group</span>(<span class="ruby-identifier">svc_name</span>)
       <span class="ruby-keyword">if</span> <span class="ruby-identifier">group</span>
-        <span class="ruby-identifier">sm</span>.<span class="ruby-identifier">start_group</span>(<span class="ruby-identifier">svc_name</span>, <span class="ruby-value">tmux_info:</span> <span class="ruby-identifier">tmux_info</span>, <span class="ruby-value">task_info:</span> <span class="ruby-identifier">task_info</span>)
+        <span class="ruby-identifier">sm</span>.<span class="ruby-identifier">start_group</span>(<span class="ruby-identifier">svc_name</span>, <span class="ruby-value">herdr_info:</span> <span class="ruby-identifier">herdr_info</span>, <span class="ruby-value">task_info:</span> <span class="ruby-identifier">task_info</span>)
       <span class="ruby-keyword">else</span>
-        <span class="ruby-identifier">sm</span>.<span class="ruby-identifier">start</span>(<span class="ruby-identifier">svc_name</span>, <span class="ruby-value">tmux_info:</span> <span class="ruby-identifier">tmux_info</span>, <span class="ruby-value">task_info:</span> <span class="ruby-identifier">task_info</span>, <span class="ruby-value">variation_overrides:</span> <span class="ruby-identifier">variation_overrides</span>)
+        <span class="ruby-identifier">sm</span>.<span class="ruby-identifier">start</span>(<span class="ruby-identifier">svc_name</span>, <span class="ruby-value">herdr_info:</span> <span class="ruby-identifier">herdr_info</span>, <span class="ruby-value">task_info:</span> <span class="ruby-identifier">task_info</span>, <span class="ruby-value">variation_overrides:</span> <span class="ruby-identifier">variation_overrides</span>)
       <span class="ruby-keyword">end</span>
     <span class="ruby-keyword">end</span>
 
@@ -1159,22 +486,18 @@
         ],
       }
 
-      <span class="ruby-identifier">require</span> <span class="ruby-string">&#39;tempfile&#39;</span>
-      <span class="ruby-identifier">tmpfile</span> = <span class="ruby-constant">Tempfile</span>.<span class="ruby-identifier">new</span>([<span class="ruby-string">&#39;service&#39;</span>, <span class="ruby-string">&#39;.yml&#39;</span>])
-      <span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">write</span>(<span class="ruby-constant">YAML</span>.<span class="ruby-identifier">dump</span>({ <span class="ruby-string">&#39;new_service&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">template</span> }))
-      <span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">close</span>
-
-      <span class="ruby-identifier">h</span>.<span class="ruby-identifier">edit_files</span>(<span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">path</span>)
+      <span class="ruby-identifier">input</span> = <span class="ruby-constant">InputFile</span>.<span class="ruby-identifier">yaml_file</span>(<span class="ruby-value">hiiro:</span> <span class="ruby-identifier">h</span>, <span class="ruby-value">content:</span> <span class="ruby-constant">YAML</span>.<span class="ruby-identifier">dump</span>({ <span class="ruby-string">&#39;new_service&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">template</span> }), <span class="ruby-value">prefix:</span> <span class="ruby-string">&#39;service&#39;</span>)
+      <span class="ruby-identifier">input</span>.<span class="ruby-identifier">edit</span>
 
       <span class="ruby-keyword">begin</span>
-        <span class="ruby-identifier">data</span> = <span class="ruby-constant">YAML</span>.<span class="ruby-identifier">safe_load_file</span>(<span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">path</span>, <span class="ruby-value">permitted_classes:</span> [<span class="ruby-constant">Symbol</span>]) <span class="ruby-operator">||</span> {}
+        <span class="ruby-identifier">data</span> = <span class="ruby-identifier">input</span>.<span class="ruby-identifier">parsed_file</span>(<span class="ruby-value">permitted_classes:</span> [<span class="ruby-constant">Symbol</span>]) <span class="ruby-operator">||</span> {}
         <span class="ruby-identifier">data</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span>, <span class="ruby-identifier">cfg</span><span class="ruby-operator">|</span>
           <span class="ruby-identifier">sm</span>.<span class="ruby-identifier">add_service</span>({ <span class="ruby-string">&#39;name&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">name</span> }.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">cfg</span> <span class="ruby-operator">||</span> {}))
         <span class="ruby-keyword">end</span>
       <span class="ruby-keyword">rescue</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">e</span>
         <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Error parsing config: #{e.message}&quot;</span>
       <span class="ruby-keyword">ensure</span>
-        <span class="ruby-identifier">tmpfile</span>.<span class="ruby-identifier">unlink</span>
+        <span class="ruby-identifier">input</span>.<span class="ruby-identifier">cleanup</span>
       <span class="ruby-keyword">end</span>
     <span class="ruby-keyword">end</span>
 
@@ -1258,101 +581,69 @@
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-c-new" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-c-new" title="Link to this method">
                 <span class="method-name">new</span>
-                <span class="method-args">(config_file: CONFIG_FILE, state_file: STATE_FILE)</span>
+                <span class="method-args">(config_file: CONFIG_FILE, state_file: STATE_FILE, herdr: Hiiro::Herdr.client)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
-          <div class="method-source-code" id="new-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 15</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-value">config_file:</span> <span class="ruby-constant">CONFIG_FILE</span>, <span class="ruby-value">state_file:</span> <span class="ruby-constant">STATE_FILE</span>)
-  <span class="ruby-ivar">@config_file</span> = <span class="ruby-identifier">config_file</span>
-  <span class="ruby-ivar">@state_file</span> = <span class="ruby-identifier">state_file</span>
-<span class="ruby-keyword">end</span></pre>
-          </div>
-
-
 
         <div class="method-description">
-
-
+          <div class="method-source-code" id="new-source">
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 23</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-value">config_file:</span> <span class="ruby-constant">CONFIG_FILE</span>, <span class="ruby-value">state_file:</span> <span class="ruby-constant">STATE_FILE</span>, <span class="ruby-value">herdr:</span> <span class="ruby-constant">Hiiro</span><span class="ruby-operator">::</span><span class="ruby-constant">Herdr</span>.<span class="ruby-identifier">client</span>)
+  <span class="ruby-ivar">@config_file</span> = <span class="ruby-identifier">config_file</span>
+  <span class="ruby-ivar">@state_file</span> = <span class="ruby-identifier">state_file</span>
+  <span class="ruby-ivar">@herdr</span> = <span class="ruby-identifier">herdr</span>
+<span class="ruby-keyword">end</span></pre>
+          </div>
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
     </section>
 
-
-
-
-
-
-
-     <section id="public-instance-untitled-method-details" class="method-section anchor-link">
+     <section id="public-instance-5Buntitled-5D-method-details" class="method-section anchor-link">
        <header>
-         <h3 id="public-instance-untitled-methods"><a href="#public-instance-untitled-methods">Public Instance Methods</a></h3>
+         <h3>Public Instance Methods</h3>
        </header>
-
 
       <div id="method-i-add_service" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-add_service" title="Link to this method">
                 <span class="method-name">add_service</span>
                 <span class="method-args">(config_hash)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="add_service-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 400</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 385</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_service</span>(<span class="ruby-identifier">config_hash</span>)
   <span class="ruby-identifier">name</span> = <span class="ruby-identifier">config_hash</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-string">&#39;name&#39;</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">config_hash</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value">:name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">name</span>
@@ -1372,44 +663,31 @@
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-attach" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-attach" title="Link to this method">
                 <span class="method-name">attach</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="attach-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 317</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 312</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">attach</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">svc</span>
@@ -1424,68 +702,45 @@
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">info</span> = <span class="ruby-identifier">running_services</span>[<span class="ruby-identifier">svc_name</span>]
-  <span class="ruby-identifier">pane_id</span> = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;tmux_pane&#39;</span>]
-  <span class="ruby-identifier">session</span> = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;tmux_session&#39;</span>]
-  <span class="ruby-identifier">window</span> = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;tmux_window&#39;</span>]
+  <span class="ruby-identifier">workspace_id</span> = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;herdr_workspace&#39;</span>]
+  <span class="ruby-identifier">tab_id</span> = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;herdr_tab&#39;</span>]
 
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">session</span>
-    <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;switch-client&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">session</span>)
-  <span class="ruby-keyword">end</span>
-
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">window</span>
-    <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;select-window&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">window</span>)
-  <span class="ruby-keyword">end</span>
-
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">pane_id</span>
-    <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;select-pane&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">pane_id</span>)
-  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">herdr</span>.<span class="ruby-identifier">focus_workspace</span>(<span class="ruby-identifier">workspace_id</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">workspace_id</span>
+  <span class="ruby-identifier">herdr</span>.<span class="ruby-identifier">focus_tab</span>(<span class="ruby-identifier">tab_id</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">tab_id</span>
 
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-clean" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-clean" title="Link to this method">
                 <span class="method-name">clean</span>
                 <span class="method-args">()</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="clean-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 187</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 183</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">clean</span>
   <span class="ruby-identifier">state</span> = <span class="ruby-identifier">load_state</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">puts</span>(<span class="ruby-string">&quot;No running services to clean&quot;</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">state</span>.<span class="ruby-identifier">empty?</span>
 
-  <span class="ruby-identifier">stale</span> = <span class="ruby-identifier">state</span>.<span class="ruby-identifier">select</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">_</span>, <span class="ruby-identifier">info</span><span class="ruby-operator">|</span> <span class="ruby-identifier">stale_pane?</span>(<span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;tmux_pane&#39;</span>]) }
+  <span class="ruby-identifier">stale</span> = <span class="ruby-identifier">state</span>.<span class="ruby-identifier">select</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">_</span>, <span class="ruby-identifier">info</span><span class="ruby-operator">|</span> <span class="ruby-identifier">stale_pane?</span>(<span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;herdr_pane&#39;</span>]) }
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">stale</span>.<span class="ruby-identifier">empty?</span>
     <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;All running services have live panes&quot;</span>
     <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span>
@@ -1499,44 +754,31 @@
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-find_group" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-find_group" title="Link to this method">
                 <span class="method-name">find_group</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="find_group-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 35</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 44</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_group</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">configs</span> = <span class="ruby-identifier">services</span>
   <span class="ruby-identifier">names</span> = <span class="ruby-identifier">configs</span>.<span class="ruby-identifier">keys</span>.<span class="ruby-identifier">select</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">k</span><span class="ruby-operator">|</span> <span class="ruby-identifier">configs</span>[<span class="ruby-identifier">k</span>].<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Hash</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">configs</span>[<span class="ruby-identifier">k</span>].<span class="ruby-identifier">key?</span>(<span class="ruby-string">&#39;services&#39;</span>) }
@@ -1551,44 +793,31 @@
   { <span class="ruby-value">name:</span> <span class="ruby-identifier">group_name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">symbolize_keys</span>(<span class="ruby-identifier">configs</span>[<span class="ruby-identifier">group_name</span>]) }
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-find_service" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-find_service" title="Link to this method">
                 <span class="method-name">find_service</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="find_service-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 24</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 33</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">configs</span> = <span class="ruby-identifier">services</span>
   <span class="ruby-identifier">names</span> = <span class="ruby-identifier">configs</span>.<span class="ruby-identifier">keys</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">k</span><span class="ruby-operator">|</span> <span class="ruby-constant">OpenStruct</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">name:</span> <span class="ruby-identifier">k</span>) }
@@ -1600,130 +829,91 @@
   { <span class="ruby-value">name:</span> <span class="ruby-identifier">svc_name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">symbolize_keys</span>(<span class="ruby-identifier">configs</span>[<span class="ruby-identifier">svc_name</span>]) }
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-host" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-host" title="Link to this method">
                 <span class="method-name">host</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="host-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 366</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 351</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">host</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">svc</span>&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-value">:host</span>) <span class="ruby-operator">||</span> <span class="ruby-string">&#39;localhost&#39;</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-port" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-port" title="Link to this method">
                 <span class="method-name">port</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="port-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 361</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 346</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">port</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">svc</span>&amp;.<span class="ruby-identifier">[]</span>(<span class="ruby-value">:port</span>)
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-prepare_env" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-prepare_env" title="Link to this method">
                 <span class="method-name">prepare_env</span>
                 <span class="method-args">(svc_name, variation_overrides: {})</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="prepare_env-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 49</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 58</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">prepare_env</span>(<span class="ruby-identifier">svc_name</span>, <span class="ruby-value">variation_overrides:</span> {})
   <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">svc_name</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">svc</span>
@@ -1738,44 +928,31 @@
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-remove_service" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-remove_service" title="Link to this method">
                 <span class="method-name">remove_service</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="remove_service-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 419</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 404</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">remove_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">configs</span> = <span class="ruby-identifier">load_config</span>
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">configs</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">name</span>)
@@ -1789,44 +966,31 @@
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-reset" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-reset" title="Link to this method">
                 <span class="method-name">reset</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="reset-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 167</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 163</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">reset</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">svc</span>
@@ -1847,44 +1011,31 @@
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-reset_group" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-reset_group" title="Link to this method">
                 <span class="method-name">reset_group</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="reset_group-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 136</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 132</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">reset_group</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">group</span> = <span class="ruby-identifier">find_group</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">group</span>
@@ -1907,215 +1058,150 @@
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-running-3F" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-running-3F" title="Link to this method">
                 <span class="method-name">running?</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="running-3F-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 158</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 154</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">running?</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">state</span> = <span class="ruby-identifier">load_state</span>
   <span class="ruby-identifier">state</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">name</span>)
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-running_services" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-running_services" title="Link to this method">
                 <span class="method-name">running_services</span>
                 <span class="method-args">()</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="running_services-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 163</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 159</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">running_services</span>
   <span class="ruby-identifier">load_state</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-services" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-services" title="Link to this method">
                 <span class="method-name">services</span>
                 <span class="method-args">()</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="services-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 20</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 29</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">services</span>
   <span class="ruby-identifier">load_config</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-services_for_dir" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-services_for_dir" title="Link to this method">
                 <span class="method-name">services_for_dir</span>
                 <span class="method-args">(base_dir)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="services_for_dir-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 395</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 380</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">services_for_dir</span>(<span class="ruby-identifier">base_dir</span>)
   <span class="ruby-identifier">configs</span> = <span class="ruby-identifier">services</span>
   <span class="ruby-identifier">configs</span>.<span class="ruby-identifier">select</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">_</span>, <span class="ruby-identifier">v</span><span class="ruby-operator">|</span> <span class="ruby-identifier">v</span>[<span class="ruby-string">&#39;base_dir&#39;</span>] <span class="ruby-operator">==</span> <span class="ruby-identifier">base_dir</span> }
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-start" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-start" title="Link to this method">
                 <span class="method-name">start</span>
-                <span class="method-args">(name, tmux_info: {}, task_info: {}, variation_overrides: {}, skip_env: false, skip_window_creation: false)</span>
+                <span class="method-args">(name, herdr_info: {}, task_info: {}, variation_overrides: {}, skip_env: false)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="start-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 205</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">start</span>(<span class="ruby-identifier">name</span>, <span class="ruby-value">tmux_info:</span> {}, <span class="ruby-value">task_info:</span> {}, <span class="ruby-value">variation_overrides:</span> {}, <span class="ruby-value">skip_env:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">skip_window_creation:</span> <span class="ruby-keyword">false</span>)
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 201</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">start</span>(<span class="ruby-identifier">name</span>, <span class="ruby-value">herdr_info:</span> {}, <span class="ruby-value">task_info:</span> {}, <span class="ruby-value">variation_overrides:</span> {}, <span class="ruby-value">skip_env:</span> <span class="ruby-keyword">false</span>)
   <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">svc</span>
     <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Service &#39;#{name}&#39; not found&quot;</span>
@@ -2126,7 +1212,7 @@
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">running?</span>(<span class="ruby-identifier">svc_name</span>)
     <span class="ruby-identifier">info</span> = <span class="ruby-identifier">running_services</span>[<span class="ruby-identifier">svc_name</span>]
-    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Service &#39;#{svc_name}&#39; is already running (pid: #{info[&#39;pid&#39;]}, pane: #{info[&#39;tmux_pane&#39;]})&quot;</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Service &#39;#{svc_name}&#39; is already running (pid: #{info[&#39;pid&#39;]}, pane: #{info[&#39;herdr_pane&#39;]})&quot;</span>
     <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span>
   <span class="ruby-keyword">end</span>
 
@@ -2148,23 +1234,21 @@
   )
 
   <span class="ruby-identifier">base_dir</span> = <span class="ruby-identifier">resolve_base_dir</span>(<span class="ruby-identifier">svc</span>[<span class="ruby-value">:base_dir</span>])
-  <span class="ruby-identifier">session</span> = <span class="ruby-identifier">tmux_info</span>[<span class="ruby-value">:session</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">current_tmux_session</span>
+  <span class="ruby-identifier">workspace</span> = <span class="ruby-identifier">resolve_herdr_workspace</span>(<span class="ruby-identifier">herdr_info</span>[<span class="ruby-value">:workspace</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">current_herdr_workspace</span>)
 
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">session</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">skip_window_creation</span>
-    <span class="ruby-comment"># Create a new tmux window for this service</span>
-    <span class="ruby-identifier">window_target</span>, <span class="ruby-identifier">pane_id</span> = <span class="ruby-identifier">create_tmux_window</span>(<span class="ruby-identifier">session</span>, <span class="ruby-identifier">svc_name</span>)
-  <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">session</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">skip_window_creation</span>
-    <span class="ruby-comment"># Pane already created by start_group</span>
-    <span class="ruby-identifier">pane_id</span> = <span class="ruby-identifier">tmux_info</span>[<span class="ruby-value">:pane</span>]
-    <span class="ruby-identifier">window_target</span> = <span class="ruby-identifier">tmux_info</span>[<span class="ruby-value">:window</span>]
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">workspace</span>
+    <span class="ruby-identifier">result</span> = <span class="ruby-identifier">herdr</span>.<span class="ruby-identifier">new_tab</span>(
+      <span class="ruby-value">name:</span> <span class="ruby-identifier">svc_name</span>,
+      <span class="ruby-value">workspace:</span> <span class="ruby-identifier">workspace</span>,
+      <span class="ruby-value">start_directory:</span> <span class="ruby-identifier">base_dir</span>,
+      <span class="ruby-value">command:</span> <span class="ruby-identifier">script</span>,
+      <span class="ruby-value">focus:</span> <span class="ruby-keyword">false</span>
+    )
+    <span class="ruby-identifier">tab_id</span> = <span class="ruby-identifier">result</span>.<span class="ruby-identifier">dig</span>(<span class="ruby-string">&#39;tab&#39;</span>, <span class="ruby-string">&#39;tab_id&#39;</span>)
+    <span class="ruby-identifier">pane_id</span> = <span class="ruby-identifier">result</span>.<span class="ruby-identifier">dig</span>(<span class="ruby-string">&#39;root_pane&#39;</span>, <span class="ruby-string">&#39;pane_id&#39;</span>)
   <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">tab_id</span> = <span class="ruby-keyword">nil</span>
     <span class="ruby-identifier">pane_id</span> = <span class="ruby-keyword">nil</span>
-    <span class="ruby-identifier">window_target</span> = <span class="ruby-keyword">nil</span>
-  <span class="ruby-keyword">end</span>
-
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">pane_id</span>
-    <span class="ruby-identifier">send_to_pane</span>(<span class="ruby-identifier">pane_id</span>, <span class="ruby-identifier">base_dir</span>, <span class="ruby-identifier">script</span>)
-  <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">system</span>(<span class="ruby-node">&quot;cd #{base_dir} &amp;&amp; #{script} &amp;&quot;</span>)
   <span class="ruby-keyword">end</span>
 
@@ -2172,9 +1256,10 @@
   <span class="ruby-identifier">state</span> = <span class="ruby-identifier">load_state</span>
   <span class="ruby-identifier">state</span>[<span class="ruby-identifier">svc_name</span>] = {
     <span class="ruby-string">&#39;pid&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">nil</span>,
-    <span class="ruby-string">&#39;tmux_session&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">session</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">tmux_info</span>[<span class="ruby-value">:session</span>],
-    <span class="ruby-string">&#39;tmux_window&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">window_target</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">tmux_info</span>[<span class="ruby-value">:window</span>],
-    <span class="ruby-string">&#39;tmux_pane&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">pane_id</span>,
+    <span class="ruby-string">&#39;herdr_workspace&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">workspace</span>&amp;.<span class="ruby-identifier">id</span>,
+    <span class="ruby-string">&#39;workspace_name&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">workspace</span>&amp;.<span class="ruby-identifier">name</span>,
+    <span class="ruby-string">&#39;herdr_tab&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">tab_id</span>,
+    <span class="ruby-string">&#39;herdr_pane&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">pane_id</span>,
     <span class="ruby-string">&#39;task&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:task_name</span>],
     <span class="ruby-string">&#39;tree&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:tree</span>],
     <span class="ruby-string">&#39;branch&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">task_info</span>[<span class="ruby-value">:branch</span>],
@@ -2186,45 +1271,32 @@
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-start_group" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-start_group" title="Link to this method">
                 <span class="method-name">start_group</span>
-                <span class="method-args">(name, tmux_info: {}, task_info: {})</span>
+                <span class="method-args">(name, herdr_info: {}, task_info: {})</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="start_group-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 63</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">start_group</span>(<span class="ruby-identifier">name</span>, <span class="ruby-value">tmux_info:</span> {}, <span class="ruby-value">task_info:</span> {})
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 72</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">start_group</span>(<span class="ruby-identifier">name</span>, <span class="ruby-value">herdr_info:</span> {}, <span class="ruby-value">task_info:</span> {})
   <span class="ruby-identifier">group</span> = <span class="ruby-identifier">find_group</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">group</span>
     <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Group &#39;#{name}&#39; not found&quot;</span>
@@ -2237,82 +1309,56 @@
     <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span>
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-identifier">session</span> = <span class="ruby-identifier">tmux_info</span>[<span class="ruby-value">:session</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">current_tmux_session</span>
-  <span class="ruby-keyword">unless</span> <span class="ruby-identifier">session</span>
-    <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;tmux is required to start a service group&quot;</span>
+  <span class="ruby-identifier">workspace</span> = <span class="ruby-identifier">herdr_info</span>[<span class="ruby-value">:workspace</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">current_herdr_workspace</span>
+  <span class="ruby-keyword">unless</span> <span class="ruby-identifier">workspace</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Herdr is required to start a service group&quot;</span>
     <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span>
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Starting group &#39;#{group[:name]}&#39;...&quot;</span>
 
-  <span class="ruby-comment"># Create one window for the group, split panes for each service</span>
-  <span class="ruby-identifier">window_target</span>, <span class="ruby-identifier">first_pane_id</span> = <span class="ruby-identifier">create_tmux_window</span>(<span class="ruby-identifier">session</span>, <span class="ruby-identifier">group</span>[<span class="ruby-value">:name</span>])
-  <span class="ruby-identifier">last_pane_id</span> = <span class="ruby-identifier">first_pane_id</span>
-
-  <span class="ruby-identifier">members</span>.<span class="ruby-identifier">each_with_index</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">member</span>, <span class="ruby-identifier">idx</span><span class="ruby-operator">|</span>
+  <span class="ruby-identifier">members</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">member</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">member_name</span> = <span class="ruby-identifier">member</span>[<span class="ruby-string">&#39;name&#39;</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">member</span>[<span class="ruby-value">:name</span>]
     <span class="ruby-identifier">use_overrides</span> = <span class="ruby-identifier">member</span>[<span class="ruby-string">&#39;use&#39;</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">member</span>[<span class="ruby-value">:use</span>] <span class="ruby-operator">||</span> {}
 
     <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">member_name</span>)
     <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">svc</span>
 
-    <span class="ruby-keyword">if</span> <span class="ruby-identifier">idx</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span>
-      <span class="ruby-identifier">pane_id</span> = <span class="ruby-identifier">first_pane_id</span>
-    <span class="ruby-keyword">else</span>
-      <span class="ruby-comment"># Split from the last pane so each new pane is distinct</span>
-      <span class="ruby-identifier">pane_id</span> = <span class="ruby-identifier">split_tmux_pane</span>(<span class="ruby-identifier">window_target</span>, <span class="ruby-identifier">last_pane_id</span>)
-      <span class="ruby-identifier">last_pane_id</span> = <span class="ruby-identifier">pane_id</span>
-    <span class="ruby-keyword">end</span>
-
-    <span class="ruby-identifier">member_tmux_info</span> = <span class="ruby-identifier">tmux_info</span>.<span class="ruby-identifier">merge</span>(
-      <span class="ruby-value">session:</span> <span class="ruby-identifier">session</span>,
-      <span class="ruby-value">window:</span> <span class="ruby-identifier">window_target</span>,
-      <span class="ruby-value">pane:</span> <span class="ruby-identifier">pane_id</span>,
+    <span class="ruby-identifier">start</span>(
+      <span class="ruby-identifier">member_name</span>,
+      <span class="ruby-value">herdr_info:</span> <span class="ruby-identifier">herdr_info</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-value">workspace:</span> <span class="ruby-identifier">workspace</span>),
+      <span class="ruby-value">task_info:</span> <span class="ruby-identifier">task_info</span>,
+      <span class="ruby-value">variation_overrides:</span> <span class="ruby-identifier">use_overrides</span>
     )
-
-    <span class="ruby-identifier">start</span>(<span class="ruby-identifier">member_name</span>, <span class="ruby-value">tmux_info:</span> <span class="ruby-identifier">member_tmux_info</span>, <span class="ruby-value">task_info:</span> <span class="ruby-identifier">task_info</span>, <span class="ruby-value">variation_overrides:</span> <span class="ruby-identifier">use_overrides</span>, <span class="ruby-value">skip_window_creation:</span> <span class="ruby-keyword">true</span>)
   <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-status" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-status" title="Link to this method">
                 <span class="method-name">status</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="status-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 371</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 356</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">status</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">svc</span>
@@ -2329,7 +1375,7 @@
     <span class="ruby-identifier">info</span> = <span class="ruby-identifier">running_services</span>[<span class="ruby-identifier">svc_name</span>]
     <span class="ruby-identifier">puts</span> <span class="ruby-string">&quot;Status: running&quot;</span>
     <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;PID: #{info[&#39;pid&#39;] || &#39;(unknown)&#39;}&quot;</span>
-    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Pane: #{info[&#39;tmux_pane&#39;] || &#39;(unknown)&#39;}&quot;</span>
+    <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Pane: #{info[&#39;herdr_pane&#39;] || &#39;(unknown)&#39;}&quot;</span>
     <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Task: #{info[&#39;task&#39;] || &#39;(none)&#39;}&quot;</span>
     <span class="ruby-identifier">puts</span> <span class="ruby-node">&quot;Started: #{info[&#39;started_at&#39;]}&quot;</span>
   <span class="ruby-keyword">else</span>
@@ -2337,44 +1383,31 @@
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-stop" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-stop" title="Link to this method">
                 <span class="method-name">stop</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="stop-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 276</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 271</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">stop</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">svc</span>
@@ -2390,7 +1423,7 @@
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">info</span> = <span class="ruby-identifier">running_services</span>[<span class="ruby-identifier">svc_name</span>]
-  <span class="ruby-identifier">pane_id</span> = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;tmux_pane&#39;</span>]
+  <span class="ruby-identifier">pane_id</span> = <span class="ruby-identifier">info</span>[<span class="ruby-string">&#39;herdr_pane&#39;</span>]
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">svc</span>[<span class="ruby-value">:stop</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">svc</span>[<span class="ruby-value">:stop</span>].<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">empty?</span>
     <span class="ruby-identifier">stop_cmd</span> = <span class="ruby-identifier">svc</span>[<span class="ruby-value">:stop</span>]
@@ -2399,7 +1432,7 @@
     <span class="ruby-keyword">end</span>
     <span class="ruby-identifier">system</span>(<span class="ruby-identifier">stop_cmd</span>)
   <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">pane_id</span>
-    <span class="ruby-identifier">system</span>(<span class="ruby-string">&#39;tmux&#39;</span>, <span class="ruby-string">&#39;send-keys&#39;</span>, <span class="ruby-string">&#39;-t&#39;</span>, <span class="ruby-identifier">pane_id</span>, <span class="ruby-string">&#39;C-c&#39;</span>)
+    <span class="ruby-identifier">herdr</span>.<span class="ruby-identifier">send_keys</span>(<span class="ruby-identifier">pane_id</span>, <span class="ruby-string">&#39;ctrl+c&#39;</span>)
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-comment"># Run cleanup commands</span>
@@ -2416,44 +1449,31 @@
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-stop_group" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-stop_group" title="Link to this method">
                 <span class="method-name">stop_group</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="stop_group-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 114</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 110</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">stop_group</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">group</span> = <span class="ruby-identifier">find_group</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">group</span>
@@ -2476,44 +1496,31 @@
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
       <div id="method-i-url" class="method-detail anchor-link ">
         <div class="method-header">
-
             <div class="method-heading">
               <a href="#method-i-url" title="Link to this method">
                 <span class="method-name">url</span>
                 <span class="method-args">(name)</span>
               </a>
             </div>
-
         </div>
-
 
           <div class="method-controls">
             <details class="method-source-toggle">
               <summary>Source</summary>
             </details>
           </div>
+
+        <div class="method-description">
           <div class="method-source-code" id="url-source">
-            <pre class="ruby"><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 350</span>
+            <pre><span class="ruby-comment"># File lib/hiiro/service_manager.rb, line 335</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">url</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">svc</span> = <span class="ruby-identifier">find_service</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">svc</span>
@@ -2525,53 +1532,14 @@
   <span class="ruby-node">&quot;http://#{host}:#{port}&quot;</span>
 <span class="ruby-keyword">end</span></pre>
           </div>
-
-
-
-        <div class="method-description">
-
-
           
-
-
         </div>
-
-
-
 
 
       </div>
 
-
     </section>
 
-
-
-
   </section>
-
 </main>
-
-<aside class="table-of-contents" role="complementary" aria-label="Table of Contents">
-  <div class="toc-sticky">
-    <h3 class="toc-heading">On This Page</h3>
-    <nav class="toc-nav" id="toc-nav" aria-label="Page sections">
-      <!-- Generated by JavaScript based on page headings -->
-    </nav>
-  </div>
-</aside>
-
-
-<footer class="site-footer">
-  
-
-  <div class="footer-bottom">
-    <p>
-      Generated by <a href="https://ruby.github.io/rdoc/">RDoc 7.2.0</a>
-      using the Aliki theme by <a href="http://st0012.dev">Stan Lo</a>
-    </p>
-  </div>
-</footer>
-
-</body>
 
