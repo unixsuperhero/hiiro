@@ -5,6 +5,7 @@ require "json"
 require "open3"
 require "shellwords"
 require "fileutils"
+require "hiiro"
 
 HIIRO_SUPPORTED_RUBY_VERSION = ">= 3.2.0"
 
@@ -20,7 +21,6 @@ class RubyGems
     JSON.parse(Net::HTTP.get(uri)).map { |v| v["number"] }
   rescue => e
     puts "Warning: could not fetch versions from RubyGems (#{e.message}), falling back to local"
-    require "hiiro"
     [Hiiro::VERSION]
   end
   def self.cli_version = `gem search -r hiiro`.lines.map(&:strip).select{|ln| ln.match?(/\d\.\d/) }.first&.[](/\d+\.\d+[^)]+/)
