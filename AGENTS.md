@@ -338,6 +338,37 @@ cmp.two_dot_range / cmp.three_dot_range / cmp.fork_range / cmp.changed_paths(rel
 
 `Hiiro::Git` gained the underlying queries: `ref_exists?`, `rev_list_count`, `merge_base`, `ancestor?`, `changed_files`.
 
+### Hiiro::TaskLocation (lib/hiiro/task_location.rb)
+
+Where a task's directories are. `CurrentTask` and `TaskCli` delegate `code_directory`, `workspace_label`, `tree_path`, `start_directory`, and `app_directory` to it:
+
+```ruby
+loc = Hiiro::TaskLocation.for(task, override: opts[:directory], app: Hiiro::App.new(name:, path:))
+loc.home             # TaskRecord.home_for(task.name); never creates it
+loc.worktree_path    # task.tree, absolute or under WORK_DIR; nil without a tree
+loc.code_directory   # task.primary_directory || worktree_path
+loc.app_directory    # app.resolve(code_directory); nil unless both known
+loc.start_directory  # override || app_directory || code_directory || home
+loc.source           # :override | :app | :primary | :tree | :home  (callers run ensure_home only for :home)
+loc.workspace_label  # (task.session || task.name).tr('.', '_')
+Hiiro::TaskLocation.contains?(root, path)   # realpath containment
+```
+
+### Hiiro::Herdr::TabCreation / Hiiro::Herdr::Location (lib/hiiro/herdr.rb)
+
+`tab create` responses are read through one value instead of `result.dig('tab','tab_id')` at every call site:
+
+```ruby
+created = Hiiro::Herdr::TabCreation.create(client, name:, workspace:, start_directory:, command:, focus:)  # or herdr.create_tab(**req)
+created.tab_id / created.pane_id / created.tab / created.root_pane
+created.created?   # tab id present          created.complete?  # tab + root pane present
+created.errors     # [] | ['no tab'] | ['no root pane']
+created.location(workspace_id: ws.id)       # Herdr::Location
+loc = Hiiro::Herdr::Location.from_meta(meta)  # reads herdr_workspace / herdr_tab / herdr_pane
+loc.target                                    # pane_id || tab_id || workspace_id
+loc.to_meta                                   # inverse of from_meta (queue/service metadata)
+```
+
 ### Hiiro::Duration / Hiiro::TimeInput (lib/hiiro/duration.rb, lib/hiiro/time_input.rb)
 
 Value objects behind `h date`, `h time`, and `h remind` (formerly duplicated helpers in each bin):

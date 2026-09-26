@@ -234,15 +234,16 @@ class Hiiro
       workspace = resolve_herdr_workspace(herdr_info[:workspace] || current_herdr_workspace)
 
       if workspace
-        result = herdr.new_tab(
+        created = Hiiro::Herdr::TabCreation.create(
+          herdr,
           name: svc_name,
           workspace: workspace,
           start_directory: base_dir,
           command: script,
           focus: false
         )
-        tab_id = result.dig('tab', 'tab_id')
-        pane_id = result.dig('root_pane', 'pane_id')
+        tab_id = created.tab_id
+        pane_id = created.pane_id
       else
         tab_id = nil
         pane_id = nil

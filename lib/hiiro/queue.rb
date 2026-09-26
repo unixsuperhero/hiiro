@@ -244,16 +244,15 @@ class Hiiro
       when :window
         workspace = ensure_herdr_workspace(target_workspace, cwd: working_dir)
         tab_name = short_window_name(name)
-        result = herdr.new_tab(
+        created = Hiiro::Herdr::TabCreation.create(
+          herdr,
           name: tab_name,
           workspace: workspace,
           start_directory: working_dir,
           command: script_path,
           focus: false
         )
-        meta['herdr_workspace'] = workspace.id
-        meta['herdr_tab'] = result.dig('tab', 'tab_id')
-        meta['herdr_pane'] = result.dig('root_pane', 'pane_id')
+        meta.merge!(created.location(workspace_id: workspace.id).to_meta)
         File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
         puts "Launched: #{name} [#{meta['herdr_tab'] || workspace.id}]"
 

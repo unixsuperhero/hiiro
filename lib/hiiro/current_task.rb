@@ -74,19 +74,12 @@ class Hiiro
       TaskRecord[saved.value] || raise(Error, 'Saved task no longer exists; run t use NAME')
     end
 
-    def workspace_label(task)
-      (task.session || task.name).tr('.', '_')
-    end
-
-    def code_directory(task)
-      task.primary_directory || (task.tree && (task.tree.start_with?('/') ? task.tree : File.join(Hiiro::WORK_DIR, task.tree)))
-    end
+    def location(task)        = TaskLocation.for(task)
+    def workspace_label(task) = location(task).workspace_label
+    def code_directory(task)  = location(task).code_directory
 
     def inside?(path, directory)
-      return false unless Dir.exist?(directory)
-
-      root = File.realpath(directory)
-      path == root || path.start_with?(root == File::SEPARATOR ? root : root + File::SEPARATOR)
+      TaskLocation.contains?(directory, path)
     end
   end
 end

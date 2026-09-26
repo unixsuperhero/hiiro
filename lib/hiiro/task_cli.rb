@@ -464,13 +464,9 @@ class Hiiro
         check_result(system('mdoc', path), 'mdoc could not open the document; install mdoc and check its configuration')
       end
 
-      def code_directory(task)
-        task.primary_directory || (task.tree && (task.tree.start_with?('/') ? task.tree : File.join(Hiiro::WORK_DIR, task.tree)))
-      end
-
-      def workspace_label(task)
-        (task.session || task.name).tr('.', '_')
-      end
+      def location(task, **kw)  = Hiiro::TaskLocation.for(task, **kw)
+      def code_directory(task)  = location(task).code_directory
+      def workspace_label(task) = location(task).workspace_label
 
       def client
         @client ||= begin
@@ -485,16 +481,21 @@ class Hiiro
       # under the task worktree; explicit param wins over the option.
       def start_directory(task, app: nil)
         app = opts&.fetch(:app) if app.nil?
-        path = opts&.fetch(:directory) || (app && app_directory(task, app)) || code_directory(task) || ensure_home(task)
-        existing_path(path, directory: true)
+        loc = location(task, override: opts&.fetch(:directory), app: app && app_for(task, app))
+        ensure_home(task) if loc.source == :home # filesystem effect stays here
+        existing_path(loc.start_directory, directory: true)
       end
 
       # Registry app directory under the task worktree.
       def app_directory(task, reference)
-        _name, relative = lookup_app!(reference)
-        root = code_directory(task)
-        raise Error, "#{task.name} has no worktree; run t tree new #{task.name} first" unless root
-        File.join(root, relative)
+        loc = location(task, app: app_for(task, reference))
+        raise Error, "#{task.name} has no worktree; run t tree new #{task.name} first" unless loc.code_directory
+        loc.app_directory
+      end
+
+      def app_for(task, reference)
+        name, relative = lookup_app!(reference)
+        Hiiro::App.new(name: name, path: relative)
       end
 
       def open_workspace(task, save:, app: nil)
@@ -648,10 +649,7 @@ class Hiiro
         @tree_manager ||= Hiiro::TaskManager.new(self)
       end
 
-      def tree_path(task)
-        return nil unless task.tree
-        task.tree.start_with?('/') ? task.tree : File.join(Hiiro::WORK_DIR, task.tree)
-      end
+      def tree_path(task) = location(task).worktree_path
 
       def show_tree(task)
         raise Error, "No worktree for #{task.name}; run t tree new #{task.name}" unless task.tree
@@ -730,9 +728,9 @@ class Hiiro
       end
 
       def new_tab(task, label)
-        result = client.new_tab(name: label, workspace: workspace_for(task), start_directory: start_directory(task), command: opts.command, focus: true)
-        check_result(result['tab'], 'Herdr did not create the tab')
-        puts result['tab']['tab_id']
+        created = Hiiro::Herdr::TabCreation.create(client, name: label, workspace: workspace_for(task), start_directory: start_directory(task), command: opts.command, focus: true)
+        check_result(created.created?, 'Herdr did not create the tab')
+        puts created.tab_id
       end
 
       def pane_action(task, action, args)

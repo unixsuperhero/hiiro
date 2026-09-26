@@ -31,21 +31,20 @@ class Hiiro
       command = [tool]
       command << (tool == 'codex' ? 'resume' : '--resume') if resume
       command.concat(args)
-      result = @client.new_tab(
+      created = Herdr::TabCreation.create(
+        @client,
         name: tool,
         workspace: @workspace,
         start_directory: @directory,
         focus: true,
       )
-      tab_id = result.is_a?(Hash) && result.dig('tab', 'tab_id')
-      raise Error, "Could not create #{tool} tab" unless tab_id.is_a?(String) && !tab_id.empty?
-      pane_id = result.dig('root_pane', 'pane_id')
-      raise Error, "Created #{tool} tab has no root pane" unless pane_id.is_a?(String) && !pane_id.empty?
-      unless @client.run_in_pane(pane_id, Shellwords.join(command))
-        raise Error, "Could not start #{tool} in pane #{pane_id}"
+      raise Error, "Could not create #{tool} tab" unless created.created?
+      raise Error, "Created #{tool} tab has no root pane" unless created.complete?
+      unless @client.run_in_pane(created.pane_id, Shellwords.join(command))
+        raise Error, "Could not start #{tool} in pane #{created.pane_id}"
       end
 
-      tab_id
+      created.tab_id
     end
   end
 end

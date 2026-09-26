@@ -229,6 +229,74 @@ class Hiiro
       def ids = @items.map(&:id)
     end
 
+    # workspace / tab / pane IDs kept together, e.g. as recorded in queue and
+    # service metadata under herdr_workspace / herdr_tab / herdr_pane.
+    class Location
+      def self.from_meta(hash, prefix: 'herdr_')
+        hash ||= {}
+        new(workspace_id: hash["#{prefix}workspace"], tab_id: hash["#{prefix}tab"], pane_id: hash["#{prefix}pane"])
+      end
+
+      attr_reader :workspace_id, :tab_id, :pane_id
+
+      def initialize(workspace_id: nil, tab_id: nil, pane_id: nil)
+        @workspace_id = workspace_id
+        @tab_id = tab_id
+        @pane_id = pane_id
+      end
+
+      def tab?      = present?(tab_id)
+      def pane?     = present?(pane_id)
+      def complete? = present?(workspace_id) && tab? && pane?
+
+      # Most specific known target.
+      def target = [pane_id, tab_id, workspace_id].find { |id| present?(id) }
+
+      def with(**ids) = self.class.new(workspace_id: workspace_id, tab_id: tab_id, pane_id: pane_id, **ids)
+
+      def to_meta(prefix: 'herdr_')
+        { "#{prefix}workspace" => workspace_id, "#{prefix}tab" => tab_id, "#{prefix}pane" => pane_id }
+      end
+
+      private
+
+      def present?(id) = id.is_a?(String) && !id.empty?
+    end
+
+    # The result of `tab create`, with the request that produced it.
+    class TabCreation
+      # Works with any client that responds to new_tab (including test doubles).
+      def self.create(client, **request)
+        new(request: request, response: client.new_tab(**request))
+      end
+
+      attr_reader :request, :response
+
+      def initialize(request:, response:)
+        @request = request
+        @response = response.is_a?(Hash) ? response : {}
+      end
+
+      def tab_id  = response.dig('tab', 'tab_id')
+      def pane_id = response.dig('root_pane', 'pane_id')
+
+      def tab       = response['tab'].is_a?(Hash) ? Tab.new(response['tab']) : nil
+      def root_pane = response['root_pane'].is_a?(Hash) ? Pane.new(response['root_pane']) : nil
+
+      def created?  = tab_id.is_a?(String) && !tab_id.empty?
+      def complete? = created? && pane_id.is_a?(String) && !pane_id.empty?
+
+      def errors
+        return ['no tab'] unless created?
+        return ['no root pane'] unless complete?
+        []
+      end
+
+      def location(workspace_id: nil)
+        Location.new(workspace_id: workspace_id || response.dig('tab', 'workspace_id'), tab_id: tab_id, pane_id: pane_id)
+      end
+    end
+
     class << self
       def client!(hiiro = nil)
         @client = new(hiiro)
@@ -422,6 +490,11 @@ class Hiiro
 
     def new_window(name: nil, target: nil, **opts)
       new_tab(name: name, workspace: target, **opts)
+    end
+
+    # Same request as new_tab; the response comes back with its request retained.
+    def create_tab(**request)
+      TabCreation.create(self, **request)
     end
 
     def close_tab(ref)
