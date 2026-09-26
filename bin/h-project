@@ -15,15 +15,13 @@ Hiiro.run(*ARGV) do
   add_subcmd(:open) { |project_name|
     re = /#{project_name}/i
 
-    conf_matches = projects.from_config.select { |k, v| k.match?(re) }
-    dir_matches  = projects.dirs.select { |proj, path| proj.match?(re) }
+    # conf_matches = projects.from_config.select { |k, v| k.match?(re) }
+    # dir_matches  = projects.dirs.select { |proj, path| proj.match?(re) }
 
-    matches = dir_matches.merge(conf_matches)
-    if matches.count > 1
-      matches = matches.select { |name, path| name == project_name }
-    end
+    dir_matches = Hiiro::Matcher.by_prefix(projects.dirs, project_name){|k,v| k }
+    matches = dir_matches.matches
 
-    case matches.count
+    case dir_matches.matches.count
     when 0
       name = 'proj'
       path = File.join(Dir.home, 'proj')
@@ -38,7 +36,7 @@ Hiiro.run(*ARGV) do
 
       open_project_workspace(name, path)
     when 1
-      name, path = matches.first
+      name, path = matches.first.item
 
       puts "changing dir: #{path}"
       Dir.chdir(path)
