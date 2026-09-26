@@ -281,6 +281,21 @@ Or via `h db q`:
 h db q "SELECT bin_name, argv_json, invoked_at FROM invocations ORDER BY invoked_at DESC LIMIT 10"
 ```
 
+### Hiiro::Duration / Hiiro::TimeInput (lib/hiiro/duration.rb, lib/hiiro/time_input.rb)
+
+Value objects behind `h date`, `h time`, and `h remind` (formerly duplicated helpers in each bin):
+
+```ruby
+Hiiro::Duration.parse('15m')            # => Duration(900s); nil when not <digits><s|m|h|d|w>
+Hiiro::Duration.seconds(90_061).compact # => "1d1h1m1s"   (.clock => "25:01:01", .components => {days:,hours:,...})
+Hiiro::Duration.milliseconds(1500)      # Rational-precise seconds
+
+t = Hiiro::TimeInput.parse('1726000000123')   # digits → unix; ms auto-detected past 11 digits (or ms: true)
+t.unit / t.time / t.unix_seconds / t.unix_milliseconds / t.utc / t.iso8601(3)
+Hiiro::TimeInput.parse('now') ; Hiiro::TimeInput.parse('2026-09-22 10:00')   # 'now'/blank → now ; else Time.parse
+a.difference(b)                          # => Duration
+```
+
 ### Hiiro::Shell (lib/hiiro/shell.rb)
 
 Utility for piping content to external commands:

@@ -68,22 +68,7 @@ class ReminderManager
     end
 
     def parse_interval(str)
-      return 3600 unless str # default 1 hour
-
-      match = str.to_s.match(/^(\d+)([smhdw])$/i)
-      return 3600 unless match
-
-      num = match[1].to_i
-      unit = match[2].downcase
-
-      case unit
-      when 's' then num
-      when 'm' then num * 60
-      when 'h' then num * 3600
-      when 'd' then num * 86400
-      when 'w' then num * 604800
-      else 3600
-      end
+      Hiiro::Duration.parse(str)&.seconds || 3600 # default 1 hour
     end
 
     def one_time?
@@ -152,17 +137,8 @@ class ReminderManager
     end
 
     # Check for relative interval format: 15m, 2h, etc.
-    if time_str =~ /^(\d+)([smhdw])$/i
-      num = $1.to_i
-      unit = $2.downcase
-      seconds = case unit
-      when 's' then num
-      when 'm' then num * 60
-      when 'h' then num * 3600
-      when 'd' then num * 86400
-      when 'w' then num * 604800
-      else num * 60
-      end
+    if (relative = Hiiro::Duration.parse(time_str))
+      seconds = relative.seconds
 
       # This is a one-time reminder at a relative time
       trigger_at = (Time.now + seconds).iso8601

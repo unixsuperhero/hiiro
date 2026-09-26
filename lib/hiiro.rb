@@ -6,6 +6,8 @@ require "ostruct"
 require 'awesome_print'
 
 require_relative "hiiro/version"
+require_relative "hiiro/duration"
+require_relative "hiiro/time_input"
 require_relative "hiiro/error"
 require_relative "hiiro/config"
 require_relative "hiiro/effects"
