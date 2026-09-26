@@ -16,12 +16,12 @@ Hiiro.run(*ARGV, cwd: Dir.pwd) do
 
   add_subcmd(:switch) do |path|
     if path.nil?
-      lines = `git worktree list`.strip.split("\n")
-      if lines.empty?
+      trees = Hiiro::Git::Worktrees.fetch
+      if trees.empty?
         STDERR.puts "No worktrees found"
         next
       end
-      map = lines.each_with_object({}) { |line, h| h[line] = line.split.first }
+      map = trees.each_with_object({}) { |wt, h| h[wt.to_line] = wt.path }
       path = fuzzyfind_from_map(map)
       next unless path
     end
@@ -32,19 +32,14 @@ Hiiro.run(*ARGV, cwd: Dir.pwd) do
   end
 
   add_subcmd(:select) do |*args|
-    # Get worktree list
-    output = `git worktree list`.strip
+    trees = Hiiro::Git::Worktrees.fetch
 
-    if output.empty?
+    if trees.empty?
       STDERR.puts "No worktrees found"
       next
     end
 
-    lines = output.split("\n").each_with_object({}) do |line, hash|
-      # Format: /path/to/worktree  sha [branch]
-      path = line.split.first
-      hash[line] = path
-    end
+    lines = trees.each_with_object({}) { |wt, hash| hash[wt.to_line] = wt.path }
 
     selected = fuzzyfind_from_map(lines)
 
@@ -54,33 +49,29 @@ Hiiro.run(*ARGV, cwd: Dir.pwd) do
   end
 
   add_subcmd(:size) do |*args|
-    output = `git worktree list`.strip
+    trees = Hiiro::Git::Worktrees.fetch
 
-    if output.empty?
+    if trees.empty?
       STDERR.puts "No worktrees found"
       next
     end
 
-    output.split("\n").each do |line|
-      path, *rest = line.split
-      size = `du -sh #{Shellwords.escape(path)} 2>/dev/null`.split.first || "?"
-      puts "#{size}\t#{path} #{rest.join(' ')}"
+    trees.each do |wt|
+      size = `du -sh #{Shellwords.escape(wt.path)} 2>/dev/null`.split.first || "?"
+      puts "#{size}\t#{wt.to_line}"
     end
   end
 
   add_subcmd(:branch) do |*paths|
     if paths.empty?
       # No paths given — print branch for each worktree
-      output = `git worktree list`.strip
-      if output.empty?
+      trees = Hiiro::Git::Worktrees.fetch
+      if trees.empty?
         STDERR.puts "No worktrees found"
         next
       end
-      output.split("\n").each do |line|
-        parts = line.split
-        path = parts[0]
-        branch = parts[2]&.gsub(/[\[\]]/, '') || parts[1]
-        puts "#{path}\t#{branch}"
+      trees.each do |wt|
+        puts "#{wt.path}\t#{wt.branch || wt.head}"
       end
     else
       # Resolve each given path and print its branch
@@ -98,17 +89,14 @@ Hiiro.run(*ARGV, cwd: Dir.pwd) do
   end
 
   add_subcmd(:copy) do |*args|
-    output = `git worktree list`.strip
+    trees = Hiiro::Git::Worktrees.fetch
 
-    if output.empty?
+    if trees.empty?
       STDERR.puts "No worktrees found"
       next
     end
 
-    lines = output.split("\n").each_with_object({}) do |line, hash|
-      path = line.split.first
-      hash[line] = path
-    end
+    lines = trees.each_with_object({}) { |wt, hash| hash[wt.to_line] = wt.path }
 
     selected = fuzzyfind_from_map(lines)
 

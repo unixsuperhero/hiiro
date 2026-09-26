@@ -1,6 +1,5 @@
 require 'yaml'
 require 'fileutils'
-require 'tempfile'
 require 'sequel'
 
 class Hiiro
@@ -177,7 +176,8 @@ class Hiiro
       item
     end
 
-    def edit_items(items_to_edit = nil, task_info: nil)
+    # hiiro supplies the editor (see Hiiro#editor / #edit_files).
+    def edit_items(items_to_edit = nil, task_info: nil, hiiro:)
       items_array = if items_to_edit.nil?
         [ITEM_TEMPLATE.dup]
       elsif items_to_edit.is_a?(Array)
@@ -186,15 +186,9 @@ class Hiiro
         [items_to_edit.is_a?(TodoItem) ? editable_hash(items_to_edit) : items_to_edit]
       end
 
-      tmpfile = Tempfile.new(['todo-edit-', '.yml'])
-      tmpfile.write(items_array.to_yaml)
-      tmpfile.close
-
-      editor = ENV['EDITOR'] || 'safe_nvim' || 'nvim'
-      system(editor, tmpfile.path)
-
-      updated_data = YAML.safe_load_file(tmpfile.path)
-      tmpfile.unlink
+      input = InputFile.yaml_file(hiiro: hiiro, content: items_array.to_yaml, prefix: 'todo-edit-')
+      updated_data = input.edit.document.data
+      input.cleanup
 
       return [] if updated_data.nil?
 

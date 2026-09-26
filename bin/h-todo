@@ -54,7 +54,7 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
 
   add_subcmd(:add) do |*add_args|
     if add_args.empty?
-      new_items = tm.edit_items
+      new_items = tm.edit_items(hiiro: self)
       if new_items.empty?
         puts "No items added."
         next

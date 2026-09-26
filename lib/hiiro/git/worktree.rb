@@ -46,6 +46,14 @@ class Hiiro
         pwd == path || pwd.start_with?(path + '/')
       end
 
+      # Human-readable form matching `git worktree list`: path, short head, [branch]
+      def to_line
+        parts = [path]
+        parts << head[0, 7] if head
+        parts << (bare? ? '(bare)' : detached? ? '(detached HEAD)' : "[#{branch}]")
+        parts.join(' ')
+      end
+
       def to_h
         {
           path: path,

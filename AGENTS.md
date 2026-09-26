@@ -198,7 +198,8 @@ git = hiiro.git
 git.root                          # Repository root path
 git.branch                        # Current branch name
 git.branches                      # List all branches
-git.worktrees                     # List all worktrees
+git.worktrees                     # List all worktrees (Git::Worktree: path, head, branch, bare?, detached?, name, to_line)
+Hiiro::Git::Worktrees.fetch       # Porcelain-backed collection; bins should use this instead of splitting `git worktree list`
 git.add_worktree(path, branch:)   # Create worktree
 git.move_worktree(from, to)       # Rename worktree
 git.current_pr                    # Get current PR info
@@ -280,6 +281,20 @@ Or via `h db q`:
 ```bash
 h db q "SELECT bin_name, argv_json, invoked_at FROM invocations ORDER BY invoked_at DESC LIMIT 10"
 ```
+
+### Hiiro::InputFile / Hiiro::EditedDocument (lib/hiiro/input_file.rb)
+
+Tempfile + editor lifecycle for YAML/markdown input. After `edit`, the result is retained as an `EditedDocument`:
+
+```ruby
+input = yaml_input_file(content: yaml, prefix: 'todo-edit-')   # or InputFile.yaml_file(hiiro:, ...) / .md_file
+doc   = input.edit.document        # EditedDocument: original, result (alias contents), parsed (alias data), error
+doc.changed? / doc.empty? / doc.valid?
+input.parsed_file                  # still available; nil on YAML parse error
+input.cleanup                      # unlink the tempfile when done
+```
+
+Use this instead of a hand-rolled Tempfile/system/YAML.load/unlink cycle (TodoManager#edit_items now does).
 
 ### Hiiro::Duration / Hiiro::TimeInput (lib/hiiro/duration.rb, lib/hiiro/time_input.rb)
 
