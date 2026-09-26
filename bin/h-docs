@@ -8,6 +8,8 @@ require 'uri'
 SERVER = ENV.fetch('HDOCS_SERVER', 'http://127.0.0.1:4387').sub(%r{/$}, '')
 DOCS_DIR = File.join(Dir.home, 'claude', 'docs')
 PROJECT_ROOT = ENV.fetch('PORTFOLIO_HOME', File.join(Dir.home, 'proj', 'portfolio'))
+DESKTOP_DIR = File.join(PROJECT_ROOT, 'apps/desktop')
+APP_PATH = File.join(DESKTOP_DIR, 'bin/desktop.app')
 SERVICE_LABEL = "com.#{ENV.fetch('USER')}.portfolio"
 SERVICE_DOMAIN = "gui/#{Process.uid}"
 SERVICE_TARGET = "#{SERVICE_DOMAIN}/#{SERVICE_LABEL}"
@@ -43,6 +45,10 @@ class PortfolioApi
 
   def health
     get('/health')
+  end
+
+  def ports
+    get('/api/ports')
   end
 
   def delete(id, files: false)
@@ -188,6 +194,15 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
     matching_items(opts, limit: count).each { |item| puts item_label(item) }
   }
 
+  add_subcmd(:make) { |*args|
+    Dir.chdir DESKTOP_DIR
+    system 'wails3', 'package' 
+  }
+
+  add_subcmd(:run) { |*args|
+    system 'open', APP_PATH
+  }
+
   add_subcmd(:open) { |*args|
     opts = open_opts.parse(args)
     if opts.args.empty? && !opts.html && !opts.md && !opts.all
@@ -244,5 +259,28 @@ Hiiro.run(*ARGV, plugins: [Pins]) {
 
   add_subcmd(:path) { |*_args|
     puts DOCS_DIR
+  }
+
+  add_subcmd(:ports) { |*args|
+    json = args.include?('--json')
+    snapshot = API.ports
+    if json
+      next puts JSON.pretty_generate(snapshot)
+    end
+    ports = snapshot.fetch('ports', [])
+    if ports.empty?
+      next puts('No TCP listeners found.')
+    end
+    puts format('%-7s %-15s %-18s %-10s %s', 'PORT', 'BIND', 'PROCESS', 'UPTIME', 'DIRECTORY / HERDR / AI')
+    ports.each do |port|
+      herdr = port['herdr']
+      ai = port['ai']
+      herdr_label = herdr ? "#{herdr['workspace_label'] || herdr['workspace_id']} #{herdr['pane_id']}#{herdr['match'] == 'cwd' ? ' ~' : ''}" : '-'
+      ai_label = ai&.fetch('session', nil) ? "#{ai['kind']} #{ai['session'][0, 8]}…" : (ai&.fetch('kind', nil) || '-')
+      uptime = port['elapsed'] && !port['elapsed'].empty? ? port['elapsed'] : '-'
+      puts format('%-7s %-15s %-18s %-10s %s', port['port'], port['host'], "#{port['command']}##{port['pid']}", uptime, port['cwd'].to_s)
+      puts "         herdr: #{herdr_label}   ai: #{ai_label}"
+    end
+    warn "herdr unavailable: #{snapshot.fetch('warnings', []).join('; ')}" if snapshot['herdr_available'] == false
   }
 }
