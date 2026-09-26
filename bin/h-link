@@ -22,55 +22,8 @@ class LinkManager
     'created_at' => Time.now.iso8601,
   }
 
-  class Link
-    attr_accessor :url, :description, :shorthand, :created_at
-
-    def initialize(url:, description: '', shorthand: nil, created_at: Time.now.iso8601)
-      @url = url
-      @description = description
-      @shorthand = shorthand
-      @created_at = created_at
-    end
-
-    def self.from_hash(hash)
-      new(
-        url: hash['url'],
-        description: hash['description'] || '',
-        shorthand: hash['shorthand'],
-        created_at: hash['created_at'] || Time.now.iso8601
-      )
-    end
-
-    def to_h
-      {
-        'url' => @url,
-        'description' => @description,
-        'shorthand' => @shorthand,
-        'created_at' => @created_at
-      }
-    end
-
-    def to_yaml
-      to_h.to_yaml
-    end
-
-    def matches?(*terms)
-      searchable = [
-        @url,
-        @description,
-        @shorthand
-      ].compact.join(' ').downcase
-
-      terms.all? { |term| searchable.downcase.include?(term.downcase) }
-    end
-
-    def display_string(index = nil)
-      num = index ? "#{(index + 1).to_s.rjust(3)}." : ""
-      shorthand_str = @shorthand ? " [#{@shorthand}]" : ""
-      desc_str = @description.to_s.empty? ? "" : " - #{@description}"
-      "#{num}#{shorthand_str} #{@url}#{desc_str}".strip
-    end
-  end
+  # Shared representation with the DB model; YAML rows load as unsaved instances.
+  Link = Hiiro::Link
 
   attr_reader :links_file
 
@@ -172,11 +125,11 @@ class LinkManager
   end
 
   def extract_placeholders(url)
-    url.scan(/\{(\w+)\}/).flatten
+    Hiiro::URLTemplate.new(url).placeholders
   end
 
   def has_placeholders?(url)
-    !extract_placeholders(url).empty?
+    Hiiro::URLTemplate.new(url).placeholders?
   end
 
   def prompt_for_placeholder_values(url, link=nil)
@@ -212,13 +165,7 @@ class LinkManager
   end
 
   def substitute_placeholders(url, values)
-    result = url.dup
-    values.each do |key, value|
-      # Replace spaces with + for URL encoding
-      encoded_value = value.to_s.gsub(' ', '+')
-      result.gsub!("{#{key}}", encoded_value)
-    end
-    result
+    Hiiro::URLTemplate.new(url, values: values).url
   end
 
   def find_link_by_ref(ref, links)

@@ -33,16 +33,16 @@ class Hiiro
       end
     end
 
+    def entries_in(status)
+      Entry.in(queue_dirs, status.to_sym)
+    end
+
     def tasks_in(status)
-      dir = queue_dirs[status]
-      Dir.glob(File.join(dir, '*.md')).sort.map { |f| File.basename(f, '.md') }
+      entries_in(status).map(&:name)
     end
 
     def tasks_in_sorted(status)
-      dir = queue_dirs[status]
-      Dir.glob(File.join(dir, '*.md')).map { |f|
-        { name: File.basename(f, '.md'), mtime: File.mtime(f) }
-      }.sort_by { |t| -t[:mtime].to_i }
+      entries_in(status).map { |e| { name: e.name, mtime: e.modified_at } }.sort_by { |t| -t[:mtime].to_i }
     end
 
     def format_mtime(mtime)
@@ -62,19 +62,11 @@ class Hiiro
         display.each do |t|
           ts = format_mtime(t[:mtime])
           line = "%-10s %-12s %s" % [status, ts, t[:name]]
-          meta = meta_for(t[:name], status.to_sym)
-          if meta && status == 'running'
-            started = meta['started_at']
-            if started
-              elapsed = Time.now - Time.parse(started)
-              mins = (elapsed / 60).to_i
-              line += "  (#{mins}m)"
-            end
-            if meta['herdr_pane']
-              line += "  [pane #{meta['herdr_pane']}]"
-            elsif meta['herdr_tab']
-              line += "  [tab #{meta['herdr_tab']}]"
-            end
+          run = entry_for(t[:name], status.to_sym).execution
+          if run
+            line += "  (#{run.elapsed_minutes}m)" if run.started_at
+            line += "  [pane #{run.location.pane_id}]" if run.location.pane?
+            line += "  [tab #{run.location.tab_id}]" if !run.location.pane? && run.location.tab?
           end
           preview = task_preview(t[:name], status.to_sym)
           line += "  #{preview}" if preview
@@ -89,38 +81,23 @@ class Hiiro
     end
 
     def all_tasks
-      STATUSES.flat_map do |status|
-        tasks_in(status.to_sym).map { |name| { name: name, status: status } }
-      end
+      STATUSES.flat_map { |status| entries_in(status).map(&:to_h) }
+    end
+
+    def entry_for(name, status)
+      Entry.new(dirs: queue_dirs, name: name, status: status.to_sym)
     end
 
     def meta_for(name, status)
-      path = File.join(queue_dirs[status], "#{name}.meta")
-      File.exist?(path) ? YAML.safe_load_file(path) : nil
+      entry_for(name, status).meta
     end
 
     def task_preview(name, status)
-      path = File.join(queue_dirs[status], "#{name}.md")
-      return nil unless File.exist?(path)
-
-      lines = File.readlines(path, chomp: true)
-      # Skip frontmatter
-      if lines.first == '---'
-        end_idx = lines[1..].index('---')
-        lines = lines[(end_idx + 2)..] if end_idx
-      end
-      first = lines&.find { |l| !l.strip.empty? }&.strip
-      return nil unless first
-
-      first.length > 60 ? "| #{first[0, 57]}..." : "| #{first}"
+      entry_for(name, status).preview
     end
 
     def find_task(name)
-      STATUSES.each do |status|
-        md = File.join(queue_dirs[status.to_sym], "#{name}.md")
-        return { name: name, status: status } if File.exist?(md)
-      end
-      nil
+      Entry.find(queue_dirs, name)&.to_h
     end
 
     def ensure_herdr_workspace(name = HERDR_WORKSPACE, cwd: nil)
@@ -541,20 +518,15 @@ class Hiiro
             next
           end
           tasks.each do |t|
-            meta = q.meta_for(t[:name], t[:status].to_sym)
+            entry = q.entry_for(t[:name], t[:status])
+            meta = entry.meta
             line = "%-10s %s" % [t[:status], t[:name]]
             if meta
-              started = meta['started_at']
-              if started && t[:status] == 'running'
-                elapsed = Time.now - Time.parse(started)
-                mins = (elapsed / 60).to_i
-                line += "  (#{mins}m elapsed)"
-              end
-              if meta['herdr_pane']
-                line += "  [pane #{meta['herdr_pane']}]"
-              elsif meta['herdr_tab']
-                line += "  [tab #{meta['herdr_tab']}]"
-              end
+              run = entry.execution
+              line += "  (#{run.elapsed_minutes}m elapsed)" if run&.started_at
+              loc = Hiiro::Herdr::Location.from_meta(meta)
+              line += "  [pane #{loc.pane_id}]" if loc.pane?
+              line += "  [tab #{loc.tab_id}]" if !loc.pane? && loc.tab?
               line += "  dir:#{meta['working_dir']}" if meta['working_dir']
             end
             puts line
@@ -721,15 +693,7 @@ class Hiiro
 
           # Split+interactive: open the editor and omp in a new Herdr pane.
           if split && args.empty? && $stdin.tty?
-            fm_lines = ["---"]
-            fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
-            fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
-            fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
-            fm_lines << "ignore: true" if opts.ignore
-            fm_lines << "# app: <partial-app-name>  (run omp from this app's directory)"
-            fm_lines << "# dir: <relative-path>     (subdir within app or tree root)"
-            fm_lines << "---"
-            fm_lines << ""
+            fm_lines = Prompt.frontmatter_lines(task_info: ti, ignore: opts.ignore, hints: true)
 
             tmp_dir = File.join(Dir.home, '.config/hiiro/tmp')
             FileUtils.mkdir_p(tmp_dir)
@@ -782,15 +746,7 @@ class Hiiro
           elsif args.any?
             content = args.join(' ')
           else
-            fm_lines = ["---"]
-            fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
-            fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
-            fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
-            fm_lines << "ignore: true" if opts.ignore
-            fm_lines << "# app: <partial-app-name>  (run omp from this app's directory)"
-            fm_lines << "# dir: <relative-path>     (subdir within app or tree root)"
-            fm_lines << "---"
-            fm_lines << ""
+            fm_lines = Prompt.frontmatter_lines(task_info: ti, ignore: opts.ignore, hints: true)
             fm_content = fm_lines.join("\n")
 
             # Start the editor from the selected workspace's active directory.
@@ -867,14 +823,7 @@ class Hiiro
           path = File.join(q.queue_dirs[:wip], "#{name}.md")
 
           unless File.exist?(path)
-            fm_lines = ["---"]
-            fm_lines << "task_name: #{ti[:task_name]}" if ti&.dig(:task_name)
-            fm_lines << "tree_name: #{ti[:tree_name]}" if ti&.dig(:tree_name)
-            fm_lines << "session_name: #{ti[:session_name]}" if ti&.dig(:session_name)
-            fm_lines << "# app: <partial-app-name>  (run omp from this app's directory)"
-            fm_lines << "# dir: <relative-path>     (subdir within app or tree root)"
-            fm_lines << "---"
-            fm_lines << ""
+            fm_lines = Prompt.frontmatter_lines(task_info: ti, hints: true)
             File.write(path, fm_lines.join("\n"))
           end
 
@@ -1024,19 +973,131 @@ class Hiiro
       end
     end
 
+    # A queue entry's identity and storage: root dirs, name, lifecycle status.
+    # Answers every companion path and reads its files; moving is left to callers.
+    class Entry
+      def self.find(dirs, name)
+        STATUSES.each do |status|
+          entry = new(dirs: dirs, name: name, status: status.to_sym)
+          return entry if entry.exists?
+        end
+        nil
+      end
+
+      def self.in(dirs, status)
+        Dir.glob(File.join(dirs.fetch(status), '*.md')).sort.map do |path|
+          new(dirs: dirs, name: File.basename(path, '.md'), status: status)
+        end
+      end
+
+      attr_reader :dirs, :name, :status
+
+      def initialize(dirs:, name:, status:)
+        @dirs = dirs
+        @name = name
+        @status = status
+      end
+
+      def dir           = dirs.fetch(status)
+      def prompt_path   = File.join(dir, "#{name}.md")
+      def meta_path     = File.join(dir, "#{name}.meta")
+      def launcher_path = File.join(dir, "#{name}.sh")
+      def body_path     = File.join(dir, "#{name}.prompt")
+
+      def companion_files = [prompt_path, meta_path, launcher_path, body_path].select { |p| File.exist?(p) }
+
+      def exists?     = File.exist?(prompt_path)
+      def modified_at = File.mtime(prompt_path)
+      def running?    = status == :running
+
+      def prompt(hiiro: nil) = Prompt.from_file(prompt_path, hiiro: hiiro)
+
+      def meta
+        File.exist?(meta_path) ? YAML.safe_load_file(meta_path) : nil
+      end
+
+      # "| first non-blank body line", truncated to width.
+      def preview(width: 60)
+        return nil unless exists?
+
+        lines = File.readlines(prompt_path, chomp: true)
+        if lines.first == '---'
+          end_idx = lines[1..].index('---')
+          lines = lines[(end_idx + 2)..] if end_idx
+        end
+        first = lines&.find { |l| !l.strip.empty? }&.strip
+        return nil unless first
+
+        first.length > width ? "| #{first[0, width - 3]}..." : "| #{first}"
+      end
+
+      # Snapshot of the recorded run; nil when there is no metadata.
+      def execution
+        data = meta
+        data && Execution.new(self, data)
+      end
+
+      def moved_to(new_status) = self.class.new(dirs: dirs, name: name, status: new_status.to_sym)
+
+      def to_h = { name: name, status: status.to_s }
+    end
+
+    # What the .meta file recorded when an entry was launched.
+    class Execution
+      attr_reader :entry, :meta
+
+      def initialize(entry, meta)
+        @entry = entry
+        @meta = meta
+      end
+
+      def started_at        = meta['started_at'] && Time.parse(meta['started_at'])
+      def working_directory = meta['working_dir']
+      def location          = Hiiro::Herdr::Location.from_meta(meta)
+      def attach_target     = location.target
+
+      def elapsed(now: Time.now) = started_at && Duration.seconds(now - started_at)
+      def elapsed_minutes(now: Time.now) = elapsed(now: now) && (elapsed(now: now).seconds / 60).to_i
+    end
+
     class Prompt
       def self.from_file(path, hiiro: nil)
         return unless File.exist?(path)
 
-        new(FrontMatterParser::Parser.parse_file(path), hiiro:)
+        new(FrontMatterParser::Parser.parse_file(path), hiiro:, path: path)
       end
 
-      attr_reader :hiiro, :doc, :frontmatter
+      # The editor template: task context lines, optional ignore flag, and the
+      # commented app/dir hints. Returns lines (no trailing newline joined).
+      def self.frontmatter_lines(task_info:, ignore: false, hints: false)
+        lines = ["---"]
+        lines << "task_name: #{task_info[:task_name]}" if task_info&.dig(:task_name)
+        lines << "tree_name: #{task_info[:tree_name]}" if task_info&.dig(:tree_name)
+        lines << "session_name: #{task_info[:session_name]}" if task_info&.dig(:session_name)
+        lines << "ignore: true" if ignore
+        if hints
+          lines << "# app: <partial-app-name>  (run omp from this app's directory)"
+          lines << "# dir: <relative-path>     (subdir within app or tree root)"
+        end
+        lines << "---"
+        lines << ""
+        lines
+      end
 
-      def initialize(doc, hiiro: nil)
+      attr_reader :hiiro, :doc, :frontmatter, :path
+
+      def initialize(doc, hiiro: nil, path: nil)
         @hiiro = hiiro
         @doc = doc
+        @path = path
         @frontmatter = doc.front_matter || {}
+      end
+
+      # Prompt text without frontmatter.
+      def body = doc.content.strip
+
+      def location_ingredients
+        { session_name: session_name, tree_name: tree_name, app_name: app_name, rel_dir: rel_dir }
       end
 
       def ignore?

@@ -39,6 +39,73 @@ class Hiiro::PsProcess
     )
   end
 
+  # One `ps awwux` capture; every question below reads the same table.
+  class Snapshot
+    def self.capture
+      new(PsProcess.all, captured_at: Time.now)
+    end
+
+    attr_reader :processes, :captured_at
+
+    def initialize(processes, captured_at: Time.now)
+      @processes = processes
+      @captured_at = captured_at
+    end
+
+    def by_pid(pid)          = processes.find { |p| p.pid == pid.to_s }
+    def with_pids(pids)      = processes.select { |p| pids.include?(p.pid) }
+    def matching(pattern)    = processes.select { |p| p.cmd.include?(pattern) || p.user.include?(pattern) }
+
+    def parent_of(pid)
+      ppid = `ps -o ppid= -p #{pid.to_i}`.strip
+      return nil if ppid.empty?
+      by_pid(ppid)
+    end
+
+    def children_of(pid)
+      `pgrep -P #{pid.to_i}`.lines.map(&:strip).filter_map { |cpid| by_pid(cpid) }
+    end
+  end
+
+  # One lsof invocation, parsed once. `failed` is true when lsof exited
+  # non-zero, which is distinct from an empty result.
+  class OpenFiles
+    def self.for_pid(pid, network_only: false)
+      args = network_only ? ['-a', '-p', pid.to_s, '-i'] : ['-p', pid.to_s]
+      run(args)
+    end
+
+    def self.for_port(port) = run(['-i', ":#{port.to_i}"])
+    def self.in_dir(path)   = run(['+D', File.expand_path(path)])
+
+    def self.run(args)
+      raw = `lsof #{args.shelljoin} 2>/dev/null`
+      new(args, raw, failed: !$?.success?)
+    end
+
+    attr_reader :query, :raw, :rows, :failed
+
+    def initialize(query, raw, failed: false)
+      @query = query
+      @raw = raw
+      @failed = failed
+      @rows = raw.lines[1..].to_a.map(&:split)
+    end
+
+    def pids = rows.filter_map { |r| r[1] }.to_set
+
+    # { fd:, type:, name: } per row, as PsProcess#files has always returned
+    def files = rows.filter_map { |r| { fd: r[3], type: r[4], name: r[8] } if r.size >= 9 }
+
+    # { protocol:, name: } per row, as PsProcess#ports has always returned
+    def sockets = rows.filter_map { |r| { protocol: r[7], name: r[8] } if r.size >= 9 }
+
+    def cwd
+      row = rows.find { |r| r[3] == 'cwd' }
+      row&.last
+    end
+  end
+
   # Get all processes
   def self.all
     `ps awwux`.lines[1..].filter_map { |line| from_line(line) }
@@ -56,74 +123,35 @@ class Hiiro::PsProcess
 
   # Find processes listening on given port numbers
   def self.by_port(*ports)
-    pids = Set.new
-    ports.each do |port|
-      lsof_output = `lsof -i :#{port.to_i} 2>/dev/null`.lines[1..]
-      next unless lsof_output
-
-      lsof_output.each do |line|
-        fields = line.split
-        pids << fields[1] if fields[1]
-      end
-    end
-
-    all.select { |p| pids.include?(p.pid) }
+    pids = ports.flat_map { |port| OpenFiles.for_port(port).pids.to_a }.to_set
+    Snapshot.capture.with_pids(pids)
   end
 
   # Find processes with files open in given directories
   def self.in_dirs(*paths)
-    pids = Set.new
-    paths.each do |path|
-      expanded = File.expand_path(path)
-      lsof_output = `lsof +D #{expanded.shellescape} 2>/dev/null`.lines[1..]
-      next unless lsof_output
-
-      lsof_output.each do |line|
-        fields = line.split
-        pids << fields[1] if fields[1]
-      end
-    end
-
-    all.select { |p| pids.include?(p.pid) }
+    pids = paths.flat_map { |path| OpenFiles.in_dir(path).pids.to_a }.to_set
+    Snapshot.capture.with_pids(pids)
   end
 
-  # Open files for this process
-  def files
-    lines = `lsof -p #{pid} 2>/dev/null`.lines[1..] || []
-    lines.filter_map do |line|
-      parts = line.split
-      { fd: parts[3], type: parts[4], name: parts[8] } if parts.size >= 9
-    end
+  # One lsof for files and cwd.
+  def open_files
+    @open_files ||= OpenFiles.for_pid(pid)
   end
 
-  # Open network ports for this process
-  def ports
-    lines = `lsof -a -p #{pid} -i 2>/dev/null`.lines[1..] || []
-    lines.filter_map do |line|
-      parts = line.split
-      { protocol: parts[7], name: parts[8] } if parts.size >= 9
-    end
-  end
+  # Open files for this process: [{ fd:, type:, name: }]
+  def files = open_files.files
+
+  # Open network ports for this process: [{ protocol:, name: }]
+  def ports = OpenFiles.for_pid(pid, network_only: true).sockets
 
   # Current working directory
-  def dir
-    cwd_line = `lsof -p #{pid} 2>/dev/null | grep ' cwd '`.strip
-    return nil if cwd_line.empty?
-    cwd_line.split.last
-  end
+  def dir = open_files.cwd
 
   # Parent process
-  def parent
-    ppid = `ps -o ppid= -p #{pid}`.strip
-    return nil if ppid.empty?
-    self.class.find(ppid)
-  end
+  def parent = Snapshot.capture.parent_of(pid)
 
   # Child processes
-  def children
-    child_pids = `pgrep -P #{pid}`.lines.map(&:strip)
-    child_pids.filter_map { |cpid| self.class.find(cpid) }
-  end
+  def children = Snapshot.capture.children_of(pid)
 
   # Simple display: PID and CMD
   def to_s

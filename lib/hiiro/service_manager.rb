@@ -55,17 +55,25 @@ class Hiiro
       { name: group_name, **symbolize_keys(configs[group_name]) }
     end
 
+    # The matched service as a ServiceDefinition (prefix match like find_service).
+    def definition_for(name)
+      svc = find_service(name)
+      return nil unless svc
+
+      ServiceDefinition.from_config(svc[:name], services[svc[:name]], root: git_root)
+    end
+
+    def group_definition_for(name)
+      group = find_group(name)
+      group && ServiceGroup.from_config(group[:name], services[group[:name]])
+    end
+
     def prepare_env(svc_name, variation_overrides: {})
-      svc = find_service(svc_name)
-      return unless svc
+      definition = definition_for(svc_name)
+      return unless definition
 
-      base_dir = resolve_base_dir(svc[:base_dir])
-
-      env_file_configs = build_env_file_configs(svc)
-      return if env_file_configs.empty?
-
-      env_file_configs.each do |efc|
-        prepare_single_env(base_dir, efc, variation_overrides)
+      definition.environment_files.each do |env_file|
+        prepare_single_env(env_file, variation_overrides)
       end
     end
 
@@ -677,8 +685,7 @@ class Hiiro
           puts "Service groups:"
           puts
           groups.each do |name, cfg|
-            members = (cfg['services'] || []).map { |m| m['name'] || m[:name] }.compact
-            puts format("  %-20s  %s", name, members.join(', '))
+            puts format("  %-20s  %s", name, ServiceGroup.from_config(name, cfg).service_names.join(', '))
           end
         end
 
@@ -694,25 +701,19 @@ class Hiiro
             next
           end
 
-          configs = sm.send(:build_env_file_configs, svc)
-          if configs.empty?
+          env_files = sm.definition_for(svc_name).environment_files
+          if env_files.empty?
             puts "No env files configured for '#{svc[:name]}'"
             next
           end
 
           puts "Env files for '#{svc[:name]}':"
-          configs.each do |efc|
+          env_files.each do |ef|
             puts
-            puts "  #{efc[:env_file] || '(no dest)'}"
-            puts "    template: #{efc[:base_env]}" if efc[:base_env]
+            puts "  #{ef.spec[:env_file] || '(no dest)'}"
+            puts "    template: #{ef.spec[:base_env]}" if ef.spec[:base_env]
 
-            env_vars = efc[:env_vars]
-            next unless env_vars
-
-            env_vars.each do |var_name, var_config|
-              variations = var_config.is_a?(Hash) && (var_config['variations'] || var_config[:variations])
-              next unless variations
-
+            ef.variables.each do |var_name, variations|
               puts "    #{var_name}:"
               variations.each do |variation, value|
                 puts "      #{variation}: #{value}"
@@ -725,61 +726,20 @@ class Hiiro
 
     private
 
-    # Normalize env file config into an array of hashes,
-    # supporting both old single-env format and new env_files array
-    def build_env_file_configs(svc)
-      if svc[:env_files]
-        Array(svc[:env_files]).map { |ef| symbolize_keys(ef.is_a?(Hash) ? ef : {}) }
-      elsif svc[:env_file] || svc[:base_env] || svc[:env_vars]
-        [{ env_file: svc[:env_file], base_env: svc[:base_env], env_vars: svc[:env_vars] }]
-      else
-        []
-      end
-    end
-
-    def prepare_single_env(base_dir, efc, variation_overrides)
-      env_file = efc[:env_file]
-      base_env = efc[:base_env]
-      env_vars = efc[:env_vars]
+    def prepare_single_env(env_file, variation_overrides)
+      dest = env_file.destination_path
 
       # Copy base env template if configured
-      if base_env && env_file
-        src = File.join(ENV_TEMPLATES_DIR, base_env)
-        dest = File.join(base_dir, env_file)
-        if File.exist?(src)
-          FileUtils.mkdir_p(File.dirname(dest))
-          FileUtils.cp(src, dest)
-        end
+      if env_file.template_path && dest && File.exist?(env_file.template_path)
+        FileUtils.mkdir_p(File.dirname(dest))
+        FileUtils.cp(env_file.template_path, dest)
       end
 
       # Inject variation values into env file
-      return unless env_vars && env_file
+      return unless dest && env_file.spec[:env_vars]
 
-      dest = File.join(base_dir, env_file)
-      lines = File.exist?(dest) ? File.readlines(dest) : []
-
-      env_vars.each do |var_name, var_config|
-        var_config = symbolize_keys(var_config) if var_config.is_a?(Hash)
-        variations = var_config.is_a?(Hash) && (var_config[:variations] || var_config['variations'])
-        next unless variations
-
-        variation = (variation_overrides[var_name] || variation_overrides[var_name.to_sym] || 'local').to_s
-        value = variations[variation]
-        next unless value
-
-        replaced = false
-        lines.map! do |line|
-          if line.match?(/\A#{Regexp.escape(var_name.to_s)}=/)
-            replaced = true
-            "#{var_name}=#{value}\n"
-          else
-            line
-          end
-        end
-        lines << "#{var_name}=#{value}\n" unless replaced
-      end
-
-      File.write(dest, lines.join)
+      existing = File.exist?(dest) ? File.readlines(dest) : []
+      File.write(dest, env_file.desired_content(existing, variation_overrides).join)
     end
 
     def stale_pane?(pane_id)
@@ -885,13 +845,15 @@ class Hiiro
       hash.each_with_object({}) { |(k, v), h| h[k.to_sym] = v }
     end
 
+    def git_root
+      git_root = `git rev-parse --show-toplevel 2>/dev/null`.chomp
+      git_root.empty? ? Dir.pwd : git_root
+    end
+
     def resolve_base_dir(base_dir)
       return Dir.pwd if base_dir.nil? || base_dir.to_s.empty?
 
-      git_root = `git rev-parse --show-toplevel 2>/dev/null`.chomp
-      root = git_root.empty? ? Dir.pwd : git_root
-
-      File.join(root, base_dir)
+      File.join(git_root, base_dir)
     end
   end
 end

@@ -155,8 +155,26 @@ class Hiiro
       end
     end
 
+    # Cardinality and resolution answers shared by every result shape.
+    # Including classes provide #matches, #all_items and #query.
+    module ResultQueries
+      def count       = matches.count
+      def ambiguous?  = count > 1
+      def one?        = count == 1
+      def match?      = matches.any?
+      def exact_match = all_items.find { |item| item.extracted_item == query }
+      def exact?      = !exact_match.nil?
+      def match       = one? ? matches.first : nil
+      # resolve semantics: exact match, or single match, otherwise nil
+      def resolved    = exact_match || match
+      # find semantics: first match even when ambiguous
+      def first       = matches.first
+    end
+
     class Result
+      include ResultQueries
       attr_reader :matcher, :all_items, :key, :block, :pattern, :match_type
+      alias query pattern
 
       def initialize(matcher:, all_items:, pattern:, match_type: :prefix, key: nil, block: nil)
         @matcher = matcher
@@ -185,47 +203,12 @@ class Hiiro
         }
       end
 
-      def count
-        matches.count
-      end
-
-      def ambiguous?
-        count > 1
-      end
-
-      def exact_match
-        all_items.find { |item| item.extracted_item == pattern }
-      end
-
-      def match
-        one? ? matches.first : nil
-      end
-
-      def match?
-        matches.any?
-      end
-
-      def exact?
-        !exact_match.nil?
-      end
-
-      def one?
-        count == 1
-      end
-
-      # Returns item for resolve semantics: exact match, or single match, otherwise nil
-      def resolved
-        exact_match || match
-      end
-
-      # Returns the first matching item (for find semantics)
-      def first
-        matches.first
-      end
     end
 
     class PathResult
+      include ResultQueries
       attr_reader :matcher, :all_items, :key, :block, :prefix
+      alias query prefix
 
       def initialize(matcher:, all_items:, prefix:, key: nil, block: nil)
         @matcher = matcher
@@ -251,43 +234,6 @@ class Hiiro
         end
       end
 
-      def count
-        matches.count
-      end
-
-      def ambiguous?
-        count > 1
-      end
-
-      def exact_match
-        all_items.find { |item| item.extracted_item == prefix }
-      end
-
-      def match
-        one? ? matches.first : nil
-      end
-
-      def match?
-        matches.any?
-      end
-
-      def exact?
-        !exact_match.nil?
-      end
-
-      def one?
-        count == 1
-      end
-
-      # Returns item for resolve semantics: exact match, or single match, otherwise nil
-      def resolved
-        exact_match || match
-      end
-
-      # Returns the first matching item (for find semantics)
-      def first
-        matches.first
-      end
     end
   end
 

@@ -187,6 +187,8 @@ Hiiro::Matcher.by_prefix(items, "pre", key: :name)
 Hiiro::Matcher.by_substring(items, "abc", key: :name)
 ```
 
+`Result` and `PathResult` share their cardinality/resolution answers through `Hiiro::Matcher::ResultQueries` (`count`, `one?`, `ambiguous?`, `match?`, `exact_match`, `exact?`, `match`, `resolved`, `first`); both expose the original query as `query`.
+
 Note: `Hiiro::PrefixMatcher` is aliased to `Hiiro::Matcher` for backward compatibility.
 
 ### Hiiro::Git (lib/hiiro/git.rb)
@@ -369,6 +371,28 @@ loc.target                                    # pane_id || tab_id || workspace_i
 loc.to_meta                                   # inverse of from_meta (queue/service metadata)
 ```
 
+### Hiiro::Link / Hiiro::URLTemplate (lib/hiiro/link.rb)
+
+`bin/h-link` uses `Hiiro::Link` directly (its inline `LinkManager::Link` copy is gone). `Link.from_hash(yaml_row)` builds an unsaved instance; `to_h` / `to_yaml` give the links.yml shape.
+
+```ruby
+t = Hiiro::URLTemplate.new('https://x/{org}/{repo}', values: { 'org' => 'a b' })
+t.placeholders     # ['org', 'repo']     t.placeholders?   # true
+t.missing_values   # ['repo']            t.complete?       # false
+t.url              # 'https://x/a+b/{repo}'  (spaces → '+', nothing else is encoded)
+```
+
+### Hiiro::PsProcess::Snapshot / OpenFiles (lib/hiiro/ps_process.rb)
+
+```ruby
+snap = Hiiro::PsProcess::Snapshot.capture      # one `ps awwux`; .processes .captured_at
+snap.by_pid(pid) / snap.with_pids(set) / snap.matching(pattern) / snap.parent_of(pid) / snap.children_of(pid)
+of = Hiiro::PsProcess::OpenFiles.for_pid(pid)  # one lsof; also .for_port(port), .in_dir(path), for_pid(pid, network_only: true)
+of.pids / of.cwd / of.files / of.sockets / of.failed   # failed = lsof exited non-zero (not the same as empty)
+```
+
+`PsProcess.by_port`, `.in_dirs`, `#files`, `#ports`, `#dir`, `#parent`, `#children` keep their shapes and read through these.
+
 ### Hiiro::Duration / Hiiro::TimeInput (lib/hiiro/duration.rb, lib/hiiro/time_input.rb)
 
 Value objects behind `h date`, `h time`, and `h remind` (formerly duplicated helpers in each bin):
@@ -391,7 +415,12 @@ Utility for piping content to external commands:
 ```ruby
 Hiiro::Shell.pipe("content", "pbcopy")           # Pipe string to command
 Hiiro::Shell.pipe_lines(["a", "b"], "command")   # Join array with newlines and pipe
+result = Hiiro::Shell.run('cmd', 'arg', SOME_ENV: 'x')   # Result: stdout, stderr, status, success?, lines, plain_text
+result.spec      # Hiiro::CommandSpecification — argv, env (normalized to strings), cwd, preview, open3_args
+result.command   # spec.preview, e.g. "cmd arg"
 ```
+
+`run`, `run_combined`, `run3`, `stream`, and `stream_combined` all build one `CommandSpecification` and attach it to the `Result`.
 
 ### Hiiro::Options (lib/hiiro/options.rb)
 
@@ -406,6 +435,8 @@ opts.output    # Value of --output or -o
 opts.verbose   # true if --verbose or -v was passed
 opts.args      # Remaining non-option arguments
 ```
+
+The declared options live in a `Hiiro::OptionSet` (`options.option_set`), which both `Options` and the parsed `Args` use for `help_text`, `hint`, `definition_for('--out' | '-o' | :out)`, `defaults`, `subset(names)`, and `conflicts_for(name)` (mutual-exclusion star topology).
 
 ### Hiiro::Notification (lib/hiiro/notification.rb)
 
@@ -437,7 +468,9 @@ Subcommands (`h queue <subcmd>`):
 Config: `~/.config/hiiro/queue/{wip,pending,running,done,failed}/`
 
 Key internals:
-- `Queue::Prompt` - Parses frontmatter to resolve task/tree/session for working directory
+- `Queue::Entry` - `Entry.find(dirs, name)` / `Entry.in(dirs, status)`; answers `prompt_path`, `meta_path`, `launcher_path`, `body_path`, `companion_files`, `modified_at`, `meta`, `preview`, `prompt`, `execution`, `moved_to(status)`, `to_h` ({ name:, status: }). `Queue#entry_for(name, status)` builds one; `tasks_in`, `all_tasks`, `meta_for`, `task_preview`, `find_task` are thin wrappers over it.
+- `Queue::Execution` - snapshot of a running entry's `.meta`: `started_at`, `elapsed` (Duration), `elapsed_minutes`, `working_directory`, `location` (Herdr::Location), `attach_target`
+- `Queue::Prompt` - Parses frontmatter to resolve task/tree/session for working directory; retains `path`; `body` strips frontmatter; `Prompt.frontmatter_lines(task_info:, ignore:, hints:)` is the editor template shared by add/wip
 - Tasks launch in tmux windows within the task's session (from frontmatter) or default `hq` session
 - Launcher script runs `cat prompt | claude`, then moves files to done/failed based on exit code
 
@@ -489,6 +522,9 @@ my-stack:
 ```
 
 Key internals:
+- `Hiiro::ServiceDefinition` (lib/hiiro/service_definition.rb) - `sm.definition_for(name)`; answers `base_directory`, `host`, `port`, `url`, `init_commands`, `start_command`, `stop_command`, `cleanup_commands`, `environment_files`
+- `Hiiro::EnvironmentFile` - one env file of a service: `template_path`, `destination_path`, `variables` ({ VAR => { variation => value } }), `selected_variation(var, overrides)` (default `local`), `effective_values(overrides)`, `desired_content(existing_lines, overrides)`. `h service env` displays it and `prepare_env` writes it; both read the same object.
+- `Hiiro::ServiceGroup` - `sm.group_definition_for(name)` / `ServiceGroup.from_config(name, cfg)`; `service_names`, `overrides_for(service_name)`
 - `prepare_env(svc_name, variation_overrides:)` - Copies base_env template from `~/.config/hiiro/env_templates/` to `base_dir/env_file`, then injects variation values
 - `find_group(name)` / `start_group(name, ...)` - Detect and start service groups, applying per-member `use:` overrides
 - Default variation is `local` when not specified

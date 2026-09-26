@@ -1,11 +1,26 @@
 require 'open3'
+require 'shellwords'
 
 class Hiiro
+  # What Shell ran: argv, environment (normalized to strings), working directory.
+  class CommandSpecification
+    attr_reader :argv, :env, :cwd
+
+    def initialize(*argv, env: {}, cwd: nil)
+      @argv = argv.flatten
+      @env  = env.transform_keys(&:to_s).transform_values(&:to_s)
+      @cwd  = cwd
+    end
+
+    def preview    = Shellwords.join(argv)
+    def open3_args = cwd ? [env, *argv, { chdir: cwd }] : [env, *argv]
+    def to_s       = preview
+  end
+
   class Shell
     def self.capture_output(*command, **env)
-      env = env.transform_keys(&:to_s).transform_values(&:to_s)
-
-      stdout, status = Open3.capture2(env, *command)
+      spec = CommandSpecification.new(*command, env: env)
+      stdout, _status = Open3.capture2(*spec.open3_args)
       stdout
     end
 
@@ -24,21 +39,21 @@ class Hiiro
     end
 
     def self.run(*command, **env)
-      env = env.transform_keys(&:to_s).transform_values(&:to_s)
-      stdout, status = Open3.capture2(env, *command)
-      Result.new(stdout, status)
+      spec = CommandSpecification.new(*command, env: env)
+      stdout, status = Open3.capture2(*spec.open3_args)
+      Result.new(stdout, status, spec: spec)
     end
 
     def self.run_combined(*command, **env)
-      env = env.transform_keys(&:to_s).transform_values(&:to_s)
-      output, status = Open3.capture2e(env, *command)
-      Result.new(output, status)
+      spec = CommandSpecification.new(*command, env: env)
+      output, status = Open3.capture2e(*spec.open3_args)
+      Result.new(output, status, spec: spec)
     end
 
     def self.run3(*command, **env)
-      env = env.transform_keys(&:to_s).transform_values(&:to_s)
-      stdout, stderr, status = Open3.capture3(env, *command)
-      Result.new(stdout, status, stderr: stderr)
+      spec = CommandSpecification.new(*command, env: env)
+      stdout, stderr, status = Open3.capture3(*spec.open3_args)
+      Result.new(stdout, status, stderr: stderr, spec: spec)
     end
 
     # Stream stdout live to $stdout as chunks arrive, buffering for Result.
@@ -60,18 +75,18 @@ class Hiiro
     #
     # stream_combined replaces that pattern — stderr merged in, one Result back.
     def self.stream(*command, tee: $stdout, **env)
-      env = env.transform_keys(&:to_s).transform_values(&:to_s)
-      Open3.popen2(env, *command) do |stdin, stdout, wait_thr|
+      spec = CommandSpecification.new(*command, env: env)
+      Open3.popen2(*spec.open3_args) do |stdin, stdout, wait_thr|
         stdin.close
-        return Result.collect_chunks(stdout, wait_thr, tee: tee)
+        return Result.collect_chunks(stdout, wait_thr, tee: tee, spec: spec)
       end
     end
 
     def self.stream_combined(*command, tee: $stdout, **env)
-      env = env.transform_keys(&:to_s).transform_values(&:to_s)
-      Open3.popen2e(env, *command) do |stdin, stdout_err, wait_thr|
+      spec = CommandSpecification.new(*command, env: env)
+      Open3.popen2e(*spec.open3_args) do |stdin, stdout_err, wait_thr|
         stdin.close
-        return Result.collect_chunks(stdout_err, wait_thr, tee: tee)
+        return Result.collect_chunks(stdout_err, wait_thr, tee: tee, spec: spec)
       end
     end
   end
@@ -80,7 +95,7 @@ class Hiiro
     # Factory: reads chunks from an IO (popen handle), optionally tee-ing
     # each chunk to `tee` as it arrives. Used by Shell.stream / stream_combined.
     # Pass tee: nil to capture without printing.
-    def self.collect_chunks(io, wait_thr, tee: $stdout)
+    def self.collect_chunks(io, wait_thr, tee: $stdout, spec: nil)
       output = +""
       loop do
         chunk = io.readpartial(4096)
@@ -90,7 +105,7 @@ class Hiiro
       rescue EOFError
         break
       end
-      new(output, wait_thr.value)
+      new(output, wait_thr.value, spec: spec)
     end
 
     # Matches the full ANSI/VT100 escape sequence spec:
@@ -99,13 +114,17 @@ class Hiiro
     # \x20-\x2f used instead of space-to-slash to avoid ambiguity with the / regex delimiter.
     ANSI_PATTERN = /\e(?:\[[0-?]*[\x20-\x2f]*[@-~]|[^\[])/
 
-    attr_reader :stdout, :stderr, :status
+    attr_reader :stdout, :stderr, :status, :spec
 
-    def initialize(stdout, status, stderr: nil)
+    def initialize(stdout, status, stderr: nil, spec: nil)
       @stdout = stdout
       @stderr = stderr
       @status = status
+      @spec   = spec
     end
+
+    # The command that produced this result, when known.
+    def command = spec&.preview
 
     def success?
       status.success?

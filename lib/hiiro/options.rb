@@ -1,4 +1,58 @@
 class Hiiro
+  # The declared options of a command: definitions plus mutual-exclusion groups.
+  # Answers help/hint text, token lookup, defaults, and conflicts for both the
+  # declaring side (Options) and the parsed side (Options::Args).
+  class OptionSet
+    attr_reader :definitions, :mutex_groups
+
+    def initialize(definitions, mutex_groups: [])
+      @definitions = definitions
+      @mutex_groups = mutex_groups
+    end
+
+    def help_text
+      lines = definitions.reject { |name, _| name == :help }.map { |_, defn| defn.usage_line }
+      lines << definitions[:help].usage_line
+      lines.join("\n")
+    end
+
+    def hint
+      definitions
+        .reject { |k, _| k == :help }
+        .map { |_, d| d.flag? ? d.long_form : "#{d.long_form} <val>" }
+        .map { |s| "[#{s}]" }
+        .join(' ')
+    end
+
+    # '--name' | '-n' | :name → Definition or nil
+    def definition_for(token)
+      text = token.to_s
+      if text.start_with?('--')
+        definitions.values.find { |d| d.long_form == text }
+      elsif text.start_with?('-') && text.length == 2
+        definitions.values.find { |d| d.short == text[1] }
+      else
+        definitions[text.to_sym]
+      end
+    end
+
+    def defaults
+      definitions.to_h { |name, defn| [name, defn.multi ? [] : defn.default] }
+    end
+
+    def subset(names)
+      self.class.new(definitions.slice(*names.map(&:to_sym)), mutex_groups: mutex_groups)
+    end
+
+    # Names reset when `name` is set. Star topology: the hub clears its spokes,
+    # a spoke clears only the hub.
+    def conflicts_for(name)
+      mutex_groups.select { |group| group.include?(name) }.flat_map do |hub, *spokes|
+        name == hub ? spokes : [hub]
+      end
+    end
+  end
+
   class Options
     attr_reader :definitions
 
@@ -31,23 +85,12 @@ class Hiiro
       instance_eval(&block) if block
     end
 
-    def help_text
-      lines = []
-      @definitions.each do |name, defn|
-        next if name == :help
-        lines << defn.usage_line
-      end
-      lines << @definitions[:help].usage_line
-      lines.join("\n")
+    def option_set
+      OptionSet.new(@definitions, mutex_groups: @mutex_groups || [])
     end
 
-    def hint
-      @definitions
-        .reject { |k, _| k == :help }
-        .map { |_, d| d.flag? ? d.long_form : "#{d.long_form} <val>" }
-        .map { |s| "[#{s}]" }
-        .join(' ')
-    end
+    def help_text = option_set.help_text
+    def hint      = option_set.hint
 
     def flag(name, long: nil, short: nil, default: false, desc: nil)
       defn = Definition.new(name, long: long, short: short, type: :flag, default: default, desc: desc)
@@ -104,7 +147,7 @@ class Hiiro
     end
 
     def parse(args)
-      Args.new(@definitions, args.flatten.compact, mutex_groups: @mutex_groups || [])
+      Args.new(option_set, args.flatten.compact)
     end
 
     def parse!(args)
@@ -115,9 +158,9 @@ class Hiiro
       attr_reader :remaining_args, :original_args
       alias args remaining_args
 
-      def initialize(definitions, raw_args, mutex_groups: [])
-        @definitions = definitions
-        @mutex_groups = mutex_groups
+      def initialize(option_set, raw_args)
+        @option_set = option_set
+        @definitions = option_set.definitions
         @original_args = raw_args.dup.freeze
         @values = {}
         @remaining_args = []
@@ -151,15 +194,7 @@ class Hiiro
         @values[:help]
       end
 
-      def help_text
-        lines = []
-        @definitions.each do |name, defn|
-          next if name == :help
-          lines << defn.usage_line
-        end
-        lines << @definitions[:help].usage_line
-        lines.join("\n")
-      end
+      def help_text = @option_set.help_text
 
       def to_h
         @values.dup
@@ -182,9 +217,7 @@ class Hiiro
       end
 
       def do_parse(args)
-        @definitions.each do |name, defn|
-          @values[name] = defn.multi ? [] : defn.default
-        end
+        @values = @option_set.defaults
 
         while args.any?
           arg = args.shift
@@ -207,7 +240,7 @@ class Hiiro
         flag_part = parts[0]
         value     = parts[1]
 
-        defn = @definitions.values.find { |d| d.long_form == flag_part }
+        defn = @option_set.definition_for(flag_part)
         return unless defn
 
         if defn.flag? || defn.flag_active?(@values)
@@ -221,13 +254,13 @@ class Hiiro
       def parse_short_options(arg, args)
         chars = arg.sub(/^-/, '').chars
 
-        unless chars.any? { |c| @definitions.values.find { |d| d.short == c } }
+        unless chars.any? { |c| @option_set.definition_for("-#{c}") }
           @remaining_args << arg
           return
         end
 
         chars.each_with_index do |char, idx|
-          defn = @definitions.values.find { |d| d.short == char }
+          defn = @option_set.definition_for("-#{char}")
           next unless defn
 
           if defn.flag? || defn.flag_active?(@values)
@@ -247,18 +280,9 @@ class Hiiro
         #   Setting a spoke   → clears only the hub (group[0])
         # This lets spokes coexist with each other (e.g. --red --drafts is fine)
         # while still preventing any spoke from combining with the hub (--all).
-        @mutex_groups.each do |group|
-          next unless group.include?(defn.name)
-          hub, *spokes = group
-          if defn.name == hub
-            spokes.each do |spoke|
-              spoke_defn = @definitions[spoke]
-              @values[spoke] = spoke_defn.default if spoke_defn
-            end
-          else
-            hub_defn = @definitions[hub]
-            @values[hub] = hub_defn.default if hub_defn
-          end
+        @option_set.conflicts_for(defn.name).each do |other|
+          other_defn = @definitions[other]
+          @values[other] = other_defn.default if other_defn
         end
         @values[defn.name] = value
       end

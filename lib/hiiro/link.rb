@@ -18,6 +18,18 @@ class Hiiro
     def tags     = Hiiro::Tag.for(self).map(&:name)
     def tags=(v) ; self.tags_json = Hiiro::DB::JSON.dump(v); end
 
+    # Unsaved instance from a string-keyed hash (the links.yml shape).
+    def self.from_hash(hash)
+      new(
+        url:         hash['url'],
+        description: hash['description'] || '',
+        shorthand:   hash['shorthand'],
+        created_at:  hash['created_at'] || Time.now.iso8601,
+      )
+    end
+
+    def to_yaml(*) = to_h.to_yaml
+
     def self.find_by_shorthand(s)
       where(shorthand: s).first
     end
@@ -56,6 +68,31 @@ class Hiiro
         'shorthand'   => shorthand,
         'created_at'  => created_at
       }
+    end
+  end
+
+  # A link URL with {placeholder} slots and the values chosen for them.
+  # Substitution only turns spaces into '+', as h-link always has.
+  class URLTemplate
+    PLACEHOLDER = /\{(\w+)\}/
+
+    attr_reader :source_url, :values, :link
+
+    def initialize(source_url, values: {}, link: nil)
+      @source_url = source_url.to_s
+      @values = values || {}
+      @link = link
+    end
+
+    def placeholders   = source_url.scan(PLACEHOLDER).flatten
+    def placeholders?  = !placeholders.empty?
+    def missing_values = placeholders.reject { |name| values.key?(name) || values.key?(name.to_sym) }
+    def complete?      = missing_values.empty?
+
+    def url
+      values.each_with_object(source_url.dup) do |(key, value), result|
+        result.gsub!("{#{key}}", value.to_s.gsub(' ', '+'))
+      end
     end
   end
 end
