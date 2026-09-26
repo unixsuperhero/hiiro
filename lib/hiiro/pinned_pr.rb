@@ -93,6 +93,13 @@ class Hiiro
       where(number: n, pinned: true).first
     end
 
+    # Repository-qualified lookup. Rows with no repo recorded still match by number.
+    def self.find_by_reference(ref)
+      scope = where(number: ref.number, pinned: true)
+      scope = scope.where(Sequel.|({ repo: ref.repo.path }, { repo: nil })) if ref.repo
+      scope.first
+    end
+
     # Sync the check_runs table for this PR from the cached check_runs_json blob.
     def sync_check_runs
       runs = Hiiro::DB::JSON.load(check_runs_json)
@@ -197,9 +204,12 @@ class Hiiro
     def draft?       = is_draft == true
     def conflicting? = mergeable == 'CONFLICTING'
 
-    def red?     = (c = checks) && c['failed'].to_i > 0
-    def green?   = (c = checks) && c['failed'].to_i == 0 && c['pending'].to_i == 0 && c['success'].to_i > 0
-    def pending? = (c = checks) && c['pending'].to_i > 0 && c['failed'].to_i == 0
+    def check_summary = Hiiro::CheckSummary.from_counts(checks, contexts: check_runs)
+    def reference     = Hiiro::PullRequestReference.new(number: number, repo: Hiiro::RepositoryIdentity.parse(repo || url))
+
+    def red?     = check_summary&.red?
+    def green?   = check_summary&.green?
+    def pending? = check_summary&.pending?
 
     def active?    = !merged? && !closed?
     def drafts?    = draft?

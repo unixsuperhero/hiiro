@@ -235,12 +235,8 @@ Hiiro.run(*ARGV) do
       selected, status = Open3.capture2('sk', '--no-sort', stdin_data: lines.keys.join("\n"))
       return nil unless status.success? && !selected.strip.empty?
       lines[selected.chomp]
-    elsif arg.to_s =~ %r{/pull/(\d+)}
-      num = $1
-      pinned.find { |pr| pr.number.to_s == num }
-    elsif arg.to_s =~ /^#?(\d+)$/
-      num = $1
-      pinned.find { |pr| pr.number.to_s == num }
+    elsif (ref = Hiiro::PullRequestReference.parse(arg))
+      pinned.find { |pr| ref.matches?(pr) }
     end
   }
 
@@ -857,105 +853,51 @@ Hiiro.run(*ARGV) do
   }
 
   add_subcmd(:diff) { |*diff_args|
-    case diff_args.length
-    when 0
-      base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
-      range = "#{base}..HEAD"
-    when 1
-      range = "#{diff_args[0]}..HEAD"
-    else
-      from, to = diff_args[0..1]
-      range = "#{from}..#{to}"
-    end
-
-    system('git', 'log', '--oneline', '--decorate', range)
+    cmp = git.compare(source: diff_args[1] || 'HEAD', target: diff_args[0], base_policy: :local_main, fallback: 'HEAD~1')
+    system('git', 'log', '--oneline', '--decorate', cmp.two_dot_range)
   }
 
   add_subcmd(:changed) { |*changed_args|
     show_all = changed_args.delete('-a') || changed_args.delete('--all')
-    upstream = changed_args.first
+    cmp = git.compare(target: changed_args.first, base_policy: :remote_first)
 
-    upstream ||= %w[origin/master master origin/main main].find { |ref|
-      system("git rev-parse --verify #{ref} >/dev/null 2>&1")
-    }
-
-    unless upstream
+    unless cmp.resolved?
       puts "Cannot find master or origin/master"
       next
     end
 
-    forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
-    if forkpoint.empty?
-      forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
-    end
-
-    if forkpoint.empty?
+    unless cmp.fork_point
       puts "Could not find fork point"
       next
     end
 
-    if show_all
-      system('git', 'diff', '--name-only', "#{forkpoint}...HEAD")
-    else
-      system('git', 'diff', '--name-only', '--relative', "#{forkpoint}...HEAD")
-    end
+    puts cmp.changed_paths(relative: !show_all)
   }
 
   add_subcmd(:ahead) { |*ahead_args|
-    case ahead_args.length
-    when 0
-      base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
-      ahead_of = base
-      branch = 'HEAD'
-    when 1
-      ahead_of = ahead_args[0]
-      branch = 'HEAD'
-    else
-      ahead_of, branch = ahead_args[0..1]
-    end
-
-    count = `git rev-list --count #{ahead_of}..#{branch}`.strip.to_i
-    puts "#{branch} is #{count} commit(s) ahead of #{ahead_of}"
+    cmp = git.compare(source: ahead_args[1] || 'HEAD', target: ahead_args[0], base_policy: :local_main, fallback: 'HEAD~1')
+    puts "#{cmp.source} is #{cmp.ahead} commit(s) ahead of #{cmp.target}"
   }
 
   add_subcmd(:behind) { |*behind_args|
-    case behind_args.length
-    when 0
-      base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") } || 'HEAD~1'
-      behind_of = base
-      branch = 'HEAD'
-    when 1
-      behind_of = behind_args[0]
-      branch = 'HEAD'
-    else
-      behind_of, branch = behind_args[0..1]
-    end
-
-    count = `git rev-list --count #{branch}..#{behind_of}`.strip.to_i
-    puts "#{branch} is #{count} commit(s) behind #{behind_of}"
+    cmp = git.compare(source: behind_args[1] || 'HEAD', target: behind_args[0], base_policy: :local_main, fallback: 'HEAD~1')
+    puts "#{cmp.source} is #{cmp.behind} commit(s) behind #{cmp.target}"
   }
 
   add_subcmd(:log) { |upstream = nil|
-    upstream ||= %w[origin/master master origin/main main].find { |ref|
-      system("git rev-parse --verify #{ref} >/dev/null 2>&1")
-    }
+    cmp = git.compare(target: upstream, base_policy: :remote_first)
 
-    unless upstream
+    unless cmp.resolved?
       puts "Cannot find master or origin/master"
       next
     end
 
-    forkpoint = `git merge-base --fork-point #{upstream} HEAD 2>/dev/null`.strip
-    if forkpoint.empty?
-      forkpoint = `git merge-base #{upstream} HEAD 2>/dev/null`.strip
-    end
-
-    if forkpoint.empty?
+    unless cmp.fork_point
       puts "Could not find fork point"
       next
     end
 
-    system('git', 'log', '--oneline', '--decorate', "#{forkpoint}..HEAD")
+    system('git', 'log', '--oneline', '--decorate', cmp.fork_range)
   }
 
   add_subcmd(:q, :query) { |*args|
@@ -1001,50 +943,32 @@ Hiiro.run(*ARGV) do
   }
 
   add_subcmd(:forkpoint) { |upstream = nil, branch = nil|
-    branch ||= 'HEAD'
-    upstream ||= %w[origin/master master origin/main main].find { |ref|
-      system("git rev-parse --verify #{ref} >/dev/null 2>&1")
-    }
+    cmp = git.compare(source: branch || 'HEAD', target: upstream, base_policy: :remote_first)
 
-    unless upstream
+    unless cmp.resolved?
       puts "Cannot find master or origin/master"
       next
     end
 
-    forkpoint = `git merge-base --fork-point #{upstream} #{branch} 2>/dev/null`.strip
-
-    if forkpoint.empty?
-      forkpoint = `git merge-base #{upstream} #{branch} 2>/dev/null`.strip
-    end
-
-    if forkpoint.empty?
-      puts "Could not find fork point between #{upstream} and #{branch}"
+    if cmp.fork_point
+      puts cmp.fork_point
     else
-      puts forkpoint
+      puts "Could not find fork point between #{cmp.target} and #{cmp.source}"
     end
   }
 
   add_subcmd(:ancestor) { |*ancestor_args|
-    case ancestor_args.length
-    when 0
-      base = %w[main master].find { |b| system("git rev-parse --verify #{b} >/dev/null 2>&1") }
-      unless base
-        puts "Cannot find main or master branch"
-        next
-      end
-      ancestor = base
-      descendant = 'HEAD'
-    when 1
-      ancestor = ancestor_args[0]
-      descendant = 'HEAD'
-    else
-      ancestor, descendant = ancestor_args[0..1]
+    cmp = git.compare(source: ancestor_args[1] || 'HEAD', target: ancestor_args[0], base_policy: :local_main)
+
+    unless cmp.resolved?
+      puts "Cannot find main or master branch"
+      next
     end
 
-    if system("git merge-base --is-ancestor #{ancestor} #{descendant}")
-      puts "Yes, #{ancestor} is an ancestor of #{descendant}"
+    if cmp.ancestor?
+      puts "Yes, #{cmp.target} is an ancestor of #{cmp.source}"
     else
-      puts "No, #{ancestor} is NOT an ancestor of #{descendant}"
+      puts "No, #{cmp.target} is NOT an ancestor of #{cmp.source}"
     end
   }
 end

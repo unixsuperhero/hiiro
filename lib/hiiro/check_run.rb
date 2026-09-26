@@ -22,14 +22,7 @@ class Hiiro
       where(pr_number: number.to_i).delete
       Array(runs).each do |run|
         next unless run.is_a?(Hash)
-        insert(
-          pr_number:  number.to_i,
-          name:       run['name']&.to_s,
-          url:        (run['url'] || run['detailsUrl'])&.to_s,
-          status:     run['status']&.to_s,
-          conclusion: run['conclusion']&.to_s,
-          updated_at: Time.now.iso8601
-        )
+        insert(Hiiro::CheckContext.from_node(run).to_row(pr_number: number.to_i))
       end
     end
   end

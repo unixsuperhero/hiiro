@@ -4,7 +4,7 @@ class Hiiro
   class Git
     class Pr
       PINNED_FILE = Hiiro::Config.path('pinned_prs.yml')
-      FAILED_CONCLUSIONS = %w[FAILURE ERROR TIMED_OUT STALE STARTUP_FAILURE ACTION_REQUIRED].freeze
+      FAILED_CONCLUSIONS = Hiiro::CheckContext::FAILED_CONCLUSIONS
 
       attr_accessor :number, :title, :state, :url, :head_branch, :base_branch,
                     :repo, :slot, :is_draft, :mergeable, :review_decision,
@@ -21,34 +21,21 @@ class Hiiro
       end
 
       def self.is_link?(link)
-        temp_link = link.to_s
-        return false unless temp_link.match?('github.com') && temp_link.match?(/pull\/[0-9]+/)
-
-        true
+        !Hiiro::PullRequestReference.from_url(link).nil?
       end
 
       def self.from_link(link)
-        return nil unless is_link?(link)
-
-        number = link[/pull\/(\d+)/].sub(/\D*/, '')
-        owner, name, _ = link.sub(/.*github.com./, '').split(?/, 3)
-        new(
-          number: number,
-          url: link,
-          repo: [owner, name].join(?/),
-        )
+        ref = Hiiro::PullRequestReference.from_url(link) or return nil
+        new(number: ref.number_string, url: link, repo: ref.repo.path)
       end
 
       def self.from_number(number)
-        number = number.to_s.strip[/^\d+$/]
-        return if number&.length == 0
-
-        new(number: number)
+        ref = Hiiro::PullRequestReference.parse(number) or return nil
+        new(number: ref.number_string)
       end
 
       def self.repo_from_url(url)
-        return nil unless url
-        url.match(%r{github\.com/([^/]+/[^/]+)/pull/})&.[](1)
+        Hiiro::PullRequestReference.from_url(url)&.repo&.path
       end
 
       # Build a Pr from a stored YAML hash. Handles both camelCase keys (legacy)
@@ -134,28 +121,7 @@ class Hiiro
       # frozen = number of failed contexts that are specifically the ISC code freeze check.
       # truncated: true is added when pagination couldn't retrieve all checks.
       def self.summarize_checks(rollup, truncated: false)
-        return nil unless rollup
-
-        contexts = rollup.is_a?(Array) ? rollup : []
-        return nil if contexts.empty?
-
-        total   = contexts.length
-        success = contexts.count { |c| c['conclusion'] == 'SUCCESS' || c['state'] == 'SUCCESS' }
-        pending = contexts.count do |c|
-          %w[QUEUED IN_PROGRESS PENDING REQUESTED WAITING].include?(c['status']) ||
-            c['state'] == 'PENDING'
-        end
-        failed  = contexts.count do |c|
-          FAILED_CONCLUSIONS.include?(c['conclusion']) || %w[FAILURE ERROR].include?(c['state'])
-        end
-        frozen  = contexts.count do |c|
-          c['context'] == 'ISC code freeze' &&
-            (FAILED_CONCLUSIONS.include?(c['conclusion']) || %w[FAILURE ERROR].include?(c['state']))
-        end
-
-        result = { 'total' => total, 'success' => success, 'pending' => pending, 'failed' => failed, 'frozen' => frozen }
-        result['truncated'] = true if truncated
-        result
+        Hiiro::CheckSummary.from_rollup(rollup, truncated: truncated)&.to_h
       end
 
       # Summarizes raw review nodes into { approved, changes_requested, commented, reviewers }.
@@ -234,10 +200,19 @@ class Hiiro
       def draft?       = is_draft == true
       def conflicting? = mergeable == 'CONFLICTING'
 
+      # Checks as a CheckSummary (nil when no checks are known).
+      def check_summary
+        Hiiro::CheckSummary.from_counts(checks, contexts: check_runs)
+      end
+
+      def reference
+        Hiiro::PullRequestReference.new(number: number, repo: Hiiro::RepositoryIdentity.parse(repo || url))
+      end
+
       # Check-status predicates
-      def red?     = (c = checks) && c['failed'].to_i > 0
-      def green?   = (c = checks) && c['failed'].to_i == 0 && c['pending'].to_i == 0 && c['success'].to_i > 0
-      def pending? = (c = checks) && c['pending'].to_i > 0 && c['failed'].to_i == 0
+      def red?     = check_summary&.red?
+      def green?   = check_summary&.green?
+      def pending? = check_summary&.pending?
 
       # Aliases matching filter option names
       def active?    = !merged? && !closed?

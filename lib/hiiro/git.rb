@@ -4,6 +4,7 @@ require_relative 'git/branch'
 require_relative 'git/branches'
 require_relative 'git/remote'
 require_relative 'git/pr'
+require_relative 'git/branch_comparison'
 
 class Hiiro
   class Git
@@ -89,6 +90,36 @@ class Hiiro
 
     def branch_exists?(name)
       run_success?('show-ref', '--verify', '--quiet', "refs/heads/#{name}")
+    end
+
+    # Any ref git can resolve (branch, remote branch, tag, sha).
+    def ref_exists?(ref)
+      run_success?('rev-parse', '--verify', '--quiet', ref)
+    end
+
+    # Ref comparison; the base policy is chosen at the call site.
+    # See BranchComparison::BASE_POLICIES.
+    def compare(source: 'HEAD', target: nil, base_policy: :local_main, fallback: nil)
+      BranchComparison.build(self, source: source, target: target, base_policy: base_policy, fallback: fallback)
+    end
+
+    def rev_list_count(range)
+      run_safe('rev-list', '--count', range).to_i
+    end
+
+    def merge_base(a, b, fork_point: false)
+      fork_point ? run_safe('merge-base', '--fork-point', a, b) : run_safe('merge-base', a, b)
+    end
+
+    def ancestor?(ancestor, descendant)
+      run_success?('merge-base', '--is-ancestor', ancestor, descendant)
+    end
+
+    def changed_files(range, relative: true)
+      args = ['diff', '--name-only']
+      args << '--relative' if relative
+      args << range
+      run_safe(*args).to_s.lines(chomp: true)
     end
 
     def create_branch(name, start_point = nil)

@@ -337,25 +337,14 @@ class Hiiro
       indent = " " * (slot_w + 2)
 
       check_emoji, checks_count_str =
-        if pr.checks
-          c = pr.checks
-          has_failed   = c['failed'].to_i > 0
-          has_pending  = c['pending'].to_i > 0
-          only_frozen  = has_failed && c['failed'].to_i == c['frozen'].to_i
-          emoji = if has_failed && has_pending
-            only_frozen ? "⏳❄️" : "⏳❌"
-          elsif has_failed
-            only_frozen ? "　❄️" : "　❌"
-          elsif has_pending
-            "⏳　"
-          elsif c['truncated']
-            "　❓"
-          else
-            "　✅"
-          end
-          succ  = c['success'].to_i.to_s.rjust(succ_w)
-          total = c['total'].to_i.to_s.rjust(total_w)
-          [emoji, "#{succ}/#{total}"]
+        if (s = pr.check_summary)
+          emoji = if s.red? && s.any_pending? then s.only_frozen? ? "⏳❄️" : "⏳❌"
+                  elsif s.red?                then s.only_frozen? ? "　❄️" : "　❌"
+                  elsif s.any_pending?        then "⏳　"
+                  elsif !s.complete?          then "　❓"
+                  else                             "　✅"
+                  end
+          [emoji, "#{s.success.to_s.rjust(succ_w)}/#{s.total.to_s.rjust(total_w)}"]
         else
           ["", nil]
         end
@@ -437,15 +426,11 @@ class Hiiro
       lines << "   Branch: #{pr.head_branch}" if pr.head_branch
       lines << "   URL: #{pr.url}" if pr.url
 
-      if pr.checks
-        c = pr.checks
-        check_status = if c['failed'] > 0
-          "FAILING (#{c['success']}/#{c['total']} passed, #{c['failed']} failed)"
-        elsif c['pending'] > 0
-          "PENDING (#{c['success']}/#{c['total']} passed, #{c['pending']} pending)"
-        else
-          "PASSING (#{c['success']}/#{c['total']})"
-        end
+      if (s = pr.check_summary)
+        check_status = if s.red?             then "FAILING (#{s.success}/#{s.total} passed, #{s.failed} failed)"
+                       elsif s.any_pending? then "PENDING (#{s.success}/#{s.total} passed, #{s.pending} pending)"
+                       else                      "PASSING (#{s.success}/#{s.total})"
+                       end
         lines << "   Checks: #{check_status}"
       else
         lines << "   Checks: (none)"
@@ -494,27 +479,17 @@ class Hiiro
     end
 
     def display_check_runs(pr, indent: "   ")
-      runs = pr.check_runs
-      return unless runs.is_a?(Array) && runs.any?
+      contexts = pr.check_summary&.contexts
+      return unless contexts&.any?
 
-      runs.each do |run|
-        case run['__typename']
-        when 'CheckRun'
-          emoji = check_run_emoji(run['conclusion'], run['status'])
-          name  = run['name'] || run['workflowName'] || '(unknown)'
-          url   = run['detailsUrl']
-        when 'StatusContext'
-          emoji = status_context_emoji(run['state'])
-          name  = run['context'] || '(unknown)'
-          url   = run['targetUrl']
-        else
-          emoji = '?'
-          name  = run['name'] || run['context'] || '(unknown)'
-          url   = run['detailsUrl'] || run['targetUrl']
-        end
-
-        line = "#{indent}#{emoji}  #{name}"
-        line += "\n#{indent}   #{url}" if url
+      contexts.each do |ctx|
+        emoji = case ctx.kind
+                when :check_run      then check_run_emoji(ctx.raw['conclusion'], ctx.raw['status'])
+                when :status_context then status_context_emoji(ctx.raw['state'])
+                else '?'
+                end
+        line = "#{indent}#{emoji}  #{ctx.name}"
+        line += "\n#{indent}   #{ctx.url}" if ctx.url
         puts line
       end
     end

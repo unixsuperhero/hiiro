@@ -296,6 +296,48 @@ input.cleanup                      # unlink the tempfile when done
 
 Use this instead of a hand-rolled Tempfile/system/YAML.load/unlink cycle (TodoManager#edit_items now does).
 
+### Hiiro::CheckSummary / Hiiro::CheckContext (lib/hiiro/check_summary.rb)
+
+One interpretation of a PR's `statusCheckRollup`, shared by `Git::Pr`, `PinnedPr`, `PinnedPRManager` display, `CheckRun` persistence, and `h pr status`:
+
+```ruby
+s = Hiiro::CheckSummary.from_rollup(rollup, truncated: false)   # nil when rollup nil/empty
+s = pr.check_summary                                             # from stored counts (+ raw contexts when present)
+s.total / s.success / s.pending / s.failed / s.frozen / s.complete?
+s.red? / s.green? / s.pending?        # the -r / -g / -p filter predicates (pr.red? etc. delegate here)
+s.any_pending? / s.only_frozen?       # display distinctions
+s.counts_by_outcome                   # { 'SUCCESS' => 12, 'FAILURE' => 1 } (missing keys read 0)
+s.contexts.each { |c| c.kind (:check_run|:status_context) ; c.name ; c.url ; c.outcome ; c.raw }
+s.to_h                                # the stored { 'total','success','pending','failed','frozen'[,'truncated'] } hash
+```
+
+### Hiiro::PullRequestReference / Hiiro::RepositoryIdentity (lib/hiiro/pull_request_reference.rb)
+
+```ruby
+ref = Hiiro::PullRequestReference.parse(input)   # URL | '#123' | '123' | 123 → ref, else nil
+ref.number / ref.number_string / ref.repo        # repo: RepositoryIdentity or nil for a bare number
+ref.key            # [number, 'owner/name'] — the key PinnedPRManager batches by
+ref.repo_args      # ['-R', 'owner/name'] or []
+ref.matches?(pr)   # same number; same repo when both sides know it
+pr.reference       # Git::Pr / PinnedPr → reference
+Hiiro::PinnedPr.find_by_reference(ref)           # repo-qualified lookup; legacy rows without repo still match
+Hiiro::RepositoryIdentity.parse('owner/name' | github URL)  # .host .owner .name .path .url
+```
+
+### Hiiro::Git::BranchComparison (lib/hiiro/git/branch_comparison.rb)
+
+Two refs plus an explicit base policy. Used by `h branch diff/changed/ahead/behind/log/forkpoint/ancestor`:
+
+```ruby
+cmp = git.compare(source: 'HEAD', target: nil, base_policy: :local_main, fallback: 'HEAD~1')
+# base_policy :local_main → main, master ; :remote_first → origin/master, master, origin/main, main
+cmp.target / cmp.target_source (:explicit|:policy|:fallback|:none) / cmp.resolved?
+cmp.ahead / cmp.behind / cmp.ancestor? / cmp.merge_base / cmp.fork_point (--fork-point, then merge-base)
+cmp.two_dot_range / cmp.three_dot_range / cmp.fork_range / cmp.changed_paths(relative: true)
+```
+
+`Hiiro::Git` gained the underlying queries: `ref_exists?`, `rev_list_count`, `merge_base`, `ancestor?`, `changed_files`.
+
 ### Hiiro::Duration / Hiiro::TimeInput (lib/hiiro/duration.rb, lib/hiiro/time_input.rb)
 
 Value objects behind `h date`, `h time`, and `h remind` (formerly duplicated helpers in each bin):
