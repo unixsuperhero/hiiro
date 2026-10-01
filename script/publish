@@ -131,7 +131,7 @@ end
 # ─── Claude AI calls ─────────────────────────────────────────────────────────
 
 class Claude
-  MODEL = "claude-haiku-4-5"
+  MODEL = "sonnet"
 
   Result = Struct.new(:commits, :changelog)
 
