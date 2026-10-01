@@ -418,7 +418,10 @@ Hiiro::Shell.pipe_lines(["a", "b"], "command")   # Join array with newlines and 
 result = Hiiro::Shell.run('cmd', 'arg', SOME_ENV: 'x')   # Result: stdout, stderr, status, success?, lines, plain_text
 result.spec      # Hiiro::CommandSpecification — argv, env (normalized to strings), cwd, preview, open3_args
 result.command   # spec.preview, e.g. "cmd arg"
+content = Hiiro::Shell.read_input(*args)          # files named in args ('-' = stdin), else piped stdin
 ```
+
+`read_input` keeps only args that are readable paths (regular files, `/dev/fd/N`, `<(cmd)`) or `-`, concatenates them, and falls back to stdin when none remain. A named file wins over piped stdin unless `-` places it. At a terminal with no input it aborts with `no input: pipe data in or pass a file`.
 
 `run`, `run_combined`, `run3`, `stream`, and `stream_combined` all build one `CommandSpecification` and attach it to the `Result`.
 

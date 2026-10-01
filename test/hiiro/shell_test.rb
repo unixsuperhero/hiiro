@@ -52,4 +52,70 @@ class ShellTest < Minitest::Test
 
     assert_equal input, result
   end
+
+  def test_read_input_reads_a_file
+    with_input_files("one\n") do |path|
+      assert_equal "one\n", Hiiro::Shell.read_input(path)
+    end
+  end
+
+  def test_read_input_concatenates_files
+    with_input_files("one\n", "two\n") do |first, second|
+      assert_equal "one\ntwo\n", Hiiro::Shell.read_input(first, second)
+    end
+  end
+
+  def test_read_input_ignores_args_that_are_not_files
+    with_input_files("one\n") do |path|
+      assert_equal "one\n", Hiiro::Shell.read_input("--flag", path, "missing.txt", Dir.tmpdir)
+    end
+  end
+
+  def test_read_input_reads_piped_stdin_without_args
+    assert_equal "piped", read_input_in_subprocess("piped")
+  end
+
+  def test_read_input_reads_piped_stdin_for_dash
+    assert_equal "piped", read_input_in_subprocess("piped", "-")
+  end
+
+  def test_read_input_places_stdin_at_dash_between_files
+    with_input_files("one\n", "two\n") do |first, second|
+      assert_equal "one\npiped\ntwo", read_input_in_subprocess("piped\n", first, "-", second)
+    end
+  end
+
+  def test_read_input_prefers_files_over_piped_stdin
+    with_input_files("one\n") do |path|
+      assert_equal "one", read_input_in_subprocess("piped", path)
+    end
+  end
+
+  def test_read_input_aborts_at_a_terminal_without_input
+    $stdin.stub(:tty?, true) do
+      _out, err = capture_io do
+        assert_raises(SystemExit) { Hiiro::Shell.read_input("missing.txt") }
+      end
+
+      assert_match(/no input/, err)
+    end
+  end
+
+  private
+
+  def with_input_files(*contents)
+    files = contents.map do |content|
+      Tempfile.new("read-input").tap { |file| file.write(content); file.close }
+    end
+    yield(*files.map(&:path))
+  ensure
+    files&.each(&:unlink)
+  end
+
+  def read_input_in_subprocess(stdin_data, *args)
+    lib = File.expand_path("../../lib", __dir__)
+    script = "print Hiiro::Shell.read_input(*ARGV)"
+
+    Hiiro::Shell.pipe(stdin_data, "ruby", "-I", lib, "-r", "hiiro/shell", "-e", script, *args)
+  end
 end

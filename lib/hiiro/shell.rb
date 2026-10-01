@@ -38,6 +38,15 @@ class Hiiro
       selected&.chomp
     end
 
+    # Contents of the files named in args (`-` is stdin), or of stdin when
+    # none are named. Args that are not readable paths are ignored.
+    def self.read_input(*args)
+      sources = args.select { |arg| arg == '-' || (File.exist?(arg) && !File.directory?(arg)) }
+      abort('no input: pipe data in or pass a file') if sources.empty? && $stdin.tty?
+
+      ARGF.class.new(*sources).read
+    end
+
     def self.run(*command, **env)
       spec = CommandSpecification.new(*command, env: env)
       stdout, status = Open3.capture2(*spec.open3_args)
