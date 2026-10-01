@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.387.pre.2] - 2026-10-01
+
+### Changed
+- publish script now uses the `sonnet` model alias instead of `claude-haiku-4-5` for commit plan and changelog generation
+
 ## [0.1.387.pre.1] - 2026-10-01
 
 ### Added
