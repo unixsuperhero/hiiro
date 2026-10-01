@@ -57,6 +57,7 @@ require_relative 'hiiro/current_task'
 require_relative 'hiiro/task_sessions'
 require_relative 'hiiro/task_cli'
 require_relative 'hiiro/tui'
+require_relative 'hiiro/extractor'
 
 class String
   def underscore(camel_cased_word=self)
@@ -291,6 +292,7 @@ class Hiiro
   end
 
   def handle_result(result)
+    return result if result.is_a?(Integer)
     exit 0 if result.nil? || result
 
     exit 1
