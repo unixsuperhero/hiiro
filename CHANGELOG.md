@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.387.pre.1] - 2026-10-01
+
+### Added
+- `Hiiro::Extractor` value object for data extraction
+- Support for Integer return values as exit codes from subcommand handlers
+
 ## Unreleased
 
 ### Added
