@@ -209,7 +209,7 @@ end
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
-pre_release    = ARGV.include?("-t") || Git.current_branch != "main"
+pre_release    = ARGV.include?("-t")
 pending_before = Git.pending_changes?
 
 Git.ensure_up_to_date!
