@@ -68,6 +68,7 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 | Command | Description |
 |---------|-------------|
 | [h-bg](h-bg.md) | Run commands in background Herdr tabs with history tracking |
+| [h-extract](../README.md#extract-files-directories-and-links) | Extract file paths, directories, and HTTP(S) links from text |
 | [h-img](h-img.md) | Save or base64-encode images from clipboard or file |
 | [h-save](h-save.md) | Save clipboard text or images to ~/saved |
 | [h-misc](h-misc.md) | Miscellaneous utilities (symlink destination reporting) |

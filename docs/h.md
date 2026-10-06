@@ -48,6 +48,7 @@ These are separate `bin/h-*` executables dispatched by `h`:
 | [`h config`](h-config.md) | Open config files in editor |
 | [`h cpr`](h-cpr.md) | Shortcut to current branch's PR |
 | [`h db`](h-db.md) | SQLite database inspection and management |
+| [`h extract`](../README.md#extract-files-directories-and-links) | Extract file paths, directories, and HTTP(S) links from text |
 | [`h img`](h-img.md) | Image clipboard utilities |
 | [`h link`](h-link.md) | URL bookmark management |
 | [`h misc`](h-misc.md) | Miscellaneous utilities |

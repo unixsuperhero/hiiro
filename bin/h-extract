@@ -1,0 +1,61 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+options = Hiiro::Options.setup do
+  option(:base_dir, short: :b, multi: true, desc: 'Base directory for relative path checks (repeatable; default: cwd)')
+  flag(:no_check, desc: 'Extract path-shaped text without checking the filesystem')
+end
+
+clean_url = lambda do |url|
+  url = url.sub(/[.,;:!?]+\z/, '')
+  { ')' => '(', ']' => '[', '}' => '{' }.each do |closing, opening|
+    url = url.chop while url.end_with?(closing) && url.count(closing) > url.count(opening)
+  end
+  url.sub(/[.,;:!?]+\z/, '')
+end
+
+Hiiro.run(*ARGV) do
+  %i[files dirs links].each do |kind|
+    add_subcmd(kind) do |*args|
+      vals = options.parse!(args)
+      if vals.help?
+        puts "Usage: h extract #{kind} [options] [input-file ...]"
+        puts options.help_text
+        next
+      end
+
+      abort("--base-dir requires a directory") if vals.base_dir.any? { |base| base.nil? || base.empty? }
+      bases = vals.base_dir.empty? ? [Dir.pwd] : vals.base_dir.map { |base| File.expand_path(base) }
+      input = Hiiro::Shell.read_input(*vals.args)
+      matches = if kind == :links
+        input.scan(%r{https?://[^\s<>"'`]+}i).map { |url| clean_url.call(url) }
+      else
+        # Consume URLs whole so their slash-separated pieces cannot become paths.
+        tokens = input.scan(%r{https?://[^\s<>"'`]+|(?<![[:alnum:]])(?:"[^"\n]+"|'[^'\n]+'|`[^`\n]+`)|[^\s<>"'`()\[\]{},;=]+}i)
+        tokens.filter_map do |token|
+          quoted = ['"', "'", '`'].include?(token[0])
+          original = quoted ? token[1...-1] : token
+          path = original.sub(/[.!?:]+\z/, '').sub(/:\d+(?::\d+)?\z/, '')
+          next if path.empty? || path.match?(%r{\A[a-z][a-z0-9+.-]*://}i)
+
+          if vals.no_check
+            next unless path.include?('/') || path.match?(/\A[^\s]+\.[^\s.]+\z/)
+            next if kind == :files && path.end_with?('/')
+            next if kind == :dirs && File.basename(path).match?(/\.[^.]+\z/)
+          else
+            path = [original, path].uniq.find do |candidate|
+              bases.any? do |base|
+                full_path = File.expand_path(candidate, base)
+                kind == :files ? File.file?(full_path) : File.directory?(full_path)
+              end
+            end
+            next unless path
+          end
+          path
+        end
+      end
+      puts matches.uniq
+    end
+  end
+end

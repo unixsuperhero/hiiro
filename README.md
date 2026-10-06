@@ -73,6 +73,49 @@ Saved files can be listed, printed, copied back to the clipboard, opened,
 edited, or removed with `h save ls|show|copy|open|edit|rm`. See
 [docs/h-save.md](docs/h-save.md).
 
+### Extract files, directories, and links
+
+`h extract files`, `h extract dirs`, and `h extract links` read text from stdin
+or input files and print one unique match per line, in first-encounter order.
+
+```sh
+# Read text from stdin
+printf '%s\n' 'README.md:12:3' 'README.md' | h extract files
+printf '%s\n' 'docs/' './docs/' | h extract dirs
+printf '%s\n' '(https://example.org/a_(b)).' | h extract links
+
+# Read text from input files
+h extract files build.log
+h extract dirs build.log
+h extract links notes.txt build.log
+```
+
+Files and directories must exist and match the requested type. Relative paths
+are checked against the current directory by default. Repeat `--base-dir DIR`
+or `-b DIR` to replace that default with explicit bases. A match under any one
+base is enough:
+
+```sh
+h extract files --base-dir /path/to/project -b /path/to/other-project build.log
+```
+
+Base directories affect path checks, not the locations of input files. Output
+preserves the original path spelling rather than expanding or normalizing it.
+Quotes and surrounding wrappers are removed, as are `:line` and `:line:column`
+suffixes. Quoted paths can contain spaces, such as `"src/my file.rb:12:3"`.
+Links must use HTTP or HTTPS. Trailing punctuation is removed, while balanced
+parentheses in URLs are kept.
+
+`--no-check` skips filesystem checks and uses text heuristics, not actual
+existence or type. Files need a slash or a dotted filename and cannot end in a
+slash. Directories need a slash and cannot have a dotted basename. These rules
+can misclassify paths or omit real files and directories:
+
+```sh
+printf '%s\n' '"src/my file.rb:12:3"' | h extract files --no-check
+printf '%s\n' 'missing/output/' | h extract dirs --no-check
+```
+
 ### Task CLI
 
 `t` and `tt` are gem executables in `exe/`, installed alongside `h`. They are thin
@@ -167,6 +210,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h commit` | Select commits using fuzzy finder |
 | `h config` | Open config files (vim, git, Herdr, zsh, starship, claude) |
 | `h env` | Append safely quoted environment variables |
+| [`h extract`](#extract-files-directories-and-links) | Extract file paths, directories, and HTTP(S) links from text |
 | `h link` | Manage saved links with URL, description, and shorthand |
 | `h pane` | Herdr pane management |
 | `h plugin` | Manage hiiro plugins (list, edit, search) |
