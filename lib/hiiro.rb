@@ -7,6 +7,7 @@ require 'awesome_print'
 
 require_relative "hiiro/version"
 require_relative "hiiro/duration"
+require_relative "hiiro/tuios"
 require_relative "hiiro/time_input"
 require_relative "hiiro/error"
 require_relative "hiiro/config"
@@ -364,6 +365,8 @@ class Hiiro
       r[:lookup]&.call(ref)
     end
   end
+
+  def tuios = @tuios ||= Hiiro::Tuios.new
 
   def add_cmd(*names, args: [], opts: [], passthrough: false, &block)
     cmd_opts = options.select(opts)
