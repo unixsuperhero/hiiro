@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.390] - 2026-10-07
+
+### Added
+- `Hiiro::Tuios` class and `Hiiro#tuios` accessor for TUIOS integration
+
 ## [0.1.387.pre.2] - 2026-10-01
 
 ### Changed
