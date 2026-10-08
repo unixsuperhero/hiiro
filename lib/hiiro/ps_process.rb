@@ -42,7 +42,7 @@ class Hiiro::PsProcess
   # One `ps awwux` capture; every question below reads the same table.
   class Snapshot
     def self.capture
-      new(PsProcess.all, captured_at: Time.now)
+      new(Hiiro::PsProcess.all, captured_at: Time.now)
     end
 
     attr_reader :processes, :captured_at

@@ -59,6 +59,13 @@ h ping
 # => pong
 ```
 
+### Find processes by port
+
+`h ps byport 4399` prints each matching process PID and working directory,
+separated by a tab. Pass multiple ports with `h ps byport 4399 3000`.
+If no processes match, it prints `No processes found on port(s): 4399`.
+This command requires `ps` and `lsof`.
+
 ### Save clipboard content
 
 `h save` saves whatever is on the macOS clipboard to `~/saved/` and prints the

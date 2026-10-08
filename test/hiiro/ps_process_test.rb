@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class PsProcessTest < Minitest::Test
   LSOF = <<~OUT
@@ -23,6 +24,22 @@ class PsProcessTest < Minitest::Test
     assert_equal Set[], Hiiro::PsProcess::OpenFiles.new([], "").pids
     assert_nil Hiiro::PsProcess::OpenFiles.new([], "").cwd
     assert Hiiro::PsProcess::OpenFiles.new([], "", failed: true).failed
+  end
+
+  def test_snapshot_capture_parses_the_process_table
+    output = <<~OUT
+      USER PID %CPU %MEM VSZ RSS TTY STAT START TIME COMMAND
+      josh 12345 0.0 0.0 1 1 ?? S 1:00 0:00.01 ruby app.rb --port 4399
+      josh 12346 0.0 0.0 1 1 ?? S 1:00 0:00.01 node worker.js
+    OUT
+
+    Hiiro::PsProcess.stub(:`, output) do
+      snapshot = Hiiro::PsProcess::Snapshot.capture
+      assert_equal "ruby app.rb --port 4399", snapshot.by_pid(12345).cmd
+      assert_equal "josh", snapshot.by_pid(12345).user
+      assert_equal ["12345"], snapshot.with_pids(Set["12345"]).map(&:pid)
+      assert_equal ["12346"], snapshot.matching("worker.js").map(&:pid)
+    end
   end
 
   def test_snapshot_lookups

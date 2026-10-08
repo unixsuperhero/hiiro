@@ -18,6 +18,9 @@
 
 ## Unreleased
 
+### Fixed
+- Fix `PsProcess::Snapshot.capture` constant lookup, which raised `NameError` in `h ps byport`, `h ps indir`, and parent/child process lookups.
+
 ### Added
 - `h herdr` and `hh` pane controls for Vim-style focus, two-pane reflow, resize, swap, and zoom
 - `prefix+shift+h/j/k/l` reflows a two-pane tab toward an edge; `prefix+alt+h/j/k/l` resizes the current pane
