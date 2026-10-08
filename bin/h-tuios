@@ -1,0 +1,84 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'hiiro'
+
+if $PROGRAM_NAME == __FILE__
+  begin
+    Hiiro.run(*ARGV, external_commands: false) do
+      add_flag :dry_run, desc: 'Preview changes without writing files or installing hooks'
+      add_flag :remove, desc: 'Remove the managed project instruction block'
+      add_default { puts Hiiro::Tuios::USAGE }
+      add_cmd(:gfy) { puts tuios.class }
+      add_cmd(:help) { puts Hiiro::Tuios::USAGE; help }
+      add_cmd(:setup, args: ['HARNESS...'], opts: [:dry_run]) do
+        tuios.apply(tuios.plan(opts.args, skills: true, rules: true), dry_run: opts.dry_run)
+        tuios.install_integrations(opts.args, dry_run: opts.dry_run)
+      end
+      add_cmd(:'skills-install', :'skills-refresh', args: ['HARNESS...'], opts: [:dry_run]) do
+        tuios.apply(tuios.plan(opts.args, skills: true), dry_run: opts.dry_run)
+      end
+      add_cmd(:'bootstrap-project', args: ['DIRECTORY'], opts: [:dry_run, :remove]) do
+        raise Hiiro::Error, 'Use bootstrap-project DIRECTORY [--remove]' unless opts.args.length == 1 && File.directory?(File.expand_path(opts.args.first))
+        path = File.join(File.expand_path(opts.args.first), 'AGENTS.md')
+        _, text = tuios.rule_text(path, remove: opts.remove)
+        changes = opts.remove && !File.exist?(path) ? [] : [tuios.file_plan(path, text, backup: true)].compact
+        tuios.apply(changes, dry_run: opts.dry_run)
+      end
+      add_cmd(:'bootstrap-install', args: ['HARNESS...'], opts: [:dry_run]) do
+        tuios.apply(tuios.plan(opts.args, rules: true), dry_run: opts.dry_run)
+      end
+      add_cmd(:'bootstrap-remove', args: ['HARNESS...'], opts: [:dry_run]) do
+        tuios.apply(tuios.plan(opts.args, rules: true, remove: true), dry_run: opts.dry_run)
+      end
+      add_cmd(:uninstall, args: ['HARNESS...'], opts: [:dry_run]) do
+        tuios.apply(tuios.plan(opts.args, skills: true, rules: true, remove: true), dry_run: opts.dry_run)
+      end
+      add_cmd(:'integrations-install', args: ['ID...'], opts: [:dry_run]) { tuios.install_integrations(opts.args, dry_run: opts.dry_run) }
+      add_cmd(:'integrations-status') { tuios.native('integration', 'status', '--command', tuios.hook_command) }
+      add_cmd(:targets) do
+        tuios.targets(Hiiro::Tuios::TARGETS.keys).each { |t| puts "#{t[:name]}\n  skill: #{t[:skill]}\n  startup: #{t[:instruction] || '(manual; no verified global file)'}" }
+      end
+      add_cmd(:start) do
+        raise Hiiro::Error, 'Use start without arguments' unless opts.args.empty?
+        tuios.server(:start)
+      end
+      add_cmd(:stop) do
+        raise Hiiro::Error, 'Use stop without arguments' unless opts.args.empty?
+        tuios.server(:stop)
+      end
+      add_cmd(:status) do
+        raise Hiiro::Error, 'Use status without arguments; use setup-status [HARNESS...] for setup checks' unless opts.args.empty?
+        exit(tuios.server(:status) ? 0 : 1)
+      end
+      add_cmd(:'setup-status', args: ['HARNESS...']) { tuios.show_status(opts.args) }
+      add_cmd(:doctor, args: ['agents|shell?']) do
+        raise Hiiro::Error, 'Use doctor agents or doctor shell' unless opts.args.empty? || (opts.args.length == 1 && %w[agents shell].include?(opts.args.first))
+        tuios.native('doctor', opts.args.first || 'agents')
+      end
+      add_cmd(:config) { tuios.native('config', 'path') }
+      add_cmd(:hooks) { tuios.native('list-hooks', '--json') }
+      add_cmd(:skill, args: ['TOPIC?']) do
+        raise Hiiro::Error, 'Use skill [TOPIC]' if opts.args.length > 1
+        tuios.native('--skill', *opts.args)
+      end
+      add_cmd(:instructions) { puts Hiiro::Tuios::INSTRUCTIONS }
+      add_cmd(:env) { puts JSON.pretty_generate(tuios.pane) }
+      add_cmd(:bootstrap) do
+        next unless ENV['TUIOS_ENV'] == '1'
+        tuios.require_pane!
+        puts JSON.pretty_generate(tuios.pane)
+        puts Hiiro::Tuios::INSTRUCTIONS
+        tuios.native('--skill')
+        tuios.native('--skill', 'mail')
+      end
+      add_cmd(:mail) do
+        tuios.require_pane!
+        tuios.native('read-agent-messages', '-s', ENV.fetch('TUIOS_SESSION'), '-w', ENV.fetch('TUIOS_PANE_ID'), '--unread')
+      end
+    end
+  rescue Hiiro::Error, SystemCallError, JSON::ParserError => e
+    warn e.message
+    exit 1
+  end
+end
