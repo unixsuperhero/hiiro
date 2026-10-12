@@ -91,7 +91,7 @@ Built 2026-10-12 per `docs/plans/projects-screen.md`: `h project ui`, one row pe
 
 ## PR 7. Tuios screen
 
-Same rule as PR 5. Gets its own one page plan after PR 6 ships.
+Planned 2026-10-12 in `docs/plans/tuios-screen.md`: `h tuios ui`, one row per tuios window across sessions and hosts, with the pane's screen on request, jump, rename, minimize, new window, and mail, scoped to a task by each window's directory.
 
 ## PR 8. Trigger-character autocomplete
 
