@@ -277,6 +277,8 @@ acts.run('o', entry)                   # system('/bin/sh', '-c', cmd); returns c
 
 `t ui` is the second screen on the toolkit: `Hiiro::TaskScreen` (lib/hiiro/task_screen.rb, `TaskScreen.new(scope: :global, current:, show_closed: false, ops:)`, `reload!`, `expanded`) is a tree of task/subtask/todo nodes; edits go through `TaskRecord#set_next!` / `#set_waiting!` / `#set_status!`, `TodoItem#update_status`, and `TaskScreen::Ops` (create, save_current, open_workspace over `TaskCli::Commands`, stdout captured). See `docs/t.md`.
 
+`h project ui` is the third screen on the toolkit: `Hiiro::ProjectCatalog.load(roots:, aliases:)` (lib/hiiro/project_catalog.rb; `default_roots` is `~/proj` and `WORK_DIR`, `rows` / `repos` / `reload` / `repo_for(row)`; a `Row` is `{ name, path, kind: :tree | :dir | :alias, repo, branch, head }`, `key` is the path, `main?` is the repo's first worktree) lists one row per git worktree under the roots plus plain dirs and `project` aliases, grouping a repo's worktrees by `Git::Worktrees.fetch` so an extra tree reads `repo ▸ tree`. `Hiiro::ProjectScreen.new(catalog:, scope:, current:, facts:, opener:, fetcher:)` (lib/hiiro/project_screen.rb, `reload!`, `rebuild!`) draws it; `Facts` caches `status[tree_path]` / `branches[repo_path]` / `prs[repo_path]` fetched on `s` / `b` / `p` through `Fetcher` (git and `gh pr list`), `Opener#open(row)` runs `tuios new-window` under `TUIOS_ENV=1` (`command(row)` is the argv) and `Herdr.open_workspace` otherwise, and `a` / `d` add and remove worktrees through git. See `docs/h-project.md`.
+
 ### Hiiro::Tui (lib/hiiro/tui.rb)
 
 Screen toolkit for in-process TUIs. One engine for every hiiro TUI; do not add curses or shell out to a fuzzy finder for a screen (see `docs/plans/hiiro-tui.md`).

@@ -222,7 +222,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h pane` | Herdr pane management |
 | `h plugin` | Manage hiiro plugins (list, edit, search) |
 | `h pr` | GitHub PR management via gh CLI |
-| `h project` | Project navigation with Herdr workspace management |
+| [`h project`](docs/h-project.md) | Project navigation with Herdr workspace management; `h project ui` is the projects screen over every worktree, directory, and alias |
 | `h queue` | Claude prompt queue with Herdr-based task execution |
 | `h registry` | Named resources by type with short aliases; the same rows as `h table` |
 | `h service` | Manage background dev services with env variations and groups |

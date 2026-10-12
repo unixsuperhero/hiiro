@@ -87,7 +87,7 @@ Built 2026-10-12 per `docs/plans/tasks-screen.md`. `t ui` renders the task tree 
 
 ## PR 6. Projects screen
 
-Planned 2026-10-12 in `docs/plans/projects-screen.md`: `h project ui`, one row per git worktree across `~/proj` and `~/work`, with per-row status, branches, and PRs on request and an open backend keyed on `TUIOS_ENV`.
+Built 2026-10-12 per `docs/plans/projects-screen.md`: `h project ui`, one row per git worktree across `~/proj` and `~/work`, with per-row status, branches, and PRs on request and an open backend keyed on `TUIOS_ENV`.
 
 ## PR 7. Tuios screen
 

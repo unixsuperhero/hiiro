@@ -23,7 +23,7 @@ class ProjectTest < Minitest::Test
   end
 
   def test_registers_expected_subcommands
-    expected = %i[open list ls config edit select copy help]
+    expected = %i[open list ls config edit select copy sh ui help]
     expected.each do |subcmd|
       assert @harness.has_subcmd?(subcmd), "Expected subcmd :#{subcmd} to be registered"
     end

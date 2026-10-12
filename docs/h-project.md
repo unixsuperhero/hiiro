@@ -19,6 +19,7 @@ h project <subcommand> [args]
 | `select` | Fuzzy-select a project and print its path |
 | `copy` | Fuzzy-select a project and copy path to clipboard |
 | `sh <name> [cmd]` | Open shell (or run command) in a project directory |
+| `ui [--root DIR ...]` | TUI over every git worktree, plain directory, and alias, with a detail pane and worktree add/remove |
 | `help` | Show usage |
 
 Projects are discovered from two sources:
@@ -100,6 +101,37 @@ Open a shell in a project directory, or run a command there.
 ```bash
 h project sh hiiro
 h project sh hiiro bundle exec rake test
+```
+
+### ui
+
+Open the projects screen: one flat list with a row per git worktree found under the roots, a row per plain directory with no `.git` of its own, and a row per alias from table `project`. A repo's extra worktrees read `repo ▸ tree` under the repo's main row, so `~/proj/h2` checked out from `~/proj/hiiro` is `hiiro ▸ h2`. Each row shows `NAME  BRANCH  HEAD`; plain directories and aliases show `-` for the branch. The detail pane lists the row's path, repo, branch, head, and the repo's worktrees, then `status`, `branches`, and `prs` lines that read `-` until fetched.
+
+**Roots.** `~/proj` and `~/work` (`Hiiro::WORK_DIR`) by default. `--root DIR` replaces them and may repeat. A root that is itself a repo (`~/work`, whose `.git` points at `~/work/.bare`) is one repo named after the root; its bare entry is dropped. Git runs once per repo directory at open; status, branches, and PRs load per row on request.
+
+| Key | Action |
+|-----|--------|
+| `enter` / `o` | Open the row (see below) and quit |
+| `/` | Search name, branch, and path |
+| `g` | Toggle scope between `global` (every row) and `task(@NAME)` (the current task's repo, cursor on its tree) |
+| `s` | Fetch `git status --porcelain -b` for the tree; the row gains ` *N ↑A ↓B` after the branch (zero parts omitted) |
+| `b` | Fetch the repo's local branches into the pane |
+| `p` | Fetch the repo's open PRs (`gh pr list`) into the pane |
+| `a` | Prompt `branch` then `path` (prefilled `<repo parent>/<branch basename>`) and run `git worktree add`, with `-b` when the branch is new; the new tree is selected |
+| `d` | On an extra worktree, prompt `remove PATH? (y/n)` and run `git worktree remove`; the main tree, plain dirs, and aliases answer `not a removable worktree` |
+| `y` | Copy the row path with `pbcopy` |
+| `q` / `Esc` | Quit |
+
+**Scope.** The current task is resolved like `t` does (Herdr workspace, working directory, then the `t use` pin). `g` scopes to it only when its tree (`TaskLocation#worktree_path`) is a row in the catalog; otherwise the status line says `no current task to scope to`.
+
+**Open backend.** With `TUIOS_ENV=1` the row opens as `tuios new-window NAME -s $TUIOS_SESSION --cwd PATH`; otherwise it opens the Herdr workspace `NAME` rooted at the path, the same call `h project open` makes. NAME is the row name with `.` and spaces replaced by `_` and the `▸` marker dropped. A failed open shows in the status line and the screen stays open. Fetch errors (`gh` not logged in, a directory that is not a repo) show the same way.
+
+**Examples**
+
+```bash
+h project ui
+h project ui --root ~/proj --root ~/work
+h project ui --root /tmp/scratch
 ```
 
 ## Configuration

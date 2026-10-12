@@ -152,6 +152,19 @@ Hiiro.run(*ARGV) do
     end
   }
 
+  # === PROJECTS SCREEN ===
+  add_subcmd(:ui) { |*ui_args|
+    opts = Hiiro::Options.setup {
+      option(:root, desc: 'Root directory to scan; repeatable', multi: true)
+    }.parse(ui_args)
+
+    roots = opts.root.empty? ? Hiiro::ProjectCatalog.default_roots : opts.root
+    catalog = Hiiro::ProjectCatalog.load(roots:, aliases: projects.from_config)
+    current = Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve
+    Hiiro::ProjectScreen.new(catalog:, scope: :global, current:).run
+    nil # the screen's false return would become a non-zero exit status
+  }
+
   # === SHELL IN PROJECT ===
   add_subcmd(:sh) { |project_name=nil, *args|
     if project_name.nil? || project_name.empty?
@@ -194,6 +207,7 @@ Hiiro.run(*ARGV) do
         h-project config                Show saved project aliases as YAML
         h-project edit                  Edit saved project aliases as YAML
         h-project sh <project_name>     Open shell in project directory
+        h-project ui [--root DIR ...]   TUI over every worktree, dir, and alias (see docs/h-project.md)
 
       SOURCES:
         Projects are discovered from two sources:
