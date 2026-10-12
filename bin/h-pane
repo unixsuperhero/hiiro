@@ -1,43 +1,12 @@
 #!/usr/bin/env ruby
 
 require 'hiiro'
-require 'yaml'
 
 Hiiro.run(*ARGV, plugins: [Pins]) do
   herdr = herdr_client
   Hiiro::Herdr.add_resolvers(self)
 
-  home_config_path = Hiiro::Config.path('pane_homes.yml')
-
-  load_homes = -> {
-    begin
-      PaneHome.all_as_hash
-    rescue => e
-      warn "PaneHome DB load failed: #{e}"
-      next({}) unless File.exist?(home_config_path)
-      YAML.load_file(home_config_path) || {}
-    end
-  }
-
-  save_homes = ->(config) {
-    begin
-      config.each do |name, data|
-        existing = PaneHome.find_by_name(name)
-        if existing
-          existing.update(data_json: Hiiro::DB::JSON.dump(data))
-        else
-          pane_home = PaneHome.new(name: name.to_s)
-          pane_home.data = data
-          pane_home.save
-        end
-      end
-      PaneHome.where(Sequel.~(name: config.keys.map(&:to_s))).delete
-      File.write(home_config_path, config.to_yaml)
-    rescue => e
-      warn "PaneHome DB save failed: #{e}"
-      File.write(home_config_path, config.to_yaml)
-    end
-  }
+  load_homes = -> { Hiiro::PaneHome.all_as_hash }
 
   add_subcmd(:ls) { |*args|
     if args.empty?
@@ -128,10 +97,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
           next
         end
 
-        homes = load_homes.call
-        homes[name] = { 'workspace' => workspace }
-        homes[name]['path'] = File.expand_path(path) if path
-        save_homes.call(homes)
+        fields = { workspace: workspace }
+        fields[:path] = File.expand_path(path) if path
+        Hiiro::PaneHome.set(name, **fields)
         puts "Added '#{name}' → #{workspace}#{path ? " (#{File.expand_path(path)})" : ''}"
       }
 
@@ -141,9 +109,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
           next
         end
 
-        homes = load_homes.call
-        if homes.delete(name)
-          save_homes.call(homes)
+        if Hiiro::PaneHome.remove(name)
           puts "Removed home pane '#{name}'"
         else
           puts "Home pane '#{name}' not found"

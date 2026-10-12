@@ -67,19 +67,8 @@ Hiiro.run(*ARGV) do
 
     puts "DB: #{db_path} (#{db_size_str})"
 
-    migrated = Hiiro::DB.migrated?
-    if migrated
-      ran_at = begin
-        Hiiro::DB.connection[:schema_migrations].where(name: 'yaml_import').first&.[](:ran_at)
-      rescue
-        nil
-      end
-      puts "Migration: complete#{ran_at ? " (#{ran_at})" : ""}"
-    else
-      puts "Migration: not run"
-    end
-
-    puts "Dual-write: #{Hiiro::DB.dual_write? ? 'active' : 'disabled'}"
+    puts "Migration: #{Hiiro::DB.migrated? ? 'selected imports verified' : 'not run'}"
+    puts 'Authority: database only; legacy sources are recovery inputs, never live writers.'
     puts
 
     db = Hiiro::DB.connection
@@ -93,15 +82,7 @@ Hiiro.run(*ARGV) do
       end
     end
 
-    config_dir = File.expand_path('~/.config/hiiro')
-    archives = Dir.glob(File.join(config_dir, 'sqlite-migration.*.tar.gz')).sort
-    puts
-    if archives.empty?
-      puts "Backups: (none)"
-    else
-      puts "Backups:"
-      archives.each { |a| puts "  #{a}" }
-    end
+    puts "Accepted sources: #{Hiiro::DB.connection[:migration_sources].count} (retained on disk)"
   end
 
   add_subcmd(:tables) do
@@ -111,64 +92,40 @@ Hiiro.run(*ARGV) do
   add_subcmd(:q) { |*args| run_query(args) }
   add_subcmd(:query) { |*args| run_query(args) }
 
-  add_subcmd(:migrate) do
-    unless Hiiro::DB.migrated?
-      puts "Migration has not run yet. Run `h db status` for details."
-      next
-    end
+  add_subcmd(:manifest) { print_table(Hiiro::DB.owned_store_manifest) }
 
-    unless Hiiro::DB.dual_write?
-      puts "Already fully migrated. Dual-write is already disabled."
-      next
-    end
-
-    print "This will archive and remove all YAML files. Continue? [y/N] "
-    response = $stdin.gets.chomp
-    unless response.downcase == 'y'
-      puts "Aborted."
-      next
-    end
-
-    config_dir = File.expand_path('~/.config/hiiro')
-    timestamp  = Time.now.strftime('%Y%m%d%H%M%S')
-    archive    = File.join(config_dir, "sqlite-migration.#{timestamp}.tar.gz")
-
-    yml_files = Dir.glob(File.join(config_dir, '**/*.yml'))
-                   .reject { |f| f.end_with?('.yml.bak') }
-                   .map { |f| Pathname.new(f).relative_path_from(config_dir).to_s }
-
-    if yml_files.empty?
-      puts "No YAML files found to back up."
-    else
-      puts "Creating backup: #{archive}"
-      Dir.chdir(config_dir) do
-        system('tar', 'cvzf', archive, *yml_files)
+  [:plan, :migrate].each do |action|
+    add_subcmd(action) do |*args|
+      opts = Hiiro::Options.parse(args) do
+        option(:only, desc: 'Comma-separated owned stores')
+        option(:sources, desc: 'Comma-separated exact owned source paths; required for .bak recovery')
       end
-      puts "\nRemoving YAML files..."
-      yml_files.each do |rel_path|
-        full_path = File.join(config_dir, rel_path)
-        puts "  rm #{full_path}"
-        File.delete(full_path)
+      begin
+        plan = Hiiro::DB.migration_plan(only: opts[:only]&.split(','), sources: opts[:sources]&.split(','))
+        puts JSON.pretty_generate(manifest: plan[:manifest], sources: plan[:entries].map { |entry|
+          entry.slice(:store, :path, :logical, :variant, :checksum).merge(rows: entry[:rows]&.length)
+        }, available_sources: plan[:available_sources], report: plan[:report], errors: plan[:errors])
+        abort 'Migration rejected; no records imported and all sources retained.' unless plan[:errors].empty?
+        if action == :migrate
+          puts JSON.pretty_generate(Hiiro::DB.migrate!(plan: plan))
+          puts 'Selected import verified. All source files retained unchanged.'
+        else
+          puts 'Plan only; no records imported. Definitions, preferences and artifacts are excluded.'
+        end
+      rescue Hiiro::DB::ImportError, Sequel::Error, SystemCallError => error
+        abort "Migration rejected: #{error.message}"
       end
     end
-
-    Hiiro::DB.disable_dual_write!
-
-    puts
-    puts "Full migration complete."
-    puts "Backup saved: #{archive}"
-    puts
-    puts "To restore YAML files:"
-    puts "  cd #{config_dir}"
-    puts "  tar xvzf #{File.basename(archive)}"
   end
 
-  add_subcmd(:remigrate) do |*args|
-    opts = Hiiro::Options.parse(args) do
-      option(:only, desc: 'Comma-separated list of tables to remigrate (e.g. todos,tags,pinned_prs)')
+  add_subcmd(:export) do |*args|
+    abort 'Usage: h db export <new-file.json>' unless args.length == 1
+    begin
+      puts "Canonical export: #{Hiiro::DB.export!(File.expand_path(args.first))}"
+      puts 'Full typed rows, IDs, relations, import ledger and allocator state saved; existing files never overwritten.'
+    rescue SystemCallError, Hiiro::DB::ImportError => error
+      abort "Export rejected: #{error.message}"
     end
-    tables = opts[:only]&.split(',')&.map(&:strip)
-    Hiiro::DB.remigrate!(only: tables)
   end
 
   add_subcmd(:cleanup) do
@@ -180,8 +137,8 @@ Hiiro.run(*ARGV) do
 
     # Natural unique keys per table — used to detect duplicate groups
     dedup_keys = {
-      prs:         %w[number],
-      branches:    %w[name],
+      prs:         %w[repo number],
+      branches:    %w[name worktree],
       tags:        %w[name taggable_type taggable_id],
       links:       %w[url],
       tasks:       %w[name],
@@ -190,8 +147,6 @@ Hiiro.run(*ARGV) do
       assignments: %w[worktree],
       pins:        %w[command key],
       pane_homes:  %w[name],
-      check_runs:  %w[pr_number name],
-      reminders:   %w[text],
     }
 
     lines = []
@@ -269,16 +224,13 @@ Hiiro.run(*ARGV) do
     end
   end
 
-  add_subcmd(:restore) do
-    config_dir = File.expand_path('~/.config/hiiro')
-    archives   = Dir.glob(File.join(config_dir, 'sqlite-migration.*.tar.gz')).sort
-    if archives.empty?
-      puts "No backup archives found in #{config_dir}"
-      next
+  add_subcmd(:restore) do |*args|
+    abort 'Usage: h db restore <export.json> (conflicts abort; later writes are never overwritten)' unless args.length == 1
+    begin
+      print_table(Hiiro::DB.restore!(File.expand_path(args.first)))
+      puts 'Recovery verified. Later canonical writes retained; no sources overwritten.'
+    rescue Hiiro::DB::ImportError, Sequel::Error, JSON::ParserError, SystemCallError => error
+      abort "Recovery rejected: #{error.message}"
     end
-    latest = archives.last
-    puts "Restoring from #{File.basename(latest)}..."
-    Dir.chdir(config_dir) { system('tar', 'xvzf', latest) }
-    puts "Done. YAML files restored."
   end
 end

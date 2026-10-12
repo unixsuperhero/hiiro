@@ -5,7 +5,7 @@ This prompt set describes how to implement the design in [the proposal snapshot]
 ## Current status
 
 - Workspace and prompt set prepared.
-- Redesign implementation has not started. Every checkbox below is intentionally unchecked.
+- Step 01 is implemented and verified. Steps 02–16 remain unchecked and have not started.
 - Clone baseline: `139aa0143644d73c257edb810bd8afef88ba39a8`, source branch `main`.
 - The clone's `origin` is the local original repository. Do not push, publish, install, or change that remote automatically.
 
@@ -14,6 +14,23 @@ This prompt set describes how to implement the design in [the proposal snapshot]
 - Parsed all 19 Markdown files and checked 425 local links/anchors, prerequisite ordering, and required prompt sections.
 - The cloned CLI returned `pong` from `ruby -Ilib exe/h ping` with a temporary HOME and in-memory test database. This is a startup smoke check, not redesign acceptance.
 - At authoring, `bundle check` reported missing `mcp` 1.7.0, `sequel` 5.109.0, `io-console` 0.9.4, and `regexp_parser` 2.13.1. The Bundler test suite was not run. Prepare an isolated gem environment before implementation verification; do not alter live gem installations automatically.
+
+### Step 01 implementation verification
+
+- Step 01 is implemented in the clone. SQLite owns mutable domain records; definitions, preferences, runtime files, prompts, notes, and ordinary artifacts retain their documented file owners. See [data authority and recovery](../../docs/h-db.md).
+- Stabilized isolated aggregate: **639 runs, 2,605 assertions, zero failures or errors**. All 54 changed Ruby files passed `ruby -c`. Existing constant-reload and Minitest deprecation warnings remain.
+- The aggregate loaded `test/**/*_test.rb` with Ruby 3.3.10, an allowlisted environment, temporary HOME, and isolated gems. Its exact exclusion filter was:
+
+  ```text
+  /test_tree_commands_create_detach_and_resume_worktrees_without_herdr|test_current_task_detects_external_absolute_tree|test_directory_commands_resolve_optional_app_by_exact_or_unique_prefix|test_all_lists_all_executables_on_path|test_glob_finds_executables_from_path/
+  ```
+
+- These five exclusions cover real worktree creation, an unmocked live Herdr query, and observed unrelated task-context/command-discovery failures. This is not an unqualified full-suite pass.
+- `test/hiiro/db_migration_test.rb`: **16 runs, 134 assertions, zero failures or errors**. Actual `h-db` plan/import/replay/export/restore/reexport fixtures preserved IDs, types, relationships, allocators, source/definition bytes, and later canonical writes/deletions. Failed or interrupted imports and failed fresh verification retained truthful completion state.
+- `test/bin/data_ownership_test.rb`: **5 runs, 101 assertions, zero failures or errors**. Actual `t`, `tt`, `h-todo`, `h-link`, and `h-remind` subprocesses proved targeted writes, task/orphan scope, string pins versus integer task IDs, link/tag identity, pause/resume, and recurrence.
+- Additional isolated CLI proofs covered project/app aliases, pane homes, task metadata/resources, branch tags, qualified PRs/check owners, editor failure/conflicts, and retained legacy SQL. PR and notification adapters were controlled; clone Pins was explicitly preloaded where baseline discovery required it.
+- Native legacy `h-otask` dispatch remains unverified because its external Tmux plugin is unavailable. Its in-repo persistence methods passed isolated adapter regressions; unavailable external Task/OldTask implementations were not fabricated.
+- The original checkout, installed commands, remotes, and live user data were not modified. No redesign step after 01 was started. The next eligible prompt is [02](02-command-context.md).
 
 ## Start here
 
@@ -33,7 +50,7 @@ For subsequent steps, replace the numbered filename. These prompts are instructi
 
 ### Phase 1: Canonical data ownership
 
-- [ ] [01. Canonical data ownership and safe migration](01-data-ownership-and-migration.md). No implementation prerequisite.
+- [x] [01. Canonical data ownership and safe migration](01-data-ownership-and-migration.md). No implementation prerequisite.
 
 ### Phase 2: Context and execution
 

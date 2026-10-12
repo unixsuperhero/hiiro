@@ -11,6 +11,26 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   pm = pinned_manager = Hiiro::PinnedPRManager.new
   Hiiro::PinnedPRManager.add_resolvers(self)
 
+  edit_pr_records = -> {
+    prs = pinned_manager.load_pinned
+    baseline = pinned_manager.edit_baseline(prs)
+    input = yaml_input_file(content: pinned_manager.edit_rows(prs).to_yaml, prefix: 'pr-records-')
+    begin
+      input.edit
+      document = input.document
+      if !document.valid?
+        puts "Aborted: #{document.error.message}"
+      elsif document.changed? && !document.empty?
+        pinned_manager.apply_edits(document.parsed, baseline: baseline)
+        puts 'Updated tracked PR records.'
+      end
+    rescue Hiiro::Error => e
+      puts "Aborted: #{e.message}"
+    ensure
+      input.cleanup
+    end
+  }
+
   watch_block = ->(*all_args) {
     opts = Hiiro::Options.setup {
       option(:select, short: :s, type: :flag, desc: 'Select PR via fuzzyfinder')
@@ -88,7 +108,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next unless pr_number
 
     pinned = pinned_manager.load_pinned
-    pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+    pr = pinned_manager.find(pr_number)
 
     if pr && pr.url
       print pr.url
@@ -109,7 +129,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       current = pinned_manager.fetch_current_branch_pr
       if current
         pinned = pinned_manager.load_pinned
-        pr = pinned.find { |p| p.number.to_s == current.number.to_s }
+        pr = pinned_manager.find(current)
         url = pr&.url || current.url
         url ? system('open', url) : system('gh', 'pr', 'view', current.number.to_s, '--web')
         next
@@ -120,7 +140,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     refs.each do |ref|
       pr_number = resolve(:pr, ref)
       next unless pr_number
-      pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+      pr = pinned_manager.find(pr_number)
       pr&.url ? system('open', pr.url) : system('gh', 'pr', 'view', pr_number.to_s, '--web')
     end
   }
@@ -221,14 +241,16 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         next
       end
     else
-      puts "Usage: h pr track [-|PR_NUMBER]"
-      puts "  -       Track current branch's PR"
-      puts "  <num>   Track PR by number"
-      puts "  (none)  Select from your open PRs"
-      next
+      reference = Hiiro::PullRequestReference.parse(ref)
+      unless reference
+        puts 'Usage: h pr track [-|PR_NUMBER|GITHUB_URL]'
+        next
+      end
+      pr_info = pinned_manager.fetch_pr_info(reference.number, repo: reference.repo&.path)
+      next puts "PR #{ref} not found" unless pr_info
     end
 
-    if pinned_manager.pinned?(pr_info.number)
+    if pinned_manager.pinned?(pr_info)
       puts "Already tracking ##{pr_info.number}"
       next
     end
@@ -267,7 +289,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next puts "No tracked PRs" if pinned.empty?
 
     pinned_manager.refresh_all_status(pinned, force: opts.update)
-    pinned_manager.save_pinned(pinned)
 
     results = pinned_manager.apply_filters(pinned, opts)
 
@@ -358,7 +379,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     active = pinned.select(&:active?)
     puts "Updating status for #{active.length} active PR(s) (#{pinned.length - active.length} closed/merged skipped)..."
     pinned_manager.refresh_all_status(pinned, force: opts.force_update, verbose: true)
-    pinned_manager.save_pinned(pinned)
     puts "Done."
 
     puts
@@ -436,7 +456,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     merged_or_closed.each do |pr|
       puts "  ##{pr.number}: #{pr.title} [#{pr.state}]"
-      pinned_manager.unpin(pr.number)
+      pinned_manager.unpin(pr)
     end
 
     puts
@@ -554,7 +574,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next unless pr_number
 
     pinned = pinned_manager.load_pinned
-    pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+    pr = pinned_manager.find(pr_number)
 
     unless pr
       puts "PR ##{pr_number} not in pinned list — run 'h pr update' first"
@@ -590,8 +610,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     # Write a launcher: commit WIP if dirty, checkout the PR branch, then drop into shell
-    script_path = "/tmp/h-pr-attach-#{pr_number}.sh"
-    File.write(script_path, <<~SH)
+    launcher = Tempfile.create(["h-pr-attach-#{pr.id}-", '.sh'], '/tmp')
+    script_path = launcher.path
+    launcher.write(<<~SH)
       #!/usr/bin/env bash
       cd #{Shellwords.shellescape(working_dir)}
 
@@ -606,10 +627,11 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       git checkout #{Shellwords.shellescape(branch)}
       exec #{Shellwords.shellescape(ENV['SHELL'] || 'zsh')}
     SH
+    launcher.close
     FileUtils.chmod(0755, script_path)
 
     herdr_client.new_tab(
-      name: "pr-#{pr_number}",
+      name: "pr-#{pr.number}",
       workspace: workspace,
       start_directory: working_dir,
       command: script_path,
@@ -629,7 +651,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     if ref.nil?
       lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pr.number.to_s
+        h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pinned_manager.reference_text(pr)
       end
 
       pr_number = fuzzyfind_from_map(lines)
@@ -637,11 +659,9 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         puts "No PR selected"
         next
       end
-    elsif ref =~ /^\d+$/
-      pr_number = ref
     else
-      puts "Usage: h pr rm [PR_NUMBER]"
-      next
+      pr_number = resolve(:pr, ref)
+      next unless pr_number
     end
 
     if pinned_manager.unpin(pr_number)
@@ -733,7 +753,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       opts.args.map { |ref|
         pr_num = resolve(:pr, ref)
         next nil unless pr_num
-        pinned.find { |p| p.number.to_s == pr_num.to_s }
+        pinned_manager.find(pr_num)
       }.compact
     end
 
@@ -868,7 +888,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
     pinned = pinned_manager.load_pinned
     ref ||= Hiiro::PullRequestReference.parse(pr_number)
-    pr = pinned.find { |p| ref.matches?(p) }
+    pr = pinned_manager.find(ref)
 
     unless pr
       puts "PR ##{pr_number} not in tracked list"
@@ -960,7 +980,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         # Lines starting with # are comments and are ignored.
 
         prs:
-        #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
+        #{pinned.map { |pr| "- #{pr.id}  # #{pr.reference}: #{pr.title}" }.join("\n")}
 
         tags:
         -
@@ -968,7 +988,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
 
       input = yaml_input_file(content: yaml_content, prefix: 'pr-tag-')
       input.edit
-      parsed = input.parsed_file
+      parsed = input.document.valid? ? input.document.parsed : nil
       input.cleanup
 
       unless parsed.is_a?(Hash)
@@ -976,25 +996,27 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         next
       end
 
-      selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
+      selected_ids = Array(parsed['prs'])
       new_tags         = Array(parsed['tags']).map(&:to_s).reject(&:empty?)
 
-      if selected_numbers.empty? || new_tags.empty?
+      if selected_ids.empty? || new_tags.empty?
         puts "Aborted: need at least one PR and one tag"
         next
       end
 
-      pinned = pinned_manager.load_pinned
-      updated = 0
-      selected_numbers.each do |num|
-        pr = pinned.find { |p| p.number.to_s == num }
-        next unless pr
-        pr.tags = (Array(pr.tags) + new_tags).uniq
-        updated += 1
-        puts "Tagged ##{num} with: #{new_tags.join(', ')}"
+      original_ids = pinned.map(&:id)
+      unless selected_ids.all? { |id| id.is_a?(Integer) && original_ids.include?(id) } && selected_ids.uniq == selected_ids
+        puts "Aborted: select original PR ids only"
+        next
       end
-
-      pinned_manager.save_pinned(pinned)
+      updated = 0
+      Hiiro::DB.connection.transaction(mode: :immediate) do
+        selected_ids.each do |id|
+          original = pinned.find { |pr| pr.id == id }
+          pinned_manager.change_tags(original, add: new_tags)
+          updated += 1
+        end
+      end
       puts "Updated #{updated} PR(s)."
     else
       ref       = opts.args[0]
@@ -1010,15 +1032,14 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       next unless pr_number
 
       pinned = pinned_manager.load_pinned
-      pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+      pr = pinned_manager.find(pr_number)
       unless pr
         puts "PR ##{pr_number} not in tracked list"
         next
       end
 
-      pr.tags = (Array(pr.tags) + tag_names).uniq
-      pinned_manager.save_pinned(pinned)
-      puts "Tagged ##{pr_number} with: #{tag_names.join(', ')}"
+      pr = pinned_manager.change_tags(pr, add: tag_names)
+      puts "Tagged ##{pr.number} with: #{tag_names.join(', ')}"
       puts "  Tags now: #{pr.tags.join(', ')}"
     end
   end
@@ -1033,22 +1054,20 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next unless pr_number
 
     pinned = pinned_manager.load_pinned
-    pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+    pr = pinned_manager.find(pr_number)
     unless pr
       puts "PR ##{pr_number} not in tracked list"
       next
     end
 
     if tag_names.empty?
-      pr.tags = nil
-      puts "Cleared all tags from ##{pr_number}"
+      pinned_manager.change_tags(pr, clear: true)
+      puts "Cleared all tags from ##{pr.number}"
     else
-      pr.tags = Array(pr.tags) - tag_names
-      pr.tags = nil if pr.tags.empty?
-      puts "Removed tag(s) #{tag_names.join(', ')} from ##{pr_number}"
+      pinned_manager.change_tags(pr, remove: tag_names)
+      puts "Removed tag(s) #{tag_names.join(', ')} from ##{pr.number}"
     end
 
-    pinned_manager.save_pinned(pinned)
   end
 
   add_subcmd(:tags) do |*raw_args|
@@ -1067,7 +1086,6 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     pinned_manager.refresh_all_status(pinned, force: opts.update)
-    pinned_manager.save_pinned(pinned)
 
     by_tag = Hash.new { |h, k| h[k] = [] }
     untagged = []
@@ -1157,7 +1175,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     queued_names = []
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p.number.to_s == num }
+      pr = pinned_manager.find(num)
       next unless pr
 
       task_info = { task_name: pr.task, tree_name: pr.worktree, session_name: pr.herdr_workspace }.compact
@@ -1208,7 +1226,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next puts "Aborted: no PRs selected" if selected_numbers.empty?
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p.number.to_s == num }
+      pr = pinned_manager.find(num)
       pr&.url ? system('open', pr.url) : system('gh', 'pr', 'view', num, '--web')
     end
   end
@@ -1248,7 +1266,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     merge_args = strategy.empty? ? [] : ["--#{strategy}"]
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p.number.to_s == num }
+      pr = pinned_manager.find(num)
       title = pr ? pr.title : num
       puts "Merging ##{num}: #{title}"
       system('gh', 'pr', 'merge', num, *merge_args)
@@ -1280,7 +1298,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next puts "Aborted: no PRs selected" if selected_numbers.empty?
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p.number.to_s == num }
+      pr = pinned_manager.find(num)
       puts "Marking ##{num} as ready: #{pr ? pr.title : num}"
       system('gh', 'pr', 'ready', num)
     end
@@ -1311,7 +1329,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     next puts "Aborted: no PRs selected" if selected_numbers.empty?
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p.number.to_s == num }
+      pr = pinned_manager.find(num)
       puts "Converting ##{num} to draft: #{pr ? pr.title : num}"
       system('gh', 'pr', 'ready', '--draft', num)
     end
@@ -1320,32 +1338,36 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   add_subcmd(:mrm) do |*args|
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
+    baseline = pinned_manager.edit_baseline(pinned)
 
     yaml_content = <<~YAML
       # Select PRs to remove from tracking (remove lines you don't want).
 
       prs:
-      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
+      #{pinned.map { |pr| "- #{pr.id}  # #{pr.reference}: #{pr.title}" }.join("\n")}
     YAML
 
     input = yaml_input_file(content: yaml_content, prefix: 'pr-mrm-')
     input.edit
-    parsed = input.parsed_file
+    parsed = input.document.valid? ? input.document.parsed : nil
     input.cleanup
+    next puts 'Aborted: no changes' unless input.document.changed? && !input.document.empty?
 
     unless parsed.is_a?(Hash)
       puts "Aborted: could not parse YAML"
       next
     end
 
-    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
-    next puts "Aborted: no PRs selected" if selected_numbers.empty?
-
-    selected_numbers.each do |num|
-      pr = pinned.find { |p| p.number.to_s == num }
-      pinned_manager.unpin(num)
-      puts "Removed ##{num}: #{pr ? pr.title : num}"
+    selected_ids = Array(parsed['prs'])
+    next puts "Aborted: no PRs selected" if selected_ids.empty?
+    unless selected_ids.all? { |id| id.is_a?(Integer) && pinned.any? { |pr| pr.id == id } } && selected_ids.uniq == selected_ids
+      puts 'Aborted: select original PR ids only'
+      next
     end
+    next puts 'Aborted: no selection changes' if selected_ids == pinned.map(&:id)
+    retained = pinned.reject { |pr| selected_ids.include?(pr.id) }
+    pinned_manager.apply_edits(pinned_manager.edit_rows(retained), baseline: baseline)
+    selected_ids.each { |id| puts "Removed PR id #{id}" }
   end
 
   add_subcmd(:mcomment) do |*args|
@@ -1387,7 +1409,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
     end
 
     selected_numbers.each do |num|
-      pr = pinned.find { |p| p.number.to_s == num }
+      pr = pinned_manager.find(num)
       title = pr ? pr.title : num
       puts "Commenting on ##{num}: #{title}"
       system('gh', 'pr', 'comment', num, '--body', body)
@@ -1412,14 +1434,14 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         end
 
         pinned = pinned_manager.load_pinned
-        pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+        pr = pinned_manager.find(pr_number)
         unless pr
           puts "PR ##{pr_number} is not tracked — pin it first with: h pr track #{pr_number}"
           next
         end
 
-        pr.depends_on = (Array(pr.depends_on) + dep_numbers.map(&:to_i)).uniq.sort
-        pinned_manager.save_pinned(pinned)
+        numbers = dep_numbers.map { |value| Hiiro::PullRequestReference.parse(value).number }
+        pr = pinned_manager.change_dependencies(pr, add: numbers)
         puts "PR ##{pr_number} now depends on: #{pr.depends_on.map { |n| "##{n}" }.join(', ')}"
       }
 
@@ -1433,23 +1455,22 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         next unless pr_number
 
         pinned = pinned_manager.load_pinned
-        pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+        pr = pinned_manager.find(pr_number)
         unless pr
           puts "PR ##{pr_number} not in tracked list"
           next
         end
 
         if dep_refs.empty?
-          pr.depends_on = nil
+          pr = pinned_manager.change_dependencies(pr, clear: true)
           puts "Cleared all dependencies from ##{pr_number}"
         else
-          dep_numbers = dep_refs.map { |r| resolve(:pr, r) }.compact.map(&:to_i)
-          pr.depends_on = (Array(pr.depends_on) - dep_numbers).then { |d| d.empty? ? nil : d }
+          dep_numbers = dep_refs.map { |r| resolve(:pr, r) }.compact.map { |value| Hiiro::PullRequestReference.parse(value).number }
+          pr = pinned_manager.change_dependencies(pr, remove: dep_numbers)
           puts "Removed dep(s) #{dep_numbers.map { |n| "##{n}" }.join(', ')} from ##{pr_number}"
           puts "  Remaining: #{Array(pr.depends_on).map { |n| "##{n}" }.join(', ').then { |s| s.empty? ? '(none)' : s }}"
         end
 
-        pinned_manager.save_pinned(pinned)
       }
 
       h.add_subcmd(:ls) { |ref = nil|
@@ -1458,7 +1479,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
         if ref
           pr_number = resolve(:pr, ref)
           next unless pr_number
-          pr = pinned.find { |p| p.number.to_s == pr_number.to_s }
+          pr = pinned_manager.find(pr_number)
           unless pr
             puts "PR ##{pr_number} not in tracked list"
             next
@@ -1494,11 +1515,11 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       }
 
       h.add_subcmd(:config) {
-        puts Hiiro::Git::Pr::PINNED_FILE
+        puts ENV.fetch('HIIRO_TEST_DB', Hiiro::DB::DB_FILE)
       }
 
       h.add_subcmd(:edit) {
-        edit_files Hiiro::Git::Pr::PINNED_FILE
+        edit_pr_records.call
       }
     end
   end
@@ -1506,11 +1527,11 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
   add_subcmd(:config) do |*args|
     make_child do
       add_subcmd(:path) do
-        puts Hiiro::Git::Pr::PINNED_FILE
+        puts ENV.fetch('HIIRO_TEST_DB', Hiiro::DB::DB_FILE)
       end
 
       add_subcmd(:vim) do
-        edit_files Hiiro::Git::Pr::PINNED_FILE
+        edit_pr_records.call
       end
     end.run
   end
@@ -1523,7 +1544,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
       limit = opts.all ? nil : 50
 
       if query_args.empty?
-        ds = db[:pinned_prs]
+        ds = db[:prs]
         ds = ds.limit(limit) if limit
         rows = ds.all
       elsif query_args[0].include?(' ') || query_args[0].upcase =~ /\A(SELECT|INSERT|UPDATE|DELETE|WITH)/
@@ -1535,7 +1556,7 @@ Hiiro.run(*ARGV, plugins: [Pins]) do
           k, v = pair.split('=', 2)
           h[k] = v if k && v
         end
-        ds = db[:pinned_prs]
+        ds = db[:prs]
         conditions.each { |k, v| ds = ds.where(k.to_sym => v) }
         ds = ds.limit(limit) if limit
         rows = ds.all

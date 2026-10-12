@@ -7,13 +7,14 @@ class Hiiro
   class EditedDocument
     attr_reader :path, :type, :original, :result, :parsed, :error
 
-    def initialize(path:, type:, original:, result:, parsed: nil, error: nil)
+    def initialize(path:, type:, original:, result:, parsed: nil, error: nil, editor_succeeded: true)
       @path = path
       @type = type
       @original = original
       @result = result
-      @parsed = parsed
-      @error = error
+      @editor_succeeded = editor_succeeded == true
+      @parsed = parsed if editor_succeeded?
+      @error = error || (RuntimeError.new('Editor did not exit successfully') unless editor_succeeded?)
     end
 
     alias contents result
@@ -21,7 +22,8 @@ class Hiiro
 
     def changed? = original.to_s != result
     def empty?   = result.to_s.strip.empty?
-    def valid?   = error.nil?
+    def editor_succeeded? = @editor_succeeded
+    def valid?   = editor_succeeded? && error.nil?
   end
 
   class InputFile
@@ -58,12 +60,13 @@ class Hiiro
 
     # Runs the editor, then captures the result as #document. Returns self.
     def edit(permitted_classes: [])
-      if append && hiiro.vim?
+      @parsed_file = @contents = nil
+      editor_succeeded = if append && hiiro.vim?
         system(hiiro.editor, '+$', tmpfile.path)
       else
         hiiro.edit_files(tmpfile.path)
       end
-      @document = snapshot(permitted_classes: permitted_classes)
+      @document = snapshot(permitted_classes: permitted_classes, editor_succeeded: editor_succeeded)
       self
     end
 
@@ -76,13 +79,15 @@ class Hiiro
 
     # The raw text the user wrote, stripped of leading/trailing whitespace.
     def contents
-      @contents ||= File.read(tmpfile.path).strip
+      @contents ||= (document ? document.result : File.read(tmpfile.path)).strip
     end
 
     # Parses the file contents according to type:
     #   :yaml → Hash or Array (via YAML.safe_load)
     #   :md   → FrontMatterParser::Document (call .front_matter, .content)
     def parsed_file(permitted_classes: [])
+      return document.data if document
+
       @parsed_file ||= begin
         parse(permitted_classes: permitted_classes)
       rescue Psych::Exception
@@ -112,8 +117,12 @@ class Hiiro
       end
     end
 
-    def snapshot(permitted_classes:)
+    def snapshot(permitted_classes:, editor_succeeded:)
       result = File.read(tmpfile.path)
+      unless editor_succeeded == true
+        return EditedDocument.new(path: path, type: type, original: content, result: result,
+                                  editor_succeeded: editor_succeeded)
+      end
       EditedDocument.new(path: path, type: type, original: content, result: result,
                          parsed: parse(permitted_classes: permitted_classes))
     rescue Psych::Exception => e

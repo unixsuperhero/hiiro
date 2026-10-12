@@ -16,10 +16,7 @@ module Project
     end
 
     hiiro.define_singleton_method(:projects_from_config) do
-      path = File.join(Dir.home, '.config', 'hiiro', 'projects.yml')
-      return {} unless File.exist?(path)
-      require 'yaml'
-      YAML.safe_load_file(path) || {}
+      Hiiro::Project.all_as_hash
     end
   end
 

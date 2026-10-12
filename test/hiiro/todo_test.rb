@@ -214,238 +214,175 @@ class TodoItemTest < Minitest::Test
 end
 
 class TodoManagerTest < Minitest::Test
-  include TestHelpers
-
   def setup
-    @temp_dir = Dir.mktmpdir
-    @todo_file = File.join(@temp_dir, "todo.yml")
-    # Clear DB between tests since all TodoManagerTests share the same in-memory DB
     Hiiro::TodoItem.dataset.delete
-    @manager = Hiiro::TodoManager.new(file_path: @todo_file)
+    @manager = Hiiro::TodoManager.new
   end
 
-  def teardown
-    FileUtils.rm_rf(@temp_dir)
+  def editor(&block)
+    Object.new.tap do |instance|
+      instance.define_singleton_method(:edit_files) do |path|
+        block.call(path)
+        true
+      end
+    end
   end
 
-  def test_initialize_with_empty_file
-    assert_equal [], @manager.all
+  def test_stale_manager_edit_preserves_external_insert_and_context
+    Hiiro::TodoItem.create(id: 1, text: 'original', task_name: 'feature', subtask_name: 'child', tree: 'tree', branch: 'branch', session: 'session', tags: 'old')
+    stale = Hiiro::TodoManager.new
+    stale.all
+    Hiiro::TodoItem.create(id: 2, text: 'external')
+    stale.change(1, text: 'edited')
+    assert_equal [[1, 'edited'], [2, 'external']], @manager.all.map { |item| [item.id, item.text] }
+    assert_equal ['feature', 'child', 'tree', 'branch', 'session', 'old'], Hiiro::TodoItem[1].values.values_at(:task_name, :subtask_name, :tree, :branch, :session, :tags)
   end
 
-  def test_initialize_loads_existing_items
-    # TodoManager now reads from SQLite (not YAML file), so seed via DB directly
-    Hiiro::TodoItem.create(id: 99, text: 'Existing task', status: 'not_started')
-
-    manager = Hiiro::TodoManager.new(file_path: @todo_file)
-    assert_equal 1, manager.all.length
-    assert_equal 'Existing task', manager.all.first.text
+  def test_interleaved_managers_insert_database_ids_and_remove_only_selected_row
+    first = @manager.add('first')
+    stale = Hiiro::TodoManager.new
+    stale.all
+    second = @manager.add('second')
+    third = stale.add('third')
+    assert_equal [first.id + 1, first.id + 2], [second.id, third.id]
+    stale.remove(first.id)
+    assert_equal [[second.id, 'second'], [third.id, 'third']], @manager.all.map { |item| [item.id, item.text] }
+    stale.remove(third.id)
+    fourth = @manager.add('fourth')
+    assert_equal third.id + 1, fourth.id
   end
 
-  def test_add_creates_item_and_saves
-    item = @manager.add("New task", tags: "test")
-
-    assert_equal "New task", item.text
-    assert_equal "test", item.tags
-    assert File.exist?(@todo_file)
-
-    # Reload and verify persistence
-    reloaded = Hiiro::TodoManager.new(file_path: @todo_file)
-    assert_equal 1, reloaded.all.length
-    assert_equal "New task", reloaded.all.first.text
+  def test_change_preserves_external_fields_and_explicit_null_clears_tags
+    item = @manager.add('first', tags: 'old')
+    @manager.all
+    Hiiro::TodoItem[item.id].update(tags: 'external', branch: 'new-branch')
+    @manager.change(item.id, text: 'edited')
+    assert_equal ['edited', 'external', 'new-branch'], Hiiro::TodoItem[item.id].values.values_at(:text, :tags, :branch)
+    @manager.change(item.id, tags: nil)
+    assert_equal ['edited', nil, 'new-branch'], Hiiro::TodoItem[item.id].values.values_at(:text, :tags, :branch)
   end
 
-  def test_add_with_task_info
-    task_info = { task_name: "feature", tree: "feature-tree" }
-    item = @manager.add("Task with context", task_info: task_info)
-
-    assert_equal "feature", item.task_name
-    assert_equal "feature-tree", item.tree
+  def test_status_transitions_and_filters
+    pending = @manager.add('pending')
+    started = @manager.add('started', tags: 'urgent', task_info: { task_name: 'feature' })
+    done = @manager.add('done')
+    skipped = @manager.add('skipped')
+    @manager.start(started.id)
+    @manager.done(done.id)
+    @manager.skip(skipped.id)
+    assert_equal ['pending', 'started'], @manager.active.map(&:text)
+    assert_equal ['done', 'skipped'], @manager.completed.map(&:text)
+    assert_equal ['started'], @manager.filter_by_tag('URGENT').map(&:text)
+    assert_equal ['started'], @manager.filter_by_task('feature').map(&:text)
+    assert_equal ['pending'], @manager.search('pend').map(&:text)
+    @manager.reset(done.id)
+    assert_equal 'not_started', Hiiro::TodoItem[done.id].status
+    assert_equal "#{started.id} [>] started  [urgent]  (feature)", @manager.format_item(Hiiro::TodoItem[started.id])
+    assert_equal 'pending', @manager.find(pending.id).text
+    assert_equal 'started', @manager.find_by_index(1).text
   end
 
-  def test_find_by_id
-    item = @manager.add("Find me")
-    found = @manager.find(item.id)
-
-    assert_equal item.text, found.text
+  def test_editor_preserves_ids_context_and_concurrent_unedited_fields
+    item = @manager.add('original', tags: 'old', task_info: { task_name: 'feature', subtask_name: 'child', tree: 'tree', branch: 'branch', session: 'session' })
+    original_created_at = item.created_at
+    selected = @manager.all
+    edit = editor do |path|
+      rows = YAML.safe_load_file(path)
+      rows.first['text'] = 'edited'
+      Hiiro::TodoItem[item.id].update(tags: 'external', status: 'started')
+      Hiiro::TodoItem.create(text: 'concurrent')
+      File.write(path, rows.to_yaml)
+    end
+    @manager.edit_items(selected, hiiro: edit)
+    reloaded = Hiiro::TodoItem[item.id]
+    assert_equal ['edited', 'external', 'started', 'feature', 'child', 'tree', 'branch', 'session', original_created_at], reloaded.values.values_at(:text, :tags, :status, :task_name, :subtask_name, :tree, :branch, :session, :created_at)
+    assert_equal ['edited', 'concurrent'], @manager.all.map(&:text)
   end
 
-  def test_find_by_id_prefix
-    item = @manager.add("Find me")
-    prefix = item.id[0..3]
-    found = @manager.find(prefix)
-
-    assert_equal item.text, found.text
+  def test_editor_missing_keys_preserve_values_and_new_rows_get_ids
+    item = @manager.add('original', tags: 'old')
+    edit = editor { |path| File.write(path, [{ 'id' => item.id, 'tags' => nil }, { 'text' => 'new' }].to_yaml) }
+    @manager.edit_items(item, hiiro: edit)
+    assert_equal [[item.id, 'original', nil], [item.id + 1, 'new', nil]], @manager.all.map { |row| [row.id, row.text, row.tags] }
   end
 
-  def test_find_by_index
-    @manager.add("First")
-    @manager.add("Second")
-
-    found = @manager.find_by_index(1)
-    assert_equal "Second", found.text
+  def test_editor_deletes_only_baseline_selection
+    selected = @manager.add('selected')
+    other = @manager.add('other')
+    edit = editor do |path|
+      Hiiro::TodoItem.create(text: 'external')
+      File.write(path, '[]')
+    end
+    @manager.edit_items([selected], hiiro: edit)
+    assert_equal [[other.id, 'other'], [other.id + 1, 'external']], @manager.all.map { |row| [row.id, row.text] }
   end
 
-  def test_remove_by_id
-    first = @manager.add("First")
-    @manager.add("Second")
-
-    removed = @manager.remove(first.id)
-
-    assert_equal "First", removed.text
-    assert_equal 1, @manager.all.length
-    assert_equal "Second", @manager.all.first.text
+  def test_editor_conflict_rolls_back_deletions_and_insertions
+    first = @manager.add('first')
+    second = @manager.add('second')
+    edit = editor do |path|
+      Hiiro::TodoItem[second.id].update(text: 'external')
+      File.write(path, [{ 'text' => 'new' }, { 'id' => second.id, 'text' => 'edited' }].to_yaml)
+    end
+    assert_raises(Hiiro::TodoManager::EditConflict) { @manager.edit_items(@manager.all, hiiro: edit) }
+    assert_equal [[first.id, 'first'], [second.id, 'external']], @manager.all.map { |row| [row.id, row.text] }
   end
 
-  def test_change_updates_item
-    item = @manager.add("Original")
-
-    @manager.change(item.id, text: "Updated", tags: "new-tag")
-
-    assert_equal "Updated", item.text
-    assert_equal "new-tag", item.tags
+  def test_editor_refuses_concurrently_changed_deletion_and_removed_edit
+    item = @manager.add('first')
+    edit = editor do |path|
+      Hiiro::TodoItem[item.id].update(branch: 'external')
+      File.write(path, '[]')
+    end
+    assert_raises(Hiiro::TodoManager::EditConflict) { @manager.edit_items(@manager.all, hiiro: edit) }
+    assert_equal 'external', Hiiro::TodoItem[item.id].branch
+    edit = editor do |path|
+      Hiiro::TodoItem[item.id].delete
+      File.write(path, [{ 'id' => item.id, 'text' => 'edited' }].to_yaml)
+    end
+    assert_raises(Hiiro::TodoManager::EditConflict) { @manager.edit_items(@manager.all, hiiro: edit) }
+    assert_nil Hiiro::TodoItem[item.id]
   end
 
-  def test_start_changes_status
-    item = @manager.add("Task")
-    @manager.start(item.id)
-
-    assert_equal "started", item.status
+  def test_editor_rejects_invalid_duplicate_and_unknown_ids_before_writing
+    item = @manager.add('original')
+    invalid = [[{ 'id' => item.id, 'text' => 'edited' }, { 'id' => item.id }], [{ 'id' => item.id + 1, 'text' => 'new' }], [{ 'id' => item.id.to_s, 'text' => 'edited' }], [{ 'text' => 'new', 'status' => 'bad' }], [{ 'id' => item.id, 'tags' => false }]]
+    invalid.each do |rows|
+      edit = editor { |path| File.write(path, rows.to_yaml) }
+      assert_raises(ArgumentError) { @manager.edit_items(@manager.all, hiiro: edit) }
+      assert_equal [[item.id, 'original']], @manager.all.map { |row| [row.id, row.text] }
+    end
   end
 
-  def test_done_changes_status
-    item = @manager.add("Task")
-    @manager.done(item.id)
-
-    assert_equal "done", item.status
+  def test_unchanged_blank_and_invalid_editor_documents_do_not_write
+    item = @manager.add('original')
+    unchanged = editor { |_path| Hiiro::TodoItem[item.id].update(text: 'external') }
+    @manager.edit_items(@manager.all, hiiro: unchanged)
+    blank = editor { |path| File.write(path, '') }
+    @manager.edit_items(@manager.all, hiiro: blank)
+    invalid = editor { |path| File.write(path, '[') }
+    assert_raises(ArgumentError) { @manager.edit_items(@manager.all, hiiro: invalid) }
+    assert_equal [[item.id, 'external']], @manager.all.map { |row| [row.id, row.text] }
   end
 
-  def test_skip_changes_status
-    item = @manager.add("Task")
-    @manager.skip(item.id)
-
-    assert_equal "skip", item.status
+  def test_failed_editor_cannot_apply_valid_but_cancelled_document
+    item = @manager.add('original')
+    failed = Object.new
+    failed.define_singleton_method(:edit_files) do |path|
+      File.write(path, [{ 'id' => item.id, 'text' => 'cancelled' }].to_yaml)
+      false
+    end
+    assert_raises(ArgumentError) { @manager.edit_items(@manager.all, hiiro: failed) }
+    assert_equal [[item.id, 'original']], @manager.all.map { |row| [row.id, row.text] }
   end
 
-  def test_reset_changes_status
-    item = @manager.add("Task")
-    @manager.start(item.id)
-    @manager.reset(item.id)
-
-    assert_equal "not_started", item.status
-  end
-
-  def test_search
-    @manager.add("Fix login bug")
-    @manager.add("Add signup feature")
-    @manager.add("Update login tests")
-
-    results = @manager.search("login")
-
-    assert_equal 2, results.length
-    assert results.all? { |item| item.text.downcase.include?("login") }
-  end
-
-  def test_filter_by_status
-    @manager.add("Not started")
-    item2 = @manager.add("Started")
-    @manager.start(1)
-    item3 = @manager.add("Done")
-    @manager.done(2)
-
-    results = @manager.filter_by_status("started", "done")
-
-    assert_equal 2, results.length
-  end
-
-  def test_filter_by_tag
-    @manager.add("Tagged", tags: "urgent")
-    @manager.add("Not tagged")
-
-    results = @manager.filter_by_tag("urgent")
-
-    assert_equal 1, results.length
-    assert_equal "Tagged", results.first.text
-  end
-
-  def test_filter_by_task
-    @manager.add("Task 1", task_info: { task_name: "feature" })
-    @manager.add("Task 2", task_info: { task_name: "bugfix" })
-
-    results = @manager.filter_by_task("feature")
-
-    assert_equal 1, results.length
-    assert_equal "Task 1", results.first.text
-  end
-
-  def test_active_returns_not_started_and_started
-    @manager.add("Not started")
-    @manager.add("Started")
-    @manager.start(1)
-    @manager.add("Done")
-    @manager.done(2)
-
-    results = @manager.active
-
-    assert_equal 2, results.length
-  end
-
-  def test_completed_returns_done_and_skip
-    @manager.add("Active")
-    @manager.add("Done")
-    @manager.done(1)
-    @manager.add("Skipped")
-    @manager.skip(2)
-
-    results = @manager.completed
-
-    assert_equal 2, results.length
-  end
-
-  def test_list_returns_formatted_string
-    @manager.add("First task")
-    @manager.add("Second task")
-
-    output = @manager.list
-
-    assert_includes output, "First task"
-    assert_includes output, "Second task"
-    assert_includes output, "[ ]"  # not_started icon
-  end
-
-  def test_list_shows_status_icons
-    @manager.add("Not started")
-    @manager.add("Started")
-    @manager.start(1)
-    @manager.add("Done")
-    @manager.done(2)
-    @manager.add("Skipped")
-    @manager.skip(3)
-
-    output = @manager.list(show_all: true)
-
-    assert_includes output, "[ ]"  # not_started
-    assert_includes output, "[>]"  # started
-    assert_includes output, "[x]"  # done
-    assert_includes output, "[-]"  # skip
-  end
-
-  def test_list_empty_returns_message
-    output = @manager.list
-
-    assert_equal "No todo items found.", output
-  end
-
-  def test_format_item_includes_tags
-    item = @manager.add("Task", tags: "urgent")
-    output = @manager.format_item(item)
-
-    assert_includes output, "[urgent]"
-  end
-
-  def test_format_item_includes_task_name
-    item = @manager.add("Task", task_info: { task_name: "feature" })
-    output = @manager.format_item(item)
-
-    assert_includes output, "(feature)"
+  def test_editor_additions_are_unsaved_until_insert_and_reject_explicit_ids
+    edit = editor { |path| File.write(path, [{ 'text' => 'new', 'tags' => 'urgent' }].to_yaml) }
+    rows = @manager.edit_items(task_info: { task_name: 'feature' }, hiiro: edit)
+    assert_nil rows.first.id
+    @manager.add_items(rows)
+    assert_equal [['new', 'urgent', 'feature']], @manager.all.map { |row| [row.text, row.tags, row.task_name] }
+    assert_raises(ArgumentError) { @manager.add_items([Hiiro::TodoItem.new(id: 999, text: 'invalid')]) }
+    assert_equal ['new'], @manager.all.map(&:text)
   end
 end

@@ -2,64 +2,36 @@ require "test_helper"
 
 class TodoTest < Minitest::Test
   def setup
-    @mock_tm = MockTodoManager.new
-    mock = @mock_tm
-
-    @harness = Hiiro::TestHarness.load_bin("bin/h-todo") do
-      # The bin file creates tm at top level, we need to stub it
-      # Since tm is a local variable in the block, we redefine the methods
-      # that use it
-    end
-
-    # Replace the tm reference - this is tricky because tm is captured in closures
-    # For now, just test subcommand registration
+    Hiiro::TodoItem.dataset.delete
+    @harness = Hiiro::TestHarness.load_bin("bin/h-todo")
   end
 
-  def test_registers_expected_subcommands
-    expected = %i[ls list add rm remove change start done skip reset search path editall help]
-    expected.each do |subcmd|
-      assert @harness.has_subcmd?(subcmd), "Expected subcmd :#{subcmd} to be registered"
-    end
+  def test_add_change_status_list_and_remove_preserve_other_rows
+    @harness.run_subcmd(:add, 'first', '-t', 'urgent')
+    first = Hiiro::TodoItem.first
+    second = Hiiro::TodoItem.create(text: 'external', task_name: 'feature', branch: 'branch')
+    @harness.run_subcmd(:change, first.id.to_s, '--text', 'edited')
+    @harness.run_subcmd(:done, first.id.to_s)
+    assert_equal ['edited', 'urgent', 'done'], Hiiro::TodoItem[first.id].values.values_at(:text, :tags, :status)
+    assert_equal ['external', 'feature', 'branch'], Hiiro::TodoItem[second.id].values.values_at(:text, :task_name, :branch)
+    output, = capture_io { @harness.run_subcmd(:ls, '-a') }
+    assert_equal "#{first.id} [x] edited  [urgent]\n#{second.id} [ ] external  (feature)\n", output
+    @harness.run_subcmd(:rm, first.id.to_s)
+    assert_equal [[second.id, 'external']], Hiiro::TodoItem.order(:id).all.map { |row| [row.id, row.text] }
   end
 
-  def test_editall_opens_editor
-    # editall calls system with editor
+  def test_editall_updates_database_projection_preserving_context_and_external_rows
+    item = Hiiro::TodoItem.create(text: 'original', task_name: 'feature', branch: 'branch', tags: 'old')
+    @harness.define_singleton_method(:edit_files) do |path|
+      rows = YAML.safe_load_file(path)
+      rows.first['text'] = 'edited'
+      Hiiro::TodoItem[item.id].update(tags: 'external')
+      Hiiro::TodoItem.create(text: 'external-row')
+      File.write(path, rows.to_yaml)
+      true
+    end
     @harness.run_subcmd(:editall)
-
-    assert_equal 1, @harness.system_calls.size
-  end
-
-  class MockTodoManager
-    attr_accessor :items
-
-    def initialize
-      @items = []
-    end
-
-    def todo_file
-      "/tmp/test_todo.yml"
-    end
-
-    def active
-      @items.select { |i| i[:status] != 'done' && i[:status] != 'skip' }
-    end
-
-    def all
-      @items
-    end
-
-    def list(items)
-      items.map { |i| "#{i[:text]}" }.join("\n")
-    end
-
-    def format_item(item)
-      item[:text]
-    end
-
-    def add(text, tags: nil)
-      item = { text: text, tags: tags, status: 'not_started' }
-      @items << item
-      item
-    end
+    assert_equal ['edited', 'feature', 'branch', 'external'], Hiiro::TodoItem[item.id].values.values_at(:text, :task_name, :branch, :tags)
+    assert_equal ['edited', 'external-row'], Hiiro::TodoItem.order(:id).select_map(:text)
   end
 end

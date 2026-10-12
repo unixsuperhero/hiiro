@@ -4,7 +4,7 @@ require 'hiiro'
 
 tm = Hiiro::TodoManager.new
 
-Hiiro.run(*ARGV, todo_file: tm.todo_file) do
+Hiiro.run(*ARGV) do
   select_todo = ->(pool) {
     return nil if pool.empty?
     map = pool.each_with_object({}) { |item, h| h[tm.format_item(item)] = item.id.to_s }
@@ -116,27 +116,24 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
     id_or_index ||= select_todo.call(tm.active)
     next puts "No item selected." if id_or_index.nil?
 
-    text = nil
-    tags = nil
-    status = nil
+    changes = {}
 
     while change_args.any?
       arg = change_args.shift
       case arg
       when '--text'
-        text = change_args.shift
+        changes[:text] = change_args.shift
       when '--tags', '-t'
-        tags = change_args.shift
+        changes[:tags] = change_args.shift
       when '--status', '-s'
-        status = change_args.shift
+        changes[:status] = change_args.shift
       else
-        text ||= ''
-        text = [text, arg, *change_args].join(' ').strip
+        changes[:text] = [arg, *change_args].join(' ').strip
         break
       end
     end
 
-    item = tm.change(id_or_index, text: text, tags: tags, status: status)
+    item = tm.change(id_or_index, **changes)
     if item
       puts "Updated: #{tm.format_item(item)}"
     else
@@ -216,12 +213,8 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
     end
   end
 
-  add_subcmd(:path) do |*args|
-    print tm.todo_file
-  end
-
   add_subcmd(:editall) do |*args|
-    edit_files(tm.todo_file)
+    tm.edit_items(tm.all, hiiro: self)
   end
 
   add_subcmd(:help) do |*args|
@@ -252,8 +245,7 @@ Hiiro.run(*ARGV, todo_file: tm.todo_file) do
 
         search <query>        Search items by text, tags, or task
 
-        path                  Print path to todo.yml
-        editall               Open todo.yml in editor
+        editall               Edit database todos as temporary YAML
 
       Item IDs:
         Items are identified by a permanent numeric ID (1, 2, 3, ...).

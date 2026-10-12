@@ -42,6 +42,31 @@ class Hiiro
       self.herdr_json = Hiiro::DB::JSON.dump(value)
     end
 
+    def rename_saved(new_name)
+      db.transaction(mode: :immediate) do
+        refresh
+        old_name = name
+        set(name: new_name, updated_at: Time.now.iso8601)
+        save_changes
+        Hiiro::Tag.where(taggable_type: 'Branch', taggable_id: old_name).each do |tag|
+          if Hiiro::Tag.where(taggable_type: 'Branch', taggable_id: new_name, name: tag.name).first
+            tag.destroy
+          else
+            tag.set(taggable_id: new_name)
+            tag.save_changes
+          end
+        end
+      end
+    end
+
+    def remove_saved
+      db.transaction(mode: :immediate) do
+        refresh
+        Hiiro::Tag.where(taggable_type: 'Branch', taggable_id: name).delete
+        destroy
+      end
+    end
+
     def self.for_task(task_name)    = where(task: task_name).all
     def self.for_worktree(wt)       = where(worktree: wt).all
     def self.find_by_name(n)        = where(name: n).first

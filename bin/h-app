@@ -3,8 +3,6 @@
 require 'pathname'
 require 'hiiro'
 
-APPS_FILE = File.join(Dir.home, '.config', 'hiiro', 'apps.yml')
-
 def task_root
   # Fall back to current task's tree path if not in a git repo
   env = Environment.current rescue nil
@@ -33,9 +31,15 @@ end
 
 
 Hiiro.run(*ARGV) {
-  add_subcmd(:config) {
-    edit_files(APPS_FILE)
+  add_subcmd(:show) {
+    puts Hiiro::AppRecord.editor_projection.to_yaml
   }
+
+  add_subcmd(:config, :edit) do
+    puts(Hiiro::AppRecord.edit(hiiro: self) ? "Apps updated" : "No apps changed")
+  rescue ArgumentError, Hiiro::Error, Sequel::ConstraintViolation => e
+    warn "Apps not changed: #{e.message}"
+  end
 
   add_subcmd(:cd) { |app_name=nil|
     root = git.root || task_root
@@ -64,13 +68,13 @@ Hiiro.run(*ARGV) {
     end
   }
 
-  add_subcmd(:ls) {
+  add_subcmd(:ls, :list) {
     apps = environment.all_apps
 
     if apps.empty?
       puts "No apps configured."
-      puts "Create #{APPS_FILE} with format:"
-      puts "  app_name: /path/to/app"
+      puts "Add one with: h app add <name> <relative_path>"
+      puts "Edit saved aliases with: h app edit"
     else
       puts "Configured apps:"
       puts
@@ -147,28 +151,9 @@ Hiiro.run(*ARGV) {
     puts "Added app '#{app_name}' => #{relative_path}"
   }
 
-  add_subcmd(:rm) { |app_name=nil|
+  add_subcmd(:rm, :remove) { |app_name=nil|
     if app_name.nil? || app_name.empty?
       puts "Usage: h app rm <app_name>"
-      next
-    end
-
-    record = Hiiro::AppRecord.find_by_name(app_name)
-    unless record
-      puts "App '#{app_name}' not found"
-      puts
-      puts "Available apps:"
-      Hiiro::AppRecord.all.each { |a| puts format("  %-20s => %s", a.name, a.path) }
-      next
-    end
-
-    record.destroy
-    puts "Removed app '#{app_name}' (was: #{record.path})"
-  }
-
-  add_subcmd(:remove) { |app_name=nil|
-    if app_name.nil? || app_name.empty?
-      puts "Usage: h app remove <app_name>"
       next
     end
 

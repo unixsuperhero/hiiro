@@ -1,8 +1,10 @@
 require 'sequel'
+require_relative 'alias_editor'
 
 class Hiiro
   class AppRecord < Sequel::Model(:apps)
     Hiiro::DB.register(self)
+    extend AliasEditor
 
     def self.create_table!(db)
       db.create_table?(:apps) do

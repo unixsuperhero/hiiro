@@ -1,9 +1,6 @@
-require 'yaml'
-
 class Hiiro
   class Git
     class Pr
-      PINNED_FILE = Hiiro::Config.path('pinned_prs.yml')
       FAILED_CONCLUSIONS = Hiiro::CheckContext::FAILED_CONCLUSIONS
 
       attr_accessor :number, :title, :state, :url, :head_branch, :base_branch,
@@ -11,13 +8,8 @@ class Hiiro
                     :checks, :check_runs, :reviews, :last_checked, :pinned_at, :updated_at,
                     :task, :worktree, :herdr_workspace, :tags, :assigned, :authored, :depends_on
 
-      # Load all pinned PRs from YAML, returning an array of Pr instances.
       def self.pinned_prs
-        return [] unless File.exist?(PINNED_FILE)
-        prs = YAML.load_file(PINNED_FILE) || []
-        prs.map { |h| from_pinned_hash(h) }
-      rescue
-        []
+        Hiiro::PinnedPr.by_slot.all.map(&:to_git_pr)
       end
 
       def self.is_link?(link)
@@ -36,43 +28,6 @@ class Hiiro
 
       def self.repo_from_url(url)
         Hiiro::PullRequestReference.from_url(url)&.repo&.path
-      end
-
-      # Build a Pr from a stored YAML hash. Handles both camelCase keys (legacy)
-      # and snake_case keys. Falls back to computing checks from raw statusCheckRollup
-      # if the summarized checks hash is missing (pre-refresh data).
-      def self.from_pinned_hash(hash)
-        raw_rollup = hash['statusCheckRollup']
-        raw_rollup = nil unless raw_rollup.is_a?(Array) && raw_rollup.any?
-        stored_checks = hash['checks']
-        checks = stored_checks || (raw_rollup ? summarize_checks(raw_rollup) : nil)
-
-        new(
-          number:          hash['number'],
-          title:           hash['title'],
-          state:           hash['state'],
-          url:             hash['url'],
-          head_branch:     hash['headRefName'] || hash['head_branch'],
-          base_branch:     hash['baseRefName'] || hash['base_branch'],
-          repo:            hash['repo'],
-          slot:            hash['slot'],
-          is_draft:        hash.key?('is_draft') ? hash['is_draft'] : hash['isDraft'],
-          mergeable:       hash['mergeable'],
-          review_decision: hash['review_decision'] || hash['reviewDecision'],
-          checks:          checks,
-          check_runs:      raw_rollup,
-          reviews:         hash['reviews'],
-          last_checked:    hash['last_checked'],
-          pinned_at:       hash['pinned_at'],
-          updated_at:      hash['updated_at'],
-          task:            hash['task'],
-          worktree:        hash['worktree'],
-          herdr_workspace: hash['herdr_workspace'] || hash['tmux_session'],
-          tags:            hash['tags'],
-          assigned:        hash['assigned'],
-          authored:        hash['authored'],
-          depends_on:      hash['depends_on'],
-        )
       end
 
       # Build a Pr from GitHub API JSON (gh pr view --json or GraphQL).
@@ -248,35 +203,6 @@ class Hiiro
 
       def close  = system('gh', 'pr', 'close', number.to_s)
       def reopen = system('gh', 'pr', 'reopen', number.to_s)
-
-      # Serialize back to string-keyed hash for YAML storage.
-      def to_pinned_h
-        {
-          'number'              => number,
-          'title'               => title,
-          'state'               => state,
-          'url'                 => url,
-          'headRefName'         => head_branch,
-          'repo'                => repo,
-          'slot'                => slot,
-          'is_draft'            => is_draft,
-          'mergeable'           => mergeable,
-          'review_decision'     => review_decision,
-          'checks'              => checks,
-          'statusCheckRollup'   => check_runs,
-          'reviews'             => reviews,
-          'last_checked'        => last_checked,
-          'pinned_at'           => pinned_at,
-          'updated_at'          => updated_at,
-          'task'                => task,
-          'worktree'            => worktree,
-          'herdr_workspace'     => herdr_workspace,
-          'tags'                => (Array(tags).empty? ? nil : tags),
-          'assigned'            => assigned,
-          'authored'            => authored,
-          'depends_on'          => (Array(depends_on).empty? ? nil : depends_on),
-        }.compact
-      end
 
       def to_s = "##{number}: #{title}"
 

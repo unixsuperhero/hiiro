@@ -93,11 +93,6 @@ class Hiiro
 
     # In-memory filesystem double for tests.
     # Does not touch the real filesystem.
-    # Usage:
-    #   fs = NullFilesystem.new
-    #   manager = Hiiro::TodoManager.new(fs: fs)
-    #   manager.save
-    #   assert_includes fs.writes, TodoManager::TODO_FILE
     class NullFilesystem
       attr_reader :writes, :deletes, :renames
 

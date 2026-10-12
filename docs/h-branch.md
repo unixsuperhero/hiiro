@@ -2,6 +2,9 @@
 
 Manage, tag, search, and inspect git branches with task and PR associations stored in SQLite.
 
+Saved branch metadata and name-keyed branch tags are SQLite-owned. Legacy `branches.yml` and `tags.yml` are explicit migration inputs, never live fallback stores.
+Database read failures are reported as errors rather than empty branch, task, or PR results.
+
 ## Synopsis
 
 ```bash
@@ -258,7 +261,7 @@ h branch recent 20
 
 ### rename
 
-Rename a branch locally and on the remote (if configured). Also updates any saved branch record.
+Rename a branch locally and on the remote (if configured). Also updates the saved branch record in place and moves its name-keyed tags to the new name.
 
 **Examples**
 
@@ -269,7 +272,7 @@ h branch rename new-name old-name
 
 ### save
 
-Save the current (or named) branch with metadata: task name, worktree, Herdr workspace/tab/pane, and HEAD SHA. Creates or updates a record in the branches table.
+Save the current (or named) branch with metadata: task name, worktree, Herdr workspace/tab/pane, and HEAD SHA. Creates or updates a record in the branches table. Updating retains the database ID, note, tags, legacy terminal data, and unrelated Herdr payload keys; saving outside Herdr retains the saved Herdr context.
 
 **Options**
 
@@ -338,7 +341,7 @@ h branch status --all
 
 ### tag
 
-Tag a branch. With no branch name, uses the current branch. With `-e`, opens a YAML editor for bulk tagging.
+Tag a branch. With no branch name, uses the current branch. With `-e`, opens a YAML mapping of branch names to tag arrays. Add tags to the arrays; existing tags are retained. Keep quoted names quoted (for example, `'0042'`) so their string identity is preserved. Invalid or failed editor output applies no tags.
 
 **Options**
 

@@ -52,8 +52,25 @@ h pr <subcommand> [args]
 | `old` | List merged/closed tracked PRs |
 | `draft` | List draft PRs |
 | `edit` | Edit the `h-pr` bin file |
+| `dep add <ref> <dependencies>` | Add dependencies to a tracked PR |
+| `dep rm <ref> [dependencies]` | Remove dependencies or clear them all |
+| `dep edit` / `config vim` | Edit tracked PR metadata in a temporary YAML document |
+| `config path` | Print the canonical database location |
+| `q [conditions]` | Query the canonical `prs` table |
 
-PR references (`ref`) can be a PR number, a URL containing `/pull/<number>`, or omitted to fuzzy-select from tracked PRs.
+PR references can be a PR number, a GitHub pull-request URL, or omitted to select a tracked PR. When two repositories have the same number, a bare number is an error. Use the full URL to choose the repository. Stored rows keep their database ID, slot, and pin time across metadata changes and status refreshes.
+
+### Data ownership and record editing
+
+SQLite owns tracked and pinned PR records in `prs`. Check rows use `check_runs.pr_id` to identify the owning PR row, so refreshes never replace another repository's checks. Legacy number-only checks remain unowned when their repository cannot be established. Each PR's raw cached check JSON can rebuild its owned check rows.
+
+`pinned_prs.yml` is a legacy import source, not a live store. Normal PR commands neither read nor write that file. PR templates remain ordinary files.
+
+`h pr config vim` and `h pr dep edit` edit a temporary document containing original row IDs and editable metadata. A missing field keeps its current value. An explicit null clears a field. Changed fields use the original values to detect concurrent edits, and conflicts roll back the operation. Removing a record from this document unpins only that original row, provided it has not changed concurrently. New PRs added while the editor is open remain untouched. Add a new PR with `track`, not by inventing an ID in the editor.
+
+Cleared workspace associations stay cleared across restarts. An old `tmux_session` value seeds `herdr_workspace` only when the canonical column is first introduced; it remains available for recovery but is not a reader fallback.
+
+The `tag -e` and `mrm` selection documents use stable row IDs with repository comments. Failed, blank, or unchanged editors do not mutate PR records. Refresh writes only fetched status, check, review, and last-check fields. It leaves local tags, dependencies, task associations, worktrees, slots, and pin times unchanged.
 
 ### attach
 
@@ -195,6 +212,7 @@ Start tracking a PR. Automatically associates it with the current task/worktree/
 ```bash
 h pr track          # track current branch's PR (or fuzzy-select)
 h pr track 1234     # track by number
+h pr track https://github.com/team/repo/pull/1234
 ```
 
 ### update

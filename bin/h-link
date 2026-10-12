@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 require 'yaml'
-require 'fileutils'
 require 'time'
 require 'pry'
 require 'tempfile'
@@ -14,28 +13,12 @@ opts = Hiiro::Options.setup {
 }
 
 class LinkManager
-  LINKS_FILE = File.join(Dir.home, '.config/hiiro/links.yml')
   LINK_TEMPLATE = {
     'url' => '',
     'description' => '',
     'shorthand' => nil,
     'created_at' => Time.now.iso8601,
   }
-
-  # Shared representation with the DB model; YAML rows load as unsaved instances.
-  Link = Hiiro::Link
-
-  attr_reader :links_file
-
-  def initialize(links_file = LINKS_FILE)
-    @links_file = links_file
-  end
-
-  def ensure_links_file
-    dir = File.dirname(@links_file)
-    FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
-    File.write(@links_file, [].to_yaml) unless File.exist?(@links_file)
-  end
 
   def hash_matches?(links_hash, *args)
     links_hash.select { |line, link| link.matches?(*args) }
@@ -55,73 +38,69 @@ class LinkManager
 
   def load_links
     Hiiro::Link.ordered
-  rescue => e
-    warn "Link DB read failed: #{e}"
-    load_links_from_yaml
   end
 
-  def load_links_from_yaml
-    ensure_links_file
-    links_data = YAML.load_file(@links_file) || []
-    links_data.map { |hash| Link.from_hash(hash) }
+  def edit_links(links = nil, hiiro:)
+    selected = links.nil? ? [] : Array(links)
+    baseline = selected.to_h { |link| [link.id, { values: link.values.dup, tags: Hiiro::Tag.for(link).order(:id).map { |tag| tag.values.dup } }] }
+    rows = links.nil? ? [LINK_TEMPLATE] : selected.map(&:to_h)
+    input = Hiiro::InputFile.yaml_file(hiiro: hiiro, content: rows.to_yaml, prefix: 'link-edit-')
+    document = input.edit.document
+    raise Hiiro::Error, document.error.message unless document.valid?
+    return nil if document.empty? || !document.changed?
+    parsed = document.data
+    apply_edit(parsed.is_a?(Hash) ? [parsed] : parsed, baseline: baseline)
+  ensure
+    input&.cleanup
   end
 
-  def edit_links(links=nil)
-    links_array = if links.nil?
-      [LINK_TEMPLATE]
-    elsif links.is_a?(Array)
-      links.map { |link| link.respond_to?(:to_h) ? link.to_h : link }
-    else
-      [links.respond_to?(:to_h) ? links.to_h : links]
+  def apply_edit(rows, baseline:)
+    raise Hiiro::Error, 'Links must be an array of records' unless rows.is_a?(Array)
+    fields = %w[url description shorthand created_at]
+    ids = []
+    rows.each do |row|
+      raise Hiiro::Error, 'Each link must be a record' unless row.is_a?(Hash)
+      raise Hiiro::Error, 'Unknown link fields' unless (row.keys - fields - ['id']).empty?
+      fields.each do |field|
+        next unless row.key?(field)
+        raise Hiiro::Error, "Invalid link #{field}" unless row[field].nil? || row[field].is_a?(String)
+      end
+      if row.key?('url') || !row.key?('id')
+        raise Hiiro::Error, 'A link needs a URL' unless row['url'].is_a?(String) && !row['url'].strip.empty?
+      end
+      next unless row.key?('id')
+      id = row['id']
+      raise Hiiro::Error, 'Unknown or duplicate link ID' unless id.is_a?(Integer) && baseline.key?(id) && !ids.include?(id)
+      ids << id
     end
-
-    tmpfile = Tempfile.new(['link-edit-', '.yml'])
-    tmpfile.write(links_array.to_yaml)
-    tmpfile.close
-
-    system(ENV['EDITOR'] || 'vim', tmpfile.path)
-
-    updated_data = YAML.load_file(tmpfile.path)
-    tmpfile.unlink
-
-    # Handle both array and single hash results
-    updated_array = updated_data.is_a?(Array) ? updated_data : [updated_data]
-    updated_array.map { |hash| Link.from_hash(hash) }
-  end
-
-  def save_links(links)
-    links.each do |link|
-      attrs = {
-        url:         link.url,
-        description: link.description,
-        shorthand:   link.shorthand,
-        tags_json:   link.respond_to?(:tags_json) ? link.tags_json : nil,
-        created_at:  link.created_at || Time.now.iso8601
-      }
-      existing = Hiiro::Link.where(url: link.url).first
-      if existing
-        existing.update(attrs)
-      else
-        Hiiro::Link.create(attrs)
+    Hiiro::Link.db.transaction(mode: :immediate) do
+      (baseline.keys - ids).each do |id|
+        current = Hiiro::Link[id]
+        next unless current
+        before = baseline.fetch(id)
+        tags = Hiiro::Tag.for(current).order(:id).map(&:values)
+        raise Hiiro::Error, "Link ##{id} changed before deletion" unless current.values == before[:values] && tags == before[:tags]
+        Hiiro::Link.remove(id)
+      end
+      rows.map do |row|
+        attrs = row.reject { |key, _| key == 'id' }.transform_keys(&:to_sym)
+        unless row.key?('id')
+          next Hiiro::Link.create({ description: '', created_at: Time.now.iso8601 }.merge(attrs))
+        end
+        id = row.fetch('id')
+        before = baseline.fetch(id)[:values]
+        changes = attrs.reject { |key, value| value == before[key] }
+        current = Hiiro::Link[id]
+        next current if changes.empty?
+        raise Hiiro::Error, "Link ##{id} was removed" unless current
+        changes.each do |key, value|
+          raise Hiiro::Error, "Link ##{id} #{key} changed concurrently" unless current[key] == before[key] || current[key] == value
+          current[key] = value
+        end
+        current.save_changes
+        current
       end
     end
-    save_yaml_backup
-  rescue => e
-    warn "Link DB write failed: #{e}"
-    save_links_to_yaml(links)
-  end
-
-  def save_links_to_yaml(links)
-    ensure_links_file
-    File.write(@links_file, links.map(&:to_h).to_yaml)
-  end
-
-  def save_yaml_backup
-    rows = Hiiro::Link.ordered
-    ensure_links_file
-    File.write(@links_file, rows.map(&:to_h).to_yaml)
-  rescue => e
-    warn "Link YAML backup failed: #{e}"
   end
 
   def extract_placeholders(url)
@@ -143,7 +122,7 @@ class LinkManager
 
     # Add the link as YAML comments if provided
     if link
-      link_yaml = link.to_yaml
+      link_yaml = link.to_h.to_yaml
       link_yaml.each_line do |line|
         tmpfile.puts("# #{line.chomp}")
       end
@@ -183,7 +162,7 @@ end
 
 lm = LinkManager.new
 
-Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
+Hiiro.run(*ARGV, plugins: [Pins]) do
   add_subcmd(:add) do |*add_args|
     vals = opts.parse!(add_args)
 
@@ -195,17 +174,8 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
     end
 
     if vals.args.empty?
-      new_links = lm.edit_links
-
-      new_links.each do |link|
-        Hiiro::Link.create(
-          url: link.url,
-          description: link.description,
-          shorthand: link.shorthand,
-          created_at: link.created_at || Time.now.iso8601
-        )
-      end
-      lm.save_yaml_backup
+      new_links = lm.edit_links(hiiro: self)
+      next unless new_links
 
       count = Hiiro::Link.count
       if new_links.length == 1
@@ -227,7 +197,6 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
       created_at: Time.now.iso8601
     )
     Hiiro::Tag.tag!(new_link, *tags) if tags.any?
-    lm.save_yaml_backup
 
     puts "Saved link ##{Hiiro::Link.count}: #{url}"
   end
@@ -329,15 +298,8 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
   end
 
   add_subcmd(:editall) do |*editall_args|
-    links_before = lm.load_links
-    edit_files(lm.links_file)
-
-    begin
-      links_after = lm.load_links
-    rescue => e
-      puts "ERROR: Unable to read updated file...reverting."
-      lm.save_links(links_before)
-    end
+    updated_links = lm.edit_links(lm.load_links, hiiro: self)
+    puts "Saved link edits" if updated_links
   end
 
   add_subcmd(:edit) do |*edit_args|
@@ -354,18 +316,11 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
       exit 1
     end
 
-    updated_links = lm.edit_links(link)
-
-    # Replace the original link with the first updated link
-    # If multiple links were added, insert them all
-    links[idx] = updated_links.first
-    if updated_links.length > 1
-      links.insert(idx + 1, *updated_links[1..-1])
-    end
-
-    lm.save_links(links)
-
-    if updated_links.length == 1
+    updated_links = lm.edit_links([link], hiiro: self)
+    next unless updated_links
+    if updated_links.empty?
+      puts "Removed link ##{idx + 1}"
+    elsif updated_links.length == 1
       puts "Updated link ##{idx + 1}"
     else
       puts "Updated link ##{idx + 1} and added #{updated_links.length - 1} more"
@@ -386,8 +341,7 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
       next if selected.nil? || selected.strip.empty?
       link = lines[selected.strip]
       next unless link
-      Hiiro::Link.where(url: link.url).delete
-      lm.save_yaml_backup
+      Hiiro::Link.remove(link.id)
       puts "Removed: #{link.url}"
     else
       rm_args.each do |ref|
@@ -406,8 +360,7 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
             next
           end
         end
-        Hiiro::Link.where(url: link.url).delete
-        lm.save_yaml_backup
+        Hiiro::Link.remove(link.id)
         puts "Removed: #{link.url}"
       end
     end
@@ -480,6 +433,7 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
       puts "#{tag}:"
       links.each { |link| puts "  #{link.display_string(exclude_tags: [tag])}" }
     end.empty? && puts("No tags found!")
+    true
   end
 
   add_subcmd(:paste) do |*paste_args|
@@ -501,12 +455,11 @@ Hiiro.run(*ARGV, plugins: [Pins], links_file: lm.links_file) do
       created_at: Time.now.iso8601
     )
     Hiiro::Tag.tag!(new_link, *tags) if tags.any?
-    lm.save_yaml_backup
 
     puts "Saved link ##{Hiiro::Link.count}: #{url}"
   end
 
   add_subcmd(:path) do |*path_args|
-    print lm.links_file
+    print Hiiro::DB::DB_FILE
   end
 end

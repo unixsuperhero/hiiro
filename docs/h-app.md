@@ -22,7 +22,8 @@ h app <subcommand> [args]
 | `rg <name> [args]` | Run `rg` scoped to an app directory |
 | `vim <name> [args]` | Open vim scoped to an app directory |
 | `sh <name> [cmd]` | Open a shell (or run a command) in an app directory |
-| `config` | Edit `~/.config/hiiro/apps.yml` |
+| `config` / `edit` | Edit a temporary projection of saved app aliases |
+| `show` | Print saved app aliases as YAML |
 | `service` | Manage services (delegates to `h service`) |
 | `run` | Run tools against changed files (delegates to `h run`) |
 | `file` | Manage tracked app files (delegates to `h file`) |
@@ -61,12 +62,30 @@ h app cd api
 
 ### config
 
-Edit the apps config file (`~/.config/hiiro/apps.yml`) in your editor.
+Alias for `edit`. Open a temporary YAML projection of canonical SQLite app records in your editor, not `apps.yml`.
 
 **Examples**
 
 ```bash
 h app config
+```
+
+### edit
+
+Edit saved app aliases through `InputFile`. The temporary document contains an array of records with `id`, `name`, and `path`, as shown under Configuration.
+
+Keep an existing row's `id` unchanged. Omit `id` on a new row. Add `delete: true` to an existing row to delete it; omitting a row leaves it unchanged. Only changed fields are written, so edits preserve unrelated rows and concurrent changes to other fields. A conflicting concurrent change, invalid document, or failed editor leaves the database unchanged.
+
+```bash
+h app edit
+```
+
+### show
+
+Print the YAML projection without opening an editor. An empty registry prints `--- []`.
+
+```bash
+h app show
 ```
 
 ### fd
@@ -178,12 +197,20 @@ h app vim api src/main.rb
 
 ## Configuration
 
-Apps are stored in `~/.config/hiiro/apps.yml`:
+App aliases live in the `apps` table of `~/.config/hiiro/hiiro.db`, owned by `Hiiro::AppRecord`. `h app show` prints this projection:
 
 ```yaml
-api: backend/api
-web: frontend/web
-workers: backend/workers
+- id: 1
+  name: api
+  path: backend/api
+- id: 2
+  name: web
+  path: frontend/web
+- id: 3
+  name: workers
+  path: backend/workers
 ```
 
-Paths are relative to the git repo root (or current task tree path).
+Paths are relative to the git repo root or current task tree path.
+
+Legacy `apps.yml` is an explicit import input for `h db plan --only apps` and `h db migrate --only apps`. App commands do not read or rewrite it. See [h-db](h-db.md) for source selection and recovery. App-file definitions in `app_files.yml`, services, tools, and sparse definitions remain ordinary configuration files.

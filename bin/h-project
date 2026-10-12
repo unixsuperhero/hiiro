@@ -13,15 +13,10 @@ Hiiro.run(*ARGV) do
 
   # === OPEN PROJECT (default) ===
   add_subcmd(:open) { |project_name|
-    re = /#{project_name}/i
+    result = Hiiro::Matcher.by_prefix(projects.all, project_name) { |name, _| name }
+    matches = result.matches
 
-    # conf_matches = projects.from_config.select { |k, v| k.match?(re) }
-    # dir_matches  = projects.dirs.select { |proj, path| proj.match?(re) }
-
-    dir_matches = Hiiro::Matcher.by_prefix(projects.dirs, project_name){|k,v| k }
-    matches = dir_matches.matches
-
-    case dir_matches.matches.count
+    case matches.count
     when 0
       name = 'proj'
       path = File.join(Dir.home, 'proj')
@@ -46,7 +41,8 @@ Hiiro.run(*ARGV) do
       puts "ERROR: Multiple matches found"
       puts
       puts "Matches:"
-      matches.each { |name, path|
+      matches.each { |match|
+        name, path = match.item
         puts format("  %s: %s", name, path)
       }
     end
@@ -71,29 +67,34 @@ Hiiro.run(*ARGV) do
     run_subcmd(:list, *ls_args)
   }
 
-  # === SHOW CONFIG FILE ===
-  add_subcmd(:config) { |*config_args|
-    if File.exist?(Hiiro::Projects::CONFIG_FILE)
-      puts File.read(Hiiro::Projects::CONFIG_FILE)
-    else
-      puts "No config file found at: #{Hiiro::Projects::CONFIG_FILE}"
-      puts
-      puts "Create it with YAML format:"
-      puts "  project_name: /path/to/project"
+  add_subcmd(:add) { |name=nil, path=nil|
+    unless name && path && !name.empty? && !path.empty?
+      puts "Usage: h project add <name> <path>"
+      next
     end
+    projects.save_project(name, path)
+    puts "Saved project '#{name}' => #{path}"
   }
 
-  # === EDIT CONFIG FILE ===
-  add_subcmd(:edit) { |*edit_args|
-    config_dir = File.dirname(Hiiro::Projects::CONFIG_FILE)
-    Dir.mkdir(config_dir) unless Dir.exist?(config_dir)
-
-    unless File.exist?(Hiiro::Projects::CONFIG_FILE)
-      File.write(Hiiro::Projects::CONFIG_FILE, "# Project aliases\n# project_name: /path/to/project\n")
+  add_subcmd(:rm, :remove) { |name=nil|
+    record = Hiiro::Project.find_by_name(name)
+    unless record
+      puts "Project '#{name}' not found"
+      next
     end
-
-    edit_files(Hiiro::Projects::CONFIG_FILE)
+    record.destroy
+    puts "Removed project '#{name}'"
   }
+
+  add_subcmd(:config) {
+    puts Hiiro::Project.editor_projection.to_yaml
+  }
+
+  add_subcmd(:edit) do
+    puts(Hiiro::Project.edit(hiiro: self) ? "Projects updated" : "No projects changed")
+  rescue ArgumentError, Hiiro::Error, Sequel::ConstraintViolation => e
+    warn "Projects not changed: #{e.message}"
+  end
 
   # === SELECT PROJECT ===
   add_subcmd(:select) { |*select_args|
@@ -177,18 +178,18 @@ Hiiro.run(*ARGV) do
         h-project open <project_name>   Same as above
         h-project list                  List all known projects
         h-project ls                    Alias for list
-        h-project config                Show config file contents
-        h-project edit                  Edit config file
+        h-project add <name> <path>     Save a project alias
+        h-project rm <name>             Remove a saved alias
+        h-project config                Show the SQLite editor projection
+        h-project edit                  Edit saved aliases
         h-project sh <project_name>     Open shell in project directory
 
       SOURCES:
-        Projects are discovered from two sources:
-        1. Directories in ~/proj/
-        2. Entries in ~/.config/hiiro/projects.yml
+        Directories in ~/proj/ and saved project aliases in SQLite.
 
-      CONFIG FORMAT (projects.yml):
-        project_name: /path/to/project
-        another: /some/other/path
+      EDIT FORMAT:
+        YAML rows with id, name, and path. New rows omit id.
+        Set delete: true to remove a displayed alias; omitted rows are preserved.
 
       MATCHING:
         Project names are matched using regex (case insensitive).

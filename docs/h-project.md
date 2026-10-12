@@ -14,8 +14,10 @@ h project <subcommand> [args]
 |------------|-------------|
 | `open <name>` | Open a project and focus/create its Herdr workspace |
 | `list` / `ls` | List all known projects |
-| `config` | Show the config file contents |
-| `edit` | Edit the config file |
+| `add <name> <path>` | Save or update a project alias |
+| `rm <name>` / `remove <name>` | Remove a saved project alias |
+| `config` | Print saved project aliases as YAML |
+| `edit` | Edit a temporary projection of saved project aliases |
 | `select` | Fuzzy-select a project and print its path |
 | `copy` | Fuzzy-select a project and copy path to clipboard |
 | `sh <name> [cmd]` | Open shell (or run command) in a project directory |
@@ -24,13 +26,13 @@ h project <subcommand> [args]
 Projects are discovered from two sources:
 
 1. Directories in `~/proj/`
-2. Entries in `~/.config/hiiro/projects.yml`
+2. Saved aliases in SQLite, which take precedence over directories with the same name
 
 The default subcommand (no subcommand) runs `help`.
 
 ### config
 
-Print the contents of `~/.config/hiiro/projects.yml`.
+Print a YAML projection of saved SQLite project aliases, with `id`, `name`, and `path` for each row. Directory discovery is not included. With no saved aliases, prints `--- []`.
 
 **Examples**
 
@@ -50,7 +52,9 @@ h project copy
 
 ### edit
 
-Open `~/.config/hiiro/projects.yml` in your editor. Creates the file with a template comment if it doesn't exist.
+Open a temporary YAML projection of saved SQLite project aliases through `InputFile`, not `projects.yml`.
+
+Keep an existing row's `id` unchanged. Omit `id` on a new row. Add `delete: true` to an existing row to delete it; omitting a row leaves it unchanged. Only changed fields are written. Unrelated rows and concurrent changes to other fields survive. A conflicting concurrent change, invalid document, or failed editor leaves the database unchanged.
 
 **Examples**
 
@@ -60,7 +64,7 @@ h project edit
 
 ### list / ls
 
-List all projects with their source (`[config]` or `[dir]`) and path.
+List all projects with their source (`[config]` for SQLite aliases or `[dir]` for discovered directories) and path.
 
 **Examples**
 
@@ -102,11 +106,33 @@ h project sh hiiro
 h project sh hiiro bundle exec rake test
 ```
 
+### add
+
+Save a named project alias. An existing name updates only its path and keeps its database ID.
+
+```bash
+h project add my-app ~/work/my-app
+```
+
+### rm / remove
+
+Delete only the saved alias with the exact name. This does not delete its directory or exclude it from `~/proj/` discovery.
+
+```bash
+h project rm my-app
+```
+
 ## Configuration
 
-`~/.config/hiiro/projects.yml`:
+Project aliases live in the `projects` table of `~/.config/hiiro/hiiro.db`, owned by `Hiiro::Project`. `h project config` prints this projection:
 
 ```yaml
-my-app: /Users/me/work/my-app
-hiiro: /Users/me/proj/hiiro
+- id: 1
+  name: my-app
+  path: /Users/me/work/my-app
+- id: 2
+  name: hiiro
+  path: /Users/me/proj/hiiro
 ```
+
+Legacy `projects.yml` is an explicit import input for `h db plan --only projects` and `h db migrate --only projects`. Project commands do not read or rewrite it. See [h-db](h-db.md) for source selection and recovery. Directory discovery in `~/proj/` remains file-based.

@@ -47,7 +47,11 @@ Home panes save a workspace label and optional path:
 | `home rm <name>` | Remove a home |
 | `home switch [name]` | Open or focus the home's workspace and tab |
 
-Homes are stored in `~/.config/hiiro/pane_homes.yml` and mirrored in SQLite.
+Homes live only in SQLite, in the `pane_homes` table of `~/.config/hiiro/hiiro.db`. `home add` updates the named row in place and preserves its ID, existing path when omitted, legacy session, and other saved fields. `home rm` deletes only the exact name. Listing prefers `workspace` over the legacy `session` field.
+
+Legacy `pane_homes.yml` is an explicit migration source, not a live configuration file. Home commands neither read nor rewrite it.
+
+The mounted `pin` command also uses SQLite only. `h pane pin set <key> <value>` stores CLI text as text, so `42`, `false`, and JSON-looking text do not become numbers, booleans, or collections. `pin all`, `pin get <key>`, and `pin rm <key>` read or mutate the command-specific pins without replacing other keys. Legacy pin files remain recovery sources.
 
 ```bash
 h pane home add work development ~/work

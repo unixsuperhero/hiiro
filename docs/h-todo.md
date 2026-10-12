@@ -23,13 +23,12 @@ h todo <subcommand> [args]
 | `skip [id]` | Mark an item as skipped |
 | `reset [id]` | Reset an item to not_started |
 | `search <query>` | Search items by text, tags, or task |
-| `path` | Print path to the todo file |
-| `editall` | Open the todo file in editor |
+| `editall` | Edit a temporary database-backed YAML projection |
 | `help` | Print usage |
 
 Items have a permanent numeric ID (never reused). Statuses: `not_started` (`[ ]`), `started` (`[>]`), `done` (`[x]`), `skip` (`[-]`).
 
-All `id` arguments accept either the item's ID or its index in the current list. Fuzzy-select is used when no ID is provided.
+Todos are stored only in SQLite. Exact IDs take precedence; `h todo` also retains its historical numeric suffix shortcut. Fuzzy-select is used when no ID is provided. `t` and `tt` require exact decimal IDs belonging to their selected task (or the orphan scope `-`).
 
 ### add
 
@@ -94,14 +93,15 @@ h todo ls -t urgent
 h todo ls --task my-task
 ```
 
-### path / editall
+### editall
 
-`path` prints the todo file path. `editall` opens it directly in your editor.
+`editall` opens a temporary YAML projection of current database rows, not `todo.yml`. Keep existing `id` values unchanged; new rows omit `id`. Edit `text`, `status`, or `tags`; omitted fields remain unchanged and `tags: null` clears tags. Task associations, tree, branch, session, and creation time are retained.
 
-**Examples**
+Removing a row deletes only that selected original ID. Rows added by another command while the editor is open are preserved. Changed fields or deleted rows that conflict with concurrent changes abort the entire edit. Blank, unchanged, invalid, or failed editor output makes no changes; an explicit `[]` removes the originally selected rows if they have not changed.
+
+The obsolete `path` command has been removed because there is no authoritative todo YAML file. Legacy `todo.yml` is an explicit `h db migrate` recovery input only.
 
 ```bash
-h todo path
 h todo editall
 ```
 ### rm / remove

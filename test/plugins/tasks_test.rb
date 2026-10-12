@@ -227,171 +227,46 @@ Environment = Hiiro::Environment
 class EnvironmentTest < Minitest::Test
   include TestHelpers
 
-  def test_current_returns_environment_with_pwd
-    env = Environment.current
-
-    assert_instance_of Environment, env
-    assert_equal Dir.pwd, env.path
+  def setup
+    Hiiro::TaskRecord.dataset.delete
+    Hiiro::AppRecord.dataset.delete
   end
 
-  def test_initialize_with_custom_path
-    env = Environment.new(path: "/custom/path")
-
-    assert_equal "/custom/path", env.path
+  def teardown
+    setup
   end
 
-  def test_all_tasks_returns_tasks_from_config
-    with_temp_dir do |dir|
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-      File.write(tasks_file, <<~YAML)
-        tasks:
-          - name: task-one
-            tree: task-one/main
-          - name: task-two
-            tree: task-two/main
-      YAML
-
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      env = Environment.new(config: config)
-
-      assert_equal 2, env.all_tasks.count
-      assert_equal "task-one", env.all_tasks.first.name
-    end
-  end
-
-  def test_find_task_by_full_name
-    with_temp_dir do |dir|
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-      File.write(tasks_file, <<~YAML)
-        tasks:
-          - name: feature
-            tree: feature/main
-          - name: bugfix
-            tree: bugfix/main
-      YAML
-
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      env = Environment.new(config: config)
-
-      task = env.find_task("feature")
-
-      assert_equal "feature", task.name
-    end
-  end
-
-  def test_find_task_by_prefix
-    with_temp_dir do |dir|
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-      File.write(tasks_file, <<~YAML)
-        tasks:
-          - name: feature-auth
-            tree: feature-auth/main
-          - name: bugfix
-            tree: bugfix/main
-      YAML
-
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      env = Environment.new(config: config)
-
-      task = env.find_task("feat")
-
-      assert_equal "feature-auth", task.name
-    end
-  end
-
-  def test_find_task_returns_nil_for_no_match
-    with_temp_dir do |dir|
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-      File.write(tasks_file, "tasks: []\n")
-
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      env = Environment.new(config: config)
-
-      task = env.find_task("nonexistent")
-
-      assert_nil task
-    end
+  def test_task_readers_resolve_database_names_and_refresh_changes
+    feature = Hiiro::TaskRecord.create(name: 'feature-auth', tree: 'feature-auth/main')
+    child = Hiiro::TaskRecord.create(name: 'feature-auth/api', tree: 'feature-auth/api')
+    env = Environment.new
+    assert_equal 'feature-auth', env.find_task('feat').name
+    assert_equal child.id, env.find_task('feature-auth/api').id
+    feature.update(next_action: 'Review')
+    Hiiro::TaskRecord.create(name: 'bugfix', tree: 'bugfix/main')
+    assert_equal %w[bugfix feature-auth feature-auth/api], env.all_tasks.map(&:name)
+    assert_equal 'Review', env.find_task('feature-auth').next_action
+    assert_nil env.find_task('missing')
   end
 
   def test_current_task_detects_external_absolute_tree
-    Hiiro::TaskRecord.dataset.delete
-
     with_temp_dir do |dir|
-      external_tree = File.join(dir, "external-repo")
-      nested_path = File.join(external_tree, "apps", "api")
-      FileUtils.mkdir_p(nested_path)
-
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-      File.write(tasks_file, <<~YAML)
-        tasks:
-          - name: external
-            tree: #{external_tree}
-            session: external
-      YAML
-
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      env = Environment.new(path: nested_path, config: config)
-
-      assert_equal external_tree, env.tree.path
-      assert_equal "external", env.task.name
+      external = File.join(dir, 'external-repo')
+      nested = File.join(external, 'apps', 'api')
+      FileUtils.mkdir_p(nested)
+      Hiiro::TaskRecord.create(name: 'external', tree: external, session: 'external')
+      env = Environment.new(path: nested)
+      assert_equal external, env.tree.path
+      assert_equal 'external', env.task.name
     end
   end
 
-  def test_find_task_with_slash_path
-    with_temp_dir do |dir|
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-      File.write(tasks_file, <<~YAML)
-        tasks:
-          - name: feature
-            tree: feature/main
-          - name: feature/api
-            tree: feature/api
-      YAML
-
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      env = Environment.new(config: config)
-
-      task = env.find_task("feature/api")
-
-      assert_equal "feature/api", task.name
-    end
-  end
-
-  def test_task_matcher_returns_matcher_instance
-    env = Environment.new(config: TaskManager::Config.new(tasks_file: "/nonexistent"))
-
-    matcher = env.task_matcher
-
-    assert_instance_of Hiiro::Matcher, matcher
-  end
-
-  def test_session_matcher_with_stubbed_sessions
+  def test_app_reader_refreshes_database_aliases
+    app = Hiiro::AppRecord.create(name: 'frontend', path: 'apps/frontend')
     env = Environment.new
-
-    stub_workspaces = [
-      herdr_workspace('w1', 'work', '/home/user/work'),
-      herdr_workspace('w2', 'personal', '/home/user/personal'),
-    ]
-    client = Struct.new(:workspaces).new(stub_workspaces)
-    Hiiro::Herdr.stub(:client, client) do
-      # Force reload
-      env.instance_variable_set(:@all_sessions, nil)
-      matcher = env.session_matcher
-
-      assert_instance_of Hiiro::Matcher, matcher
-    end
+    assert_equal 'apps/frontend', env.find_app('front').relative_path
+    app.update(path: 'apps/ui')
+    assert_equal 'apps/ui', env.find_app('front').relative_path
   end
 end
 
@@ -416,10 +291,7 @@ class TaskManagerFromWorktreeTest < Minitest::Test
       FileUtils.mkdir_p(repo)
       assert system('git', 'init', '-q', repo)
 
-      tasks_dir = File.join(dir, "tasks")
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      env = Hiiro::Environment.new(config: config)
+      env = Hiiro::Environment.new
       tm = TaskManager.new(MockHiiro.new, environment: env)
 
       task = nil
@@ -437,8 +309,7 @@ class TaskManagerFromWorktreeTest < Minitest::Test
 
   def test_task_from_worktree_rejects_non_git_directory
     with_temp_dir do |dir|
-      config = TaskManager::Config.new(tasks_file: File.join(dir, "tasks", "tasks.yml"))
-      env = Hiiro::Environment.new(config: config)
+      env = Hiiro::Environment.new
       tm = TaskManager.new(MockHiiro.new, environment: env)
 
       task = nil
@@ -456,104 +327,63 @@ class TaskManagerConfigTest < Minitest::Test
   include TestHelpers
 
   def setup
-    # Clear SQLite task/app data so tests that pass explicit YAML files get clean results
     Hiiro::TaskRecord.dataset.delete
     Hiiro::AppRecord.dataset.delete
   end
 
   def teardown
-    Hiiro::TaskRecord.dataset.delete
-    Hiiro::AppRecord.dataset.delete
+    setup
   end
 
-  def test_config_apps_from_yaml
-    with_temp_dir do |dir|
-      apps_file = File.join(dir, "apps.yml")
-      File.write(apps_file, <<~YAML)
-        frontend: apps/frontend
-        backend: services/backend
-      YAML
-
-      config = TaskManager::Config.new(apps_file: apps_file)
-      apps = config.apps
-
-      assert_equal 2, apps.count
-      assert_equal "frontend", apps.first.name
-      assert_equal "apps/frontend", apps.first.relative_path
-    end
+  def test_create_uses_database_identity_and_preserves_existing_tasks
+    existing = Hiiro::TaskRecord.create(name: 'existing', next_action: 'Keep')
+    task = TaskManager::Config.new.create_task(name: 'new-task', tree: 'new-task/main', session: 'new-task')
+    assert_equal ['new-task', 'new-task/main', 'new-task'], Hiiro::TaskRecord[task.id].values.values_at(:name, :tree, :session)
+    assert_equal 'Keep', existing.refresh.next_action
+    assert_raises(Sequel::UniqueConstraintViolation) { TaskManager::Config.new.create_task(name: 'existing') }
+    assert_equal 'Keep', existing.refresh.next_action
   end
 
-  def test_config_apps_empty_when_no_file
-    config = TaskManager::Config.new(apps_file: "/nonexistent/file.yml")
-    apps = config.apps
-
-    assert_equal [], apps
+  def test_attach_from_stale_task_preserves_new_metadata_and_resources
+    config = TaskManager::Config.new
+    task = config.create_task(name: 'stale')
+    record = Hiiro::TaskRecord[task.id]
+    record.update(status: 'waiting', next_action: 'New', app: 'api', color_index: 4)
+    record.metadata = { 'windows' => [{ 'index' => '0', 'name' => 'vim', 'path' => '/tmp/code' }], 'saved_at' => 'yesterday' }
+    record.save_changes
+    resource = Hiiro::TaskResource.create(task_id: task.id, kind: 'issue', target: 'https://example.com/42')
+    another = config.create_task(name: 'concurrent')
+    loaded = config.attach_tree(task.id, tree: 'stale/main', session: 'stale')
+    assert_equal task.id, loaded.id
+    assert_equal ['waiting', 'New', 'api', 4], record.refresh.values.values_at(:status, :next_action, :app, :color_index)
+    assert_equal 'yesterday', record.metadata['saved_at']
+    assert_equal resource.id, record.resources.first.id
+    assert_equal 'concurrent', Hiiro::TaskRecord[another.id].name
+    config.attach_tree(task.id, tree: 'stale/main', session: 'stale', app: nil)
+    assert_nil record.refresh.app
+    assert_equal 'New', record.next_action
   end
 
-  def test_config_tasks_from_yaml
-    with_temp_dir do |dir|
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-      File.write(tasks_file, <<~YAML)
-        tasks:
-          - name: feature-x
-            tree: feature-x/main
-            session: feature-x
-          - name: feature-x/api
-            tree: feature-x/api
-            session: feature-x
-      YAML
-
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      tasks = config.tasks
-
-      assert_equal 2, tasks.count
-      assert_equal "feature-x", tasks.first.name
-      assert_equal "feature-x/api", tasks.last.name
-    end
+  def test_attach_does_not_resurrect_a_removed_task
+    task = TaskManager::Config.new.create_task(name: 'removed')
+    Hiiro::TaskRecord[task.id].destroy
+    error = assert_raises(Hiiro::Error) { TaskManager::Config.new.attach_tree(task.id, tree: 'removed/main', session: 'removed') }
+    assert_equal "Task not found: #{task.id}", error.message
+    assert_nil Hiiro::TaskRecord.find_by_name('removed')
   end
 
-  def test_config_save_task
-    with_temp_dir do |dir|
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-
-      task = Task.new(name: "new-task", tree: "new-task/main", session: "new-task")
-      config.save_task(task)
-
-      # Verify file was saved
-      assert File.exist?(tasks_file)
-      content = YAML.load_file(tasks_file, permitted_classes: [Symbol])
-      assert_equal 1, content['tasks'].count
-    end
-  end
-
-  def test_detaching_a_worktree_preserves_task_metadata_and_references
-    with_temp_dir do |dir|
-      config = TaskManager::Config.new(tasks_file: File.join(dir, 'tasks.yml'))
-      task = Task.new(name: 'existing-task', tree: dir, next_action: 'Review the design', status: 'waiting', waiting_on: 'Feedback')
-      config.save_task(task)
-      record = Hiiro::TaskRecord.find_by_name(task.name)
-      Hiiro::TaskResource.create(task_id: record.id, kind: 'issue', target: 'https://example.com/issue/42')
-
-      config.detach_tree(task.name)
-      config.detach_tree(task.name)
-      loaded = config.tasks.find { |item| item.name == task.name }
-      config.save_task(loaded)
-
-      assert_nil loaded.tree_name
-      assert_equal 'waiting', loaded.status
-      assert_equal 'Review the design', loaded.next_action
-      assert_equal 'Feedback', loaded.waiting_on
-      assert_equal [
-        ['directory', dir],
-        ['issue', 'https://example.com/issue/42']
-      ], record.resources.order(:kind).select_map([:kind, :target])
-    end
+  def test_detaching_retains_current_directory_metadata_and_references
+    config = TaskManager::Config.new
+    record = Hiiro::TaskRecord.create(name: 'existing-task', tree: '/tmp/old', next_action: 'Review', status: 'waiting', waiting_on: 'Feedback')
+    config.tasks
+    record.update(tree: '/tmp/new')
+    issue = Hiiro::TaskResource.create(task_id: record.id, kind: 'issue', target: 'https://example.com/42')
+    config.detach_tree(record.name)
+    config.detach_tree(record.name)
+    assert_nil record.refresh.tree
+    assert_equal ['waiting', 'Review', 'Feedback'], record.values.values_at(:status, :next_action, :waiting_on)
+    assert_equal [['directory', '/tmp/new'], ['issue', 'https://example.com/42']], record.resources.order(:kind).select_map([:kind, :target])
+    assert_equal issue.id, record.resources.where(kind: 'issue').first.id
   end
 end
 
@@ -566,15 +396,10 @@ class TaskManagerFilterTasksTest < Minitest::Test
   end
 
   def build_tm(tasks_yaml)
-    with_temp_dir do |dir|
-      tasks_dir = File.join(dir, "tasks")
-      FileUtils.mkdir_p(tasks_dir)
-      tasks_file = File.join(tasks_dir, "tasks.yml")
-      File.write(tasks_file, tasks_yaml)
-      config = TaskManager::Config.new(tasks_file: tasks_file)
-      env = Hiiro::Environment.new(config: config)
-      yield TaskManager.new(MockHiiro.new, environment: env)
+    YAML.safe_load(tasks_yaml).fetch('tasks').each do |attributes|
+      Hiiro::TaskRecord.create(attributes.transform_keys(&:to_sym))
     end
+    yield TaskManager.new(MockHiiro.new, environment: Hiiro::Environment.new)
   end
 
   def test_filter_tasks_returns_all_when_no_prefixes

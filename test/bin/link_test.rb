@@ -1,43 +1,116 @@
 require "test_helper"
+require_relative '../../plugins/pins'
 
 class LinkTest < Minitest::Test
   def setup
-    @mock_lm = MockLinkManager.new
-    mock = @mock_lm
-
-    @harness = Hiiro::TestHarness.load_bin("bin/h-link")
+    Hiiro::Link.dataset.delete
+    Hiiro::Tag.where(taggable_type: 'Link').delete
+    @harness = Hiiro::TestHarness.load_bin('bin/h-link')
+    @manager = LinkManager.new
   end
 
-  def test_registers_expected_subcommands
-    expected = %i[add ls list search select copy editall edit open path]
-    expected.each do |subcmd|
-      assert @harness.has_subcmd?(subcmd), "Expected subcmd :#{subcmd} to be registered"
+  def teardown
+    Hiiro::Link.dataset.delete
+    Hiiro::Tag.where(taggable_type: 'Link').delete
+  end
+
+  def link(url, **attrs)
+    Hiiro::Link.create({ url: url, description: 'original', shorthand: 'ex', created_at: '2026-01-01T00:00:00Z', tags_json: '["legacy"]' }.merge(attrs))
+  end
+
+  def baseline(*links)
+    links.to_h { |record| [record.id, { values: record.values.dup, tags: Hiiro::Tag.for(record).order(:id).map { |tag| tag.values.dup } }] }
+  end
+
+  def test_add_list_and_remove_preserve_another_link_and_its_tags
+    other = link('https://other', shorthand: 'other')
+    Hiiro::Tag.tag!(other, 'keep')
+    capture_io { @harness.run_subcmd(:add, 'https://new', 'new description', '--shorthand', 'new', '--tag', 'owned') }
+    added = Hiiro::Link.find_by_shorthand('new')
+    assert_equal ['https://new', 'new description', ['owned']], [added.url, added.description, added.tags]
+    output, = capture_io { @harness.run_subcmd(:ls) }
+    assert_includes output, 'https://new - new description'
+    assert_includes output, 'https://other - original'
+    capture_io { @harness.run_subcmd(:rm, 'new') }
+    assert_equal [[other.id, 'https://other', ['keep']]], Hiiro::Link.all.map { |record| [record.id, record.url, record.tags] }
+    assert_equal ['keep'], Hiiro::Tag.where(taggable_type: 'Link').map(&:name)
+  end
+
+  def test_url_edit_preserves_stable_id_tags_and_concurrent_description
+    original = link('https://old')
+    Hiiro::Tag.tag!(original, 'keep')
+    before = baseline(original)
+    Hiiro::Link[original.id].update(description: 'concurrent')
+    inserted = link('https://inserted', shorthand: 'new')
+    @manager.apply_edit([original.to_h.merge('url' => 'https://edited')], baseline: before)
+    actual = Hiiro::Link[original.id]
+    assert_equal ['https://edited', 'concurrent', 'ex', ['keep'], '["legacy"]', '2026-01-01T00:00:00Z'], [actual.url, actual.description, actual.shorthand, actual.tags, actual.tags_json, actual.created_at]
+    assert_equal [original.id, inserted.id], Hiiro::Link.order(:id).map(&:id)
+  end
+
+  def test_bulk_editor_deletes_only_selected_ids_and_allocates_new_ids
+    first = link('https://first')
+    second = link('https://second', shorthand: 'second')
+    Hiiro::Tag.tag!(first, 'owned')
+    before = baseline(first, second)
+    inserted = link('https://concurrent', shorthand: 'concurrent')
+    @manager.apply_edit([second.to_h.merge('description' => 'edited'), { 'url' => 'https://new' }], baseline: before)
+    assert_equal [[second.id, 'https://second', 'edited'], [inserted.id, 'https://concurrent', 'original'], [inserted.id + 1, 'https://new', '']], Hiiro::Link.order(:id).all.map { |record| [record.id, record.url, record.description] }
+    assert_empty Hiiro::Tag.for(first).all
+  end
+
+  def test_conflict_rolls_back_other_edits_and_deletions
+    first = link('https://first')
+    second = link('https://second', shorthand: 'second')
+    before = baseline(first, second)
+    Hiiro::Link[second.id].update(description: 'other writer')
+    error = assert_raises(Hiiro::Error) { @manager.apply_edit([second.to_h.merge('description' => 'editor')], baseline: before) }
+    assert_includes error.message, 'changed concurrently'
+    assert_equal [[first.id, 'original'], [second.id, 'other writer']], Hiiro::Link.order(:id).all.map { |record| [record.id, record.description] }
+  end
+
+  def test_changed_tags_prevent_stale_deletion
+    first = link('https://first')
+    before = baseline(first)
+    Hiiro::Tag.tag!(first, 'concurrent')
+    assert_raises(Hiiro::Error) { @manager.apply_edit([], baseline: before) }
+    assert_equal ['https://first', ['concurrent']], [Hiiro::Link[first.id].url, Hiiro::Link[first.id].tags]
+  end
+
+  def test_omitted_fields_are_preserved_and_explicit_null_clears
+    original = link('https://old')
+    @manager.apply_edit([{ 'id' => original.id, 'shorthand' => nil }], baseline: baseline(original))
+    assert_equal ['https://old', 'original', nil], Hiiro::Link[original.id].values.values_at(:url, :description, :shorthand)
+  end
+
+  def test_deleted_edited_row_is_not_resurrected
+    original = link('https://old')
+    before = baseline(original)
+    Hiiro::Link.remove(original.id)
+    survivor = link('https://survivor')
+    assert_raises(Hiiro::Error) { @manager.apply_edit([original.to_h.merge('url' => 'https://edited')], baseline: before) }
+    assert_equal [[survivor.id, 'https://survivor']], Hiiro::Link.all.map { |record| [record.id, record.url] }
+  end
+
+  def test_unknown_duplicate_and_malformed_ids_abort_without_changes
+    original = link('https://old')
+    before = baseline(original)
+    [[{ 'id' => original.id + 999, 'url' => 'https://bad' }], [original.to_h, original.to_h], [original.to_h.merge('id' => original.id.to_s)]].each do |rows|
+      assert_raises(Hiiro::Error) { @manager.apply_edit(rows, baseline: before) }
+      assert_equal [[original.id, 'https://old']], Hiiro::Link.all.map { |record| [record.id, record.url] }
     end
   end
 
-  class MockLinkManager
-    def load_links
-      []
+  def test_blank_unchanged_and_failed_editor_output_never_writes
+    original = link('https://old')
+    editor = Object.new
+    ['', nil].each do |contents|
+      editor.define_singleton_method(:edit_files) { |path| File.write(path, contents) if contents; true }
+      assert_nil @manager.edit_links([original], hiiro: editor)
+      assert_equal ['https://old', ['legacy']], [Hiiro::Link[original.id].url, JSON.parse(Hiiro::Link[original.id].tags_json)]
     end
-
-    def save_links(links)
-    end
-
-    def links_file
-      "/tmp/test_links.yml"
-    end
-
-    def load_link_hash(links = nil)
-      {}
-    end
-
-    def hash_matches?(lines, *args)
-      lines
-    end
-
-    def has_placeholders?(url)
-      false
-    end
+    editor.define_singleton_method(:edit_files) { |path| File.write(path, [].to_yaml); false }
+    assert_raises(Hiiro::Error) { @manager.edit_links([original], hiiro: editor) }
+    assert_equal [[original.id, 'https://old']], Hiiro::Link.all.map { |record| [record.id, record.url] }
   end
-
 end

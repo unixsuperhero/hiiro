@@ -2,7 +2,6 @@
 
 require "hiiro"
 require "fileutils"
-require "yaml"
 require "pathname"
 
 hiiro = Hiiro.init(*ARGV, plugins: [Tmux])
@@ -22,7 +21,7 @@ class TaskManager
     puts "  start TASK [APP]      Start a task (reuses available worktree or creates new)"
     puts "  switch [TASK]         Switch to an existing task (interactive if no task given)"
     puts "  app APP_NAME          Open a tmux window for an app in current worktree"
-    puts "  apps                  List configured apps from apps.yml"
+    puts "  apps                  List configured database-backed apps"
     puts "  save                  Save current tmux session info for this task"
     puts "  status, st            Show current task status"
     puts "  stop                  Stop working on current task (worktree becomes available)"
@@ -388,7 +387,7 @@ class TaskManager
 
   def list_configured_apps
     if apps_config.any?
-      puts "Configured apps (#{apps_config_file}):"
+      puts "Configured apps:"
       puts
       apps_config.each do |name, path|
         puts format("  %-20s => %s", name, path)
@@ -396,12 +395,7 @@ class TaskManager
     else
       puts "No apps configured."
       puts
-      puts "Create #{apps_config_file} with format:"
-      puts "  app_name: relative/path/from/repo"
-      puts
-      puts "Example:"
-      puts "  partners: partners/partners"
-      puts "  admin: admin_portal/admin"
+      puts "Add one with: h app add NAME relative/path/from/repo"
     end
   end
 
@@ -537,65 +531,55 @@ class TaskManager
     assignments.values.find { |task| task.start_with?(partial) }
   end
 
-  # Assign a task to a tree
+  # Tree -> task assignments are scoped, per-row database mutations.
   def assign_task_to_tree(task_name, tree_name)
-    data = assignments
-    data[tree_name] = task_name
-    save_assignments(data)
-  end
-
-  # Unassign task from tree
-  def unassign_task_from_tree(tree_name)
-    data = assignments.dup
-    data.delete(tree_name)
-    save_assignments(data)
-  end
-
-  # Tree -> Task assignments
-  def assignments
-    @assignments ||= load_assignments
-  end
-
-  def load_assignments
-    data = if File.exist?(assignments_file)
-      YAML.safe_load_file(assignments_file) || {}
-    else
-      {}
+    Hiiro::DB.connection.transaction(mode: :immediate) do
+      assignment = Hiiro::Assignment.for_worktree(tree_name)
+      if assignment
+        assignment.set(branch: task_name)
+        assignment.save_changes
+      else
+        Hiiro::Assignment.create(worktree: tree_name, branch: task_name)
+      end
+      record = Hiiro::TaskRecord.find_by_name(task_name)
+      if record
+        Hiiro::TaskManager::Config.new.attach_tree(record.id, tree: tree_name, session: session_name_for(task_name))
+      else
+        Hiiro::TaskManager::Config.new.create_task(name: task_name, tree: tree_name, session: session_name_for(task_name))
+      end
     end
-    data
   end
 
-  def save_assignments(data)
-    FileUtils.mkdir_p(task_dir)
-    File.write(assignments_file, YAML.dump(data))
-    @assignments = data
+  def unassign_task_from_tree(tree_name)
+    Hiiro::DB.connection.transaction(mode: :immediate) do
+      assignment = Hiiro::Assignment.for_worktree(tree_name)
+      next unless assignment
+
+      record = Hiiro::TaskRecord.find_by_name(assignment.branch)
+      Hiiro::TaskManager::Config.new.detach_tree(record.name) if record&.tree == tree_name
+      assignment.destroy
+    end
   end
 
-  def assignments_file
-    File.join(task_dir, 'assignments.yml')
+  def assignments
+    Hiiro::Assignment.all_as_hash
   end
 
-  # Task metadata
   def task_metadata(task_name)
-    file = task_metadata_file(task_name)
-    return nil unless File.exist?(file)
-    YAML.safe_load_file(file)
+    record = Hiiro::TaskRecord.find_by_name(task_name)
+    record && record.metadata.merge(record.task_attributes.transform_keys(&:to_s))
   end
 
   def save_task_metadata(task_name, **data)
-    FileUtils.mkdir_p(task_dir)
-    existing = task_metadata(task_name) || {}
-    merged = existing.merge(data.transform_keys(&:to_s))
-    File.write(task_metadata_file(task_name), YAML.dump(merged))
-  end
-
-  def task_metadata_file(task_name)
-    safe_name = task_name.gsub(/[^a-zA-Z0-9_-]/, '_')
-    File.join(task_dir, "task_#{safe_name}.yml")
-  end
-
-  def task_dir
-    File.join(Dir.home, '.config', 'hiiro', 'tasks')
+    Hiiro::DB.connection.transaction(mode: :immediate) do
+      record = Hiiro::TaskRecord.find_by_name(task_name) or raise Hiiro::Error, "Task not found: #{task_name}"
+      columns = %i[tree session app color_index created_at] + Hiiro::TaskRecord::METADATA_COLUMNS
+      changes = data.select { |key, _| columns.include?(key) }
+      details = data.reject { |key, _| columns.include?(key) }.transform_keys(&:to_s)
+      record.set(changes)
+      record.metadata = record.metadata.merge(details) unless details.empty?
+      record.save_changes
+    end
   end
 
   # Session name for a task
@@ -642,19 +626,8 @@ class TaskManager
     hiiro.start_tmux_session(session)
   end
 
-  # Apps config from ~/.config/hiiro/apps.yml
-  # Format: { "app_name" => "relative/path/from/repo/root" }
   def apps_config
-    @apps_config ||= load_apps_config
-  end
-
-  def load_apps_config
-    return {} unless File.exist?(apps_config_file)
-    YAML.safe_load_file(apps_config_file) || {}
-  end
-
-  def apps_config_file
-    File.join(Dir.home, '.config', 'hiiro', 'apps.yml')
+    Hiiro::AppRecord.all_as_hash
   end
 
   # Find app by partial match (must be unique)
@@ -795,21 +768,15 @@ class TaskManager
         next
       end
 
-      # Step 3: Update assignments (tree name changes, task name stays)
+      # Persist only the selected assignment and task fields.
       if task
-        data = load_assignments
-        data.delete(name)
-        data[new_tree_name] = task
-        save_assignments(data)
-      end
+        Hiiro::DB.connection.transaction(mode: :immediate) do
+          assignment = Hiiro::Assignment.for_worktree(name)
+          raise Hiiro::Error, "Assignment changed: #{name}" unless assignment&.branch == task
 
-      # Step 4: Update task metadata
-      if task
-        meta = task_metadata(task)
-        if meta
-          meta['tree'] = new_tree_name
-          FileUtils.mkdir_p(task_dir)
-          File.write(task_metadata_file(task), YAML.dump(meta))
+          assignment.set(worktree: new_tree_name)
+          assignment.save_changes
+          save_task_metadata(task, tree: new_tree_name)
         end
       end
 
@@ -820,7 +787,6 @@ class TaskManager
       end
 
       clear_worktree_cache
-      @assignments = nil
       puts "  Done."
     end
 

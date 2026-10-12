@@ -18,7 +18,7 @@ Your Docker container should have:
 
 ```bash
 # Create config directories
-mkdir -p ~/.config/hiiro/{pins,tasks,sounds}
+mkdir -p ~/.config/hiiro/sounds
 mkdir -p ~/proj
 mkdir -p ~/bin
 
@@ -67,11 +67,12 @@ h
 
 ## Phase 3: Todo Management (h-todo)
 
-### Test 3.1: Check todo path
+### Test 3.1: Check canonical todo storage
 ```bash
-h todo path
+h db status
+h db q todos
 ```
-**Expected:** `~/.config/hiiro/todo.yml` (or full path)
+**Expected:** Status identifies `~/.config/hiiro/hiiro.db` as the database and prints `Authority: database only; legacy sources are recovery inputs, never live writers.` A fresh container has no todo rows, so the query prints `(no results)`. `h todo path` no longer exists.
 
 ### Test 3.2: Add items
 ```bash
@@ -185,7 +186,7 @@ h pin
 ```bash
 h link path
 ```
-**Expected:** `~/.config/hiiro/links.yml` (or full path)
+**Expected:** The full path to `~/.config/hiiro/hiiro.db`, not `links.yml`.
 
 ### Test 5.2: Add links
 ```bash
@@ -354,7 +355,7 @@ h project ls
 ```bash
 h project config
 ```
-**Expected:** Shows projects.yml contents (may be empty or not exist yet)
+**Expected:** A YAML array of saved database aliases with `id`, `name`, and `path`. With no saved aliases, prints `--- []`; directories discovered in Test 10.1 do not become saved aliases.
 
 ### Test 10.4: Help
 ```bash
@@ -371,7 +372,7 @@ h project help
 h app add frontend "apps/frontend"
 h app add backend "apps/backend"
 ```
-**Expected:** Apps saved to apps.yml
+**Expected:** Two rows in SQLite's `apps` table, not writes to `apps.yml`.
 
 ### Test 11.2: List apps
 ```bash
@@ -440,15 +441,23 @@ h todo start
 
 ## Phase 14: Cleanup Verification
 
-### Test 14.1: Verify config files created
+### Test 14.1: Verify canonical records
 ```bash
-ls ~/.config/hiiro/
-ls ~/.config/hiiro/pins/
-cat ~/.config/hiiro/todo.yml
-cat ~/.config/hiiro/links.yml
-cat ~/.config/hiiro/apps.yml
+h db status
+h db q "SELECT id, text, status FROM todos ORDER BY id"
+h db q "SELECT command, key, value_json, value_format FROM pins WHERE key IN ('mykey', 'another') ORDER BY command, key"
+h db q "SELECT id, url, description FROM links ORDER BY id"
+h db q "SELECT id, name, path FROM apps ORDER BY id"
+h project config
+h app show
 ```
-**Expected:** All config files exist with data from tests
+**Expected in a fresh container after the preceding tests:**
+- Todos retain ID 1 with `Updated first task` and `started`, and ID 2 with `Second task` and `done`. ID 3 is absent.
+- Pins retain `mykey` with `value_json` equal to `"my value"` and `value_format` equal to `json`. The removed `another` key is absent from that command's pins.
+- Links retain the three URLs and descriptions from Phase 5 under their database IDs.
+- Apps retain `frontend` at `apps/frontend`; `backend` is absent. `h app show` prints the same row with its ID.
+- `h project config` prints `--- []` when no aliases were added. The discovered project directories remain available through `h project ls`.
+- Status reports database-only authority. Domain commands do not create `todo.yml`, `links.yml`, `apps.yml`, or per-command YAML pin stores. Retained legacy sources require explicit import; definition and ordinary artifact files remain files.
 
 ---
 

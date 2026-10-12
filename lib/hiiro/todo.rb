@@ -1,5 +1,4 @@
 require 'yaml'
-require 'fileutils'
 require 'sequel'
 
 class Hiiro
@@ -11,7 +10,7 @@ class Hiiro
 
     def self.create_table!(db)
       db.create_table?(:todos) do
-        Integer :id, primary_key: true
+        primary_key :id
         String :text, null: false
         String :status, default: 'not_started'
         String :tags
@@ -118,42 +117,17 @@ class Hiiro
   end
 
   class TodoManager
-    TODO_FILE = File.join(Dir.home, '.config', 'hiiro', 'todo.yml')
-
-    ITEM_TEMPLATE = {
-      'text' => '',
-      'status' => 'not_started',
-      'tags' => nil
-    }.freeze
-
-    attr_reader :items, :todo_file
-
-    def initialize(file_path: nil, fs: Hiiro::Effects::Filesystem.new)
-      @fs = fs
-      @todo_file = file_path || TODO_FILE
-      @file_path = @todo_file
-      @items = load_items
-      @next_id = (TodoItem.max(:id) || 0) + 1
-    end
-
-    def next_id!
-      id = @next_id
-      @next_id += 1
-      id
-    end
-
-    # --- High-level API ---
+    ITEM_TEMPLATE = { 'text' => '', 'status' => 'not_started', 'tags' => nil }.freeze
+    EDITABLE_FIELDS = %w[text status tags].freeze
+    class EditConflict < StandardError; end
 
     def all
-      items
+      TodoItem.order(:id).all
     end
+    alias items all
 
     def find(id)
-      id_int = id.to_i
-      items.find { |item|
-        item.id == id_int ||
-          item.id.to_s.end_with?(id.to_s)
-      }
+      TodoItem[id.to_i] || items.find { |item| item.id.to_s.end_with?(id.to_s) }
     end
 
     def find_by_index(index)
@@ -161,94 +135,72 @@ class Hiiro
     end
 
     def add(text, tags: nil, task_info: nil)
-      item = TodoItem.new(
-        id: next_id!,
-        text: text,
-        tags: tags,
-        task_name: task_info&.dig(:task_name),
-        subtask_name: task_info&.dig(:subtask_name),
-        tree: task_info&.dig(:tree),
-        branch: task_info&.dig(:branch),
-        session: task_info&.dig(:session)
-      )
-      @items << item
-      save
-      item
+      TodoItem.create(text: text, tags: tags, **(task_info || {}))
     end
 
-    # hiiro supplies the editor (see Hiiro#editor / #edit_files).
     def edit_items(items_to_edit = nil, task_info: nil, hiiro:)
-      items_array = if items_to_edit.nil?
-        [ITEM_TEMPLATE.dup]
-      elsif items_to_edit.is_a?(Array)
-        items_to_edit.map { |item| item.is_a?(TodoItem) ? editable_hash(item) : item }
+      selected = items_to_edit.nil? ? [] : Array(items_to_edit)
+      baseline = selected.to_h { |item| [item.id, item.values.dup] }
+      projection = items_to_edit.nil? ? [ITEM_TEMPLATE.dup] : selected.map { |item| editable_hash(item) }
+      input = InputFile.yaml_file(hiiro: hiiro, content: projection.to_yaml, prefix: 'todo-edit-')
+      document = input.edit.document
+      raise ArgumentError, "Invalid todo YAML: #{document.error.message}" unless document.valid?
+      return [] if document.empty? || !document.changed?
+      data = document.data
+      rows = data.is_a?(Hash) ? [data] : data
+      raise ArgumentError, 'Todo editor requires a YAML list of records' unless rows.is_a?(Array)
+      validate_edit_rows!(rows, baseline)
+      if items_to_edit.nil?
+        rows.map { |row| new_item(row, task_info) }
       else
-        [items_to_edit.is_a?(TodoItem) ? editable_hash(items_to_edit) : items_to_edit]
+        apply_edit(rows, baseline, task_info)
       end
-
-      input = InputFile.yaml_file(hiiro: hiiro, content: items_array.to_yaml, prefix: 'todo-edit-')
-      updated_data = input.edit.document.data
-      input.cleanup
-
-      return [] if updated_data.nil?
-
-      updated_array = updated_data.is_a?(Array) ? updated_data : [updated_data]
-      updated_array.filter_map do |h|
-        next if h['text'].nil? || h['text'].to_s.strip.empty?
-        TodoItem.new(
-          id: next_id!,
-          text: h['text'],
-          status: h['status'] || 'not_started',
-          tags: h['tags'],
-          task_name: task_info&.dig(:task_name),
-          subtask_name: task_info&.dig(:subtask_name),
-          tree: task_info&.dig(:tree),
-          branch: task_info&.dig(:branch),
-          session: task_info&.dig(:session)
-        )
-      end
+    ensure
+      input&.cleanup
     end
 
     def add_items(new_items)
-      @items.concat(new_items)
-      save
+      raise ArgumentError, 'New todos cannot specify IDs' unless new_items.all? { |item| item.new? && item.id.nil? }
+      TodoItem.db.transaction { new_items.each(&:save) }
       new_items
     end
 
-    def remove(id_or_index)
-      item = resolve_item(id_or_index)
+    def remove(id)
+      item = find(id)
       return nil unless item
-      @items.delete(item)
-      save
+      item.delete
       item
     end
 
-    def change(id_or_index, text: nil, tags: nil, status: nil)
-      item = resolve_item(id_or_index)
+    def change(id, **changes)
+      item = find(id)
       return nil unless item
-
-      item.text = text if text
-      item.tags = tags if tags
-      item.update_status(status) if status
-      item.updated_at = Time.now.to_s
-      save
+      changes.each do |field, value|
+        raise ArgumentError, "Unknown todo field: #{field}" unless EDITABLE_FIELDS.include?(field.to_s)
+        next if field == :status && !TodoItem::STATUSES.include?(value)
+        item[field] = value
+      end
+      if item.modified?
+        item.updated_at = Time.now.to_s
+        item.save_changes
+      end
       item
     end
 
-    def start(id_or_index)
-      change_status(id_or_index, 'started')
+    def start(id)
+      change(id, status: 'started')
     end
 
-    def done(id_or_index)
-      change_status(id_or_index, 'done')
+    def done(id)
+      change(id, status: 'done')
     end
 
-    def skip(id_or_index)
-      change_status(id_or_index, 'skip')
+    def skip(id)
+      change(id, status: 'skip')
     end
 
-    def reset(id_or_index)
-      change_status(id_or_index, 'not_started')
+    def reset(id)
+      change(id, status: 'not_started')
     end
 
     def search(query)
@@ -256,7 +208,7 @@ class Hiiro
     end
 
     def filter_by_status(*statuses)
-      items.select { |item| statuses.include?(item.status) }
+      TodoItem.where(status: statuses).order(:id).all
     end
 
     def filter_by_tag(tag)
@@ -275,14 +227,10 @@ class Hiiro
       filter_by_status('done', 'skip')
     end
 
-    # --- List display ---
-
     def list(items_to_show = nil, show_all: false)
       items_to_show ||= show_all ? all : active
       return "No todo items found." if items_to_show.empty?
-
-      lines = items_to_show.map { |item| format_item(item) }
-      lines.join("\n")
+      items_to_show.map { |item| format_item(item) }.join("\n")
     end
 
     def format_item(item)
@@ -292,7 +240,6 @@ class Hiiro
         when 'done' then '[x]'
         when 'skip' then '[-]'
       end
-
       line = "#{item.id} #{status_icon} #{item.text}"
       line += "  [#{item.tags}]" if item.tags && !item.tags.empty?
       line += "  (#{item.full_task_name})" if item.has_task_info?
@@ -301,37 +248,67 @@ class Hiiro
 
     private
 
-    def resolve_item(id)
-      find(id)
-    end
-
-    def change_status(id_or_index, status)
-      item = resolve_item(id_or_index)
-      return nil unless item
-      item.update_status(status)
-      save
-      item
-    end
-
     def editable_hash(item)
-      {
-        'text' => item.text,
-        'status' => item.status,
-        'tags' => item.tags
-      }
+      { 'id' => item.id, 'text' => item.text, 'status' => item.status, 'tags' => item.tags }
     end
 
-    def load_items
-      TodoItem.order(Sequel.asc(:id)).all
+    def validate_edit_rows!(rows, baseline)
+      ids = []
+      rows.each do |row|
+        raise ArgumentError, 'Each todo must be a mapping' unless row.is_a?(Hash)
+        unknown = row.keys - EDITABLE_FIELDS - ['id']
+        raise ArgumentError, "Unknown todo fields: #{unknown.join(', ')}" unless unknown.empty?
+        if row.key?('id')
+          id = row['id']
+          raise ArgumentError, 'Existing todo IDs must be unchanged positive integers' unless id.is_a?(Integer) && baseline.key?(id) && !ids.include?(id)
+          ids << id
+        elsif !row['text'].is_a?(String) || row['text'].strip.empty?
+          raise ArgumentError, 'New todo text cannot be blank'
+        end
+        if row.key?('text') && (!row['text'].is_a?(String) || row['text'].strip.empty?)
+          raise ArgumentError, 'Todo text cannot be blank'
+        end
+        if row.key?('status') && !TodoItem::STATUSES.include?(row['status'])
+          raise ArgumentError, 'Invalid todo status'
+        end
+        if row.key?('tags') && !row['tags'].nil? && !row['tags'].is_a?(String)
+          raise ArgumentError, 'Todo tags must be a string or null'
+        end
+      end
     end
 
-    def save
-      TodoItem.dataset.delete
-      @items.each { |item| TodoItem.create(item.to_h) }
+    def new_item(row, task_info)
+      TodoItem.new(row.transform_keys(&:to_sym).merge(task_info || {}))
+    end
 
-      if Hiiro::DB.dual_write?
-        data = { 'next_id' => @next_id, 'todos' => @items.map(&:to_h) }
-        @fs.write(@file_path, YAML.dump(data))
+    def apply_edit(rows, baseline, task_info)
+      TodoItem.db.transaction(mode: :immediate) do
+        retained = rows.filter_map { |row| row['id'] }
+        (baseline.keys - retained).each do |id|
+          current = TodoItem[id]
+          next unless current
+          raise EditConflict, "Todo #{id} changed while editing; deletion cancelled" unless current.values == baseline[id]
+          current.delete
+        end
+        rows.map do |row|
+          next new_item(row, task_info).save unless row.key?('id')
+          id = row['id']
+          changes = row.reject { |field, value| field == 'id' || value == baseline[id][field.to_sym] }
+          current = TodoItem[id]
+          next current if changes.empty?
+          raise EditConflict, "Todo #{id} was removed while editing" unless current
+          changes.each do |field, value|
+            unless current[field.to_sym] == baseline[id][field.to_sym] || current[field.to_sym] == value
+              raise EditConflict, "Todo #{id} #{field} changed while editing"
+            end
+            current[field.to_sym] = value
+          end
+          if current.modified?
+            current.updated_at = Time.now.to_s
+            current.save_changes
+          end
+          current
+        end.compact
       end
     end
   end

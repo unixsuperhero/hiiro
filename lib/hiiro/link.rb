@@ -16,19 +16,15 @@ class Hiiro
     end
 
     def tags     = Hiiro::Tag.for(self).map(&:name)
-    def tags=(v) ; self.tags_json = Hiiro::DB::JSON.dump(v); end
 
-    # Unsaved instance from a string-keyed hash (the links.yml shape).
-    def self.from_hash(hash)
-      new(
-        url:         hash['url'],
-        description: hash['description'] || '',
-        shorthand:   hash['shorthand'],
-        created_at:  hash['created_at'] || Time.now.iso8601,
-      )
+    def self.remove(id)
+      db.transaction(mode: :immediate) do
+        link = self[id]
+        next unless link
+        Hiiro::Tag.for(link).delete
+        link.destroy
+      end
     end
-
-    def to_yaml(*) = to_h.to_yaml
 
     def self.find_by_shorthand(s)
       where(shorthand: s).first
@@ -63,6 +59,7 @@ class Hiiro
 
     def to_h
       {
+        'id'          => id,
         'url'         => url,
         'description' => description,
         'shorthand'   => shorthand,

@@ -5,13 +5,6 @@ class Hiiro
     Hiiro::DB.register(self)
 
     def self.create_table!(db)
-      # Drop the old TrackedPr schema (prs table without head_ref_name) so we can
-      # create the merged schema. TrackedPr rows are migration artifacts only — no
-      # live code reads from them.
-      if db.table_exists?(:prs) && !db.schema(:prs).any? { |col, _| col == :head_ref_name }
-        db.drop_table(:prs)
-      end
-
       db.create_table?(:prs) do
         primary_key :id
         Integer :number
@@ -43,26 +36,26 @@ class Hiiro
         String :created_at
         String :updated_at
       end
-
-      # Migrate data from legacy pinned_prs table if it still exists
-      if db.table_exists?(:pinned_prs) && db[:pinned_prs].count > 0
-        db[:pinned_prs].each do |row|
-          db[:prs].insert(row.reject { |k, _| k == :id }.merge(pinned: true))
-        end
-      end
-      db.drop_table?(:pinned_prs)
     end
 
     def self.migrate!(db)
-      columns = db.schema(:prs).map(&:first)
-      unless columns.include?(:herdr_workspace)
-        db.alter_table(:prs) { add_column :herdr_workspace, String }
-      end
+      db.transaction(mode: :immediate) do
+        columns = db.schema(:prs).map(&:first)
+        workspace_added = !columns.include?(:herdr_workspace)
+        integer_columns = %i[number slot]
+        boolean_columns = %i[pinned is_draft assigned authored]
+        string_columns = %i[title state url head_ref_name branch repo mergeable review_decision checks_json check_runs_json reviews_json task worktree herdr_workspace tmux_session tmux_json tags_json depends_on_json last_checked pinned_at created_at updated_at]
+        (integer_columns + boolean_columns + string_columns).each do |column|
+          next if columns.include?(column)
+          type = integer_columns.include?(column) ? Integer : (boolean_columns.include?(column) ? TrueClass : String)
+          db.alter_table(:prs) { add_column column, type }
+        end
 
-      db[:prs]
-        .where(herdr_workspace: nil)
-        .exclude(tmux_session: nil)
-        .update(herdr_workspace: Sequel[:tmux_session])
+        if workspace_added
+          db[:prs].where(herdr_workspace: nil).exclude(tmux_session: nil)
+            .update(herdr_workspace: Sequel[:tmux_session])
+        end
+      end
     end
 
     # --- JSON virtual accessors ---
@@ -90,20 +83,22 @@ class Hiiro
     end
 
     def self.find_by_number(n)
-      where(number: n, pinned: true).first
+      find_by_reference(Hiiro::PullRequestReference.new(number: n))
     end
 
-    # Repository-qualified lookup. Rows with no repo recorded still match by number.
-    def self.find_by_reference(ref)
-      scope = where(number: ref.number, pinned: true)
-      scope = scope.where(Sequel.|({ repo: ref.repo.path }, { repo: nil })) if ref.repo
-      scope.first
+    def self.find_by_reference(ref, pinned_only: true)
+      scope = where(number: ref.number)
+      scope = scope.where(pinned: true) if pinned_only
+      matches = scope.all
+      matches.select! { |pr| pr.reference.repo == ref.repo } if ref.repo
+      raise Hiiro::Error, "Ambiguous PR ##{ref.number}; use its GitHub URL" if matches.length > 1
+      matches.first
     end
 
     # Sync the check_runs table for this PR from the cached check_runs_json blob.
     def sync_check_runs
       runs = Hiiro::DB::JSON.load(check_runs_json)
-      Hiiro::CheckRun.upsert_for_pr(number, runs) if number && runs
+      Hiiro::CheckRun.upsert_for_pr(id, runs) if id
     end
 
     # Build an in-memory PinnedPr from a Hiiro::Git::Pr (does NOT save).
@@ -156,7 +151,7 @@ class Hiiro
         reviews:         reviews,
         task:            task,
         worktree:        worktree,
-        herdr_workspace: herdr_workspace || tmux_session,
+        herdr_workspace: herdr_workspace,
         tags:            tags,
         assigned:        assigned,
         authored:        authored,
@@ -167,34 +162,6 @@ class Hiiro
       )
     end
 
-    # Serialize to string-keyed hash for YAML dual-write (mirrors Git::Pr#to_pinned_h).
-    def to_pinned_h
-      {
-        'number'            => number,
-        'title'             => title,
-        'state'             => state,
-        'url'               => url,
-        'headRefName'       => head_ref_name,
-        'repo'              => repo,
-        'slot'              => slot,
-        'is_draft'          => is_draft,
-        'mergeable'         => mergeable,
-        'review_decision'   => review_decision,
-        'checks'            => checks,
-        'statusCheckRollup' => check_runs,
-        'reviews'           => reviews,
-        'last_checked'      => last_checked,
-        'pinned_at'         => pinned_at,
-        'updated_at'        => updated_at,
-        'task'              => task,
-        'worktree'          => worktree,
-        'herdr_workspace'   => herdr_workspace || tmux_session,
-        'tags'              => (Array(tags).empty? ? nil : tags),
-        'assigned'          => assigned,
-        'authored'          => authored,
-        'depends_on'        => (Array(depends_on).empty? ? nil : depends_on),
-      }.compact
-    end
 
     # --- Predicates (mirroring Hiiro::Git::Pr) ---
 

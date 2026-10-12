@@ -52,7 +52,7 @@ Task names may be `parent/child` for subtasks. `t new NAME` creates exactly `NAM
 | `t todo add - TEXT...`, `t todo -` | Orphan todos with no task |
 | `tt ...` | Identical to `t todo ...`; bare `tt` lists the current task's todos |
 
-`todo add -h` or `--help`, before or immediately after the task, prints help instead of adding. Empty text fails. IDs must belong to the selected task or the orphan scope. Todos share the `todos` table with `h todo`; `t` never rewrites `todo.yml`.
+`todo add -h` or `--help`, before or immediately after the task, prints help instead of adding. Empty text fails. IDs must belong to the selected task or the orphan scope. `t`, `tt`, and `h todo` share canonical SQLite rows in `todos`. The database allocates IDs; updating or removing one todo preserves unrelated rows and their IDs. None of these commands reads or rewrites `todo.yml`.
 
 ## Directory, link, PR, and file references
 
@@ -131,7 +131,13 @@ These require a running Herdr server. The workspace label is the task session or
 
 ## Storage and side effects
 
-Task rows live in the `tasks` table (`Hiiro::TaskRecord`), resources in `task_resources`, todos in `todos`, and the saved fallback in `pins` as `command='t'`, `key='current_task'`. Task homes are `~/notes/work/NAME` with `/` escaped. Hiiro also records every invocation. Only `new`, `tree new`, `doc new`, and `use` write outside their named target; reads never write.
+Task rows live in `~/.config/hiiro/hiiro.db`, in `tasks` owned by `Hiiro::TaskRecord`. Resource references live in `task_resources` owned by `Hiiro::TaskResource`, and todos live in `todos`. Mutations update the requested row or fields without replacing a saved collection. IDs, unrelated resources, and task metadata survive these updates. Additional task details, including saved window arrays and timestamps, live in `tasks.metadata_json`.
+
+`t use` stores the fallback task ID as an integer in `pins`, scoped by `command='t'` and `key='current_task'`. Typed pin storage distinguishes strings such as `"42"`, `"false"`, and JSON-looking text from numbers, booleans, and collections. Updating the fallback preserves other pins.
+
+Task homes are `~/notes/work/NAME` with `/` escaped. Document bodies and registered directory/file contents remain ordinary files, not database projections. App aliases resolve through `Hiiro::AppRecord`; app-file, service, tool, and sparse definitions remain files. Legacy task YAML and `todo.yml` are retained explicit import inputs, not fallbacks or newly written backups. See [h-db](h-db.md) for import planning and recovery.
+
+Hiiro records every invocation and initializes database schemas at startup. Startup does not import legacy domain YAML. Reads do not rewrite domain records or legacy sources.
 
 ## Source map
 

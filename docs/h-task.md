@@ -2,9 +2,9 @@
 
 `t` manages durable tasks. A task can be a coding project, an investigation, or administrative work. It does not need Git or Herdr.
 
-Task records and resource references live in `~/.config/hiiro/hiiro.db`, in the existing `tasks` table and the `task_resources` table. `h task` uses the same records. Its YAML file is a backup, not a separate task store.
+Task records and resource references live in `~/.config/hiiro/hiiro.db`, in the existing `tasks` and `task_resources` tables. `h task` uses the same records. Legacy task YAML is an explicit migration/recovery input; commands do not read it as a fallback or write backup copies.
 
-Task todos use the existing `todos` table shared with `h todo`. `t` writes to the database directly and does not rewrite the task YAML backup or `todo.yml`.
+Task todos use the existing `todos` table shared with `h todo`. Task mutations update only the requested fields and retain database IDs. Detaching a worktree keeps the task metadata and resource references, and saves its current directory as a resource.
 
 ## t
 
@@ -33,3 +33,9 @@ Worktree operations that used to live only under `h task` are now task commands:
 `h task tag`, `untag`, `tags`, `sparse`, `from`, `prune`, `apps`, `save`, `status`, and `prs` were not carried over. Tag branches with `h branch tag`, inspect worktrees with `h wtree`, and register an existing directory with `t directory add [TASK] PATH --primary`.
 
 `Hiiro::TaskManager` still holds the worktree creation code that `t tree new` and the shared `Hiiro::CurrentTask` resolver use; `h service`, `h run`, and `h file` keep using it for the current task through `Environment#task`, which now also recognizes a task by its home, primary directory, or registered directories.
+
+## Legacy task persistence
+
+The in-repo `h-otask` manager uses the same `TaskRecord`, `TaskResource`, and `Assignment` owners. Assignments change one worktree row at a time. Task detail saves merge supplied fields into the current row; saved window arrays, `saved_at`, and additional detail keys live in `tasks.metadata_json`. Changing a tree or session does not erase those details. Apps come from `AppRecord`; add or edit aliases with `h app`.
+
+`h-otask` requires the external `Tmux` plugin. `h-osubtask` and `h-zosubtask` delegate to external task plugins whose implementations are not included here. Their external persistence behavior is not implemented or verified by this repository.

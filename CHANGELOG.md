@@ -24,6 +24,19 @@
 ### Added
 - `h herdr` and `hh` pane controls for Vim-style focus, two-pane reflow, resize, swap, and zoom
 - `prefix+shift+h/j/k/l` reflows a two-pane tab toward an edge; `prefix+alt+h/j/k/l` resizes the current pane
+- `h db manifest`, inspectable `plan`, explicit owned-store `migrate`, and typed canonical `export`/`restore` with IDs, relations, import verification, and allocator state. Exports refuse existing destinations; recovery rejects conflicting later writes.
+
+### Changed
+- Mutable domain records use SQLite without live YAML mirrors. `t`, `tt`, and `h todo` share database-owned todo IDs and targeted mutations.
+- Pins preserve strings, numbers, booleans, and collections as distinct types. Named pane-home updates retain omitted fields and unrelated homes.
+- Reminder CRUD, recurrence checkpoints, pause/resume, cleanup, and bulk edits use canonical SQLite rows with stable IDs.
+- Task metadata, resources, project aliases, app mappings, saved links, branches, and tags use targeted database operations. Definitions, preferences, runtime files, and ordinary artifacts remain file-owned.
+- Legacy imports retain source bytes and verify selected records. Repeating accepted sources preserves later canonical changes and deletions; explicit restore can recreate exported deleted rows.
+- Database-backed editors use temporary projections and reject failed editors, invalid input, and conflicting changes without partial writes.
+
+### Removed
+- Automatic legacy domain YAML import and mutable-record dual writers. Legacy sources remain explicit retained recovery inputs.
+- Obsolete todo file-path, saved-link snapshot, and task YAML backup APIs; `h db remigrate`, broad YAML retirement, and YAML/tar restore.
 
 ## [0.1.384] - 2026-09-23
 

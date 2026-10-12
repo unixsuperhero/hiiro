@@ -173,8 +173,8 @@ Every argument after the task in `todo add` is literal text, including flags and
 `--`, except a leading `-h` or `--help`. Empty text fails. Only `t new NAME`
 creates tasks.
 
-Todos share the existing `todos` table with `h todo`. `t` writes only to the
-database and does not rewrite `todo.yml`. Adding or removing a todo does not
+`t`, `tt`, and `h todo` share canonical SQLite todos with database-owned IDs.
+None maintains `todo.yml`. Adding or removing a todo does not
 change the task's next action, status, or saved selection. Task completion and
 archival preserve todos. `h task` is a symlink to `t`, so both share one grammar.
 
@@ -279,7 +279,7 @@ Plugins are Ruby modules loaded from `~/.config/hiiro/plugins/`:
 
 | Plugin | Description |
 |--------|-------------|
-| Pins | Per-command YAML key-value storage |
+| Pins | Typed SQLite key/value storage scoped by command |
 | Project | Project directory navigation with Herdr workspace management |
 | Tasks | `Hiiro::TaskManager` worktree creation and current-task environment used by `t`, `h service`, `h run`, and `h file` |
 | Notify | Herdr desktop notifications |
@@ -435,22 +435,21 @@ end
 
 ## Configuration
 
-All configuration lives in `~/.config/hiiro/`:
+The database, definitions, preferences, and some runtime files live in `~/.config/hiiro/`:
 
 ```
 ~/.config/hiiro/
-  plugins/        # Plugin files (auto-loaded)
-  pins/           # Pin storage (per command)
-  services/       # Service runtime state
-  bg-history.txt  # Background command history
-  env_templates/  # Base .env templates for services
-  tasks/          # Task metadata
-  projects.yml    # Project aliases
-  apps.yml        # App directory mappings
-  services.yml    # Service and service group definitions
-  tools.yml       # Runner tool definitions
-  app_files.yml   # Per-app tracked file lists
-  todo.yml        # Todo items
+  plugins/          # Plugin files (auto-loaded)
+  hiiro.db          # Canonical mutable records
+  services/         # Service runtime state
+  bg-history.txt    # Background command history
+  env_templates/    # Base .env templates for services
+  services.yml      # Service and service group definitions
+  tools.yml         # Runner tool definitions
+  sparse_groups.yml # Sparse checkout definitions
+  tables.yml        # Per-table action definitions
+  config.yml        # Preferences
+  app_files.yml     # Per-app tracked file lists
 ```
 
 Runtime data lives separately:
@@ -460,6 +459,42 @@ Runtime data lives separately:
   queue/          # Prompt queue (wip, pending, running, done, failed)
   notify_log.yml  # Herdr notification log
 ```
+
+### Persistence ownership
+
+Each durable type has one current owner. Startup creates or upgrades database schemas; it does not import legacy domain YAML.
+
+| Durable type | Owner |
+|-------------|-------|
+| Todos | SQLite `todos`, `Hiiro::TodoItem`, shared by `t`, `tt`, and `h todo` |
+| Tasks and task resources | SQLite `tasks` and `task_resources`, `Hiiro::TaskRecord` and `Hiiro::TaskResource` |
+| Worktree assignments | SQLite `assignments`, `Hiiro::Assignment` |
+| Saved links and branches | SQLite `links` and `branches`, `Hiiro::Link` and `Hiiro::Branch` |
+| Pinned PRs and check snapshots | SQLite `prs` and `check_runs`, `Hiiro::PinnedPr` and `Hiiro::CheckRun` |
+| Project aliases and app mappings | SQLite `projects` and `apps`, `Hiiro::Project` and `Hiiro::AppRecord` |
+| Command pins and named pane homes | SQLite `pins` and `pane_homes`, `Hiiro::PinRecord` and `Hiiro::PaneHome` |
+| Reminders and scheduling checkpoints | SQLite `reminders`, `Hiiro::Reminder` |
+| Generic named entries | SQLite `registry`, `Hiiro::RegistryEntry` through `Hiiro::Table` |
+| Tags | SQLite `tags`, `Hiiro::Tag` |
+| Captures, invocations, and resolutions | SQLite `captures`, `invocations`, and `invocation_resolutions`, `Hiiro::Capture`, `Hiiro::Invocation`, and `Hiiro::InvocationResolution` |
+| Import verification and row mappings | SQLite `schema_migrations`, `migration_sources`, and `migration_rows`, `Hiiro::DB` |
+| Service, tool, sparse, and table action definitions | `services.yml` through `Hiiro::ServiceManager`, `tools.yml` through `Hiiro::RunnerTool`, `sparse_groups.yml` through `Hiiro::SparseGroups`, and `tables.yml` through `Hiiro::TableActions` |
+| Preferences and tracked app files | `config.yml` through `Hiiro::Config`, `app_files.yml` through `Hiiro::AppFiles` |
+| Runtime state, history, and notification logs | Service files through `Hiiro::ServiceManager`, background history through `h bg`, navigation history through `h jumplist`, and notification logs through `h notify` |
+| Queue prompts and companion files | Existing files through `Hiiro::Queue` |
+| Task notes, saved files, indexes, and generated SQL | Ordinary files through their existing commands |
+
+Domain commands update selected records rather than rewriting a loaded collection. Temporary editor documents are database projections, not a second store. Failed editors, invalid input, or conflicting edits do not apply a partial batch.
+
+Registry entries retain their IDs, `resource_type`, name, value, short alias, description, metadata, nullable `task_id`, and tags. `TableScope` still distinguishes global and task entries, and table rename retains entry IDs. Table actions remain in `tables.yml`.
+
+Task records retain tree/session/app/color fields, `status`, `next_action`, `waiting_on`, `primary_directory`, timestamps, and additional detail keys in `metadata_json`. Task resources reference the task ID; task notes remain ordinary files.
+
+New pins preserve value types. The strings `"42"`, `"false"`, and JSON-looking text stay strings, distinct from numbers, booleans, and collections. Preexisting unmarked pins retain their historical decoder until an explicit typed import resolves ambiguity. Reminders retain interval, one-time scheduling, enabled state, sound, and `last_triggered` checkpoints.
+
+Legacy `todo.yml`, `links.yml`, `branches.yml`, PR YAML, task YAML, `apps.yml`, `projects.yml`, `pane_homes.yml`, command-pin files, `reminders.yml`, and `tags.yml` are retained explicit import inputs, not live stores. Definitions, preferences, runtime files, and ordinary artifacts are excluded from domain migration. See [h-db](docs/h-db.md) for the owned-store manifest, import plans, typed exports, and conflict-safe recovery.
+
+`h db plan` exposes selected sources and conflicts before explicit import. Accepted-source replay preserves later database changes and deletions. Typed exports refuse existing destinations; recovery merges absent or identical records and aborts on conflicts. Recovery leaves later additions intact but can recreate exported records deleted after export. It is not a chronological rollback. Invocation/resolution audit history, definitions, and ordinary files remain outside canonical export.
 
 ## Testing
 

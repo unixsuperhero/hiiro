@@ -1,5 +1,6 @@
 require 'sequel'
 require 'uri'
+require 'json'
 
 class Hiiro
   class TaskRecord < Sequel::Model(:tasks)
@@ -24,7 +25,7 @@ class Hiiro
 
     def self.migrate!(db)
       columns = db.schema(:tasks).map(&:first)
-      METADATA_COLUMNS.each do |column|
+      (METADATA_COLUMNS + [:metadata_json]).each do |column|
         db.alter_table(:tasks) { add_column column, String } unless columns.include?(column)
       end
     end
@@ -46,7 +47,15 @@ class Hiiro
     end
 
     def task_attributes
-      values.reject { |key, _| key == :id }.compact
+      values.reject { |key, _| %i[id metadata_json].include?(key) }.compact
+    end
+
+    def metadata
+      metadata_json ? JSON.parse(metadata_json) : {}
+    end
+
+    def metadata=(data)
+      self.metadata_json = JSON.generate(data)
     end
 
     def resources

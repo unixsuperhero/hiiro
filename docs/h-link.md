@@ -2,6 +2,8 @@
 
 Store, search, tag, and open saved URLs.
 
+Links and their tags are stored only in SQLite. Legacy `links.yml` is an explicit `h db migrate` input, not a live store or backup.
+
 ## Synopsis
 
 ```bash
@@ -20,7 +22,7 @@ h link <subcommand> [args]
 | `copy [terms]` | Fuzzy-select a link and copy URL to clipboard |
 | `open [ref]` | Open a link in the browser |
 | `edit <ref>` | Edit a specific link in editor |
-| `editall` | Edit the links YAML file directly |
+| `editall` | Edit saved database links in a temporary YAML document |
 | `rm [ref]` | Remove a link |
 | `remove [ref]` | Alias for `rm` |
 | `tags [tag]` | List links grouped by tag |
@@ -62,7 +64,7 @@ h link copy github
 
 ### edit
 
-Edit a specific link (by index number or shorthand) in a YAML editor.
+Edit a specific link (by index number or shorthand) in a temporary YAML editor. Keep its `id` unchanged: changing the URL updates that same record and preserves its tags. Add records without an `id`; remove a selected record from the document to delete it and its tags.
 
 **Examples**
 
@@ -73,7 +75,7 @@ h link edit ex
 
 ### editall
 
-Open the raw links YAML file in your editor.
+Edit the links selected when the editor opens. Existing records carry stable database IDs; new records omit `id`. Only edited fields are saved. Omitted fields stay unchanged; YAML `null` clears nullable fields. Records inserted while the editor is open are preserved. Conflicting edits or deletion of a concurrently changed record abort the entire edit. Blank, unchanged, invalid, or failed editor output makes no changes; an explicit `[]` deletes the originally selected records if they have not changed.
 
 **Examples**
 
@@ -122,7 +124,7 @@ h link paste "PR template" --tag github
 
 ### path
 
-Print the path to the links YAML file.
+Print the path to the SQLite database containing links.
 
 **Examples**
 
@@ -131,7 +133,7 @@ h link path
 ```
 ### rm / remove
 
-Remove a link. With no argument, fuzzy-selects. With a number or shorthand, removes directly. Supports substring URL matching.
+Remove a link and its owned tags by the selected stable database ID. With no argument, fuzzy-selects. With a number or shorthand, removes directly. Supports substring URL matching.
 
 **Examples**
 

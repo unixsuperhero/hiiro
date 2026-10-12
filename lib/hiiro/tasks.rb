@@ -3,8 +3,6 @@ require 'fileutils'
 
 class Hiiro
   class TaskManager
-    TASKS_DIR = File.join(Dir.home, '.config', 'hiiro', 'tasks')
-    APPS_FILE = File.join(Dir.home, '.config', 'hiiro', 'apps.yml')
 
     def self.add_resolvers(hiiro, scope: :task)
       tm = new(hiiro, scope: scope)
@@ -150,8 +148,7 @@ class Hiiro
         return existing_for_path
       end
 
-      task = Task.new(name: name, tree: root, session: name)
-      config.save_task(task)
+      task = config.create_task(name: name, tree: root, session: name)
       puts "Added task '#{name}' from worktree '#{root}'"
       task
     end
@@ -179,8 +176,7 @@ class Hiiro
       return unless target_path
 
       session_name = task_name
-      task = Task.new(name: task_name, tree: subtree_name, session: session_name)
-      config.save_task(task)
+      task = config.create_task(name: task_name, tree: subtree_name, session: session_name)
 
       base_dir = target_path
       if app_name
@@ -280,9 +276,11 @@ class Hiiro
         return
       end
 
-      attributes = existing ? existing.to_h : { name: task_name }
-      task = Task.new(**attributes.merge(tree: tree.name, session: task_name))
-      config.save_task(task)
+      task = if existing
+        config.attach_tree(existing.id, tree: tree.name, session: task_name)
+      else
+        config.create_task(name: task_name, tree: tree.name, session: task_name)
+      end
       puts "Resumed task '#{task_name}' from worktree '#{tree.name}'"
 
       switch_to_task(task)
@@ -442,8 +440,7 @@ class Hiiro
         end
       else
         puts "No apps configured."
-        puts "Create #{APPS_FILE} with format:"
-        puts "  app_name: relative/path/from/repo"
+        puts "Add one with: h app add NAME relative/path/from/repo"
       end
     end
 
@@ -695,128 +692,41 @@ class Hiiro
     end
 
     class Config
-      attr_reader :tasks_file, :apps_file
-
-      def initialize(tasks_file: nil, apps_file: nil)
-        @tasks_file = tasks_file || File.join(TASKS_DIR, 'tasks.yml')
-        @apps_file = apps_file || APPS_FILE
-      end
-
       def tasks
-        data = load_tasks
-        (data['tasks'] || []).map { |h| Task.new(**h.transform_keys(&:to_sym)) }
+        TaskRecord.all_as_list.map { |record| Task.new(id: record.id, **record.task_attributes) }
       end
 
       def apps
-        rows = AppRecord.all_as_hash
-        return fallback_load_apps_from_yaml if rows.empty?
-        rows.map { |name, path| App.new(name: name, path: path) }
-      rescue => e
-        warn "Failed to load apps from DB: #{e}. Falling back to YAML."
-        fallback_load_apps_from_yaml
+        AppRecord.all_as_hash.map { |name, path| App.new(name: name, path: path) }
       end
 
-      def save_task(task)
-        record = TaskRecord.find_by_name(task.name) || TaskRecord.new(name: task.name, created_at: Time.now.iso8601)
-        record.set(task.to_h.merge(tree: task.tree_name, session: task.session_name, color_index: task.color_index))
-        record.save
-        save_tasks_yaml_backup
-      rescue => e
-        warn "Failed to save task to DB: #{e}"
+      def create_task(name:, tree: nil, session: nil, app: nil, color_index: nil)
+        record = TaskRecord.create(name: name, tree: tree, session: session || name,
+                                   app: app, color_index: color_index, created_at: Time.now.iso8601)
+        Task.new(id: record.id, **record.task_attributes)
+      end
+
+      def attach_tree(id, tree:, session:, **changes)
+        raise Hiiro::Error, 'Unknown task fields' unless (changes.keys - %i[app color_index]).empty?
+
+        Hiiro::DB.connection.transaction(mode: :immediate) do
+          record = TaskRecord[id] or raise Hiiro::Error, "Task not found: #{id}"
+          record.set(changes.merge(tree: tree, session: session, updated_at: Time.now.iso8601))
+          record.save_changes
+          Task.new(id: record.id, **record.task_attributes)
+        end
       end
 
       def detach_tree(name)
-        record = TaskRecord.find_by_name(name)
-        return unless record&.tree
+        Hiiro::DB.connection.transaction(mode: :immediate) do
+          record = TaskRecord.find_by_name(name)
+          next unless record&.tree
 
-        path = record.tree.start_with?('/') ? record.tree : File.join(Hiiro::WORK_DIR, record.tree)
-        Hiiro::DB.connection.transaction do
+          path = record.tree.start_with?('/') ? record.tree : File.join(Hiiro::WORK_DIR, record.tree)
           TaskResource.find_or_create(task_id: record.id, kind: 'directory', target: path)
-          record.update(tree: nil, updated_at: Time.now.iso8601)
+          record.set(tree: nil, updated_at: Time.now.iso8601)
+          record.save_changes
         end
-        save_tasks_yaml_backup
-      rescue => e
-        warn "Failed to detach task worktree: #{e}"
-      end
-
-      private
-
-      def load_tasks
-        rows = TaskRecord.all_as_list
-        return fallback_load_tasks_from_yaml if rows.empty?
-        { 'tasks' => rows.map { |r|
-          r.task_attributes.transform_keys(&:to_s)
-        }}
-      rescue => e
-        warn "Failed to load tasks from DB: #{e}. Falling back to YAML."
-        fallback_load_tasks_from_yaml
-      end
-
-      def fallback_load_tasks_from_yaml
-        if File.exist?(tasks_file)
-          return YAML.safe_load_file(tasks_file) || { 'tasks' => [] }
-        end
-
-        task_files = Dir.glob(File.join(File.dirname(tasks_file), 'task_*.yml'))
-        if task_files.any?
-          tasks = task_files.map do |file|
-            short_name = File.basename(file, '.yml').sub(/^task_/, '')
-            data = YAML.safe_load_file(file) || {}
-            parent = data['parent']
-            if parent.nil? && data['tree']&.include?('/')
-              parent = data['tree'].split('/').first
-            end
-            name = parent ? "#{parent}/#{short_name}" : short_name
-            h = { 'name' => name }
-            h['tree'] = data['tree'] if data['tree']
-            h['session'] = data['session'] if data['session']
-            h['color_index'] = data['color_index'] if data['color_index']
-            h
-          end
-          return { 'tasks' => tasks }
-        end
-
-        assignments = load_assignments
-        if assignments.any?
-          tasks = assignments.map do |worktree, branch|
-            h = { 'name' => branch, 'tree' => worktree }
-            h['session'] = branch if branch.include?('/')
-            h
-          end
-          data = { 'tasks' => tasks }
-          save_tasks_yaml_backup(data)
-          return data
-        end
-
-        { 'tasks' => [] }
-      end
-
-      def load_assignments
-        Assignment.all_as_hash
-      rescue => e
-        warn "Failed to load assignments from DB: #{e}"
-        {}
-      end
-
-      def fallback_load_apps_from_yaml
-        return [] unless File.exist?(apps_file)
-        data = YAML.safe_load_file(apps_file) || {}
-        (data['apps'] || data).map do |name, path|
-          App.new(name: name.to_s, path: path.to_s)
-        end
-      rescue => e
-        warn "apps.yml fallback failed: #{e}"
-        []
-      end
-
-      def save_tasks_yaml_backup(data = nil)
-        data ||= { 'tasks' => TaskRecord.all_as_list.map { |r|
-          r.task_attributes.transform_keys(&:to_s)
-        }}
-        FileUtils.mkdir_p(File.dirname(tasks_file))
-        File.write(tasks_file, YAML.dump(data))
-      rescue => e
-        warn "tasks.yml backup failed: #{e}"
       end
     end
   end
@@ -1324,7 +1234,7 @@ class Hiiro
 
           when 'add'
             if todo_args.empty?
-              new_items = todo_manager.edit_items(task_info: task_info)
+              new_items = todo_manager.edit_items(task_info: task_info, hiiro: h)
               if new_items.empty?
                 puts "No items added."
                 next
@@ -1497,9 +1407,10 @@ class Hiiro
   end
 
   class Task
-    attr_reader :name, :tree_name, :session_name, :color_index, :app, :created_at, *TaskRecord::METADATA_COLUMNS
+    attr_reader :id, :name, :tree_name, :session_name, :color_index, :app, :created_at, *TaskRecord::METADATA_COLUMNS
 
-    def initialize(name:, tree: nil, session: nil, color_index: nil, **attributes)
+    def initialize(name:, id: nil, tree: nil, session: nil, color_index: nil, **attributes)
+      @id = id
       @name = name
       @tree_name = tree
       @session_name = session || name
@@ -1660,7 +1571,7 @@ class Hiiro
     end
 
     def all_tasks
-      @all_tasks ||= config.tasks
+      config.tasks
     end
 
     def all_sessions
@@ -1672,7 +1583,7 @@ class Hiiro
     end
 
     def all_apps
-      @all_apps ||= config.apps
+      config.apps
     end
 
     def tree_matcher
@@ -1684,11 +1595,11 @@ class Hiiro
     end
 
     def app_matcher
-      @app_matcher ||= Hiiro::Matcher.new(all_apps, :name)
+      Hiiro::Matcher.new(all_apps, :name)
     end
 
     def task_matcher
-      @task_matcher ||= Hiiro::Matcher.new(all_tasks, :name)
+      Hiiro::Matcher.new(all_tasks, :name)
     end
 
     def task

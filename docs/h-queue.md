@@ -283,7 +283,7 @@ Prompts are Markdown files with optional YAML frontmatter. The frontmatter contr
 task_name: my-task           # associate with a hiiro task
 tree_name: my-task/main      # worktree to use as working dir
 session_name: my-task        # compatibility field: Herdr workspace label
-app: api                     # app name to cd into (resolved via apps.yml)
+app: api                     # app name to cd into (resolved via canonical AppRecord)
 dir: packages/api            # subdirectory within app or tree root
 ignore: true                 # use claude -p; do not start an extra shell
 ---

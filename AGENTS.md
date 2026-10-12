@@ -221,9 +221,9 @@ git.current_pr                    # Get current PR info
 
 ### Hiiro::DB (lib/hiiro/db.rb)
 
-SQLite persistence layer backed by Sequel. All data is stored in `~/.config/hiiro/hiiro.db`.
+SQLite persistence uses Sequel at `~/.config/hiiro/hiiro.db`. Mutable domain records are database-owned; definitions, preferences, runtime state, and ordinary artifacts keep their existing file owners. The complete owner/table map is in [README persistence ownership](README.md#persistence-ownership).
 
-**Setup:** `Hiiro::DB.setup!` is called at startup — creates any missing tables, then runs a one-time YAML→SQLite migration if the DB is new.
+`Hiiro::DB.setup!` creates missing tables and runs model schema upgrades at startup. It does not import domain YAML. Legacy sources are explicit retained import inputs, never live fallbacks or dual-write destinations.
 
 **Model registration:** Each Sequel model calls `Hiiro::DB.register(self)` so `setup!` can create its table:
 
@@ -240,16 +240,17 @@ class Hiiro::MyModel < Sequel::Model(:my_table)
 end
 ```
 
-**Dual-write:** During rollout, models write to both SQLite and YAML. Once migration is stable, call `Hiiro::DB.disable_dual_write!` to stop YAML writes.
+Domain operations mutate selected rows rather than saving a stale collection. Temporary YAML editor documents project database records; failed editors and conflicting changes do not apply partial batches.
 
-**Test isolation:** Set `ENV['HIIRO_TEST_DB'] = 'sqlite::memory:'` before requiring `hiiro` to get a clean in-memory DB per test run. Call `Hiiro::DB.setup!` after require.
+`TaskRecord` owns task identity, tree/session/app/color fields, `status`, `next_action`, `waiting_on`, `primary_directory`, and created/updated/completed/archived timestamps. Its `metadata_json` retains additional task detail keys, including window metadata. `TaskResource` owns task-linked directory, issue, PR, and note references; note bodies remain ordinary files.
 
-**`h db` subcommand:** Inspect and manage the database:
-- `h db status` — show connection info and migration state
-- `h db tables` — list all tables with row counts
-- `h db q <sql>` — run raw SQL and print results
-- `h db migrate` — re-run YAML import (if not yet migrated)
-- `h db restore` — restore YAML files from SQLite data
+Pins use explicit JSON encoding with a format marker. New string pins remain strings even when their text resembles JSON. Preexisting unmarked pins retain their historical decoder until an explicit typed source resolves ambiguity. Reminders store `interval`, `once`, `trigger_at`, `last_triggered`, `enabled`, and `sound` in SQLite.
+
+Tag identities remain namespace-specific. `Branch` and `Task` tags use names; `Link`, `TaskRecord`, `RegistryEntry`, and `PinnedPr` tags use model IDs.
+
+**Test isolation:** Set `ENV['HIIRO_TEST_DB'] = 'sqlite::memory:'` before requiring `hiiro` for an in-memory DB. Call `Hiiro::DB.setup!` after require. Migration smoke fixtures use a disposable file-backed database and temporary HOME.
+
+See [h-db](docs/h-db.md) for exact manifest, plan, import, export, restore, status, and query syntax.
 
 ### Hiiro::Table / Hiiro::TableScope / Hiiro::TableActions (lib/hiiro/table*.rb)
 
@@ -346,12 +347,12 @@ Tempfile + editor lifecycle for YAML/markdown input. After `edit`, the result is
 ```ruby
 input = yaml_input_file(content: yaml, prefix: 'todo-edit-')   # or InputFile.yaml_file(hiiro:, ...) / .md_file
 doc   = input.edit.document        # EditedDocument: original, result (alias contents), parsed (alias data), error
-doc.changed? / doc.empty? / doc.valid?
-input.parsed_file                  # still available; nil on YAML parse error
+doc.changed? / doc.empty? / doc.valid? / doc.editor_succeeded?
+input.parsed_file                  # nil on YAML parse error or failed editor
 input.cleanup                      # unlink the tempfile when done
 ```
 
-Use this instead of a hand-rolled Tempfile/system/YAML.load/unlink cycle (TodoManager#edit_items now does).
+`TodoManager#edit_items` uses this lifecycle for a temporary database projection. A nonzero editor exit makes the document invalid, retains its original/result text, and exposes no parsed data.
 
 ### Hiiro::CheckSummary / Hiiro::CheckContext (lib/hiiro/check_summary.rb)
 
@@ -428,7 +429,7 @@ loc.to_meta                                   # inverse of from_meta (queue/serv
 
 ### Hiiro::Link / Hiiro::URLTemplate (lib/hiiro/link.rb)
 
-`bin/h-link` uses `Hiiro::Link` directly (its inline `LinkManager::Link` copy is gone). `Link.from_hash(yaml_row)` builds an unsaved instance; `to_h` / `to_yaml` give the links.yml shape.
+`bin/h-link` reads and mutates canonical `Hiiro::Link` rows. Editing uses a temporary database projection with the selected stable ID; `links.yml` is only an explicit legacy import input.
 
 ```ruby
 t = Hiiro::URLTemplate.new('https://x/{org}/{repo}', values: { 'org' => 'a b' })
@@ -713,21 +714,23 @@ ALWAYS update `README.md` and any files in `docs/` or other markdown files that 
 
 ## Configuration Locations
 
-All config lives in `~/.config/hiiro/`:
+Current config-root stores under `~/.config/hiiro/`:
+- `hiiro.db` - Canonical mutable records through the owners listed in README
 - `plugins/` - Auto-loaded plugin files
-- `pins/` - Per-command YAML key-value storage
-- `tasks/` - Task metadata for worktree management
-- `queue/` - Prompt queue (wip, pending, running, done, failed)
 - `services/` - Service runtime state
+- `bg-history.txt` - Background command history
 - `jumplist/` - Per-client tmux navigation history
 - `env_templates/` - Base .env template files for services
-- `projects.yml` - Project directory aliases
-- `apps.yml` - App directory mappings for task plugin
 - `services.yml` - Service and service group definitions
 - `tools.yml` - Runner tool definitions
+- `sparse_groups.yml` - Sparse checkout definitions
 - `tables.yml` - Per-table action letters for `h table`
+- `config.yml` - Preferences
 - `app_files.yml` - Per-app tracked file lists
 
+`~/.local/share/hiiro/queue/` contains prompt queue files and companions. `~/.local/share/hiiro/notify_log.yml` contains the Herdr notification log. Task notes, saved artifacts, indexes, and cleanup SQL remain files at their existing locations.
+
+Legacy domain YAML, task metadata directories, and command-pin files are retained explicit migration inputs. They are not current configuration authorities.
 
 # Groups of files
 

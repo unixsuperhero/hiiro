@@ -1,7 +1,5 @@
-require 'yaml'
 require 'json'
 require 'time'
-require 'fileutils'
 
 class Hiiro
   class PinnedPRManager
@@ -16,40 +14,23 @@ class Hiiro
             nil
           else
             lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-              h[pm.strip_ansi(pm.display_pinned(pr, idx, oneline: true))] = pr.number.to_s
+              h[pm.strip_ansi(pm.display_pinned(pr, idx, oneline: true))] = pm.reference_text(pr)
             end
             hiiro.fuzzyfind_from_map(lines)
           end
         }
       ) do |ref|
-        if (pin_value = hiiro.pins.get(ref.to_s))
-          pin_value
+        value = (hiiro.pins.get(ref.to_s) || ref).to_s
+        if (pr = pm.find(value))
+          pm.reference_text(pr)
+        elsif value.match?(/\A\d+\z/) && (pr = pm.load_pinned.find { |p| p.slot == value.to_i })
+          pm.reference_text(pr)
         else
-          pinned = pm.load_pinned
-          if pinned.any? { |pr| pr.number.to_s == ref.to_s }
-            ref.to_s
-          elsif ref.to_s =~ /^\d+$/ && ref.to_i > 0
-            slot = ref.to_i
-            by_slot = pinned.find { |p| p.slot.to_i == slot }
-            if by_slot
-              by_slot.number.to_s
-            elsif slot - 1 < pinned.length
-              # Fall back to 1-based index for unslotted data
-              pinned[slot - 1].number.to_s
-            else
-              ref.to_s
-            end
-          else
-            ref.to_s
-          end
+          value
         end
       end
     end
 
-    def initialize(fs: Hiiro::Effects::Filesystem.new)
-      @fs = fs
-      ensure_file
-    end
 
     def add_options(opts)
       opts.flag(:red,       short: 'r', desc: 'filter: failing checks')
@@ -67,105 +48,145 @@ class Hiiro
       pr.repo || Hiiro::Git::Pr.repo_from_url(pr.url)
     end
 
-    def ensure_file
-      return unless Hiiro::DB.dual_write?
-      dir = File.dirname(Hiiro::Git::Pr::PINNED_FILE)
-      FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
-      @fs.write(Hiiro::Git::Pr::PINNED_FILE, [].to_yaml) unless File.exist?(Hiiro::Git::Pr::PINNED_FILE)
-    end
+    def load_pinned = Hiiro::PinnedPr.by_slot.all
 
-    def load_pinned
-      prs = Hiiro::PinnedPr.by_slot.all
-      if prs.any? { |p| p.slot.nil? }
-        next_slot = prs.map { |p| p.slot.to_i }.max.to_i
-        prs.each do |p|
-          next if p.slot
-          next_slot += 1
-          p.update(slot: next_slot)
-        end
-      end
-      prs
-    end
+    def reference_text(pr) = pr.reference.url || pr.number.to_s
 
-    def save_pinned(prs)
-      Hiiro::DB.connection.transaction do
-        Hiiro::PinnedPr.where(pinned: true).delete
-        prs.each do |pr|
-          pinned = pr.is_a?(Hiiro::PinnedPr) ? pr : Hiiro::PinnedPr.from_git_pr(pr)
-          attrs  = pinned.to_hash.reject { |k, _| k == :id }
-          attrs[:pinned] = true
-          saved = Hiiro::PinnedPr.new(attrs)
-          saved.save
-          saved.sync_check_runs
-        end
+    def find(ref, pinned_only: true)
+      if ref.is_a?(Hiiro::PinnedPr)
+        scope = Hiiro::PinnedPr.where(id: ref.id)
+        scope = scope.where(pinned: true) if pinned_only
+        return scope.first
       end
-      # Dual-write YAML for backward compat
-      if Hiiro::DB.dual_write?
-        ensure_file
-        @fs.write(Hiiro::Git::Pr::PINNED_FILE, prs.map(&:to_pinned_h).to_yaml)
+      reference = if ref.respond_to?(:number) && ref.respond_to?(:repo)
+        Hiiro::PullRequestReference.new(number: ref.number, repo: Hiiro::RepositoryIdentity.parse(ref.repo || ref.url))
+      elsif ref.is_a?(Hiiro::PullRequestReference)
+        ref
+      elsif (match = ref.to_s.match(/\A([^\s#]+\/[^\s#]+)#(\d+)\z/))
+        Hiiro::PullRequestReference.new(number: match[2], repo: Hiiro::RepositoryIdentity.parse(match[1]))
+      else
+        Hiiro::PullRequestReference.parse(ref)
       end
+      reference && Hiiro::PinnedPr.find_by_reference(reference, pinned_only: pinned_only)
     end
 
     def pin(pr)
-      pr.repo ||= Hiiro::Git::Pr.repo_from_url(pr.url)
-
-      existing = Hiiro::PinnedPr.find_by_number(pr.number)
-
-      if existing
-        updates = {
-          updated_at: Time.now.iso8601,
-        }
-        updates[:title]           = pr.title           unless pr.title.nil?
-        updates[:state]           = pr.state           unless pr.state.nil?
-        updates[:url]             = pr.url             unless pr.url.nil?
-        updates[:head_ref_name]   = pr.head_branch     unless pr.head_branch.nil?
-        updates[:repo]            = pr.repo            unless pr.repo.nil?
-        updates[:is_draft]        = pr.is_draft        unless pr.is_draft.nil?
-        updates[:mergeable]       = pr.mergeable       unless pr.mergeable.nil?
-        updates[:review_decision] = pr.review_decision unless pr.review_decision.nil?
-        updates[:check_runs_json] = Hiiro::DB::JSON.dump(pr.check_runs) unless pr.check_runs.nil?
-        updates[:checks_json]     = Hiiro::DB::JSON.dump(pr.checks)     unless pr.checks.nil?
-        updates[:reviews_json]    = Hiiro::DB::JSON.dump(pr.reviews)    unless pr.reviews.nil?
-        updates[:task]            = pr.task            unless pr.task.nil?
-        updates[:worktree]        = pr.worktree        unless pr.worktree.nil?
-        updates[:herdr_workspace] = pr.herdr_workspace unless pr.herdr_workspace.nil?
-        updates[:tags_json]       = Hiiro::DB::JSON.dump(pr.tags) unless pr.tags.nil?
-        updates[:assigned]        = pr.assigned        unless pr.assigned.nil?
-        updates[:authored]        = pr.authored        unless pr.authored.nil?
-        existing.update(updates)
-        existing.sync_check_runs if updates.key?(:check_runs_json)
-      else
-        pinned = pr.is_a?(Hiiro::PinnedPr) ? pr : Hiiro::PinnedPr.from_git_pr(pr)
-        pinned.slot      = Hiiro::PinnedPr.max(:slot).to_i + 1
-        pinned.pinned_at = Time.now.iso8601
-        pinned.pinned    = true
-        pinned.save
-        pinned.sync_check_runs
+      Hiiro::DB.connection.transaction(mode: :immediate) do
+        existing = find(pr, pinned_only: false)
+        raise Hiiro::Error, 'PR was removed while pinning' if pr.is_a?(Hiiro::PinnedPr) && !existing
+        if existing
+          attrs = Hiiro::PinnedPr.from_git_pr(pr).values
+          %i[title state url head_ref_name is_draft mergeable review_decision checks_json check_runs_json reviews_json last_checked].each do |field|
+            existing[field] = attrs[field] unless attrs[field].nil?
+          end
+          unless existing.pinned
+            existing.pinned = true
+            existing.slot ||= Hiiro::PinnedPr.max(:slot).to_i + 1
+            existing.pinned_at ||= Time.now.iso8601
+          end
+          existing.save_changes
+        else
+          existing = Hiiro::PinnedPr.from_git_pr(pr)
+          existing.repo ||= Hiiro::Git::Pr.repo_from_url(pr.url)
+          existing.slot = Hiiro::PinnedPr.max(:slot).to_i + 1
+          existing.pinned_at ||= Time.now.iso8601
+          existing.save
+        end
+        existing.sync_check_runs
+        existing
       end
-
-      # Dual-write YAML
-      if Hiiro::DB.dual_write?
-        ensure_file
-        all_prs = Hiiro::PinnedPr.by_slot.all
-        @fs.write(Hiiro::Git::Pr::PINNED_FILE, all_prs.map(&:to_pinned_h).to_yaml)
-      end
-
-      pr
     end
 
-    def unpin(pr_number)
-      removed = Hiiro::PinnedPr.where(number: pr_number.to_i).delete
-      # Dual-write YAML
-      if Hiiro::DB.dual_write?
-        ensure_file
-        all_prs = Hiiro::PinnedPr.by_slot.all
-        @fs.write(Hiiro::Git::Pr::PINNED_FILE, all_prs.map(&:to_pinned_h).to_yaml)
+    def unpin(ref)
+      Hiiro::DB.connection.transaction(mode: :immediate) do
+        pr = find(ref)
+        next false unless pr
+        Hiiro::CheckRun.where(pr_id: pr.id).delete
+        Hiiro::Tag.where(taggable_type: 'PinnedPr', taggable_id: pr.id.to_s).delete
+        pr.delete
+        true
       end
-      removed
     end
 
-    def pinned?(pr_number)
-      load_pinned.any? { |p| p.number.to_s == pr_number.to_s }
+    def pinned?(ref) = !find(ref).nil?
+
+    def change_tags(ref, add: [], remove: [], clear: false)
+      mutate_array(ref, :tags, add: add, remove: remove, clear: clear)
+    end
+
+    def change_dependencies(ref, add: [], remove: [], clear: false)
+      mutate_array(ref, :depends_on, add: add, remove: remove, clear: clear)
+    end
+
+    def mutate_array(ref, field, add:, remove:, clear:)
+      Hiiro::DB.connection.transaction(mode: :immediate) do
+        pr = find(ref)
+        raise Hiiro::Error, 'PR is no longer tracked' unless pr
+        values = clear ? [] : ((Array(pr.public_send(field)) + add).uniq - remove)
+        pr.public_send("#{field}=", values.empty? ? nil : values)
+        pr.save_changes
+        pr
+      end
+    end
+
+    EDIT_FIELDS = %w[tags depends_on task worktree herdr_workspace assigned authored].freeze
+
+    def edit_rows(prs)
+      prs.map { |pr| { 'id' => pr.id }.merge(EDIT_FIELDS.to_h { |field| [field, pr.public_send(field)] }) }
+    end
+
+    def edit_baseline(prs)
+      prs.to_h do |pr|
+        [pr.id, { record: pr,
+                  tags: Hiiro::Tag.where(taggable_type: 'PinnedPr', taggable_id: pr.id.to_s).order(:id).all.map(&:values),
+                  checks: Hiiro::CheckRun.where(pr_id: pr.id).order(:id).all.map(&:values) }]
+      end
+    end
+
+    def apply_edits(rows, baseline:)
+      raise Hiiro::Error, 'Expected a list of PR records' unless rows.is_a?(Array)
+      originals = baseline.transform_values { |entry| entry.fetch(:record) }
+      ids = rows.map do |row|
+        raise Hiiro::Error, 'Each PR needs its original integer id' unless row.is_a?(Hash) && row['id'].is_a?(Integer) && originals.key?(row['id'])
+        raise Hiiro::Error, 'Unknown PR edit field' unless (row.keys - ['id'] - EDIT_FIELDS).empty?
+        %w[tags depends_on].each do |field|
+          value = row[field]
+          valid = value.nil? || (value.is_a?(Array) && value.all? { |v| field == 'tags' ? v.is_a?(String) : v.is_a?(Integer) && v.positive? })
+          raise Hiiro::Error, "Invalid #{field}" unless valid
+        end
+        %w[task worktree herdr_workspace].each do |field|
+          raise Hiiro::Error, "Invalid #{field}" unless row[field].nil? || row[field].is_a?(String)
+        end
+        %w[assigned authored].each do |field|
+          raise Hiiro::Error, "Invalid #{field}" unless [nil, true, false].include?(row[field])
+        end
+        row['id']
+      end
+      raise Hiiro::Error, 'Duplicate PR id' unless ids.uniq == ids
+      Hiiro::DB.connection.transaction(mode: :immediate) do
+        rows.each do |row|
+          before = originals.fetch(row['id'])
+          changes = row.reject { |field, value| field == 'id' || value == before.public_send(field) }
+          next if changes.empty?
+          current = find(before)
+          raise Hiiro::Error, "PR id #{before.id} was removed" unless current
+          changes.each do |field, value|
+            actual = current.public_send(field)
+            raise Hiiro::Error, "Conflict on PR id #{before.id}: #{field}" unless actual == before.public_send(field) || actual == value
+            current.public_send("#{field}=", value)
+          end
+          current.save_changes
+        end
+        (originals.keys - ids).each do |id|
+          before = originals.fetch(id)
+          current = find(before)
+          next unless current
+          relations = edit_baseline([current]).fetch(id)
+          unchanged = current.values == before.values && %i[tags checks].all? { |key| relations[key] == baseline.fetch(id)[key] }
+          raise Hiiro::Error, "Conflict deleting PR id #{id}" unless unchanged
+          unpin(current)
+        end
+      end
     end
 
     def fetch_pr_info(pr_number, repo: nil)
@@ -290,15 +311,16 @@ class Hiiro
         rollup = info['statusCheckRollup']
         apply_isc_code_freeze_override!(rollup, frozen)
 
-        pr.state           = info['state']
-        pr.title           = info['title']
-        pr.check_runs      = rollup
-        pr.checks          = Hiiro::Git::Pr.summarize_checks(rollup, truncated: info['checksTruncated'])
-        pr.reviews         = Hiiro::Git::Pr.summarize_reviews(info['reviews'])
-        pr.review_decision = info['reviewDecision']
-        pr.is_draft        = info['isDraft']
-        pr.mergeable       = info['mergeable']
-        pr.last_checked    = Time.now.iso8601
+        changes = { last_checked: Time.now.iso8601 }
+        { 'state' => :state, 'title' => :title, 'reviewDecision' => :review_decision, 'isDraft' => :is_draft, 'mergeable' => :mergeable }.each do |key, field|
+          changes[field] = info[key] if info.key?(key)
+        end
+        if info.key?('statusCheckRollup')
+          changes[:check_runs] = rollup
+          changes[:checks] = Hiiro::Git::Pr.summarize_checks(rollup, truncated: info['checksTruncated'])
+        end
+        changes[:reviews] = Hiiro::Git::Pr.summarize_reviews(info['reviews']) if info.key?('reviews')
+        persist_status(pr, changes)
       end
 
       prs
@@ -313,16 +335,25 @@ class Hiiro
       rollup = info.check_runs
       apply_isc_code_freeze_override!(rollup, code_freeze_active?)
 
-      pr.state           = info.state
-      pr.title           = info.title
-      pr.check_runs      = rollup
-      pr.checks          = Hiiro::Git::Pr.summarize_checks(rollup)
-      pr.reviews         = info.reviews
-      pr.review_decision = info.review_decision
-      pr.is_draft        = info.is_draft
-      pr.mergeable       = info.mergeable
-      pr.last_checked    = Time.now.iso8601
+      persist_status(pr, state: info.state, title: info.title, check_runs: rollup,
+                     checks: Hiiro::Git::Pr.summarize_checks(rollup), reviews: info.reviews,
+                     review_decision: info.review_decision, is_draft: info.is_draft,
+                     mergeable: info.mergeable, last_checked: Time.now.iso8601)
       pr
+    end
+
+    def persist_status(pr, changes)
+      Hiiro::DB.connection.transaction(mode: :immediate) do
+        current = pr.is_a?(Hiiro::PinnedPr) ? find(pr) : nil
+        return nil if pr.is_a?(Hiiro::PinnedPr) && !current
+        changes.each { |field, value| (current || pr).public_send("#{field}=", value) }
+        if current
+          current.save_changes
+          current.sync_check_runs if changes.key?(:check_runs)
+          changes.each { |field, value| pr.public_send("#{field}=", value) }
+        end
+        current || pr
+      end
     end
 
     def display_pinned(pr, idx = nil, widths: {}, oneline: false)
@@ -470,7 +501,7 @@ class Hiiro
     def pr_yaml_lines(prs = nil)
       (prs || load_pinned).map do |pr|
         branch = pr.head_branch ? "[#{pr.head_branch}]" : "[##{pr.number}]"
-        "- #{pr.number}  # #{branch} #{pr.title}"
+        "- #{reference_text(pr)}  # #{branch} #{pr.title}"
       end
     end
 
