@@ -85,9 +85,13 @@ Surveyed 2026-10-12 before starting: links and projects already lived in their o
 
 Built 2026-10-12 per `docs/plans/tasks-screen.md`. `t ui` renders the task tree with subtasks, a detail pane with todos and next action, and keys for start, switch, and open in tuios. Reuses `Tui::Screen`, `TableScope`, and the key map pattern. Planned in its own one page document after PR 4.
 
-## PR 6 and 7. Projects screen and tuios screen
+## PR 6. Projects screen
 
-Same rule as PR 5. Each gets its own one page plan after PR 4 ships.
+Planned 2026-10-12 in `docs/plans/projects-screen.md`: `h project ui`, one row per git worktree across `~/proj` and `~/work`, with per-row status, branches, and PRs on request and an open backend keyed on `TUIOS_ENV`.
+
+## PR 7. Tuios screen
+
+Same rule as PR 5. Gets its own one page plan after PR 6 ships.
 
 ## PR 8. Trigger-character autocomplete
 
