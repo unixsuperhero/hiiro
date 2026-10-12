@@ -374,8 +374,8 @@ to `true`, leaves `payload` in `opts.args`, sets `opts.task` to
 command block.
 
 Names accept strings or symbols and are deduplicated across the buckets.
-Existing definitions keep their type, default, short alias, description, and
-conflicts, regardless of the bucket used to select them. New definitions are
+Existing definitions keep their type, default, short alias, and description,
+regardless of the bucket used to select them. New definitions are
 registered on the parent option set so later commands reuse them.
 
 Automatic short aliases use the first unused alphanumeric character in the full
