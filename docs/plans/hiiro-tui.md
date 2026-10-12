@@ -39,15 +39,15 @@ One box is one unit of work with the evidence that checks it. Each PR is verifie
 **Files.** Edit `lib/hiiro/registry.rb`, `lib/hiiro/tags.rb`. Create `lib/hiiro/table.rb`, `lib/hiiro/table_scope.rb`, `test/hiiro/table_test.rb`.
 
 **Build.**
-- [ ] Add nullable `task_id` to `registry` with a migration in `RegistryEntry.migrate!`.
-- [ ] `Hiiro::Table` wraps one `resource_type`. `Table.all`, `Table.named(name)`, `table.entries(scope:)`, `table.rename(new_name)`, `table.add(name, value, ...)`.
-- [ ] `RegistryEntry` gains `tags` through `Hiiro::Tag` with `taggable_type 'RegistryEntry'`, plus `tag(name)` and `untag(name)`.
-- [ ] `Hiiro::TableScope.current` resolves through `CurrentTask`. `toggle` flips mode. The value object is the only place that knows what task scope means.
-- [ ] `Hiiro::TableActions` loads `tables.yml`, merges defaults, and answers `for(entry)` as `{ letter => command }` and `run(letter, entry)`.
+- [x] Add nullable `task_id` to `registry` with a migration in `RegistryEntry.migrate!`.
+- [x] `Hiiro::Table` wraps one `resource_type`. `Table.all`, `Table.named(name)`, `table.entries(scope:)`, `table.rename(new_name)`, `table.add(name, value, ...)`.
+- [x] `RegistryEntry` gains `tags` through `Hiiro::Tag` with `taggable_type 'RegistryEntry'`, plus `tag(name)` and `untag(name)`.
+- [x] `Hiiro::TableScope.current` resolves through `CurrentTask`. `toggle` flips mode. The value object is the only place that knows what task scope means.
+- [x] `Hiiro::TableActions` loads `tables.yml`, merges defaults, and answers `for(entry)` as `{ letter => command }` and `run(letter, entry)`.
 
-**Verify, unit.** Add two entries in two tables, tag one, set a task on one. Assert `entries(scope: task)` returns exactly one and `entries(scope: global)` returns both. Assert `rename` moves every row.
+**Verify, unit.** Done 2026-10-12, 21 runs 48 assertions. Add two entries in two tables, tag one, set a task on one. Assert `entries(scope: task)` returns exactly one and `entries(scope: global)` returns both. Assert `rename` moves every row.
 
-**Verify, live.** `h db q "select resource_type, name, task_id from registry"` after `h table add link gh https://github.com` shows the row.
+**Verify, live.** Done 2026-10-12 against a throwaway sqlite file via `HIIRO_TEST_DB`, since `h table add` arrives in PR 4. `h db q "select resource_type, name, task_id from registry"` after `h table add link gh https://github.com` shows the row.
 
 ## PR 3. Migrate the YAML stores into registry
 

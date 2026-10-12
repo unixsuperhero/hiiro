@@ -54,6 +54,9 @@ require_relative "hiiro/pane_home"
 require_relative "hiiro/pin_record"
 require_relative "hiiro/reminder"
 require_relative 'hiiro/registry'
+require_relative 'hiiro/table_scope'
+require_relative 'hiiro/table'
+require_relative 'hiiro/table_actions'
 require_relative 'hiiro/current_task'
 require_relative 'hiiro/task_sessions'
 require_relative 'hiiro/task_cli'

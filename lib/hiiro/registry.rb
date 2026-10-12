@@ -19,6 +19,7 @@ class Hiiro
         String :description
         String :meta_json                    # arbitrary JSON for extra fields
         String :created_at
+        Integer :task_id
         unique [:resource_type, :name]
         unique [:resource_type, :short_name], where: Sequel[short_name: nil].~
       end
@@ -28,6 +29,10 @@ class Hiiro
       # Add value column if missing (migration for existing DBs)
       unless db.schema(:registry).any? { |col, _| col == :value }
         db.alter_table(:registry) { add_column :value, String }
+      end
+
+      unless db.schema(:registry).any? { |col, _| col == :task_id }
+        db.alter_table(:registry) { add_column :task_id, Integer }
       end
     end
 
@@ -103,6 +108,10 @@ class Hiiro
     def meta=(h)
       self.meta_json = Hiiro::DB::JSON.dump(h)
     end
+
+    def tags = Hiiro::Tag.for(self).select_map(:name).sort
+    def tag(*names)   = Hiiro::Tag.tag!(self, *names)
+    def untag(*names) = Hiiro::Tag.untag!(self, *names)
 
     def fuzzy_line
       parts = [resource_type.ljust(14), short_name&.ljust(16) || ' ' * 16, name]

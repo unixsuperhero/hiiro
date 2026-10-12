@@ -251,6 +251,28 @@ end
 - `h db migrate` — re-run YAML import (if not yet migrated)
 - `h db restore` — restore YAML files from SQLite data
 
+### Hiiro::Table / Hiiro::TableScope / Hiiro::TableActions (lib/hiiro/table*.rb)
+
+A **table** is one named key/value list, stored as `registry.resource_type`; an **entry** is one `RegistryEntry` row. `RegistryEntry` has a nullable `task_id` and `tags` / `tag(*names)` / `untag(*names)` through `Hiiro::Tag` (taggable_type `RegistryEntry`).
+
+```ruby
+Hiiro::Table.all                       # every table, sorted by name
+t = Hiiro::Table.named('link')         # exists? is false until a row is added
+t.add('gh', value: 'https://github.com', short: 'g', desc: '', meta: {}, task_id: nil)
+t.entries(scope: Hiiro::TableScope.global)   # rows ordered by name; count(scope:) ; find(ref)
+t.rename('links')                      # moves every row; raises Hiiro::Error if the target exists
+
+scope = Hiiro::TableScope.current      # task scope when CurrentTask resolves one, else global
+scope.task? / scope.global? / scope.label   # "task(@NAME)" | "global"
+scope.toggle                           # task -> global keeps the task; global -> task re-uses or resolves it
+scope.apply(dataset)                   # the only place that knows task scope means where(task_id:)
+
+acts = Hiiro::TableActions.load        # ~/.config/hiiro/tables.yml: { 'link' => { 'c' => 'cd {value}' } }
+acts.for(entry)                        # DEFAULTS (o open, y pbcopy) merged with the table's letters
+acts.command('o', entry)               # {value} {name} {table} shell-escaped; nil when no action
+acts.run('o', entry)                   # system('/bin/sh', '-c', cmd); returns cmd
+```
+
 ### Hiiro::Tui (lib/hiiro/tui.rb)
 
 Screen toolkit for in-process TUIs. One engine for every hiiro TUI; do not add curses or shell out to a fuzzy finder for a screen (see `docs/plans/hiiro-tui.md`).
@@ -703,6 +725,7 @@ All config lives in `~/.config/hiiro/`:
 - `apps.yml` - App directory mappings for task plugin
 - `services.yml` - Service and service group definitions
 - `tools.yml` - Runner tool definitions
+- `tables.yml` - Per-table action letters for `h table`
 - `app_files.yml` - Per-app tracked file lists
 
 
