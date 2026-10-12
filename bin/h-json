@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run do
+  add_cmd :structure, args: ['[FILE...]'] do
+    if opts.args.empty? && $stdin.tty?
+      abort 'Usage: h-json structure [FILE...] (or pipe JSON into stdin)'
+    end
+
+    filter = <<~JQ
+      def structure:
+        if type == "object" then
+          with_entries(.value |= structure)
+        elif type == "array" then
+          map(structure) | unique
+        else
+          type
+        end;
+
+      structure
+    JQ
+
+    exec('jq', '--', filter, *opts.args)
+  rescue Errno::ENOENT
+    abort 'h-json structure requires jq on PATH'
+  end
+end
