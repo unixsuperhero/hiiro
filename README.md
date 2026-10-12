@@ -348,15 +348,18 @@ end
 
 ### Commands with declared options
 
-Use `add_cmd` to expose a command's options in help. Undeclared names in `opts:`
-become boolean flags with a default of `false`. A flag does not consume the next
-positional argument.
+Use `add_cmd` to expose a command's options in help. Choose a declaration bucket
+for each undeclared name:
+
+- `opts:` creates a string-valued option with a default of `nil`.
+- `flags:` creates a boolean flag with a default of `false`. Flags do not consume the next positional argument.
+- `mopts:` creates a repeatable string-valued option with a default of `[]`.
 
 ```ruby
 Hiiro.run do
   add_option :task, short: :t, desc: 'Task name'
 
-  add_cmd :test, opts: %i[a b c d task] do
+  add_cmd :test, opts: %i[task], flags: %i[a b c d], mopts: %i[tag] do
     puts 'a was set' if opts.a
     puts opts.task if opts.task
     puts opts.args
@@ -364,15 +367,20 @@ Hiiro.run do
 end
 ```
 
-Here, `test -a payload -t investigation` sets `opts.a` to `true`, leaves
-`payload` in `opts.args`, and sets `opts.task` to `investigation`.
+Here, `test -a payload -t investigation --tag ruby --tag cli` sets `opts.a`
+to `true`, leaves `payload` in `opts.args`, sets `opts.task` to
+`investigation`, and sets `opts.tag` to `['ruby', 'cli']`.
 `test -h` and `test --help` display the selected options without running the
 command block.
 
-Automatic flags use their first letter as a short alias only when it is unique
-among the command's automatic flags and does not conflict with a selected
-explicit option or `-h`. Every automatic flag has a long form. Explicit flags
-and value options keep their definitions.
+Names accept strings or symbols and are deduplicated across the buckets.
+Existing definitions keep their type, default, short alias, description, and
+conflicts, regardless of the bucket used to select them. New definitions are
+registered on the parent option set so later commands reuse them.
+
+Automatic short aliases use the first unused alphanumeric character in the full
+name, scanning left to right. All existing short aliases and `-h` are reserved;
+aliases are never reassigned. A name with no available character has only its long form.
 
 For a command that delegates to `run_child`, use `add_cmd(..., passthrough: true)`.
 It forwards control without parsing the parent's arguments or intercepting the

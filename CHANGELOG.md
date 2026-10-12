@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.392] - 2026-10-12
+
+### Changed
+- `add_cmd` accepts `opts`, `flags`, and `mopts` arrays for value options, boolean flags, and repeated value options. Existing definitions are reused, and new short names use the first available alphanumeric character in the full name.
+- Automatic command definitions are registered for reuse by later commands. Existing boolean callers now use `flags`.
+
 ## [0.1.390] - 2026-10-07
 
 ### Added

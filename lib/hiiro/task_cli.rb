@@ -775,11 +775,11 @@ class Hiiro
           Hiiro::TaskScreen.new(current:).run
           nil # the screen's false return would become a non-zero exit status
         end
-        add_cmd(:next, args: ['task?', 'text...'], opts: [*TASK_OPTIONS, :clear]) do
+        add_cmd(:next, args: ['task?', 'text...'], opts: TASK_OPTIONS, flags: [:clear]) do
           task, rest = take_task(opts.args)
           metadata(task, :next_action, rest)
         end
-        add_cmd(:waiting, args: ['task?', 'text...'], opts: [*TASK_OPTIONS, :clear]) do
+        add_cmd(:waiting, args: ['task?', 'text...'], opts: TASK_OPTIONS, flags: [:clear]) do
           task, rest = take_task(opts.args)
           metadata(task, :waiting_on, rest)
         end
@@ -823,7 +823,7 @@ class Hiiro
             add_option :sparse, short: :s, desc: 'Sparse checkout group (repeatable)', multi: true
             add_default { |*rest| show_tree(take_task_only(rest, options: nil)) }
             add_cmd(:help) { help }
-            add_cmd(:new, args: ['name?', 'app?'], opts: [*TASK_OPTIONS, :app, :sparse]) do
+            add_cmd(:new, args: ['name?', 'app?'], opts: [*TASK_OPTIONS, :app], mopts: [:sparse]) do
               if opts.task
                 new_tree([lookup_task!(opts.task).name, *opts.args], opts.app, opts.sparse)
               elsif opts.find
@@ -842,7 +842,7 @@ class Hiiro
 
         add_option :directory, desc: 'Existing start directory'
         add_option :app, desc: 'Registry app directory under the task worktree'
-        add_cmd(:switch, :workspace, args: ['task-or-workspace?', 'app?'], opts: [*TASK_OPTIONS, :directory, :app, :show]) do
+        add_cmd(:switch, :workspace, args: ['task-or-workspace?', 'app?'], opts: [*TASK_OPTIONS, :directory, :app], flags: [:show]) do
           target, explicit, rest = switch_target(opts.args)
           app = opts.app || rest.first
           if target.is_a?(Hiiro::Herdr::Pane)
@@ -948,7 +948,7 @@ class Hiiro
           list_todos(task)
         end
         add_cmd(:help) { help }
-        add_cmd(:list, :ls, args: ['task?'], opts: [*TASK_OPTIONS, :plain]) do
+        add_cmd(:list, :ls, args: ['task?'], opts: TASK_OPTIONS, flags: [:plain]) do
           task, rest = take_task(opts.args, orphan: true)
           no_args!(rest)
           list_todos(task, plain: opts.plain)
@@ -976,11 +976,10 @@ class Hiiro
         add_option :label, desc: 'Resource label'
         add_option :kind, desc: 'Link kind: general, issue, or thread' if group == 'link'
         add_options = [*TASK_OPTIONS, :label]
-        add_options << :primary if group == 'directory'
         add_options << :kind if group == 'link'
         read_options = group == 'link' ? [*TASK_OPTIONS, :kind] : TASK_OPTIONS
         add_cmd(:help) { help }
-        add_cmd(:add, args: ['task?', 'target'], opts: add_options) do
+        add_cmd(:add, args: ['task?', 'target'], opts: add_options, flags: group == 'directory' ? [:primary] : []) do
           task, rest = take_task(opts.args)
           add_resource(task, group, single(rest))
         end

@@ -174,10 +174,10 @@ class HiiroAddDefaultTest < Minitest::Test
 end
 
 class HiiroAddCmdTest < Minitest::Test
-  def test_auto_flags_and_explicit_task_option_reach_handler
+  def test_flags_and_explicit_task_option_reach_handler
     hiiro = Hiiro.new("testbin-zzz")
     hiiro.add_option(:task, short: :t)
-    hiiro.add_cmd(:example, opts: %i[a b c d task]) do
+    hiiro.add_cmd(:example, opts: [:task], flags: %i[a b c d]) do
       [opts.to_h, opts.args]
     end
 
@@ -194,7 +194,7 @@ class HiiroAddCmdTest < Minitest::Test
     hiiro.add_option(:task, short: :t)
     hiiro.add_flag(:unselected)
     calls = []
-    hiiro.add_cmd(:example, opts: %i[a history task]) { calls << opts.args }
+    hiiro.add_cmd(:example, opts: [:task], flags: %i[a history]) { calls << opts.args }
 
     hiiro.run_subcommand(:example, "payload")
     assert_equal [["payload"]], calls
@@ -220,7 +220,7 @@ class HiiroAddCmdTest < Minitest::Test
       parent.add_cmd(:group, passthrough: true) do
         child = make_child(:group, args, external_commands: false) do
           add_option :task, short: :t
-          add_cmd(:leaf, opts: %i[task all]) do
+          add_cmd(:leaf, opts: [:task], flags: [:all]) do
             calls << { task: opts.task, all: opts.all, args: opts.args }
           end
         end
@@ -236,6 +236,36 @@ class HiiroAddCmdTest < Minitest::Test
     assert_equal [{ task: "demo", all: true, args: ["payload"] }], calls
     assert_match(/-t, --task/, output)
     assert_match(/--all/, output)
+  end
+
+  def test_declared_buckets_parse_values_flags_and_repeated_values_through_command_aliases
+    hiiro = Hiiro.new("testbin-zzz")
+    hiiro.add_cmd(:write, :w, opts: [:project, "project"], flags: [:append, "append"], mopts: [:tag, "tag"]) do
+      [opts.to_h, opts.args]
+    end
+    hiiro.add_cmd(:read, opts: [:append], flags: ["project"], mopts: [:tag]) do
+      [opts.to_h, opts.args]
+    end
+
+    result = hiiro.run_subcommand(:w, "-p", "demo", "-a", "-t", "ruby", "--tag=cli", "payload")
+    assert_equal [{ help: false, project: "demo", append: true, tag: %w[ruby cli] }, ["payload"]], result
+    assert_equal [{ help: false, project: "demo", append: true, tag: %w[ruby cli] }, ["payload"]],
+      hiiro.run_subcommand(:read, "--project", "demo", "--append", "--tag", "ruby", "--tag", "cli", "payload")
+    assert_equal [{ help: false, project: nil, append: false, tag: [] }, []], hiiro.run_subcommand(:write)
+    assert_equal({ help: false, project: "parent", append: true, tag: ["core"] },
+      hiiro.options.parse(%w[-p parent -a -t core]).to_h)
+  end
+
+  def test_existing_typed_definitions_keep_their_behavior_in_any_command_bucket
+    hiiro = Hiiro.new("testbin-zzz")
+    hiiro.add_option(:count, long: :limit, short: :n, type: :integer, default: 3)
+    hiiro.add_flag(:color, short: :c, default: true)
+    hiiro.add_option(:tag, short: :t, type: :integer, multi: true)
+    hiiro.add_cmd(:example, opts: [:tag], flags: [:count], mopts: [:color]) { opts.to_h }
+
+    assert_equal({ help: false, count: 3, color: true, tag: [] }, hiiro.run_subcommand(:example))
+    assert_equal({ help: false, count: 5, color: false, tag: [1, 2] },
+      hiiro.run_subcommand(:example, "--limit", "5", "-c", "-t", "1", "--tag", "2"))
   end
 
   def test_generated_help_uses_command_declarations_not_wrapper_metadata

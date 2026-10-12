@@ -142,7 +142,8 @@ class Hiiro
 
     # Capture add_cmd registrations (same table as add_subcmd); run_subcmd parses
     # args into `opts` so add_cmd blocks that read opts.args work under the harness.
-    def add_cmd(*names, args: [], opts: [], passthrough: false, &block)
+    def add_cmd(*names, args: [], opts: [], flags: [], mopts: [], passthrough: false, &block)
+      options.select(opts, flags: flags, mopts: mopts)
       names.each { |name| @subcmds[name.to_sym] = block }
     end
 

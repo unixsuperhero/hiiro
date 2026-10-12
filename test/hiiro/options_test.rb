@@ -166,8 +166,8 @@ class OptionsTest < Minitest::Test
     assert opts.dry_run
   end
 
-  def test_select_creates_boolean_flags_without_consuming_positionals
-    options = Hiiro::Options.new.select([:a, "a", "b", :c, :d])
+  def test_select_creates_flags_without_consuming_positionals
+    options = Hiiro::Options.new.select([], flags: [:a, "a", "b", :c, :d])
     opts = options.parse(%w[-a first --b second -c third])
 
     assert_equal({ help: false, a: true, b: true, c: true, d: false }, opts.to_h)
@@ -175,42 +175,110 @@ class OptionsTest < Minitest::Test
     assert_equal({ help: false, a: false, b: false, c: false, d: false }, options.parse([]).to_h)
   end
 
-  def test_select_preserves_explicit_value_options_and_flags
+  def test_select_creates_value_and_multi_options_and_deduplicates_names
+    options = Hiiro::Options.new.select(
+      [:project, "project"], flags: [:append, "append"], mopts: [:tag, "tag"]
+    )
+    opts = options.parse(%w[-p example --append -t ruby --tag=cli --project other payload])
+
+    assert_equal({ help: false, project: "other", append: true, tag: %w[ruby cli] }, opts.to_h)
+    assert_equal ["payload"], opts.args
+    assert_equal({ help: false, project: nil, append: false, tag: [] }, options.parse([]).to_h)
+  end
+
+  def test_select_preserves_explicit_definitions_across_buckets
     options = Hiiro::Options.new do
       option "task", short: :t, default: "current"
-      option :count, long: :limit, short: "n", type: :integer, default: 3
+      option :count, long: :limit, short: "n", type: :integer, default: 3, desc: "Maximum results"
+      option :rate, short: "r", type: :float, default: 1.5
       option :tag, short: "g", multi: true
-      flag :color, default: true
-    end.select(["task", :count, "tag", :color])
+      flag :color, short: "c", default: true
+    end.select(["task", :color], flags: [:count, "tag"], mopts: ["task", :rate, :color, :count])
 
     defaults = options.parse([])
-    assert_equal({ help: false, task: "current", count: 3, tag: [], color: true }, defaults.to_h)
+    assert_equal({ help: false, task: "current", color: true, count: 3, tag: [], rate: 1.5 }, defaults.to_h)
 
-    opts = options.parse(%w[-t feature --limit 5 -g ruby --tag cli --color payload])
-    assert_equal({ help: false, task: "feature", count: 5, tag: %w[ruby cli], color: false }, opts.to_h)
+    opts = options.parse(%w[-t feature --limit 5 -g ruby --tag cli -c -r 2.25 payload])
+    assert_equal({ help: false, task: "feature", color: false, count: 5, tag: %w[ruby cli], rate: 2.25 }, opts.to_h)
+    assert_equal ["payload"], opts.args
+    assert_match(/-n, --limit[^\n]*<int>[^\n]*Maximum results[^\n]*\(default: 3\)/, options.help_text)
+    assert_match(/-g, --tag[^\n]*\[multi\]/, options.help_text)
+  end
+
+  def test_select_preserves_conditional_flags
+    options = Hiiro::Options.new do
+      flag :preview
+      option :target, short: "t", flag_ifs: [:preview]
+    end.select([], flags: [:target], mopts: [:preview])
+
+    assert_equal({ help: false, target: "demo", preview: false }, options.parse(%w[-t demo]).to_h)
+    opts = options.parse(%w[--preview -t payload])
+    assert_equal({ help: false, target: true, preview: true }, opts.to_h)
     assert_equal ["payload"], opts.args
   end
 
-  def test_select_reserves_explicit_short_aliases_before_creating_flags
+  def test_select_reserves_all_parent_short_aliases_before_creating_options
     options = Hiiro::Options.new do
       option :task, short: :t
+      flag :reserved, short: "a"
     end
-    selected = options.select(%i[target task dry_run])
-    opts = selected.parse(%w[-t feature -d payload])
+    selected = options.select([], flags: %i[target task dry_run])
+    opts = selected.parse(%w[-r -t feature -d payload])
 
-    assert_equal({ help: false, target: false, task: "feature", dry_run: true }, opts.to_h)
+    assert_equal({ help: false, target: true, task: "feature", dry_run: true }, opts.to_h)
     assert_equal ["payload"], opts.args
-    assert_equal "original", options.parse(%w[-t original]).task
+    assert_equal({ help: false, task: "original", reserved: true, target: false, dry_run: false }, options.parse(%w[-t original -a]).to_h)
   end
 
-  def test_select_omits_ambiguous_short_aliases_and_preserves_help
-    options = Hiiro::Options.new.select(%i[all archive history h])
-    opts = options.parse(%w[-a payload --all --archive -h])
+  def test_select_scans_colliding_names_and_preserves_help
+    options = Hiiro::Options.new.select([], flags: %i[all archive history h])
+    opts = options.parse(%w[-a -r -i --h payload -h])
 
-    assert_equal({ help: true, all: true, archive: true, history: false, h: false }, opts.to_h)
-    assert_equal %w[-a payload], opts.args
-    refute_match(/-a,/, options.help_text)
+    assert_equal({ help: true, all: true, archive: true, history: true, h: true }, opts.to_h)
+    assert_equal ["payload"], opts.args
+    assert_match(/-a, --all/, options.help_text)
+    assert_match(/-r, --archive/, options.help_text)
+    assert_match(/-i, --history/, options.help_text)
     assert_match(/-h, --help/, options.help_text)
+  end
+
+  def test_select_skips_punctuation_and_uses_digits
+    options = Hiiro::Options.new.select([:"_h_7"])
+    opts = options.parse(%w[-7 seven payload])
+
+    assert_equal({ help: false, _h_7: "seven" }, opts.to_h)
+    assert_equal ["payload"], opts.args
+    assert_match(/-7, ---h-7/, options.help_text)
+  end
+
+  def test_select_uses_long_form_when_every_eligible_short_is_reserved
+    options = Hiiro::Options.new do
+      flag :first, short: "a"
+      flag :second, short: "b"
+      option :third, short: "d"
+    end
+    selected = options.select([], flags: [:"bad_dad", :hh])
+    opts = selected.parse(%w[--bad-dad --hh -h payload])
+
+    assert_equal({ help: true, bad_dad: true, hh: true }, opts.to_h)
+    assert_equal ["payload"], opts.args
+    refute_match(/-[abd], --bad-dad/, selected.help_text)
+    refute_match(/-h, --hh/, selected.help_text)
+    assert_equal({ help: false, first: true, second: true, third: "value", bad_dad: false, hh: false }, options.parse(%w[-a -b -d value]).to_h)
+  end
+
+  def test_select_registers_created_definitions_for_parent_and_later_subsets
+    parent = Hiiro::Options.new
+    first = parent.select(["project"], flags: [:append], mopts: ["tag"])
+    later = parent.select([:append, :tag], flags: ["project"], mopts: [:append])
+    argv = %w[-p demo -a -t ruby --tag cli payload]
+    expected = { help: false, project: "demo", append: true, tag: %w[ruby cli] }
+
+    assert_equal expected, first.parse(argv).to_h
+    assert_equal expected, parent.parse(argv).to_h
+    assert_equal expected, later.parse(argv).to_h
+    assert_equal ["payload"], later.parse(argv).args
+    assert_equal({ help: false, project: nil, append: false, tag: [] }, later.parse([]).to_h)
   end
 end
 

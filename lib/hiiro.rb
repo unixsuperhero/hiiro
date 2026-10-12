@@ -373,8 +373,8 @@ class Hiiro
 
   def tuios = @tuios ||= Hiiro::Tuios.new
 
-  def add_cmd(*names, args: [], opts: [], passthrough: false, &block)
-    cmd_opts = options.select(opts)
+  def add_cmd(*names, args: [], opts: [], flags: [], mopts: [], passthrough: false, &block)
+    cmd_opts = options.select(opts, flags: flags, mopts: mopts)
 
     wrapper = lambda do |*raw_args|
       next instance_eval(&block) if passthrough
