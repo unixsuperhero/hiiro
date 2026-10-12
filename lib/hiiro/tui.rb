@@ -92,7 +92,7 @@ class Hiiro
       end
     end
 
-    State = Struct.new(:mode, :cursor, :top, :horizontal_offset, :query, :pick_query, :message, keyword_init: true)
+    State = Struct.new(:mode, :cursor, :top, :horizontal_offset, :query, :pick_query, :message, :prompt_label, :prompt_text, keyword_init: true)
 
     class Pane
       include Terminal
@@ -141,7 +141,7 @@ class Hiiro
       def initialize(items:, empty_message: 'No items.')
         @items = items
         @empty_message = empty_message
-        @state = State.new(mode: :list, cursor: 0, top: 0, horizontal_offset: 0, query: '', pick_query: '', message: nil)
+        @state = State.new(mode: :list, cursor: 0, top: 0, horizontal_offset: 0, query: '', pick_query: '', message: nil, prompt_label: '', prompt_text: '')
       end
 
       def cursor
@@ -234,6 +234,19 @@ class Hiiro
       def picked(_candidate)
       end
 
+      # Called from list mode for a key the key map does not bind.
+      def unhandled_key(_key)
+      end
+
+      # Reads one line in the status line; Enter calls the block with the text,
+      # Escape drops it. The block runs after the prompt closes, so it may prompt again.
+      def prompt(label, default: '', &on_submit)
+        state.prompt_label = label
+        state.prompt_text = default.to_s
+        @on_prompt_submit = on_submit
+        state.mode = :prompt
+      end
+
       def visible_items
         filtered_items
       end
@@ -276,6 +289,7 @@ class Hiiro
         case state.mode
         when :search then "/#{state.query}_"
         when :pick then pick_status
+        when :prompt then "#{state.prompt_label}: #{state.prompt_text}_"
         else list_status
         end
       end
@@ -314,7 +328,7 @@ class Hiiro
         return state.mode = :pick if key == pick_trigger
 
         action = self.class.key_map[key]
-        send(action) if action
+        action ? send(action) : unhandled_key(key)
       end
 
       def search_mode_key(key)
@@ -337,6 +351,29 @@ class Hiiro
         else
           state.pick_query = edit_text(state.pick_query, key)
         end
+      end
+
+      def prompt_mode_key(key)
+        return quit if key == :ctrl_c
+
+        case key
+        when :enter
+          on_submit = @on_prompt_submit
+          text = state.prompt_text
+          leave_prompt
+          on_submit&.call(text)
+        when :escape
+          leave_prompt
+        else
+          state.prompt_text = edit_text(state.prompt_text, key)
+        end
+      end
+
+      def leave_prompt
+        @on_prompt_submit = nil
+        state.prompt_label = ''
+        state.prompt_text = ''
+        state.mode = :list
       end
 
       def leave_pick

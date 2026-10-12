@@ -273,6 +273,8 @@ acts.command('o', entry)               # {value} {name} {table} shell-escaped; n
 acts.run('o', entry)                   # system('/bin/sh', '-c', cmd); returns cmd
 ```
 
+`bin/h-table` is the TUI (`Hiiro::TableScreen` in lib/hiiro/table_screen.rb: `TableScreen.new(scope:, table:, actions:)`, `reload!`, `marked`) and the scriptable CLI (`tables`, `ls`, `add`, `rm`, `mv`, `set`, `get`, `tag`, `untag`) over these tables; `h registry` is the same rows. See `docs/h-table.md`.
+
 ### Hiiro::Tui (lib/hiiro/tui.rb)
 
 Screen toolkit for in-process TUIs. One engine for every hiiro TUI; do not add curses or shell out to a fuzzy finder for a screen (see `docs/plans/hiiro-tui.md`).
@@ -285,11 +287,15 @@ class MyScreen < Hiiro::Tui::Screen
   def pick_candidates = %w[link sound]              # '@' opens a prefix-filtered picker in the status line
   def picked(candidate) = (self.message = candidate)
   def open_item = (self.message = "open #{current_item}")
+  def unhandled_key(key) = nil                       # list-mode keys the key map does not bind
+  def ask = prompt('name', default: 'x') { |text| prompt('value') { |v| save(text, v) } }
 end
 MyScreen.new(items: rows).run        # j/k/h/l move, '/' searches, '@' picks, q/Esc/Ctrl-C quit
 ```
 
-- `state` is one `Tui::State` (`mode` :list|:search|:pick, `cursor`, `top`, `horizontal_offset`, `query`, `pick_query`, `message`). Read it; never keep a parallel boolean.
+- `state` is one `Tui::State` (`mode` :list|:search|:pick|:prompt, `cursor`, `top`, `horizontal_offset`, `query`, `pick_query`, `message`, `prompt_label`, `prompt_text`). Read it; never keep a parallel boolean.
+- `prompt(label, default: '') { |text| ... }` reads one line in the status line (`label: text_`). Enter leaves the mode and calls the block, Esc leaves without calling it, Ctrl-C quits. The block runs after the prompt closes, so it may call `prompt` again to chain questions.
+- `unhandled_key(key)` is called from list mode for any key the key map does not bind (default no-op); `TableScreen` uses it for per-table action letters.
 - `frame(rows:, cols:)` returns plain strings with no ANSI, one per row, which is what tests assert against literally. `render` adds the highlight.
 - `Tui::Pane.new(width:, height:).lines(texts)` pads and truncates to an exact rectangle.
 - `ListScreen` is `Screen` without a detail pane and keeps the `Showing a-b of n` footer.

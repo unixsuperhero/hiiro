@@ -2,6 +2,8 @@
 
 Store and look up named resources by type with optional short aliases.
 
+`h table` is the same data with a TUI and scriptable twins; see [h-table](h-table.md).
+
 ## Synopsis
 
 ```bash

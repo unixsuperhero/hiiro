@@ -41,6 +41,33 @@ class TuiTest < Minitest::Test
     end
   end
 
+  class PromptScreen < FruitScreen
+    key 'n', :ask_name
+    key 'c', :ask_chain
+
+    attr_reader :answers, :unhandled
+
+    def initialize(**kwargs)
+      super
+      @answers = []
+      @unhandled = []
+    end
+
+    def ask_name
+      prompt('name') { |text| @answers << text }
+    end
+
+    def ask_chain
+      prompt('first', default: 'x') do |first|
+        prompt('second') { |second| @answers << [first, second] }
+      end
+    end
+
+    def unhandled_key(key)
+      @unhandled << key
+    end
+  end
+
   def setup
     @saved_env = ENV.to_h.slice('LINES', 'COLUMNS')
     ENV['LINES'] = '8'
@@ -250,5 +277,72 @@ class TuiTest < Minitest::Test
     assert_equal "  one", frame(screen)[0]
     assert_equal "> two", frame(screen)[1]
     assert_equal false, screen.handle_key('q')
+  end
+
+  def test_prompt_shows_label_and_buffer_in_the_status_line
+    screen = PromptScreen.new(items: FRUITS)
+    press(screen, 'n', 'a', 'b')
+
+    assert_equal :prompt, screen.state.mode
+    assert_equal [
+      "Fruits",
+      "> apple",
+      "  banana",
+      "  cherry",
+      "  jellybean",
+      "  kiwi",
+      "  lemon",
+      "name: ab_",
+    ], frame(screen)
+  end
+
+  def test_prompt_enter_passes_text_to_block_and_returns_to_list
+    screen = PromptScreen.new(items: FRUITS)
+    press(screen, 'n', 'a', 'x', "\u007F", 'b', :enter)
+
+    assert_equal ["ab"], screen.answers
+    assert_equal :list, screen.state.mode
+    assert_equal "1/6", frame(screen).last
+  end
+
+  def test_prompt_escape_does_not_call_block
+    screen = PromptScreen.new(items: FRUITS)
+
+    assert_equal [:continue] * 3, press(screen, 'n', 'a', :escape)
+    assert_equal [], screen.answers
+    assert_equal :list, screen.state.mode
+    assert_equal "1/6", frame(screen).last
+  end
+
+  def test_prompt_ctrl_c_quits
+    screen = PromptScreen.new(items: FRUITS)
+
+    assert_equal [:continue, :continue, false], press(screen, 'n', 'a', :ctrl_c)
+    assert_equal [], screen.answers
+  end
+
+  def test_prompt_block_can_chain_another_prompt
+    screen = PromptScreen.new(items: FRUITS)
+    press(screen, 'c')
+
+    assert_equal "first: x_", frame(screen).last
+
+    press(screen, 'y', :enter)
+
+    assert_equal :prompt, screen.state.mode
+    assert_equal "second: _", frame(screen).last
+
+    press(screen, 'z', :enter)
+
+    assert_equal [["xy", "z"]], screen.answers
+    assert_equal "1/6", frame(screen).last
+  end
+
+  def test_unbound_list_key_reaches_unhandled_key
+    screen = PromptScreen.new(items: FRUITS)
+    press(screen, 'z', 'j', :enter)
+
+    assert_equal ['z', :enter], screen.unhandled
+    assert_equal "> banana", frame(screen)[2]
   end
 end

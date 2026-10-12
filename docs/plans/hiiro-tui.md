@@ -70,16 +70,16 @@ Surveyed 2026-10-12 before starting: links and projects already lived in their o
 **Files.** Create `bin/h-table`, `docs/h-table.md`, `test/bin/h-table_test.rb`. Edit `README.md`.
 
 **Build.**
-- [ ] `h table` with no arguments opens the TUI across all tables in the current scope. `h table <name>` opens one table.
-- [ ] Keys. `j k` move. `/` search. `@` pick a table. `g` toggle scope. `o y` and any letter from the table's actions. `a` add. `r` rename entry or, on the header, the table. `e` edit value. `d` delete. `T` tag. Space marks. A marked set receives `d`, `T`, and `m` (move to another table) as bulk actions.
-- [ ] CLI twins for scripts. `ls [table]`, `add <table> <name> <value>`, `rm`, `mv <table> <new>`, `set`, `tag`, `untag`.
-- [ ] `h registry` keeps working and is documented as the same data under the old name.
+- [x] `h table` with no arguments opens the TUI across all tables in the current scope. `h table <name>` opens one table.
+- [x] Keys. `j k` move. `/` search. `@` pick a table. `g` toggle scope. `o y` and any letter from the table's actions. `a` add. `r` rename entry or, on the header, the table. `e` edit value. `d` delete. `T` tag. Space marks. A marked set receives `d`, `T`, and `m` (move to another table) as bulk actions.
+- [x] CLI twins for scripts. `ls [table]`, `add <table> <name> <value>`, `rm`, `mv <table> <new>`, `set`, `tag`, `untag`.
+- [x] `h registry` keeps working and is documented as the same data under the old name.
 
 **You see.** The screen from PR 1 filled with real tables, a status line reading `scope:task(@NAME)` after `g`, and `would run` replaced by the real command.
 
-**Verify, unit.** `Hiiro::TestHarness` tests for every CLI twin with literal expected output.
+**Verify, unit.** Done 2026-10-12: table_screen_test 16 runs, bin table_test 13 runs, tui_test 18 runs, all green; full suite shows only the six pre-existing failures. `Hiiro::TestHarness` tests for every CLI twin with literal expected output.
 
-**Verify, live.** Drive the seven steps from the prototype (open, move, search, toggle scope, pick table, run action, quit) in a tuios window and keep the captures. Then drive add, rename, bulk tag, and bulk delete, and confirm each with `h db q`.
+**Verify, live.** Done 2026-10-12 in tuios windows: the seven read-only steps on the real database, then add, rename, mark two, bulk tag, bulk delete, and a custom `x` action on a database copy with a throwaway HOME, each confirmed in the status line and with `h db q`. Pressing `g` with no resolvable task now reports `no current task to scope to`. Drive the seven steps from the prototype (open, move, search, toggle scope, pick table, run action, quit) in a tuios window and keep the captures. Then drive add, rename, bulk tag, and bulk delete, and confirm each with `h db q`.
 
 ## PR 5. Tasks screen
 

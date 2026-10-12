@@ -224,11 +224,13 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h pr` | GitHub PR management via gh CLI |
 | `h project` | Project navigation with Herdr workspace management |
 | `h queue` | Claude prompt queue with Herdr-based task execution |
+| `h registry` | Named resources by type with short aliases; the same rows as `h table` |
 | `h service` | Manage background dev services with env variations and groups |
 | `h file` | Track and open frequently-used files per app |
 | `h run` | Run dev tools (lint/test/format) against changed files |
 | `h session` | Compatibility commands for Herdr workspaces |
 | `h sha` | Extract short SHA from git log |
+| [`h table`](docs/h-table.md) | TUI and scriptable CLI over registry tables (links, sounds, pins, ...) with task scope, tags, and per-table actions |
 | `h todo` | Todo list management with tags and task association |
 | `h window` | Compatibility commands for Herdr tabs |
 | `h wtree` | Git worktree management |
