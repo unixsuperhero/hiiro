@@ -22,17 +22,17 @@ One box is one unit of work with the evidence that checks it. Each PR is verifie
 **Files.** Edit `lib/hiiro/tui.rb`. Create `test/hiiro/tui_test.rb`.
 
 **Build.**
-- [ ] `Tui::Screen` owns `{ mode: :list | :search | :pick, cursor, top, query, message }` as one state object. No scattered booleans.
-- [ ] `Tui::Pane` renders a rectangle of lines. A screen composes a list pane, an optional detail pane, a header, and a status line.
-- [ ] Modal input. `/` enters search and edits `query` until Enter or Escape. A trigger character (default `@`) enters pick mode and filters a candidate list in the status line.
-- [ ] A key map is a table `{ 'j' => :down, 'k' => :up, ... }` on the screen class, not a `case` in `handle_key`.
-- [ ] `ListScreen` keeps its current public shape and becomes a `Screen` with no detail pane. `bin/h-obsidian` keeps working unchanged.
+- [x] `Tui::Screen` owns `{ mode: :list | :search | :pick, cursor, top, query, message }` as one state object. No scattered booleans.
+- [x] `Tui::Pane` renders a rectangle of lines. A screen composes a list pane, an optional detail pane, a header, and a status line.
+- [x] Modal input. `/` enters search and edits `query` until Enter or Escape. A trigger character (default `@`) enters pick mode and filters a candidate list in the status line.
+- [x] A key map is a table `{ 'j' => :down, 'k' => :up, ... }` on the screen class, not a `case` in `handle_key`.
+- [x] `ListScreen` keeps its current public shape and becomes a `Screen` with no detail pane. `bin/h-obsidian` keeps working unchanged.
 
 **You see.** A screen with a list on the left, a detail pane on the right, a search prompt in the status line, and the `@` candidates in the status line.
 
-**Verify, unit.** Render to a string with `LINES` and `COLUMNS` set and feed keys from an array. Assert the rendered lines literally. Run `ruby -Ilib -Itest test/hiiro/tui_test.rb`.
+**Verify, unit.** Done 2026-10-12, 12 runs 41 assertions. Render to a string with `LINES` and `COLUMNS` set and feed keys from an array. Assert the rendered lines literally. Run `ruby -Ilib -Itest test/hiiro/tui_test.rb`.
 
-**Verify, live.** A scratch script that renders twenty fake rows in a tuios window. Capture after open, after `j` three times, after `/jel` Enter, after `@so` Enter. Each capture shows the expected row highlighted.
+**Verify, live.** Done 2026-10-12 in a tuios window, captures kept in the session scratch dir. A scratch script that renders twenty fake rows in a tuios window. Capture after open, after `j` three times, after `/jel` Enter, after `@so` Enter. Each capture shows the expected row highlighted.
 
 ## PR 2. Table model and scope
 

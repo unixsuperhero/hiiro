@@ -251,6 +251,27 @@ end
 - `h db migrate` — re-run YAML import (if not yet migrated)
 - `h db restore` — restore YAML files from SQLite data
 
+### Hiiro::Tui (lib/hiiro/tui.rb)
+
+Screen toolkit for in-process TUIs. One engine for every hiiro TUI; do not add curses or shell out to a fuzzy finder for a screen (see `docs/plans/hiiro-tui.md`).
+
+```ruby
+class MyScreen < Hiiro::Tui::Screen
+  key 'o', :open_item                 # key map is a table; subclasses add or override bindings
+  def header_lines = ["title  #{state.query}"]
+  def detail_lines(item) = ["name  #{item.name}"]   # nil (default) means no detail pane
+  def pick_candidates = %w[link sound]              # '@' opens a prefix-filtered picker in the status line
+  def picked(candidate) = (self.message = candidate)
+  def open_item = (self.message = "open #{current_item}")
+end
+MyScreen.new(items: rows).run        # j/k/h/l move, '/' searches, '@' picks, q/Esc/Ctrl-C quit
+```
+
+- `state` is one `Tui::State` (`mode` :list|:search|:pick, `cursor`, `top`, `horizontal_offset`, `query`, `pick_query`, `message`). Read it; never keep a parallel boolean.
+- `frame(rows:, cols:)` returns plain strings with no ANSI, one per row, which is what tests assert against literally. `render` adds the highlight.
+- `Tui::Pane.new(width:, height:).lines(texts)` pads and truncates to an exact rectangle.
+- `ListScreen` is `Screen` without a detail pane and keeps the `Showing a-b of n` footer.
+
 ### Hiiro::Fuzzyfind (lib/hiiro/fuzzyfind.rb)
 
 Integration with `sk` (skim) or `fzf` fuzzy finders:
