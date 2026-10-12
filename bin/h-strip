@@ -1,39 +1,28 @@
 #!/usr/bin/env ruby
 
-USAGE = <<~TEXT
-  Usage:
-    command | h strip
-    h strip TEXT...
-    h strip FILE...
-
-  Removes ANSI escape sequences and control characters, preserving tabs and newlines.
-  Existing file arguments are concatenated; other arguments are joined with spaces.
-TEXT
+require 'hiiro'
 
 ANSI = /
   (?:
-    (?:\x1B\[|\x9B)[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7E] |
-    (?:\x1B\]|\x9D)[^\x07\x1B\x9C]*(?:\x07|\x1B\\|\x9C) |
-    (?:\x1B[P^_]|[\x90\x98\x9E\x9F])[^\x1B\x9C]*(?:\x1B\\|\x9C) |
+    \x1B\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7E] |
+    \x1B\][^\x07\x1B]*(?:\x07|\x1B\\) |
+    \x1B[P^_][^\x1B]*(?:\x1B\\) |
     \x1B[\x20-\x2F]*[\x30-\x7E]
   )
 /nx
-CONTROL = /[\x00-\x08\x0B-\x1F\x7F-\x9F]/n
+CONTROL = /[\x00-\x08\x0B-\x1F\x7F]/n
 
-def input_bytes(arguments)
-  if arguments.empty?
-    abort USAGE if STDIN.tty?
-    return STDIN.binmode.read
+Hiiro.run do
+  add_cmd :ctrl, args: ['[FILE...|TEXT...]'] do
+    arguments = opts.args
+    paths = arguments.map { |argument| File.expand_path(argument) }
+    input = if arguments.empty? || paths.all? { |path| File.file?(path) }
+      Hiiro::Shell.read_input(*paths)
+    else
+      arguments.join(' ')
+    end
+
+    STDOUT.binmode.write(input.b.gsub(ANSI, '').gsub(CONTROL, ''))
+    nil
   end
-
-  paths = arguments.map { |argument| File.expand_path(argument) }
-  return paths.map { |path| File.binread(path) }.join if paths.all? { |path| File.file?(path) }
-
-  arguments.join(' ')
 end
-
-if %w[-h --help help].include?(ARGV.first)
-  puts USAGE
-  exit
-end
-STDOUT.binmode.write(input_bytes(ARGV).gsub(ANSI, '').gsub(CONTROL, ''))

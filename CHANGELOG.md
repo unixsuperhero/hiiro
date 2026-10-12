@@ -24,6 +24,9 @@
 
 ## Unreleased
 
+### Changed
+- `h strip ctrl` replaces bare `h strip` for stripping ASCII terminal escapes and C0/DEL controls from files, stdin, or text. Tabs, line feeds, UTF-8 text, and raw invalid bytes are preserved.
+
 ### Fixed
 - Fix `PsProcess::Snapshot.capture` constant lookup, which raised `NameError` in `h ps byport`, `h ps indir`, and parent/child process lookups.
 

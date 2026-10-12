@@ -123,6 +123,23 @@ printf '%s\n' '"src/my file.rb:12:3"' | h extract files --no-check
 printf '%s\n' 'missing/output/' | h extract dirs --no-check
 ```
 
+### Strip terminal escapes and controls
+
+`h strip ctrl` removes terminal escape sequences and control characters from
+files, piped stdin, or literal text. Tabs, newlines, and UTF-8 text are preserved.
+
+```sh
+h strip ctrl terminal.log > clean.log
+printf '\033[31mhello\033[0m\n' | h strip ctrl
+h strip ctrl hello world
+h strip ctrl --help
+```
+
+The command writes to stdout without adding a newline and reads the whole input
+into memory. Redirect to a different file, not the input file. The command does
+not reconstruct a terminal screen. See [the strip reference](docs/h-misc.md#h-strip-ctrl)
+for input selection and supported escape sequences.
+
 ### Task CLI
 
 `t` and `tt` are gem executables in `exe/`, installed alongside `h`. They are thin
@@ -230,6 +247,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h run` | Run dev tools (lint/test/format) against changed files |
 | `h session` | Compatibility commands for Herdr workspaces |
 | `h sha` | Extract short SHA from git log |
+| [`h strip ctrl`](docs/h-misc.md#h-strip-ctrl) | Strip terminal escapes and controls from files, stdin, or text |
 | [`h table`](docs/h-table.md) | TUI and scriptable CLI over registry tables (links, sounds, pins, ...) with task scope, tags, and per-table actions |
 | `h todo` | Todo list management with tags and task association |
 | `h window` | Compatibility commands for Herdr tabs |
