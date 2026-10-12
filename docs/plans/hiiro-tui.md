@@ -83,7 +83,7 @@ Surveyed 2026-10-12 before starting: links and projects already lived in their o
 
 ## PR 5. Tasks screen
 
-Planned in `docs/plans/tasks-screen.md` (2026-10-12). `t ui` renders the task tree with subtasks, a detail pane with todos and next action, and keys for start, switch, and open in tuios. Reuses `Tui::Screen`, `TableScope`, and the key map pattern. Planned in its own one page document after PR 4.
+Built 2026-10-12 per `docs/plans/tasks-screen.md`. `t ui` renders the task tree with subtasks, a detail pane with todos and next action, and keys for start, switch, and open in tuios. Reuses `Tui::Screen`, `TableScope`, and the key map pattern. Planned in its own one page document after PR 4.
 
 ## PR 6 and 7. Projects screen and tuios screen
 

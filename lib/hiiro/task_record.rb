@@ -1,5 +1,6 @@
 require 'sequel'
 require 'uri'
+require 'time'
 
 class Hiiro
   class TaskRecord < Sequel::Model(:tasks)
@@ -51,6 +52,43 @@ class Hiiro
 
     def resources
       TaskResource.where(task_id: id).order(:id)
+    end
+
+    def self.create_task(name)
+      now = Time.now.iso8601
+      create(name: name, session: name, status: 'active', created_at: now, updated_at: now)
+    end
+
+    def set_next!(text)
+      text = nil if text.to_s.empty?
+      update(next_action: text, updated_at: Time.now.iso8601)
+    end
+
+    # Waiting text puts the task in `waiting`; clearing it returns a waiting task to `active`.
+    def set_waiting!(text)
+      text = nil if text.to_s.empty?
+      changes = { waiting_on: text, updated_at: Time.now.iso8601 }
+      if text
+        changes.merge!(status: 'waiting', completed_at: nil, archived_at: nil)
+      elsif task_status == 'waiting'
+        changes[:status] = 'active'
+      end
+      update(changes)
+    end
+
+    def set_status!(state)
+      raise Hiiro::Error, "Status must be #{STATUSES.join(', ')}" unless STATUSES.include?(state)
+      now = Time.now.iso8601
+      changes = { status: state, updated_at: now }
+      case state
+      when 'done'
+        changes.merge!(completed_at: completed_at || now, archived_at: nil)
+      when 'archived'
+        changes[:archived_at] = archived_at || now
+      else
+        changes.merge!(completed_at: nil, archived_at: nil)
+      end
+      update(changes)
     end
     def self.top_level
       where(Sequel.~(Sequel.like(:name, '%/%')))

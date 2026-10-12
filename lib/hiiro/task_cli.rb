@@ -177,10 +177,8 @@ class Hiiro
           puts "Task already exists: #{name}\n#{record.home}"
           return record
         end
-        now = Time.now.iso8601
-        record = Hiiro::TaskRecord.new(name: name, session: name, status: 'active', created_at: now, updated_at: now)
-        ensure_home(record)
-        record.save
+        ensure_home(Hiiro::TaskRecord.new(name: name))
+        record = Hiiro::TaskRecord.create_task(name)
         puts "Created #{name}\n#{record.home}"
         record
       end
@@ -322,31 +320,12 @@ class Hiiro
           return
         end
         text = opts.clear ? nil : args.join(' ')
-        changes = { field => text, updated_at: Time.now.iso8601 }
-        if field == :waiting_on
-          if text
-            changes.merge!(status: 'waiting', completed_at: nil, archived_at: nil)
-          elsif task.task_status == 'waiting'
-            changes[:status] = 'active'
-          end
-        end
-        task.update(changes)
+        field == :waiting_on ? task.set_waiting!(text) : task.set_next!(text)
         show(task)
       end
 
       def set_status(task, state)
-        raise Error, "Status must be #{Hiiro::TaskRecord::STATUSES.join(', ')}" unless Hiiro::TaskRecord::STATUSES.include?(state)
-        now = Time.now.iso8601
-        changes = { status: state, updated_at: now }
-        case state
-        when 'done'
-          changes.merge!(completed_at: task.completed_at || now, archived_at: nil)
-        when 'archived'
-          changes[:archived_at] = task.archived_at || now
-        else
-          changes.merge!(completed_at: nil, archived_at: nil)
-        end
-        task.update(changes)
+        task.set_status!(state)
         puts "#{task.name}\t#{task.task_status}"
       end
 
@@ -791,6 +770,11 @@ class Hiiro
           puts task.name
         end
         add_cmd(:new, args: %i[name]) { create(single(opts.args)) }
+        add_cmd(:ui, args: [], opts: []) do
+          current = Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve
+          Hiiro::TaskScreen.new(current:).run
+          nil # the screen's false return would become a non-zero exit status
+        end
         add_cmd(:next, args: ['task?', 'text...'], opts: [*TASK_OPTIONS, :clear]) do
           task, rest = take_task(opts.args)
           metadata(task, :next_action, rest)

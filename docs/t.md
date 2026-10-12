@@ -41,6 +41,30 @@ Task names may be `parent/child` for subtasks. `t new NAME` creates exactly `NAM
 
 `done` and `archived` preserve todos, resources, and documents. Setting a status other than done or archived clears those timestamps.
 
+## t ui
+
+`t ui` (also `h task ui`) opens a tree of tasks, subtasks, and todos with a detail pane for the row under the cursor. Task rows read `▸ NAME  STATUS  (OPEN)  next: TEXT` with empty parts dropped (`▾` when expanded; OPEN counts todos that are not `done` or `skip`); todo rows read `[ ] TEXT` or `[x] TEXT`. Children indent two spaces per level: a task's todos first, then its subtasks. The current task (Herdr workspace, directory, or `t use` pin) starts expanded.
+
+| Key | Action |
+|---|---|
+| `j`/`k`, arrows | Move; left/right scroll long rows |
+| `Enter`, `l` | Expand or collapse the task under the cursor |
+| `h` | Collapse an expanded task; otherwise move to the parent task |
+| `/` | Search task names and todo text |
+| `g` | Toggle scope between every task and the current task's subtree (`no current task` when none resolves) |
+| `A` | Show or hide closed tasks |
+| `x` | On a todo, flip `done` and `not_started`; on a task, same as `t` |
+| `t` | Add a todo to the task (`todo:` prompt) |
+| `n` | Edit the next action (prefilled); empty clears it |
+| `w` | Edit the waiting text (prefilled); text sets `waiting`, empty clears it and returns a waiting task to `active` |
+| `D` | `mark NAME done? (y/n)`; `y` sets `done` and `completed_at` |
+| `N` | Create a task, same as `t new` (record plus notes home) |
+| `u` | Save the task as the pinned current task, same as `t use` |
+| `s` | Open or focus the task's Herdr workspace, save it as current, and quit |
+| `q`, `Esc`, `Ctrl-C` | Quit |
+
+Scope: `global` lists every top-level task by name; `task(@NAME)` lists only the current task's subtree, with its root always expanded. Closed tasks (`done`, `archived`) and their subtasks are hidden until `A`. Search keeps rows that match plus the tasks above them, with every task shown expanded while the query is set; collapsing and expanding are remembered separately and come back when the query is cleared. Errors from an action (bad task name, Herdr not running) show in the status line.
+
 ## Todos and tt
 
 | Command | Behavior |
@@ -141,7 +165,8 @@ Task rows live in the `tasks` table (`Hiiro::TaskRecord`), resources in `task_re
 | `lib/hiiro/task_cli.rb` | `Hiiro::TaskCli` and the `Commands` module: task resolution rule, all commands |
 | `lib/hiiro/current_task.rb` | Current-task resolution shared with `Environment#task` |
 | `lib/hiiro/task_sessions.rb` | Native AI launch and resume |
-| `lib/hiiro/task_record.rb` | Task and resource models, home naming |
+| `lib/hiiro/task_record.rb` | Task and resource models, home naming, `create_task`, `set_next!`, `set_waiting!`, `set_status!` |
+| `lib/hiiro/task_screen.rb` | `t ui` (`Hiiro::TaskScreen`, `TaskScreen::Ops`) |
 | `lib/hiiro/tasks.rb` | `TaskManager#create_tree`, `Tree`, `Environment` |
 | `lib/hiiro/todo.rb` | `TodoItem` rows |
 | `lib/hiiro/herdr.rb` | Herdr adapter |

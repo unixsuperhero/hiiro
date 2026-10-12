@@ -60,6 +60,7 @@ require_relative 'hiiro/task_sessions'
 require_relative 'hiiro/task_cli'
 require_relative 'hiiro/tui'
 require_relative 'hiiro/table_screen'
+require_relative 'hiiro/task_screen'
 require_relative 'hiiro/extractor'
 
 class String

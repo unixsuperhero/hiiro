@@ -275,6 +275,8 @@ acts.run('o', entry)                   # system('/bin/sh', '-c', cmd); returns c
 
 `bin/h-table` is the TUI (`Hiiro::TableScreen` in lib/hiiro/table_screen.rb: `TableScreen.new(scope:, table:, actions:)`, `reload!`, `marked`) and the scriptable CLI (`tables`, `ls`, `add`, `rm`, `mv`, `set`, `get`, `tag`, `untag`) over these tables; `h registry` is the same rows. See `docs/h-table.md`.
 
+`t ui` is the second screen on the toolkit: `Hiiro::TaskScreen` (lib/hiiro/task_screen.rb, `TaskScreen.new(scope: :global, current:, show_closed: false, ops:)`, `reload!`, `expanded`) is a tree of task/subtask/todo nodes; edits go through `TaskRecord#set_next!` / `#set_waiting!` / `#set_status!`, `TodoItem#update_status`, and `TaskScreen::Ops` (create, save_current, open_workspace over `TaskCli::Commands`, stdout captured). See `docs/t.md`.
+
 ### Hiiro::Tui (lib/hiiro/tui.rb)
 
 Screen toolkit for in-process TUIs. One engine for every hiiro TUI; do not add curses or shell out to a fuzzy finder for a screen (see `docs/plans/hiiro-tui.md`).

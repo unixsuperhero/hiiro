@@ -203,7 +203,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h edit` | Open the h script in your editor |
 | `h alert` | macOS desktop notifications via terminal-notifier |
 | `h herdr` | Herdr task popups plus Vim-style pane focus, movement, resize, swap, and zoom controls (`h herdr install`) |
-| `h task` | Same program as `t`: task records, todos, worktrees (`t NAME tree new`), and Herdr workspaces |
+| `h task` | Same program as `t`: task records, todos, worktrees (`t NAME tree new`), and Herdr workspaces; `t ui` is a tree TUI over tasks, subtasks, and todos |
 
 ### External Subcommands
 
