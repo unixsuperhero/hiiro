@@ -33,8 +33,9 @@ class TaskCommandTest < Minitest::Test
     FileUtils.mkdir_p([@home, @cwd])
     @db_path = File.join(@root, 'tasks.sqlite3')
     @db = Sequel.sqlite(@db_path)
-    [Hiiro::TaskRecord, Hiiro::TaskResource, Hiiro::PinRecord, Hiiro::TodoItem, Hiiro::AppRecord].each { |model| model.create_table!(@db) }
+    [Hiiro::TaskRecord, Hiiro::TaskResource, Hiiro::RegistryEntry, Hiiro::TodoItem, Hiiro::AppRecord].each { |model| model.create_table!(@db) }
     Hiiro::TaskRecord.migrate!(@db)
+    Hiiro::RegistryEntry.migrate!(@db)
     @db[:tasks].insert(id: 1, name: 'prez', session: 'prez', status: 'active')
     @db[:tasks].insert(id: 2, name: 'other', session: 'other', status: 'active')
     @preload = File.join(@root, 'preload.rb')
@@ -863,7 +864,7 @@ class TaskCommandTest < Minitest::Test
   end
 
   def task_data_and_files
-    data = %i[tasks todos pins task_resources].to_h { |table| [table, @db[table].order(:id).all] }
+    data = %i[tasks todos registry task_resources].to_h { |table| [table, @db[table].order(:id).all] }
     files = Dir.glob(File.join(@home, '**', '*'), File::FNM_DOTMATCH).sort.to_h do |path|
       [path, File.file?(path) ? File.binread(path) : nil]
     end
@@ -871,7 +872,7 @@ class TaskCommandTest < Minitest::Test
   end
 
   def saved_value
-    @db[:pins].where(command: 't', key: 'current_task').get(:value_json)
+    @db[:registry].where(resource_type: 't', name: 'current_task').get(:value)
   end
 
   def mutations

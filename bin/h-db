@@ -188,7 +188,6 @@ Hiiro.run(*ARGV) do
       apps:        %w[name],
       projects:    %w[name],
       assignments: %w[worktree],
-      pins:        %w[command key],
       pane_homes:  %w[name],
       check_runs:  %w[pr_number name],
       reminders:   %w[text],

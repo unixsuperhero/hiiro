@@ -6,6 +6,11 @@ class PinsPinTest < Minitest::Test
 
   def setup
     @mock_hiiro = MockHiiro.new
+    Hiiro::RegistryEntry.dataset.delete
+  end
+
+  def teardown
+    Hiiro::RegistryEntry.dataset.delete
   end
 
   def test_pin_set_and_get
@@ -24,7 +29,7 @@ class PinsPinTest < Minitest::Test
       result = pin.set_and_save("test_key", "test_value")
 
       assert_equal "test_value", result
-      assert File.exist?(pin.pin_file)
+      assert_equal "test_value", Hiiro::Table.named("test-bin").find("test_key").value
 
       # Reload and verify
       pin.pins!
@@ -95,27 +100,19 @@ class PinsPinTest < Minitest::Test
     end
   end
 
-  def test_pin_file_creation
-    with_temp_dir do |dir|
-      pin = create_pin_with_dir(dir)
+  def test_pins_live_in_the_table_named_after_the_command
+    pin = Pins::Pin.new(MockHiiro.new("h-sha"))
+    pin.set_and_save("102", "4fb3cff")
 
-      # Accessing pins should create file
-      pin.pins
-
-      assert File.exist?(pin.pin_file)
-    end
+    assert_equal "sha", pin.table_name
+    assert_equal [["102", "4fb3cff"]], Hiiro::Table.named("sha").entries.map { |e| [e.name, e.value] }
+    assert_equal({ "102" => "4fb3cff" }, Pins::Pin.new(MockHiiro.new("h-sha")).pins)
   end
 
   private
 
   def create_pin_with_dir(dir)
-    mock_hiiro = MockHiiro.new("test-bin")
-    pin = Pins::Pin.new(mock_hiiro)
-
-    # Override pin_dir to use temp directory
-    pin.define_singleton_method(:pin_dir) { dir }
-
-    pin
+    Pins::Pin.new(MockHiiro.new("test-bin"))
   end
 
   class MockHiiro

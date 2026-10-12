@@ -53,6 +53,7 @@ class Hiiro
         end
 
         migrate_yaml! unless migrated? || ENV['HIIRO_TEST_DB']
+        import_tables! unless ENV['HIIRO_TEST_DB']
       end
 
       def migrated?
@@ -71,7 +72,7 @@ class Hiiro
         connection[:schema_migrations].insert_conflict.insert(name: 'full_migration', ran_at: Time.now.iso8601)
       end
 
-      ALL_IMPORTERS = %i[todos links branches prs pinned_prs tasks assignments apps projects pane_homes pins reminders tags].freeze
+      ALL_IMPORTERS = %i[todos links branches prs pinned_prs tasks assignments apps projects pane_homes reminders tags].freeze
 
       # Re-run import for specific tables (or all if none specified).
       # Useful after a migration that partially failed. The YAML source files must
@@ -81,6 +82,14 @@ class Hiiro
         targets = only ? Array(only).map(&:to_sym) & ALL_IMPORTERS : ALL_IMPORTERS
         targets.each { |name| send(:"import_#{name}", base) }
         puts "Remigration complete: #{targets.join(', ')}"
+      end
+
+      # Moves the per-command key/value stores into registry tables. Safe to run
+      # on every startup: a row is inserted only when its (table, name) is absent.
+      def import_tables!(base = Hiiro::Config::BASE_DIR)
+        import_legacy_pins_table
+        import_pin_files(base)
+        import_sounds(base)
       end
 
       private
@@ -98,7 +107,6 @@ class Hiiro
         import_apps(base)
         import_projects(base)
         import_pane_homes(base)
-        import_pins(base)
         import_reminders(base)
         import_tags(base)
 
@@ -384,27 +392,55 @@ class Hiiro
         warn "Hiiro::DB: failed to import pane_homes: #{e}"
       end
 
-      def import_pins(base)
-        pins_dir = File.join(base, 'pins')
-        return unless Dir.exist?(pins_dir)
+      def insert_registry_row(resource_type, name, value)
+        rows = connection[:registry]
+        return if rows.where(resource_type: resource_type, name: name).count > 0
 
-        Dir.glob(File.join(pins_dir, '*.yml')).each do |pin_file|
-          command = File.basename(pin_file, '.yml')
+        rows.insert(resource_type: resource_type, name: name, value: value, created_at: Time.now.iso8601)
+      end
+
+      def import_legacy_pins_table
+        return unless connection.table_exists?(:pins)
+
+        # The table stays until the installed gem no longer reads it; drop it with
+        # `h db q "drop table pins"` after publishing.
+        connection[:pins].each do |row|
+          insert_registry_row(row[:command].to_s.delete_prefix('h-'), row[:key], row[:value_json])
+        end
+      rescue => e
+        warn "Hiiro::DB: failed to import pins table: #{e}"
+      end
+
+      # Any file name: pins/h-sha has no extension, and the old *.yml glob skipped it.
+      def import_pin_files(base)
+        Dir.glob(File.join(base, 'pins', '*')).sort.each do |pin_file|
+          next unless File.file?(pin_file) && !pin_file.end_with?('.bak')
+
+          table = File.basename(pin_file, '.*').delete_prefix('h-')
           data = load_yaml(pin_file)
           next unless data.is_a?(Hash)
 
           data.each do |key, value|
-            connection[:pins].insert(
-              'command'    => command,
-              'key'        => key.to_s,
-              'value_json' => value.is_a?(String) ? value : ::JSON.generate(value)
-            )
+            insert_registry_row(table, key.to_s, scalar?(value) ? value.to_s : ::JSON.generate(value))
           end
           bak(pin_file)
+        rescue => e
+          warn "Hiiro::DB: failed to import pin file #{pin_file}: #{e}"
         end
-      rescue => e
-        warn "Hiiro::DB: failed to import pins: #{e}"
       end
+
+      def import_sounds(base)
+        path = File.join(base, 'sounds.yml')
+        data = load_yaml(path)
+        return unless data.is_a?(Hash)
+
+        data.each { |name, sound_path| insert_registry_row('sound', name.to_s, sound_path.to_s) }
+        bak(path)
+      rescue => e
+        warn "Hiiro::DB: failed to import sounds: #{e}"
+      end
+
+      def scalar?(value) = !value.is_a?(Hash) && !value.is_a?(Array)
 
       def import_reminders(base)
         path = File.join(base, 'reminders.yml')

@@ -440,7 +440,8 @@ All configuration lives in `~/.config/hiiro/`:
 ```
 ~/.config/hiiro/
   plugins/        # Plugin files (auto-loaded)
-  pins/           # Pin storage (per command)
+  pins/           # Legacy pin files; imported once into registry tables named after the command (h-sha -> sha), then renamed .bak
+  sounds.yml      # Legacy; imported once into registry table sound, then renamed .bak
   services/       # Service runtime state
   bg-history.txt  # Background command history
   env_templates/  # Base .env templates for services

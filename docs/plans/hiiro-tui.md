@@ -49,18 +49,21 @@ One box is one unit of work with the evidence that checks it. Each PR is verifie
 
 **Verify, live.** Done 2026-10-12 against a throwaway sqlite file via `HIIRO_TEST_DB`, since `h table add` arrives in PR 4. `h db q "select resource_type, name, task_id from registry"` after `h table add link gh https://github.com` shows the row.
 
-## PR 3. Migrate the YAML stores into registry
+## PR 3. Move the key/value stores into registry tables
 
-**Files.** Edit `lib/hiiro/db.rb`, `bin/h-link`, `lib/hiiro/link.rb`, `bin/h-notify` (sounds), `lib/hiiro/projects.rb`, `bin/h-sha` (pins). Create `test/hiiro/table_migration_test.rb`.
+Surveyed 2026-10-12 before starting: links and projects already lived in their own SQLite tables (`links`, `projects`) with YAML files kept only as dual-write backups, pins had a `pins` table plus a `pins/h-sha` file the old importer never read, and `yt.yml` is state for `~/bin/h-yt` outside this repo. The PR therefore lands as three slices, each verified and committed on its own, and leaves `yt.yml` alone.
+
+**Files.** Edit `lib/hiiro/db.rb`, `plugins/pins.rb`, `lib/hiiro/task_cli.rb`, `lib/hiiro/current_task.rb`, `bin/h-link`, `lib/hiiro/link.rb`, `lib/hiiro/projects.rb`, `bin/h-project`. Delete `lib/hiiro/pin_record.rb`. Create `test/hiiro/table_import_test.rb`.
 
 **Build.**
-- [ ] One idempotent import in `DB.setup!`, beside the existing YAML to SQLite import. `links.yml` becomes table `link`. `sounds.yml` becomes `sound`. `projects.yml` becomes `project`. Each `pins/<command>` file becomes a table named after the command. `yt.yml` becomes `yt`.
-- [ ] Rewrite each reader to go through `Hiiro::Table`. Keep every CLI's output shape.
-- [ ] Delete the YAML readers and the `pins` table in the same PR. Rename the YAML files to `.bak` on import, matching the existing migration.
+- [x] 3a. `DB.import_tables!` runs at every startup and inserts a row only when its (table, name) is absent. The `pins` table rows, every `pins/*` file (any extension, `h-` prefix stripped), and `sounds.yml` become tables named after the command plus `sound`. Files are renamed `.bak`. The `pins` table itself stays until the installed gem is republished, because the old library recreates and reads it. Drop it afterwards with `h db q "drop table pins"`.
+- [x] 3a. `PinRecord` deleted. `t use` and the pinned current task read and write table `t`, entry `current_task`. The Pins plugin (loaded by fifteen bins) stores pins in the table named after its bin and no longer writes YAML.
+- [ ] 3b. `bin/h-link` reads and writes table `link` (url to value, shorthand to short_name, description, created_at kept for the numbered order). The 10 `links` rows and their tags are imported once; `Hiiro::Link` is deleted and `URLTemplate` stays. `links.yml` dual-write stops.
+- [ ] 3c. `Hiiro::Projects` reads table `project`. The `projects` row and the `ane` alias still in `projects.yml` are imported once. `h project config` edits the table through the YAML edit helper.
 
-**Verify, unit.** Import a fixture set of the five files into the in-memory DB and assert the row count per table.
+**Verify, unit.** 3a done 2026-10-12: table_import_test 2 runs 13 assertions, pins_test 8 runs, current_task_test 3 runs, all green; full suite shows only the six pre-existing failures.
 
-**Verify, live.** Record `h link ls` before the change. Run it after. `diff` is empty. `h db q "select resource_type, count(*) from registry group by 1"` lists five tables with the expected counts.
+**Verify, live.** 3a done 2026-10-12 on the real database after backing it up to `hiiro.db.pre-tables-20261012-020244.sqlite`: 17 registry rows across `sha`, `sound`, `t`; `pins/h-sha` and `sounds.yml` renamed `.bak`; `t current` still prints the pinned task. 3b: `h link ls` and `h link list` byte-identical to the golden output captured before any change. 3c: `h project ls` identical and `ane` present.
 
 ## PR 4. `h table`
 

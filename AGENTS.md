@@ -715,7 +715,7 @@ ALWAYS update `README.md` and any files in `docs/` or other markdown files that 
 
 All config lives in `~/.config/hiiro/`:
 - `plugins/` - Auto-loaded plugin files
-- `pins/` - Per-command YAML key-value storage
+- `pins/` - Legacy per-command pin files. Pins now live in registry tables named after the command (e.g. table `t`, entry `current_task`); `pins/*` files and `sounds.yml` are imported once into tables `<name>` and `sound` by `Hiiro::DB.import_tables!` and renamed `.bak`
 - `tasks/` - Task metadata for worktree management
 - `queue/` - Prompt queue (wip, pending, running, done, failed)
 - `services/` - Service runtime state

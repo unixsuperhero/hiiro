@@ -131,7 +131,7 @@ These require a running Herdr server. The workspace label is the task session or
 
 ## Storage and side effects
 
-Task rows live in the `tasks` table (`Hiiro::TaskRecord`), resources in `task_resources`, todos in `todos`, and the saved fallback in `pins` as `command='t'`, `key='current_task'`. Task homes are `~/notes/work/NAME` with `/` escaped. Hiiro also records every invocation. Only `new`, `tree new`, `doc new`, and `use` write outside their named target; reads never write.
+Task rows live in the `tasks` table (`Hiiro::TaskRecord`), resources in `task_resources`, todos in `todos`, and the saved fallback in `registry` as table `t`, entry `current_task`. Task homes are `~/notes/work/NAME` with `/` escaped. Hiiro also records every invocation. Only `new`, `tree new`, `doc new`, and `use` write outside their named target; reads never write.
 
 ## Source map
 

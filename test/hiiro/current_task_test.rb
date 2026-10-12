@@ -4,7 +4,7 @@ class CurrentTaskTest < Minitest::Test
   def setup
     Hiiro::TaskResource.dataset.delete
     Hiiro::TaskRecord.dataset.delete
-    Hiiro::PinRecord.dataset.delete
+    Hiiro::RegistryEntry.dataset.delete
     @dir = File.realpath(Dir.mktmpdir("hiiro-current-task-"))
   end
 
@@ -12,7 +12,7 @@ class CurrentTaskTest < Minitest::Test
     FileUtils.remove_entry(@dir)
     Hiiro::TaskResource.dataset.delete
     Hiiro::TaskRecord.dataset.delete
-    Hiiro::PinRecord.dataset.delete
+    Hiiro::RegistryEntry.dataset.delete
   end
 
   def test_resolves_task_from_working_directory_inside_code_or_registered_directory
@@ -41,7 +41,7 @@ class CurrentTaskTest < Minitest::Test
 
   def test_saved_pin_is_used_only_when_enabled
     task = Hiiro::TaskRecord.create(name: "pinned")
-    Hiiro::PinRecord.create(command: "t", key: "current_task", value_json: task.id.to_s)
+    Hiiro::Table.named("t").add("current_task", value: task.id.to_s)
 
     assert_nil Hiiro::CurrentTask.new(cwd: @dir, pin: false).resolve
     assert_equal "pinned", Hiiro::CurrentTask.new(cwd: @dir, pin: true).resolve!.name

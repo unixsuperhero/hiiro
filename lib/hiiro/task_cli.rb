@@ -144,9 +144,12 @@ class Hiiro
 
 
       def save_current(task)
-        pin = Hiiro::PinRecord.find_key('t', 'current_task') || Hiiro::PinRecord.new(command: 't', key: 'current_task')
-        pin.value = task.id
-        pin.save
+        table = Hiiro::Table.named('t')
+        if (entry = table.find('current_task'))
+          entry.update(value: task.id.to_s)
+        else
+          table.add('current_task', value: task.id.to_s)
+        end
       end
 
       def inside?(path, directory)
