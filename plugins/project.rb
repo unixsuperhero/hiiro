@@ -8,11 +8,7 @@ module Project
 
   def self.attach_methods(hiiro)
     hiiro.define_singleton_method(:project_dirs) do
-      proj = File.join(Dir.home, 'proj')
-      return {} unless Dir.exist?(proj)
-      Dir.children(proj)
-        .select { |name| File.directory?(File.join(proj, name)) }
-        .each_with_object({}) { |name, h| h[name] = File.join(proj, name) }
+      Hiiro::Projects.new.dirs.transform_values { |path| File.expand_path(path) }
     end
 
     hiiro.define_singleton_method(:projects_from_config) do
@@ -21,28 +17,12 @@ module Project
   end
 
   def self.add_subcommands(hiiro)
-    hiiro.add_subcmd(:project) do |project_name|
-      projects = Hiiro::Projects.new
-      path     = projects.find(project_name.to_s)
-
-      if path.nil?
-        # Fall back to ~/proj root
-        name = 'proj'
-        path = File.join(Dir.home, 'proj')
-        unless Dir.exist?(path)
-          puts "Error: #{path.inspect} does not exist"
-          exit 1
-        end
-        puts "changing dir: #{path}"
-        Dir.chdir(path)
-        hiiro.start_herdr_workspace(name, start_directory: path)
-        next
-      end
-
-      name = project_name.to_s
-      puts "changing dir: #{path}"
-      Dir.chdir(path)
-      hiiro.start_herdr_workspace(name, start_directory: path)
+    hiiro.add_subcmd(:project) do |project_name=nil|
+      selected = Hiiro::Projects.new.context(project_name, chooser: hiiro.method(:fuzzyfind_from_map)).validate!
+      name = selected.project.respond_to?(:name) ? selected.project.name : selected.project
+      puts "changing dir: #{selected.start_directory}"
+      Dir.chdir(selected.start_directory)
+      hiiro.start_herdr_workspace(name, start_directory: selected.start_directory)
     end
   end
 end

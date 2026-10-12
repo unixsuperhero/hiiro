@@ -253,9 +253,30 @@ class TaskCommandTest < Minitest::Test
       ['herdr', 'pane', 'run', 'w1:p1', "cd #{File.realpath(frontend)}"],
     ], mutations
 
+    live_workspace('w0', 'calling')
+    live_pane('w0:p1', 'w0', 'calling shell')
     command('cd', 'prez', 'frontend', env: { 'HERDR_PANE_ID' => 'w0:p1' })
     assert_equal ['herdr', 'pane', 'run', 'w0:p1', "cd #{File.realpath(frontend)}"], mutations.last
     assert_match(/app not found/i, failure('path', 'prez', 'missing'))
+  end
+
+  def test_invalid_override_and_stale_calling_pane_do_not_create_home_or_send_cd
+    checkout = File.join(@root, 'checkout')
+    FileUtils.mkdir_p(checkout)
+    @db[:tasks].where(name: 'prez').update(primary_directory: checkout)
+    live_workspace('w0', 'calling')
+    live_pane('w0:p1', 'w0', 'calling shell')
+    command('list')
+    before = task_data_and_files
+    ['', '   '].each do |blank|
+      assert_match(/directory reference cannot be empty/i, failure('path', '-t', 'prez', '--directory', blank))
+      assert_match(/directory reference cannot be empty/i, failure('cd', '-t', 'prez', '--directory', blank, env: { 'HERDR_PANE_ID' => 'w0:p1' }))
+      assert_equal before, task_data_and_files
+    end
+    home = File.join(@home, 'notes/work/other')
+    refute Dir.exist?(home)
+    failure('cd', '-t', 'other', env: { 'HERDR_PANE_ID' => 'stale' })
+    refute Dir.exist?(home)
   end
 
   def test_workspace_show_and_implicit_open_do_not_save_selection
@@ -418,6 +439,18 @@ class TaskCommandTest < Minitest::Test
       [112, 'prez', nil, 'Keep suffix lookalike'],
     ], @db[:todos].order(:id).select_map([:id, :task_name, :subtask_name, :text])
     assert_equal '2', saved_value
+  end
+
+  def test_empty_and_missing_explicit_task_references_cannot_mutate_todos
+    @db[:tasks].exclude(name: 'prez').delete
+    command('list')
+    before = task_data_and_files
+    [['-t', ''], ['--task='], ['-t'], ['--task'], ['-t', '   ']].each do |selector|
+      failure('todo', 'add', *selector)
+      assert_equal before, task_data_and_files
+    end
+    command('todo', 'add', '-t', 'prez', '', 'native text')
+    assert_equal [' native text'], @db[:todos].where(task_name: 'prez').select_map(:text)
   end
 
   def test_rm_rejects_unknown_tasks_and_invalid_arguments_without_creating_or_deleting

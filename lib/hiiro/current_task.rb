@@ -1,85 +1,108 @@
 class Hiiro
-  # Resolves the current task record shared by `t` (via TaskScope) and
-  # Environment#task (via `h` commands):
-  #
-  #   1. Herdr workspace, when HERDR_* env vars identify one
-  #   2. Working directory inside a task home, code directory, or registered directory
-  #   3. Saved `t TASK current` pin (only when pin: true)
-  #
-  # resolve! raises Hiiro::Error with a user-facing message; resolve returns nil instead.
   class CurrentTask
-    def initialize(herdr: nil, cwd: Dir.pwd, pin: true, tasks: nil)
+    def self.select(items, reference, kind:, key: :name, chooser: nil, tty: $stdin.tty?)
+      raise Error, "#{kind.capitalize} reference cannot be empty" if reference.to_s.strip.empty?
+      result = Matcher.new(items, key).by_prefix(reference.to_s)
+      candidates = result.matches.map(&:item)
+      exact = candidates.select { |item| item.public_send(key) == reference.to_s }
+      candidates = exact unless exact.empty?
+      return candidates.first if candidates.one?
+      return nil if candidates.empty?
+      choose(candidates, reference, kind: kind, key: key, chooser: chooser, tty: tty)
+    end
+
+    def self.choose(candidates, reference, kind:, key: :name, chooser: nil, tty: $stdin.tty?)
+      raise Error, "Ambiguous #{kind} #{reference}: #{candidates.map { |item| item.public_send(key) }.join(', ')}" unless tty && chooser
+      labels = candidates.map { |item| item.public_send(key) }
+      counts = labels.tally
+      mapping = candidates.each_with_index.to_h do |item, index|
+        label = labels[index]
+        [counts[label] > 1 ? "#{label} [#{index + 1}]" : label, item]
+      end
+      chosen = chooser.call(mapping)
+      raise Error, "No #{kind} selected" unless candidates.include?(chosen)
+      chosen
+    end
+
+    attr_reader :task_source, :terminal
+
+    def initialize(herdr: nil, cwd: Dir.pwd, pin: true, tasks: nil, task: nil, env: ENV, chooser: nil)
       @herdr = herdr
       @cwd = cwd
       @pin = pin
       @tasks = tasks
+      @explicit = task
+      @herdr_env = env['HERDR_ENV'] == '1'
+      @chooser = chooser
+      @terminal = Herdr::Location.from_env(env)
     end
 
     def resolve
-      resolve!
-    rescue Hiiro::Error
-      nil
+      return @resolved if defined?(@resolved)
+      @resolved = if @explicit
+        @task_source = :explicit
+        @explicit.is_a?(TaskRecord) ? @explicit : self.class.select(tasks, @explicit, kind: 'task', chooser: @chooser) || raise(Error, "Task not found: #{@explicit}")
+      else
+        select_inferred
+      end
     end
 
     def resolve!
-      herdr_task || directory_task || pinned_task
+      resolve || raise(Error, 'No current task; supply a task name or run t use NAME')
+    end
+
+    def context(app: nil, root: nil, root_source: nil, project: nil, override: nil)
+      task = resolve
+      TaskLocation.for(task, app: app, root: root, root_source: root_source, project: project,
+                       override: override, invocation_directory: @cwd, task_source: task_source, terminal: terminal)
     end
 
     private
 
-    def tasks
-      @tasks ||= TaskRecord.all_as_list
+    def tasks = @tasks ||= TaskRecord.all_as_list
+
+    def select_inferred
+      [[:workspace, -> { herdr_task }], [:directory, -> { directory_task }], [:pin, -> { pinned_task }]].each do |source, resolver|
+        task = resolver.call
+        next unless task
+        @task_source = source
+        return task
+      end
+      nil
     end
 
     def herdr_task
-      return nil unless @herdr && (ENV['HERDR_WORKSPACE_ID'] || ENV['HERDR_PANE_ID'] || ENV['HERDR_ENV'] == '1')
-
-      herdr = @herdr.call
-      unless herdr.server_running?
-        raise Error, 'Herdr is not running; start Herdr for workspace/tab/pane commands, or supply a task name for task data'
+      if @herdr_env && !terminal.target
+        raise Error, 'Missing calling Herdr workspace/pane IDs; supply a task name'
       end
-      pane = herdr.get_pane(ENV['HERDR_PANE_ID']) if ENV['HERDR_PANE_ID']
-      raise Error, 'Cannot resolve the current Herdr pane; supply a task name' if ENV['HERDR_PANE_ID'] && !pane
-
-      workspace_id = ENV['HERDR_WORKSPACE_ID'] || pane&.workspace_id
-      raise Error, 'Conflicting Herdr pane/workspace context; supply a task name' if pane && workspace_id != pane.workspace_id
-
-      workspace = workspace_id ? herdr.get_workspace(workspace_id) : herdr.current_workspace
-      raise Error, 'Cannot resolve the current Herdr workspace; supply a task name' unless workspace
-
-      matches = tasks.select { |task| workspace_label(task) == workspace.name }
+      return nil unless terminal.target
+      adapter = @herdr || Herdr.client
+      client = adapter.respond_to?(:call) ? adapter.call : adapter
+      @terminal = terminal.validate!(client)
+      workspace = client.get_workspace(terminal.workspace_id)
+      matches = tasks.select { |task| TaskLocation.for(task).workspace_label == workspace.name }
       raise Error, "Ambiguous workspace task: #{matches.map(&:name).join(', ')}" if matches.length > 1
-
       matches.first
     end
 
     def directory_task
+      raise Error, "Directory does not exist: #{@cwd}" unless Dir.exist?(@cwd)
       cwd = File.realpath(@cwd)
       registered = TaskResource.where(kind: 'directory').select_map([:task_id, :target]).group_by(&:first)
       matches = tasks.select do |task|
-        paths = [task.home, code_directory(task), *registered.fetch(task.id, []).map(&:last)].compact
-        paths.any? { |path| inside?(cwd, path) }
+        location = TaskLocation.for(task)
+        paths = [location.home, location.code_directory, *registered.fetch(task.id, []).map(&:last)].compact
+        paths.any? { |path| TaskLocation.contains?(path, cwd) }
       end
       raise Error, "Ambiguous directory task: #{matches.map(&:name).join(', ')}" if matches.length > 1
-
       matches.first
     end
 
     def pinned_task
-      raise Error, 'No current task; supply a task name or run t use NAME' unless @pin
-
+      return nil unless @pin
       saved = PinRecord.find_key('t', 'current_task')
-      raise Error, 'No current task; supply a task name or run t use NAME' unless saved
-
+      return nil unless saved
       TaskRecord[saved.value] || raise(Error, 'Saved task no longer exists; run t use NAME')
-    end
-
-    def location(task)        = TaskLocation.for(task)
-    def workspace_label(task) = location(task).workspace_label
-    def code_directory(task)  = location(task).code_directory
-
-    def inside?(path, directory)
-      TaskLocation.contains?(directory, path)
     end
   end
 end

@@ -13,12 +13,13 @@ class Hiiro
       new(:task, record)
     end
 
-    def self.current(cwd: Dir.pwd, resolver: nil)
-      record = resolve(cwd:, resolver:)
+    def self.current(cwd: Dir.pwd, resolver: nil, context: nil)
+      record = resolve(cwd: cwd, resolver: resolver, context: context)
       record ? task(record) : global
     end
 
-    def self.resolve(cwd: Dir.pwd, resolver: nil)
+    def self.resolve(cwd: Dir.pwd, resolver: nil, context: nil)
+      return context.task if context
       return resolver.call if resolver
 
       CurrentTask.new(herdr: -> { Hiiro::Herdr.client }, cwd:, pin: false).resolve
@@ -35,10 +36,10 @@ class Hiiro
 
     def label = task? ? "task(@#{task.name})" : 'global'
 
-    def toggle(resolver: nil)
+    def toggle(resolver: nil, context: nil)
       return self.class.global(task) if task?
 
-      record = task || self.class.resolve(resolver:)
+      record = task || self.class.resolve(resolver: resolver, context: context)
       record ? self.class.task(record) : self
     end
 

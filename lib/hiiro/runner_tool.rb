@@ -1,5 +1,6 @@
 require 'yaml'
 require 'fileutils'
+require 'shellwords'
 
 class Hiiro
   class RunnerTool
@@ -9,9 +10,15 @@ class Hiiro
     KNOWN_TOOL_TYPES = %w[lint test format].freeze
 
     attr_reader :config_file
+    attr_writer :context
 
-    def initialize(config_file: CONFIG_FILE)
+    def initialize(config_file: CONFIG_FILE, context: nil)
       @config_file = config_file
+      @context = context
+    end
+
+    def context
+      @context ||= CurrentTask.new(pin: false).context
     end
 
     def tools
@@ -19,10 +26,12 @@ class Hiiro
     end
 
     def find_tool(name)
+      raise Hiiro::Error, 'Tool name is required' if name.to_s.strip.empty?
       configs = tools
       names = configs.keys.map { |k| OpenStruct.new(name: k) }
       result = Hiiro::Matcher.new(names, :name).by_prefix(name)
-      match = result.resolved || result.first
+      raise Hiiro::Error, "Ambiguous tool '#{name}'" if !result.resolved && result.matches.size > 1
+      match = result.resolved
       return nil unless match
 
       tool_name = match.item.name
@@ -38,19 +47,23 @@ class Hiiro
     end
 
     def changed_files(change_set, git: nil)
-      case change_set
+      git ||= Hiiro::Git.new(nil, context.start_directory)
+      files = case change_set
       when 'dirty'
-        output = `git status --porcelain 2>/dev/null`
-        output.lines.map { |l| l.strip.sub(/^.{3}/, '') }.reject(&:empty?)
+        git.dirty_files
       when 'branch'
-        base = `git merge-base HEAD main 2>/dev/null`.chomp
-        base = 'main' if base.empty?
-        output = `git diff --name-only #{base}...HEAD 2>/dev/null`
-        output.lines.map(&:chomp).reject(&:empty?)
+        base = git.merge_base('HEAD', 'main') || 'main'
+        git.changed_files("#{base}...HEAD", relative: false).map { |file| File.expand_path(file, git.root || git.pwd) }
       when 'all'
-        nil
+        return nil
       else
-        nil
+        return nil
+      end
+      directory = File.realpath(context.start_directory)
+      files.filter_map do |file|
+        path = File.expand_path(file)
+        next unless path.start_with?(directory + File::SEPARATOR)
+        path.delete_prefix(directory + File::SEPARATOR)
       end
     end
 
@@ -64,6 +77,7 @@ class Hiiro
         return false
       end
 
+      context.validate!
       files = changed_files(change_set, git: git)
 
       matching.each do |name, cfg|
@@ -80,11 +94,11 @@ class Hiiro
           cfg['command']
         end
 
-        filenames = tool_files ? tool_files.join(' ') : ''
-        cmd = cmd.gsub('[FILENAMES]', filenames)
+        filenames = tool_files ? Shellwords.join(tool_files) : ''
+        cmd = cmd.gsub('[FILENAMES]') { filenames }
 
         puts "Running #{name}: #{cmd}"
-        system(cmd)
+        system(cmd, chdir: context.start_directory)
       end
 
       true
@@ -122,8 +136,9 @@ class Hiiro
       true
     end
 
-    def self.build_hiiro(parent_hiiro, rt, git: nil)
-      parent_hiiro.make_child(:run) do |h|
+    def self.build_hiiro(parent_hiiro, rt, git: nil, context: parent_hiiro.context, args: parent_hiiro.args)
+      rt.context = context
+      parent_hiiro.make_child(:run, args, context: context) do |h|
         h.add_default do |*run_args|
           change_set = nil
           tool_type = nil

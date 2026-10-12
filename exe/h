@@ -162,23 +162,22 @@ Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) do
   end
 
   add_subcmd(:queue) do |*args|
-    Hiiro::Queue.build_hiiro(self).run
+    Hiiro::Queue.build_hiiro(self, args: args).run
   end
 
   add_subcmd(:service, :svc) do |*svc_args|
-    sm = Hiiro::ServiceManager.new
-    tm = Hiiro::TaskManager.new(this)
-    Hiiro::ServiceManager.build_hiiro(this, sm, task_manager: tm).run
+    sm = Hiiro::ServiceManager.new(context: context)
+    Hiiro::ServiceManager.build_hiiro(this, sm, context: context, args: svc_args).run
   end
 
   add_subcmd(:run) do |*run_args|
-    rt = Hiiro::RunnerTool.new
-    Hiiro::RunnerTool.build_hiiro(this, rt, git: git).run
+    rt = Hiiro::RunnerTool.new(context: context)
+    Hiiro::RunnerTool.build_hiiro(this, rt, context: context, args: run_args).run
   end
 
   add_subcmd(:file) do |*file_args|
-    af = Hiiro::AppFiles.new
-    Hiiro::AppFiles.build_hiiro(this, af, environment: environment).run
+    af = Hiiro::AppFiles.new(context: context)
+    Hiiro::AppFiles.build_hiiro(this, af, context: context, args: file_args).run
   end
 
   add_subcmd(:check_version) do |*args|

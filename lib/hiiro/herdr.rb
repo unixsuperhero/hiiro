@@ -232,6 +232,9 @@ class Hiiro
     # workspace / tab / pane IDs kept together, e.g. as recorded in queue and
     # service metadata under herdr_workspace / herdr_tab / herdr_pane.
     class Location
+      def self.from_env(env = ENV)
+        new(workspace_id: env['HERDR_WORKSPACE_ID'], tab_id: env['HERDR_TAB_ID'], pane_id: env['HERDR_PANE_ID'])
+      end
       def self.from_meta(hash, prefix: 'herdr_')
         hash ||= {}
         new(workspace_id: hash["#{prefix}workspace"], tab_id: hash["#{prefix}tab"], pane_id: hash["#{prefix}pane"])
@@ -243,6 +246,7 @@ class Hiiro
         @workspace_id = workspace_id
         @tab_id = tab_id
         @pane_id = pane_id
+        freeze
       end
 
       def tab?      = present?(tab_id)
@@ -253,6 +257,20 @@ class Hiiro
       def target = [pane_id, tab_id, workspace_id].find { |id| present?(id) }
 
       def with(**ids) = self.class.new(workspace_id: workspace_id, tab_id: tab_id, pane_id: pane_id, **ids)
+      def validate!(client)
+        return self unless target
+        raise Hiiro::Error, 'Herdr is not running; start Herdr for workspace/tab/pane commands' unless client.server_running?
+        pane = client.get_pane(pane_id) if pane?
+        raise Hiiro::Error, 'Cannot resolve the current Herdr pane; supply a task name' if pane? && !pane
+        tab = client.get_tab(tab_id) if tab?
+        raise Hiiro::Error, 'Cannot resolve the current Herdr tab' if tab? && !tab
+        resolved_workspace = workspace_id || pane&.workspace_id || tab&.workspace_id
+        if (pane && resolved_workspace != pane.workspace_id) || (tab && resolved_workspace != tab.workspace_id) || (pane && tab && pane.tab_id != tab.id)
+          raise Hiiro::Error, 'Conflicting Herdr pane/workspace context; supply a task name'
+        end
+        raise Hiiro::Error, 'Cannot resolve the current Herdr workspace; supply a task name' if resolved_workspace && !client.get_workspace(resolved_workspace)
+        with(workspace_id: resolved_workspace, tab_id: tab_id || pane&.tab_id)
+      end
 
       def to_meta(prefix: 'herdr_')
         { "#{prefix}workspace" => workspace_id, "#{prefix}tab" => tab_id, "#{prefix}pane" => pane_id }

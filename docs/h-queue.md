@@ -1,6 +1,6 @@
 # h queue
 
-Manage the Claude prompt queue — a directory-based task system that pipes prompts through the `claude` CLI in Herdr tabs or panes.
+Manage a directory-based prompt queue that launches native `omp` in Herdr tabs, explicit calling-pane splits, or the current process.
 
 Queue directories live in `~/.local/share/hiiro/queue/{wip,pending,running,done,failed}/`. Each task is a Markdown file with optional YAML frontmatter.
 
@@ -25,10 +25,10 @@ With no arguments (and a TTY), opens your editor with frontmatter pre-filled fro
 | `--task` | `-t` | Task name to associate (prefix-matched against tasks and workspaces) | auto-detected |
 | `--name` | `-n` | Base filename for the queue task | derived from prompt content |
 | `--find` | `-f` | Choose task/workspace interactively via fuzzyfind | false |
-| `--horizontal` | `-h` | Split down and run Claude there | false |
-| `--vertical` | `-v` | Split right and run Claude there | false |
-| `--session` | `-s` | Associate with the current Herdr workspace | false |
-| `--ignore` | `-i` | Run `claude -p` without starting an extra shell afterward | false |
+| `--horizontal` | `-h` | Split below the calling pane and run native `omp` | false |
+| `--vertical` | `-v` | Split right of the calling pane and run native `omp` | false |
+| `--session` | `-s` | Associate with the calling Herdr workspace | false |
+| `--ignore` | `-i` | Run `omp -p` without starting an extra shell afterward | false |
 
 **Examples**
 
@@ -58,7 +58,7 @@ h queue attach my-task
 
 ### cadd
 
-Shortcut for `h queue add` that runs Claude in the current process via `exec`.
+Shortcut for `h queue add` that runs native `omp` in the current process.
 
 **Examples**
 
@@ -95,7 +95,7 @@ h queue dir
 
 ### hadd
 
-Shortcut for `h queue add --horizontal`. Opens the editor in a new Herdr pane below the current pane; when saved, runs `claude` there.
+Shortcut for `h queue add --horizontal`. Open the editor below the calling pane; after valid edited context resolves, run native `omp` there.
 
 **Examples**
 
@@ -144,10 +144,11 @@ h queue ls pending        # positional status filter (prefix-matched)
 
 ### pane-dir
 
-Internal subcommand. Resolves the working directory for a pane-launched prompt after editing, accounting for `app:` and `dir:` frontmatter fields. Used by the `hadd`/`vadd`/`cadd` shell scripts.
+Internal subcommand. Resolve edited task/tree/workspace/app/directory frontmatter through the same context as normal launch. Missing or ambiguous explicit targets fail on stderr instead of returning a fallback directory.
 
 ```bash
-cd $(h queue pane-dir /path/to/prompt.md /base/dir)
+directory="$(h queue pane-dir /path/to/prompt.md /base/dir)" || exit $?
+cd "$directory" || exit $?
 ```
 
 ---
@@ -276,7 +277,7 @@ h queue wip          # fuzzy-select from existing wip tasks
 
 ## Prompt frontmatter
 
-Prompts are Markdown files with optional YAML frontmatter. The frontmatter controls where claude runs (task/tree/session/app/dir resolution):
+Prompts are Markdown files with optional YAML frontmatter. Frontmatter controls the native `omp` launch context:
 
 ```yaml
 ---
@@ -285,13 +286,18 @@ tree_name: my-task/main      # worktree to use as working dir
 session_name: my-task        # compatibility field: Herdr workspace label
 app: api                     # app name to cd into (resolved via canonical AppRecord)
 dir: packages/api            # subdirectory within app or tree root
-ignore: true                 # use claude -p; do not start an extra shell
+ignore: true                 # use omp -p; do not start an extra shell
 ---
 Your prompt text here.
 ```
 
-The resolution order for working directory is:
+Normal launch and `h queue pane-dir PROMPT [BASE_DIR]` use the same strict context resolution:
 
-1. `session_name` (from the workspace's pane CWD if no tree)
-2. `tree_name` (sets working dir to the worktree path)
-3. `app` + `dir` (resolved relative to tree root)
+1. An explicit `task_name` selects the canonical task; otherwise retain the injected/current optional context.
+2. An explicit `tree_name` overrides the root. Otherwise use the selected task root, then the named workspace’s directory.
+3. `session_name` selects placement; without a task/tree, its directory becomes the root. A workspace without a checkout path can use only the explicit calling pane in that workspace, not its first or focused pane.
+4. `app` selects a canonical app beneath that root; `dir` selects an existing relative directory beneath the effective app/root.
+
+Exact names win over prefixes. Ambiguity uses mapped terminal selection or fails non-interactively. Missing task/tree/workspace/app/directory, blank explicit selectors, conflicting terminal IDs, and traversal/symlink escapes are errors rather than fallback choices. A directory-resolution failure leaves pending prompt bytes/status unchanged and creates no launcher/body. Emitted shells stop on editor, resolution, or `cd` failure before starting the agent. Cancellation launches nothing.
+
+`t queue TASK [--app APP] ...` injects the selected task/app context. `h queue` keeps resolution lazy so explicit frontmatter can override ambient task inference. `pane-ignore` reads the edited `ignore` value for the pane launcher; true runs `omp -p` without a following shell.

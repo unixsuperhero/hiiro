@@ -20,7 +20,9 @@ h project <subcommand> [args]
 | `edit` | Edit a temporary projection of saved project aliases |
 | `select` | Fuzzy-select a project and print its path |
 | `copy` | Fuzzy-select a project and copy path to clipboard |
-| `sh <name> [cmd]` | Open shell (or run command) in a project directory |
+| `sh <name> [cmd]` | Open a shell or run unchanged native arguments in a project directory |
+| `path [name]` / `abspath [name]` | Print the absolute project path without a newline |
+| `cd [name]` | Send `cd` to the explicit calling Herdr pane |
 | `help` | Show usage |
 
 Projects are discovered from two sources:
@@ -28,7 +30,7 @@ Projects are discovered from two sources:
 1. Directories in `~/proj/`
 2. Saved aliases in SQLite, which take precedence over directories with the same name
 
-The default subcommand (no subcommand) runs `help`.
+The default subcommand runs `help`. Project operations construct a taskless context and never create or require a task. Resolved paths are absolute real paths; stored alias values remain unchanged. Missing directories are errors. `cd` validates captured workspace/tab/pane IDs and does not act on whichever pane has focus.
 
 ### config
 
@@ -75,7 +77,7 @@ h project ls
 
 ### open
 
-Open a project by name and focus (or create) a Herdr workspace rooted at its directory. Project names are matched with case-insensitive regex; if exactly one match is found, it is used. If multiple matches are found, an exact match is preferred.
+Open a project and focus or create its Herdr workspace at the resolved directory. Exact case-sensitive names win, followed by unique prefixes. A terminal disambiguates through an object-mapped picker; non-interactive ambiguity and missing explicit names fail. An unnamed target means `~/proj`, not a fallback for an unknown name.
 
 **Examples**
 

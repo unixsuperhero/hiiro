@@ -5,9 +5,10 @@ This prompt set describes how to implement the design in [the proposal snapshot]
 ## Current status
 
 - Workspace and prompt set prepared.
-- Step 01 is implemented and verified. Steps 02–16 remain unchecked and have not started.
+- Steps 01–02 are implemented and verified. Steps 03–16 remain unchecked and have not started.
+- User authorization: finish the remaining numbered steps sequentially; after final acceptance, package and publish the new `rehiiro` gem.
 - Clone baseline: `139aa0143644d73c257edb810bd8afef88ba39a8`, source branch `main`.
-- The clone's `origin` is the local original repository. Do not push, publish, install, or change that remote automatically.
+- The clone’s `origin` is the local original repository. Do not push or change that remote, modify the original checkout, or replace installed commands.
 
 ### Authoring checks
 
@@ -32,6 +33,22 @@ This prompt set describes how to implement the design in [the proposal snapshot]
 - Native legacy `h-otask` dispatch remains unverified because its external Tmux plugin is unavailable. Its in-repo persistence methods passed isolated adapter regressions; unavailable external Task/OldTask implementations were not fabricated.
 - The original checkout, installed commands, remotes, and live user data were not modified. No redesign step after 01 was started. The next eligible prompt is [02](02-command-context.md).
 
+### Step 02 implementation verification
+
+- One immutable `TaskLocation` carries canonical optional task/app/project identity, invocation/root/effective directories, task/directory provenance, and explicit calling terminal. Strict selectors preserve mapped objects; missing, blank, ambiguous, stale, overlapping, and conflicting inputs fail instead of launching in a fallback context.
+- Root/task/app queue, service, runner, and tracked-file mounts share the selected context. Project/home contexts remain taskless; TableScope preserves global/task toggle behavior. Native flags, resume/session values, empty payload arguments, binary streams, and actual child exit codes remain intact.
+- Final isolated aggregate: **681 runs, 3,069 assertions, zero failures or errors**. All 33 changed Ruby files passed `ruby -c`. The aggregate includes actual subprocess regressions in `test/bin/command_context_test.rb` (15 cases / 260 assertions) and repaired formerly excluded task-context cases.
+- Exact remaining exclusions:
+
+  ```text
+  /test_tree_commands_create_detach_and_resume_worktrees_without_herdr|test_all_lists_all_executables_on_path|test_glob_finds_executables_from_path/
+  ```
+
+  Real worktree creation remains forbidden; the two observed baseline executable-discovery defects belong to step 04. This is not an unqualified full-suite pass. Removed an obsolete Git command-echo test rather than re-pinning its argv; actual disposable Git comparisons proved nested-cwd relative and repository-wide paths, including newline, apostrophe/space, and leading-dash filenames.
+- Actual isolated Herdr 0.8.2 proof: task/app `cd` changed the calling pane while another pane remained focused; real `sk` and `fzf` chose original mapped task/app/project objects, and Escape cancelled without launch or terminal mutation. Native editor/split queue proof rejected invalid edited context before provider invocation. Read-only native `t ls`, outside active Herdr context and with stale caller IDs, retained task pane rows and duplicate-name loose workspaces without changing native state; mutations still rejected stale IDs.
+- Review corrections exercised after repair: inherited child/legacy workflow context, blank selectors/directories, stale-pane home creation, dangling tracked symlink escapes, quoted native filenames, and live-inventory suppression. Native proof sessions, sockets, editors, and sentinel scripts were cleaned; evidence remains under `/tmp/rehiiro-step02-native.3RY9e3`. No live provider/account or original installation was used.
+- All 139 local links/anchors across the 13 affected Markdown files resolved before the completion record was added. Next: [03](03-owned-execution.md).
+
 ## Start here
 
 Read [the shared execution contract](00-start-here.md), then the relevant section of [the proposal](proposal.md), then one numbered prompt. Run the steps in numeric order. Each step lists required earlier contracts; verify those contracts in the code instead of trusting its checkbox.
@@ -54,7 +71,7 @@ For subsequent steps, replace the numbered filename. These prompts are instructi
 
 ### Phase 2: Context and execution
 
-- [ ] [02. Consistent task, app, and directory context](02-command-context.md). Requires [01](01-data-ownership-and-migration.md).
+- [x] [02. Consistent task, app, and directory context](02-command-context.md). Requires [01](01-data-ownership-and-migration.md).
 - [ ] [03. Owned process and terminal execution](03-owned-execution.md). Requires [01](01-data-ownership-and-migration.md), [02](02-command-context.md).
 
 ### Phase 3: Discovery and installation
@@ -113,7 +130,7 @@ These describe responsibilities, not compulsory Ruby class names or signatures. 
 
 ## Scope and safety
 
-Keep Ruby, native tools, TaskCli, Herdr adoption, useful value objects, and native AI session behavior. Do not rename the gem merely because this checkout is named rehiiro. Do not create Git worktrees, install into the live home, mutate real GitHub/provider data, or let picker pruning delete resources.
+Keep Ruby, native tools, TaskCli, Herdr adoption, useful value objects, and native AI session behavior. The user has explicitly authorized completing steps 02–16, then renaming and publishing the new gem as `rehiiro` after final acceptance. This does not authorize Git pushes, changing the original checkout or installed commands, new worktrees, live-home installation, real GitHub/provider mutations, or destructive picker pruning.
 
 The proposal includes installed-local extensions that are not in the clone. Step 06 names the existing MCP source locations; steps 12, 14, and 15 name other optional external evidence. Those files are read-only. If a required source is unavailable, report the precise prerequisite rather than fabricating a replacement.
 

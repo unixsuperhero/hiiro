@@ -1,20 +1,9 @@
 class Hiiro
   class Projects
     def self.add_resolvers(hiiro)
-      pm = new
-      hiiro.add_resolver(:project,
-        -> {
-          all = pm.all
-          return nil if all.empty?
-          conf = pm.from_config
-          lines = all.each_with_object({}) do |(name, path), h|
-            source = conf.key?(name) ? '[config]' : '[dir]'
-            h[format("%-15s %-8s %s", name, source, path)] = path
-          end
-          hiiro.fuzzyfind_from_map(lines)
-        }
-      ) do |name|
-        pm.find(name)
+      projects = new
+      hiiro.add_resolver(:project, -> { projects.context(selection: projects.pick(chooser: hiiro.method(:fuzzyfind_from_map))).start_directory }) do |name|
+        projects.context(name, chooser: hiiro.method(:fuzzyfind_from_map)).start_directory
       end
     end
 
@@ -45,14 +34,44 @@ class Hiiro
       dirs.merge(from_config)
     end
 
-    # Find a project path by name (regex match, exact-match tiebreak).
-    # Returns the path string, or nil if 0 or >1 matches.
-    def find(name)
-      re = /#{name}/i
-      conf = from_config
-      matches = dirs.select { |k, _| k.match?(re) }.merge(conf.select { |k, _| k.match?(re) })
-      matches = matches.select { |k, _| k == name } if matches.count > 1
-      matches.count == 1 ? matches.values.first : nil
+    def pick(chooser: Fuzzyfind.method(:map_select), tty: $stdin.tty?, candidates: all.to_a)
+      raise Hiiro::Error, 'No projects found' if candidates.empty?
+      raise Hiiro::Error, 'Project selection requires a TTY; supply a project name' unless tty
+
+      configured = from_config
+      mapping = candidates.to_h do |name, path|
+        [format('%-15s %-8s %s', name, configured.key?(name) ? '[config]' : '[dir]', path), [name, path]]
+      end
+      selected = chooser.call(mapping)
+      raise Hiiro::Error, 'Project selection cancelled' unless selected
+      raise Hiiro::Error, 'Invalid project selection' unless mapping.values.include?(selected)
+      selected
+    end
+
+    def resolve(name, chooser: Fuzzyfind.method(:map_select), tty: $stdin.tty?)
+      return ['proj', File.join(Dir.home, 'proj')] if name.nil?
+      raise Hiiro::Error, 'Project name cannot be empty' if name.strip.empty?
+
+      result = Matcher.by_prefix(all, name) { |project_name, _| project_name }
+      return result.resolved.item if result.resolved
+      raise Hiiro::Error, "Project '#{name}' not found" unless result.match?
+      unless tty
+        raise Hiiro::Error, "Ambiguous project '#{name}': #{result.matches.map { |match| match.item.first }.join(', ')}"
+      end
+      pick(chooser: chooser, tty: tty, candidates: result.matches.map(&:item))
+    end
+
+    def find(name, **options)
+      _, path = resolve(name, **options)
+      File.expand_path(path)
+    end
+
+    def context(name = nil, chooser: Fuzzyfind.method(:map_select), tty: $stdin.tty?, invocation_directory: Dir.pwd,
+                terminal: Herdr::Location.from_env, selection: nil)
+      project_name, path = selection || resolve(name, chooser: chooser, tty: tty)
+      identity = Project.find_by_name(project_name) || project_name
+      TaskLocation.for(nil, root: path, root_source: :project, project: identity,
+                       invocation_directory: invocation_directory, terminal: terminal)
     end
   end
 end

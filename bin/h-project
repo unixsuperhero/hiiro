@@ -11,41 +11,27 @@ Hiiro.run(*ARGV) do
   projects = Hiiro::Projects.new
   Hiiro::Projects.add_resolvers(self)
 
-  # === OPEN PROJECT (default) ===
-  add_subcmd(:open) { |project_name|
-    result = Hiiro::Matcher.by_prefix(projects.all, project_name) { |name, _| name }
-    matches = result.matches
+  project_context = ->(name = nil) { projects.context(name, chooser: method(:fuzzyfind_from_map)) }
 
-    case matches.count
-    when 0
-      name = 'proj'
-      path = File.join(Dir.home, 'proj')
+  add_subcmd(:open) { |project_name=nil|
+    selected = project_context.call(project_name).validate!
+    name = selected.project.respond_to?(:name) ? selected.project.name : selected.project
+    puts "changing dir: #{selected.start_directory}"
+    Dir.chdir(selected.start_directory)
+    open_project_workspace(name, selected.start_directory)
+  }
 
-      unless Dir.exist?(path)
-        puts "Error: #{path.inspect} does not exist"
-        exit 1
-      end
+  add_subcmd(:path, :abspath) { |project_name=nil|
+    print project_context.call(project_name).start_directory
+  }
 
-      puts "changing dir: #{path}"
-      Dir.chdir(path)
-
-      open_project_workspace(name, path)
-    when 1
-      name, path = matches.first.item
-
-      puts "changing dir: #{path}"
-      Dir.chdir(path)
-
-      open_project_workspace(name, path)
-    when (2..)
-      puts "ERROR: Multiple matches found"
-      puts
-      puts "Matches:"
-      matches.each { |match|
-        name, path = match.item
-        puts format("  %s: %s", name, path)
-      }
-    end
+  add_subcmd(:cd) { |project_name=nil|
+    selected = project_context.call(project_name).validate!
+    terminal = selected.terminal
+    raise Hiiro::Error, 'Not running inside a Herdr pane' unless terminal.pane_id
+    client = Hiiro::Herdr.client
+    terminal.validate!(client)
+    client.run_in_pane(terminal.pane_id, "cd #{selected.start_directory.shellescape}")
   }
 
   # === LIST PROJECTS ===
@@ -96,76 +82,22 @@ Hiiro.run(*ARGV) do
     warn "Projects not changed: #{e.message}"
   end
 
-  # === SELECT PROJECT ===
-  add_subcmd(:select) { |*select_args|
-    all = projects.all
-
-    if all.empty?
-      STDERR.puts "No projects found"
-      next
-    end
-
-    conf = projects.from_config
-    lines = all.each_with_object({}) do |(name, path), h|
-      source = conf.key?(name) ? '[config]' : '[dir]'
-      display = format("%-15s %s  %s", name, source, path)
-      h[display] = path
-    end
-
-    selected = fuzzyfind_from_map(lines)
-    print selected if selected
+  add_subcmd(:select) {
+    selection = projects.pick(chooser: method(:fuzzyfind_from_map))
+    print projects.context(selection: selection).start_directory
   }
 
-  # === COPY PROJECT PATH ===
-  add_subcmd(:copy) { |*copy_args|
-    all = projects.all
-
-    if all.empty?
-      STDERR.puts "No projects found"
-      next
-    end
-
-    conf = projects.from_config
-    lines = all.each_with_object({}) do |(name, path), h|
-      source = conf.key?(name) ? '[config]' : '[dir]'
-      display = format("%-15s %s  %s", name, source, path)
-      h[display] = path
-    end
-
-    selected = fuzzyfind_from_map(lines)
-    if selected
-      Hiiro::Shell.pipe(selected, 'pbcopy')
-      puts "Copied project path '#{selected}' to clipboard"
-    end
+  add_subcmd(:copy) {
+    selection = projects.pick(chooser: method(:fuzzyfind_from_map))
+    selected = projects.context(selection: selection).start_directory
+    Hiiro::Shell.pipe(selected, 'pbcopy')
+    puts "Copied project path '#{selected}' to clipboard"
   }
 
-  # === SHELL IN PROJECT ===
-  add_subcmd(:sh) { |project_name=nil, *args|
-    if project_name.nil? || project_name.empty?
-      puts "Usage: h project sh <project_name> [command...]"
-      next
-    end
-
-    re = /#{project_name}/i
-    conf_matches = projects.from_config.select { |k, v| k.match?(re) }
-    dir_matches  = projects.dirs.select { |proj, path| proj.match?(re) }
-    matches = dir_matches.merge(conf_matches)
-    matches = matches.select { |name, path| name == project_name } if matches.count > 1
-
-    case matches.count
-    when 0
-      puts "Project '#{project_name}' not found"
-      puts
-      puts "Available projects:"
-      projects.all.keys.sort.each { |k| puts "  #{k}" }
-    when 1
-      _, path = matches.first
-      Dir.chdir(path)
-      args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*args)
-    else
-      puts "Ambiguous project '#{project_name}' — multiple matches:"
-      matches.each { |name, path| puts format("  %-15s %s", name, path) }
-    end
+  add_subcmd(:sh) { |project_name=nil, *native_args|
+    selected = project_context.call(project_name).validate!
+    Dir.chdir(selected.start_directory)
+    native_args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*native_args)
   }
 
   # === HELP ===
@@ -192,9 +124,9 @@ Hiiro.run(*ARGV) do
         Set delete: true to remove a displayed alias; omitted rows are preserved.
 
       MATCHING:
-        Project names are matched using regex (case insensitive).
-        If multiple matches are found, an exact match is preferred.
-        If still ambiguous, all matches are displayed.
+        Exact names win, then unique prefixes.
+        Ambiguous names open an object-mapped picker in a TTY.
+        Non-TTY ambiguity and missing projects fail without launching work.
     HELP
   }
 

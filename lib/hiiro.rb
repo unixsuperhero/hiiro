@@ -183,8 +183,19 @@ class Hiiro
     @tasks_enabled
   end
 
+  def context
+    return @context if defined?(@context)
+    supplied = global_values[:context]
+    @context = if supplied
+      supplied.respond_to?(:call) ? supplied.call : supplied
+    else
+      CurrentTask.new(herdr: -> { herdr_client }, cwd: global_values[:cwd] || Dir.pwd, pin: false,
+                      chooser: method(:fuzzyfind_from_map)).context
+    end
+  end
+
   def environment
-    @environment ||= Environment.current
+    @environment ||= Environment.new(path: global_values[:cwd] || Dir.pwd, context: @context || global_values[:context] || -> { context }, chooser: method(:fuzzyfind_from_map))
   end
   alias env environment
 
@@ -259,11 +270,8 @@ class Hiiro
       block.arity == 1 ? block.call(h) : h.instance_eval(&block) if block
     end
 
-    begin
-      Hiiro.init(bin_name: child_bin_name, args: child_args, **kwargs, &wrapper)
-    rescue => e
-      binding.pry
-    end
+    inherited = global_values.except(:bin_name, :args).merge(context: -> { context })
+    Hiiro.init(bin_name: child_bin_name, args: child_args, **inherited, **kwargs, &wrapper)
   end
 
   def run_child(custom_subcmd=nil, custom_args=nil, **kwargs, &block)
@@ -411,7 +419,7 @@ class Hiiro
   def pins = @pins ||= Pin.new(self)
 
   def git
-    @git ||= Git.new(self, Dir.pwd)
+    @git ||= Git.new(self, context.start_directory)
   end
 
   def attach_method(name, &block)

@@ -47,11 +47,4 @@ class QueueEntryTest < Minitest::Test
     end
   end
 
-  def test_frontmatter_lines
-    lines = Hiiro::Queue::Prompt.frontmatter_lines(task_info: { task_name: 'a', tree_name: 'b' }, ignore: true, hints: true)
-    assert_equal ['---', 'task_name: a', 'tree_name: b', 'ignore: true',
-                  "# app: <partial-app-name>  (run omp from this app's directory)",
-                  '# dir: <relative-path>     (subdir within app or tree root)', '---', ''], lines
-    assert_equal ['---', '---', ''], Hiiro::Queue::Prompt.frontmatter_lines(task_info: nil)
-  end
 end

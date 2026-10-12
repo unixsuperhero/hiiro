@@ -14,8 +14,8 @@ class Hiiro
       File.file?(repo_path.to_s) ? File.dirname(repo_path) : repo_path
     end
 
-    def self.root
-      `git rev-parse --show-toplevel 2>/dev/null`.strip
+    def self.root(pwd = Dir.pwd)
+      new(nil, pwd).root
     end
 
     def self.add_resolvers(hiiro)
@@ -116,10 +116,23 @@ class Hiiro
     end
 
     def changed_files(range, relative: true)
-      args = ['diff', '--name-only']
+      args = ['diff', '--name-only', '-z']
       args << '--relative' if relative
       args << range
-      run_safe(*args).to_s.lines(chomp: true)
+      @executor.capture('git', '-C', pwd, *args).split("\0")
+    end
+
+    def dirty_files
+      output = @executor.capture('git', '-C', pwd, 'status', '--porcelain', '-z', '--untracked-files=all')
+      entries = output.split("\0")
+      files = []
+      until entries.empty?
+        entry = entries.shift
+        path = entry[3..]
+        entries.shift if entry[0, 2].match?(/[RC]/)
+        files << File.expand_path(path, root || pwd)
+      end
+      files
     end
 
     def create_branch(name, start_point = nil)
@@ -255,16 +268,16 @@ class Hiiro
     private
 
     def run_safe(*args)
-      result = @executor.capture('git', *args).strip
+      result = @executor.capture('git', '-C', pwd, *args).strip
       result.empty? ? nil : result
     end
 
     def run_system(*args)
-      @executor.run('git', *args)
+      @executor.run('git', '-C', pwd, *args)
     end
 
     def run_success?(*args)
-      @executor.check('git', *args)
+      @executor.check('git', '-C', pwd, *args)
     end
   end
 end

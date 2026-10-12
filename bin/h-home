@@ -2,61 +2,43 @@
 
 require 'hiiro'
 
-EDITOR = ENV.fetch('EDITOR', 'nvim')
-BASE_DIR = Dir.home
+Hiiro.run(*ARGV) do
+  home_context = -> { Hiiro::TaskLocation.for(nil, root: Dir.home, root_source: :home, terminal: Hiiro::Herdr::Location.from_env) }
 
-o = Hiiro.init(*ARGV)
+  add_subcmd(:edit) { system(ENV.fetch('EDITOR', 'nvim'), __FILE__) }
 
-o.add_subcmd(:edit) { |*args|
-  system(EDITOR, __FILE__)
-}
+  add_subcmd(:path, :abspath) { print home_context.call.start_directory }
 
-o.add_subcmd(:path) { |*args|
-  print BASE_DIR
-}
+  add_subcmd(:open) { system('open', home_context.call.validate!.start_directory) }
 
-o.add_subcmd(:skf) { |*args|
-  Dir.chdir(BASE_DIR)
-  system('skf', *args)
-}
+  add_subcmd(:cd) {
+    selected = home_context.call.validate!
+    terminal = selected.terminal
+    raise Hiiro::Error, 'Not running inside a Herdr pane' unless terminal.pane_id
+    client = Hiiro::Herdr.client
+    terminal.validate!(client)
+    client.run_in_pane(terminal.pane_id, "cd #{selected.start_directory.shellescape}")
+  }
 
-o.add_subcmd(:rg) { |*args|
-  Dir.chdir(BASE_DIR)
-  system('rg', '-S', *args)
-}
+  add_subcmd(:sh) { |*native_args|
+    selected = home_context.call.validate!
+    Dir.chdir(selected.start_directory)
+    native_args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*native_args)
+  }
 
-o.add_subcmd(:rgall) { |*args|
-  Dir.chdir(BASE_DIR)
-  system('rg', '-S', '--no-ignore-vcs', *args)
-}
+  {skf: ['skf'], rg: ['rg', '-S'], rgall: ['rg', '-S', '--no-ignore-vcs']}.each do |name, command|
+    add_subcmd(name) { |*native_args|
+      selected = home_context.call.validate!
+      Dir.chdir(selected.start_directory)
+      system(*command, *native_args)
+    }
+  end
 
-o.add_subcmd(:ebin) { |*args|
-  Dir.chdir(File.join(Dir.home, 'bin'))
-
-  glob_patterns = []
-  globs = []
-
-  files = args.filter_map { |arg|
-    matches = 
-      if arg.end_with?('*')
-        glob_patterns << arg
-        Dir.glob(arg)
-      elsif arg.is_a?(String)
-        glob_patterns << '*' + arg.to_s + '*'
-        Dir.glob('*' + arg.to_s + '*')
-      end
-
-    globs << matches
-    
-    matches unless matches.empty?
-  }.flatten
-
-  system(EDITOR, *files.flatten)
-}
-
-if o.runnable?
-  o.run
-else
-  puts :no_runnable_found
+  add_subcmd(:ebin) { |*patterns|
+    selected = home_context.call
+    selected = selected.with_directory(File.join(selected.start_directory, 'bin'), source: :override).validate!
+    Dir.chdir(selected.start_directory)
+    files = patterns.flat_map { |pattern| Dir.glob(pattern.end_with?('*') ? pattern : "*#{pattern}*") }
+    system(ENV.fetch('EDITOR', 'nvim'), *files)
+  }
 end
-

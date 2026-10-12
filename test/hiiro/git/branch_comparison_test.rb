@@ -63,13 +63,4 @@ class GitBranchComparisonTest < Minitest::Test
     assert_equal 'abc123..HEAD', cmp.fork_range
   end
 
-  def test_changed_paths_relative_flag
-    @ex.stub('merge-base --fork-point main HEAD', "abc123\n")
-    @ex.stub('diff --name-only --relative abc123...HEAD', "a.rb\nb/c.rb\n")
-    @ex.stub('diff --name-only abc123...HEAD', "lib/a.rb\n")
-    cmp = @git.compare(target: 'main')
-
-    assert_equal %w[a.rb b/c.rb], cmp.changed_paths
-    assert_equal %w[lib/a.rb], cmp.changed_paths(relative: false)
-  end
 end

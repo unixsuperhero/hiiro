@@ -8,6 +8,18 @@ Manage named application subdirectories within a git repo or task worktree. Prov
 h app <subcommand> [args]
 ```
 
+App selection uses an exact case-sensitive name, then a unique prefix. A terminal can disambiguate through an object-mapped picker; non-interactive ambiguity and missing apps fail. The root comes from the resolved task code/home directory when a task is selected, otherwise the invocation Git root or cwd. Project/home operations do not require a task. Explicit missing directories fail rather than execute elsewhere.
+
+Nested context selection precedes the child command:
+
+```bash
+h app service --app api start web
+h app run --app api all test
+h app file --app api edit api
+```
+
+Without `--app`, nested commands retain the parent context. Native arguments to `fd`, `rg`, `vim`, and `sh` are forwarded unchanged after the app selector.
+
 ## Subcommands
 
 | Subcommand | Description |
@@ -15,7 +27,8 @@ h app <subcommand> [args]
 | `ls` | List all configured apps |
 | `add <name> <path>` | Register a new app |
 | `rm <name>` | Remove an app |
-| `cd [name]` | Send a `cd` to the current Herdr pane |
+| `cd [name]` | Send `cd` to the calling Herdr pane |
+| `open [name]` | Open the resolved app/root directory |
 | `path [name]` | Print relative path to app (from cwd) |
 | `abspath [name]` | Print absolute path to app |
 | `fd <name> [args]` | Run `fd` scoped to an app directory |
@@ -24,9 +37,9 @@ h app <subcommand> [args]
 | `sh <name> [cmd]` | Open a shell (or run a command) in an app directory |
 | `config` / `edit` | Edit a temporary projection of saved app aliases |
 | `show` | Print saved app aliases as YAML |
-| `service` | Manage services (delegates to `h service`) |
-| `run` | Run tools against changed files (delegates to `h run`) |
-| `file` | Manage tracked app files (delegates to `h file`) |
+| `service [--app APP] ...` | Manage services with the selected context |
+| `run [--app APP] ...` | Run tools with the selected context |
+| `file [--app APP] ...` | Manage root-relative tracked files with the selected context |
 
 ### abspath
 
@@ -51,7 +64,7 @@ h app add web frontend/web
 
 ### cd
 
-Send a `cd` command to the current Herdr pane to navigate to an app directory. Resolves the app path relative to the git repo root or current task tree. With no name, `cd`s to the repo root.
+Send `cd` to the explicit calling Herdr pane after validating its workspace/tab/pane IDs. The destination is the selected app beneath the resolved root; with no app, use that root. Another focused pane is not a target.
 
 **Examples**
 
@@ -101,7 +114,7 @@ h app fd web --type f
 
 ### file
 
-Delegate to the app file tracking system.
+Delegate to the app file tracking system. A leading `--app APP` selects the execution context before the child command; stored file names remain relative to the context root.
 
 **Examples**
 
@@ -122,7 +135,7 @@ h app ls
 
 ### path
 
-Print the relative path (from current directory) to the app. With no name, prints the repo root path.
+Print the relative path from the captured invocation directory to the app. With no name, print the resolved context root. `abspath` prints the same destination as an absolute path.
 
 **Examples**
 

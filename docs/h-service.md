@@ -10,6 +10,10 @@ Config lives in `~/.config/hiiro/services.yml`. Runtime state is tracked in `~/.
 h service <subcommand> [args]
 ```
 
+Service definitions, environment preparation, and process launch share one context. A configured relative `base_dir` is beneath its root (selected task code/home directory, otherwise invocation Git root/cwd); no `base_dir` uses the effective app/override directory. Stop and cleanup commands use the saved launch directory. Invalid directories and ambiguous service/group names fail before launch artifacts or runtime state change.
+
+`t service TASK [--app APP] ...` and `h app service [--app APP] ...` pass that context into this implementation. The app selector precedes the child command, for example `h app service --app api start web`. Environment destinations use the same definition directory; generated preparation scripts retain the explicit config/root and do not join an app directory twice.
+
 ## Subcommands
 
 ### add
@@ -213,7 +217,7 @@ h service url my-rails
 
 ```yaml
 my-rails:
-  base_dir: apps/myapp             # relative to git root
+  base_dir: apps/myapp             # relative to the selected context root
   host: localhost
   port: 3000
   init:                            # run once before start (e.g. bundle install)

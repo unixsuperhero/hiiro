@@ -2,6 +2,7 @@ require 'yaml'
 require 'fileutils'
 require 'time'
 require 'ostruct'
+require 'shellwords'
 
 class Hiiro
   class ServiceManager
@@ -11,7 +12,7 @@ class Hiiro
     ENV_TEMPLATES_DIR = File.join(Dir.home, '.config', 'hiiro', 'env_templates')
 
     attr_reader :config_file, :state_file
-    attr_writer :herdr
+    attr_writer :herdr, :context
 
     def self.add_resolvers(hiiro)
       sm = new
@@ -20,10 +21,15 @@ class Hiiro
       end
     end
 
-    def initialize(config_file: CONFIG_FILE, state_file: STATE_FILE, herdr: Hiiro::Herdr.client)
+    def initialize(config_file: CONFIG_FILE, state_file: STATE_FILE, herdr: Hiiro::Herdr.client, context: nil)
       @config_file = config_file
       @state_file = state_file
       @herdr = herdr
+      @context = context
+    end
+
+    def context
+      @context ||= CurrentTask.new(pin: false).context
     end
 
     def services
@@ -31,10 +37,12 @@ class Hiiro
     end
 
     def find_service(name)
+      raise Hiiro::Error, 'Service name is required' if name.to_s.strip.empty?
       configs = services
       names = configs.keys.map { |k| OpenStruct.new(name: k) }
       result = Hiiro::Matcher.new(names, :name).by_prefix(name)
-      match = result.resolved || result.first
+      raise Hiiro::Error, "Ambiguous service '#{name}'" if !result.resolved && result.matches.size > 1
+      match = result.resolved
       return nil unless match
 
       svc_name = match.item.name
@@ -42,17 +50,8 @@ class Hiiro
     end
 
     def find_group(name)
-      configs = services
-      names = configs.keys.select { |k| configs[k].is_a?(Hash) && configs[k].key?('services') }
-      return nil if names.empty?
-
-      structs = names.map { |k| OpenStruct.new(name: k) }
-      result = Hiiro::Matcher.new(structs, :name).by_prefix(name)
-      match = result.resolved || result.first
-      return nil unless match
-
-      group_name = match.item.name
-      { name: group_name, **symbolize_keys(configs[group_name]) }
+      service = find_service(name)
+      service if service && service.key?(:services)
     end
 
     # The matched service as a ServiceDefinition (prefix match like find_service).
@@ -60,7 +59,7 @@ class Hiiro
       svc = find_service(name)
       return nil unless svc
 
-      ServiceDefinition.from_config(svc[:name], services[svc[:name]], root: git_root)
+      ServiceDefinition.from_config(svc[:name], services[svc[:name]], root: context.root_directory, cwd: context.start_directory)
     end
 
     def group_definition_for(name)
@@ -71,6 +70,7 @@ class Hiiro
     def prepare_env(svc_name, variation_overrides: {})
       definition = definition_for(svc_name)
       return unless definition
+      validate_directory!(definition.base_directory)
 
       definition.environment_files.each do |env_file|
         prepare_single_env(env_file, variation_overrides)
@@ -90,10 +90,18 @@ class Hiiro
         return false
       end
 
-      workspace = herdr_info[:workspace] || current_herdr_workspace
+      calling_workspace = context_workspace
+      workspace = resolve_herdr_workspace(herdr_info[:workspace] || calling_workspace)
       unless workspace
         puts "Herdr is required to start a service group"
         return false
+      end
+
+      members.each do |member|
+        member_name = member['name'] || member[:name]
+        definition = definition_for(member_name)
+        raise Hiiro::Error, "Service '#{member_name}' not found" unless definition
+        validate_directory!(definition.base_directory)
       end
 
       puts "Starting group '#{group[:name]}'..."
@@ -227,6 +235,10 @@ class Hiiro
         return false
       end
 
+      base_dir = validate_directory!(definition_for(svc_name).base_directory)
+      calling_workspace = context_workspace
+      workspace = resolve_herdr_workspace(herdr_info[:workspace] || calling_workspace)
+
       # Build separate init/env/start scripts + a launcher that runs them in order
       init_cmds = Array(svc[:init] || [])
       start_cmds = Array(start_cmd)
@@ -237,9 +249,6 @@ class Hiiro
         env_prep: !skip_env,
         variation_overrides: variation_overrides,
       )
-
-      base_dir = resolve_base_dir(svc[:base_dir])
-      workspace = resolve_herdr_workspace(herdr_info[:workspace] || current_herdr_workspace)
 
       if workspace
         created = Hiiro::Herdr::TabCreation.create(
@@ -255,7 +264,7 @@ class Hiiro
       else
         tab_id = nil
         pane_id = nil
-        system("cd #{base_dir} && #{script} &")
+        system("#{Shellwords.escape(script)} &", chdir: base_dir)
       end
 
       # Record state
@@ -269,6 +278,7 @@ class Hiiro
         'task' => task_info[:task_name],
         'tree' => task_info[:tree],
         'branch' => task_info[:branch],
+        'directory' => base_dir,
         'started_at' => Time.now.iso8601,
       }
       save_state(state)
@@ -293,20 +303,22 @@ class Hiiro
 
       info = running_services[svc_name]
       pane_id = info['herdr_pane']
+      base_dir = info['directory'] || definition_for(svc_name).base_directory
+      validate_directory!(base_dir)
 
       if svc[:stop] && !svc[:stop].to_s.strip.empty?
         stop_cmd = svc[:stop]
         if info['pid']
           stop_cmd = stop_cmd.gsub('$PID', info['pid'].to_s)
         end
-        system(stop_cmd)
+        system(stop_cmd, chdir: base_dir)
       elsif pane_id
         herdr.send_keys(pane_id, 'ctrl+c')
       end
 
       # Run cleanup commands
       if svc[:cleanup]
-        svc[:cleanup].each { |cmd| system(cmd) }
+        svc[:cleanup].each { |cmd| system(cmd, chdir: base_dir) }
       end
 
       # Remove from state
@@ -423,8 +435,9 @@ class Hiiro
       true
     end
 
-    def self.build_hiiro(parent_hiiro, sm, task_manager: nil)
-      parent_hiiro.make_child(:service) do |h|
+    def self.build_hiiro(parent_hiiro, sm, context: parent_hiiro.context, args: parent_hiiro.args)
+      sm.context = context
+      parent_hiiro.make_child(:service, args, context: context) do |h|
         h.add_subcmd(:ls) do
           configs = sm.services
           if configs.empty?
@@ -483,29 +496,17 @@ class Hiiro
           end
 
           sm.herdr = h.herdr_client
-          herdr_info = {
-            workspace: h.herdr_client.current_workspace,
-          }
-
           task_info = {}
-          if task_manager
-            task = task_manager.current_task
-            if task
-              task_info = {
-                task_name: task.name,
-                tree: task.tree_name,
-                branch: task.branch,
-                session: task.session_name,
-              }
-            end
+          if (task = context.task)
+            task_info = { task_name: task.name, tree: task.tree_name, branch: task.branch, session: task.session_name }
           end
 
           # Check if it's a group or individual service
           group = sm.find_group(svc_name)
           if group
-            sm.start_group(svc_name, herdr_info: herdr_info, task_info: task_info)
+            sm.start_group(svc_name, task_info: task_info)
           else
-            sm.start(svc_name, herdr_info: herdr_info, task_info: task_info, variation_overrides: variation_overrides)
+            sm.start(svc_name, task_info: task_info, variation_overrides: variation_overrides)
           end
         end
 
@@ -748,7 +749,7 @@ class Hiiro
     end
 
     def scripts_dir
-      dir = File.join(STATE_DIR, 'scripts')
+      dir = File.join(File.dirname(state_file), 'scripts')
       FileUtils.mkdir_p(dir)
       dir
     end
@@ -768,7 +769,9 @@ class Hiiro
       code = <<~RUBY
         #!/usr/bin/env ruby
         require 'hiiro'
-        sm = Hiiro::ServiceManager.new
+        context = Hiiro::TaskLocation.for(nil, root: #{context.root_directory.inspect}, invocation_directory: #{context.invocation_directory.inspect})
+        context = context.with_directory(#{context.start_directory.inspect}, source: :override)
+        sm = Hiiro::ServiceManager.new(config_file: #{File.expand_path(config_file).inspect}, state_file: #{File.expand_path(state_file).inspect}, context: context)
         sm.prepare_env(#{svc_name.inspect}, variation_overrides: { #{overrides_literal} })
       RUBY
 
@@ -799,15 +802,16 @@ class Hiiro
       launcher_path = File.join(dir, "#{svc_name}.sh")
       steps = []
       steps << "trap 'h service reset #{svc_name}' EXIT"
-      steps << init_path unless init_cmds.empty?
-      steps << env_path if env_path
-      steps << start_path
+      steps << Shellwords.escape(init_path) unless init_cmds.empty?
+      steps << Shellwords.escape(env_path) if env_path
+      steps << Shellwords.escape(start_path)
 
       write_shell_script(launcher_path, steps)
     end
 
-    def current_herdr_workspace
-      herdr.current_workspace
+    def context_workspace
+      terminal = context.terminal.validate!(herdr)
+      terminal.workspace_id && herdr.get_workspace(terminal.workspace_id)
     end
 
     def resolve_herdr_workspace(workspace)
@@ -845,15 +849,9 @@ class Hiiro
       hash.each_with_object({}) { |(k, v), h| h[k.to_sym] = v }
     end
 
-    def git_root
-      git_root = `git rev-parse --show-toplevel 2>/dev/null`.chomp
-      git_root.empty? ? Dir.pwd : git_root
-    end
-
-    def resolve_base_dir(base_dir)
-      return Dir.pwd if base_dir.nil? || base_dir.to_s.empty?
-
-      File.join(git_root, base_dir)
+    def validate_directory!(directory)
+      raise Hiiro::Error, "Service directory does not exist: #{directory}" unless File.directory?(directory)
+      File.realpath(directory)
     end
   end
 end

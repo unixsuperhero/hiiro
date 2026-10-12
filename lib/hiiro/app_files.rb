@@ -6,9 +6,28 @@ class Hiiro
     CONFIG_FILE = File.join(Dir.home, '.config', 'hiiro', 'app_files.yml')
 
     attr_reader :config_file
+    attr_writer :context
 
-    def initialize(config_file: CONFIG_FILE)
+    def initialize(config_file: CONFIG_FILE, context: nil)
       @config_file = config_file
+      @context = context
+    end
+
+    def context
+      @context ||= CurrentTask.new(pin: false).context
+    end
+
+    def paths_for(app_name)
+      context.validate!
+      files_for(app_name).map do |file|
+        path = File.expand_path(file, context.root_directory)
+        ancestor = path
+        ancestor = File.dirname(ancestor) until File.exist?(ancestor) || File.symlink?(ancestor)
+        unless File.exist?(ancestor) && context.contains?(ancestor) && context.contains?(path)
+          raise Hiiro::Error, "Tracked file escapes root #{context.root_directory}: #{file}"
+        end
+        path
+      end
     end
 
     def files_for(app_name)
@@ -68,8 +87,9 @@ class Hiiro
       end
     end
 
-    def self.build_hiiro(parent_hiiro, af, environment: nil)
-      parent_hiiro.make_child(:file) do |h|
+    def self.build_hiiro(parent_hiiro, af, context: parent_hiiro.context, args: parent_hiiro.args)
+      af.context = context
+      parent_hiiro.make_child(:file, args, context: context) do |h|
         h.add_subcmd(:ls) do |app_name=nil|
           af.list(app_name: app_name)
         end
@@ -114,16 +134,7 @@ class Hiiro
             next
           end
 
-          # Resolve files relative to tree root if environment available
-          resolved = files
-          if environment
-            tree = environment.tree
-            if tree
-              resolved = files.map { |f| File.join(tree.path, f) }
-            end
-          end
-
-          h.edit_files(*resolved)
+          h.edit_files(*af.paths_for(app_name))
         end
       end
     end

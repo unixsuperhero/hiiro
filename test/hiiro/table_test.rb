@@ -113,6 +113,21 @@ class TableTest < Minitest::Test
     assert_equal "global", scope.label
   end
 
+  def test_current_and_taskless_toggle_reject_overlapping_directory_tasks
+    Dir.mktmpdir do |directory|
+      @task.update(primary_directory: directory)
+      nested = File.join(directory, 'nested')
+      Dir.mkdir(nested)
+      assert_equal @task.id, Hiiro::TableScope.current(cwd: nested).task.id
+      Hiiro::TaskRecord.create(name: 'nested', primary_directory: nested)
+      assert_raises(Hiiro::Error) { Hiiro::TableScope.current(cwd: nested) }
+      Dir.chdir(nested) do
+        assert_raises(Hiiro::Error) { Hiiro::TableScope.global.toggle }
+        assert_equal @task.id, Hiiro::TableScope.global(@task).toggle.task.id
+      end
+    end
+  end
+
   def test_task_requires_record
     assert_raises(ArgumentError) { Hiiro::TableScope.task(nil) }
   end

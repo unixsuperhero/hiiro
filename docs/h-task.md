@@ -28,11 +28,12 @@ Worktree operations that used to live only under `h task` are now task commands:
 | `h task todo ...` | `t todo ... [TASK]` or `tt ...` |
 | `h task ls` | `t ls` |
 | `h task current` | `t current` |
-| `h task queue`, `service`, `run`, `file` | `h queue`, `h service`, `h run`, `h file` |
+| `h task queue`, `service`, `run` | `t queue/service/run [TASK] [--app APP] ...`; these pass the selected context to the shared workflows |
+| `h task file` | `h file ...` for tracked editor files; `t file ...` manages task file resources instead |
 
 `h task tag`, `untag`, `tags`, `sparse`, `from`, `prune`, `apps`, `save`, `status`, and `prs` were not carried over. Tag branches with `h branch tag`, inspect worktrees with `h wtree`, and register an existing directory with `t directory add [TASK] PATH --primary`.
 
-`Hiiro::TaskManager` still holds the worktree creation code that `t tree new` and the shared `Hiiro::CurrentTask` resolver use; `h service`, `h run`, and `h file` keep using it for the current task through `Environment#task`, which now also recognizes a task by its home, primary directory, or registered directories.
+`Hiiro::TaskManager` retains useful worktree/domain operations. `Hiiro::CurrentTask#context` resolves the canonical task once into `TaskLocation`, and `Environment` delegates that value rather than choosing the first matching task/app/tree. Root, task, and app queue/service/runner mounts share the selected root and effective directory. Root workflows disable the saved task pin; `t` permits it as the final fallback.
 
 ## Legacy task persistence
 

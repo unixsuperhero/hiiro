@@ -10,6 +10,8 @@ h <subcommand> [args]
 
 Subcommands support prefix matching — `h ver` matches `h version`, `h br s` matches `h branch save`. Ambiguous prefixes list all matching options.
 
+Workflow/directory commands share a resolved `TaskLocation` context rather than reselecting a task/app for each action. Explicit task selection wins over calling workspace, realpath directory, and (for `t` only) the saved pin. Root queue/service/run/file mounts disable that pin. Project/home commands use taskless roots. Native payload argv remains unchanged, and `cd` uses captured calling-pane IDs instead of focus. See [shared context](../README.md#shared-command-context).
+
 ## Inline subcommands
 
 These subcommands are defined directly in `exe/h` or loaded from `lib/`:
@@ -24,7 +26,7 @@ These subcommands are defined directly in `exe/h` or loaded from `lib/`:
 | `h install` / `h update` | Install or update the hiiro gem (`-a` compatible rbenv versions, `-p` pre-release) | `exe/h` |
 | `h ping` | Health check — prints `pong` | `exe/h` |
 | `h pry` | Open a pry REPL in the hiiro context | `exe/h` |
-| [`h queue`](h-queue.md) | Claude prompt queue — create, watch, and run AI prompts in Herdr | `lib/hiiro/queue.rb` |
+| [`h queue`](h-queue.md) | Native `omp` prompt queue with shared task/app/directory context and explicit Herdr placement | `lib/hiiro/queue.rb` |
 | `h rnext` | Run `git rnext` (rebase next) | `exe/h` |
 | [`h run`](h-run.md) | Run dev tools (linters, formatters, tests) against changed files | `lib/hiiro/runner_tool.rb` |
 | [`h service`](h-service.md) | Dev service management with Herdr, env files, and service groups | `lib/hiiro/service_manager.rb` |

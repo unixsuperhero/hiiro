@@ -43,20 +43,14 @@ class Hiiro
       # Exact name, else unique prefix. An ambiguous prefix opens the fuzzy finder
       # over the candidates on a TTY and fails otherwise. nil when nothing matches.
       def lookup_task(reference)
-        result = Hiiro::Matcher.new(Hiiro::TaskRecord.all_as_list, :name).by_prefix(reference.to_s)
-        match = result.resolved
-        return match.item if match
-        return nil unless result.ambiguous?
-        candidates = result.matches.map(&:item)
-        raise Error, "Ambiguous task #{reference}: #{candidates.map(&:name).join(', ')}" unless $stdin.tty?
-        pick_task(candidates)
+        Hiiro::CurrentTask.select(Hiiro::TaskRecord.all_as_list, reference, kind: 'task', chooser: method(:fuzzyfind_from_map))
       end
 
       def pick_task(candidates)
         raise Error, 'No tasks; create one with t new NAME' if candidates.empty?
-        name = fuzzyfind(candidates.map(&:name))
-        raise Error, 'No task selected' if name.nil? || name.strip.empty?
-        candidates.find { |task| task.name == name.strip } || raise(Error, "No task named #{name.strip}")
+        task = fuzzyfind_from_map(candidates.to_h { |candidate| [candidate.name, candidate] })
+        raise Error, 'No task selected' unless candidates.include?(task)
+        task
       end
 
       def lookup_task!(reference)
@@ -66,22 +60,27 @@ class Hiiro
       # [name, relative_path] from the apps registry: exact name wins, else a
       # unique prefix; ambiguity and no-match are errors.
       def lookup_app!(reference)
-        apps = Hiiro::AppRecord.all_as_hash
-        raise Error, 'No apps are configured' if apps.empty?
-        return [reference, apps[reference]] if apps[reference]
-        found = Hiiro::Matcher.by_prefix(apps.keys.sort, reference).matches.map(&:item)
-        raise Error, "No app matches #{reference}" if found.empty?
-        raise Error, "Ambiguous app #{reference}: #{found.join(', ')}" unless found.one?
-        [found.first, apps[found.first]]
+        app = Hiiro::Environment.new(chooser: method(:fuzzyfind_from_map)).find_app(reference)
+        raise Error, "App not found: #{reference}" unless app
+        [app.name, app.relative_path]
       end
 
-      # Current task from Herdr, directory, or the saved pin. With no context at all,
-      # a TTY gets the fuzzy finder over every task; ambiguous or stale context still fails.
+      def context
+        return super if defined?(@context) || global_values[:context]
+        @context = Hiiro::CurrentTask.new(herdr: -> { herdr_client }, cwd: global_values[:cwd] || Dir.pwd, pin: true,
+                                         chooser: method(:fuzzyfind_from_map)).context
+      end
+
       def current_task
-        Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve!
-      rescue Hiiro::Error => e
-        raise unless $stdin.tty? && e.message.start_with?('No current task')
-        pick_task(Hiiro::TaskRecord.all_as_list)
+        return context.task if context.task
+        raise Error, 'No current task; supply a task name or run t use NAME' unless $stdin.tty?
+        selected_task(pick_task(Hiiro::TaskRecord.all_as_list))
+      end
+
+      def selected_task(task)
+        @context = Hiiro::CurrentTask.new(task: task, cwd: global_values[:cwd] || Dir.pwd, pin: false).context
+        @environment = nil
+        task
       end
 
       # Old h task rule: [task, remaining_args]. The first positional is the task
@@ -93,7 +92,8 @@ class Hiiro
         forced = options&.fetch(:task)
         find = options&.fetch(:find)
         if options.nil?
-          if %w[-t --task].include?(args.first) && args.length > 1
+          if %w[-t --task].include?(args.first)
+            raise Error, "Missing task reference after #{args.first}" unless args.length > 1
             args.shift
             forced = args.shift
           elsif args.first.to_s.start_with?('--task=')
@@ -103,8 +103,8 @@ class Hiiro
             find = true
           end
         end
-        return [lookup_task!(forced), args] if forced
-        return [pick_task(Hiiro::TaskRecord.all_as_list), args] if find
+        return [selected_task(lookup_task!(forced)), args] if forced
+        return [selected_task(pick_task(Hiiro::TaskRecord.all_as_list)), args] if find
         first = args.first
         if first == '.'
           args.shift
@@ -114,7 +114,7 @@ class Hiiro
           return [nil, args]
         elsif first && !first.start_with?('-') && (task = lookup_task(first))
           args.shift
-          return [task, args]
+          return [selected_task(task), args]
         end
         [current_task, args]
       end
@@ -191,17 +191,13 @@ class Hiiro
 
       # Live Herdr workspaces, or [] when Herdr is not running.
       def live_workspaces
-        herdr_client.server_running? ? client.workspaces.to_a : []
-      rescue Hiiro::Error
-        []
+        herdr_client.server_running? ? herdr_client.workspaces.to_a : []
       end
 
       # All live panes grouped by workspace id, or {} when Herdr is not running.
       def live_panes
         @live_panes ||= begin
-          herdr_client.server_running? ? client.panes(all: true).to_a.group_by(&:workspace_id) : {}
-        rescue Hiiro::Error
-          {}
+          herdr_client.server_running? ? herdr_client.panes(all: true).to_a.group_by(&:workspace_id) : {}
         end
       end
 
@@ -462,7 +458,13 @@ class Hiiro
         check_result(system('mdoc', path), 'mdoc could not open the document; install mdoc and check its configuration')
       end
 
-      def location(task, **kw)  = Hiiro::TaskLocation.for(task, **kw)
+      def location(task, **kw)
+        if defined?(@context) && @context.task&.id == task.id && kw.empty?
+          @context
+        else
+          Hiiro::TaskLocation.for(task, invocation_directory: global_values[:cwd] || Dir.pwd, **kw)
+        end
+      end
       def code_directory(task)  = location(task).code_directory
       def workspace_label(task) = location(task).workspace_label
 
@@ -472,6 +474,7 @@ class Hiiro
           unless herdr.server_running?
             raise Error, 'Herdr is not running; start Herdr for workspace/tab/pane commands, or supply a task name for task data'
           end
+          Hiiro::Herdr::Location.from_env.validate!(herdr)
           herdr
         end
       end
@@ -479,16 +482,21 @@ class Hiiro
       # under the task worktree; explicit param wins over the option.
       def start_directory(task, app: nil)
         app = opts&.fetch(:app) if app.nil?
-        loc = location(task, override: opts&.fetch(:directory), app: app && app_for(task, app))
-        ensure_home(task) if loc.source == :home # filesystem effect stays here
-        existing_path(loc.start_directory, directory: true)
+        loc = location(task)
+        loc = loc.for_app(app_for(task, app)) if app
+        directory = opts&.fetch(:directory)
+        loc = loc.with_directory(directory, source: :override) if directory
+        if loc.source == :home
+          ensure_home(task)
+          loc = Hiiro::TaskLocation.for(task, invocation_directory: loc.invocation_directory,
+                                       task_source: loc.task_source, terminal: loc.terminal)
+        end
+        @context = loc
+        loc.validate!.start_directory
       end
 
-      # Registry app directory under the task worktree.
       def app_directory(task, reference)
-        loc = location(task, app: app_for(task, reference))
-        raise Error, "#{task.name} has no worktree; run t tree new #{task.name} first" unless loc.code_directory
-        loc.app_directory
+        location(task).for_app(app_for(task, reference)).app_directory
       end
 
       def app_for(task, reference)
@@ -497,7 +505,7 @@ class Hiiro
       end
 
       def open_workspace(task, save:, app: nil)
-        open_task_workspace(task, start_directory(task, app: app))
+        open_task_workspace(task, start_directory(task, app: app), chdir: !!(app || opts&.fetch(:app) || opts&.fetch(:directory)))
         save_current(task) if save
       end
 
@@ -709,9 +717,11 @@ class Hiiro
       end
 
       def cd_to(task, app: nil)
-        pane = ENV['HERDR_PANE_ID']
-        raise Error, 'Not running inside a Herdr pane' unless pane
-        check_result(client.run_in_pane(pane, "cd #{start_directory(task, app: app).shellescape}"))
+        terminal = location(task).terminal
+        raise Error, 'Not running inside a Herdr pane' unless terminal.pane?
+        terminal = terminal.validate!(client)
+        directory = start_directory(task, app: app)
+        check_result(client.run_in_pane(terminal.pane_id, "cd #{directory.shellescape}"))
       end
 
       def show_workspace(task)
@@ -869,12 +879,36 @@ class Hiiro
             opts.show ? show_workspace(target) : open_workspace(target, save: explicit, app: app)
           end
         end
-        add_cmd(:path, args: ['task?'], opts: TASK_OPTIONS) { puts start_directory(take_task_only(opts.args)) }
+        add_cmd(:path, :abspath, args: ['task?', 'app?'], opts: [*TASK_OPTIONS, :directory, :app]) do
+          task, rest = take_task(opts.args)
+          no_args!(rest.drop(1))
+          puts start_directory(task, app: rest.first)
+        end
         add_cmd(:branch, args: ['task?'], opts: TASK_OPTIONS) { puts current_branch(take_task_only(opts.args)) }
-        add_cmd(:cd, args: ['task?', 'app?'], opts: TASK_OPTIONS) do
+        add_cmd(:cd, args: ['task?', 'app?'], opts: [*TASK_OPTIONS, :directory, :app]) do
           task, rest = take_task(opts.args)
           no_args!(rest.drop(1))
           cd_to(task, app: rest.first)
+        end
+
+        %i[queue service run].each do |mount|
+          add_cmd(mount, args: ['task?', 'command...'], passthrough: true) do
+            task, remaining = take_task(args, options: nil)
+            selected = location(task)
+            if remaining.first == '--app'
+              remaining.shift
+              app = remaining.shift || raise(Error, 'An app is required')
+              selected = selected.for_app(app_for(task, app))
+            end
+            case mount
+            when :queue
+              Hiiro::Queue.build_hiiro(self, context: selected, args: remaining).run
+            when :service
+              Hiiro::ServiceManager.build_hiiro(self, Hiiro::ServiceManager.new(context: selected), context: selected, args: remaining).run
+            when :run
+              Hiiro::RunnerTool.build_hiiro(self, Hiiro::RunnerTool.new(context: selected), context: selected, args: remaining).run
+            end
+          end
         end
 
         add_cmd(:sh, args: ['task?', 'command...'], passthrough: true) do

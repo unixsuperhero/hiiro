@@ -1,45 +1,43 @@
 require 'test_helper'
 
 class GitEffectsTest < Minitest::Test
-  def setup
-    @executor = Hiiro::Effects::NullExecutor.new
-    @git = Hiiro::Git.new(nil, '/fake/repo', executor: @executor)
+  def repository(path)
+    FileUtils.mkdir_p(path)
+    system('git', 'init', '--quiet', '--initial-branch=main', path) || raise('git init failed')
+    File.write(File.join(path, 'tracked'), 'initial')
+    system('git', '-C', path, 'add', 'tracked') || raise('git add failed')
+    system('git', '-C', path, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+      '-c', 'core.hooksPath=/dev/null', 'commit', '--quiet', '-m', 'fixture') || raise('git commit failed')
   end
 
-  def test_checkout_calls_git_checkout
-    @git.checkout('my-branch')
-    assert @executor.called?('checkout')
-    assert @executor.called?('my-branch')
+  def test_queries_checks_and_checkout_use_supplied_repository_not_process_cwd
+    Dir.mktmpdir do |sandbox|
+      target = File.join(File.realpath(sandbox), 'target')
+      ambient = File.join(File.realpath(sandbox), 'ambient')
+      repository(target)
+      repository(ambient)
+      system('git', '-C', target, 'branch', 'target-only') || raise('git branch failed')
+      git = Hiiro::Git.new(nil, target)
+      Dir.chdir(ambient) do
+        assert_equal target, git.root
+        assert git.branch_exists?('target-only')
+        refute Hiiro::Git.new(nil, ambient).branch_exists?('target-only')
+        assert git.checkout('target-only')
+        assert_equal 'target-only', git.current_branch_name
+        assert_equal 'main', Hiiro::Git.new(nil, ambient).current_branch_name
+      end
+    end
   end
 
-  def test_branch_exists_uses_check
-    # NullExecutor returns true by default for check — no stub needed
-    result = @git.branch_exists?('main')
-    assert result
-    assert @executor.called?('show-ref')
-  end
-
-  def test_delete_branch_uses_run
-    @git.delete_branch('old-branch')
-    assert @executor.called?('branch')
-    assert @executor.called?('old-branch')
-  end
-
-  def test_default_executor_is_real
-    git = Hiiro::Git.new
-    assert_instance_of Hiiro::Effects::Executor, git.instance_variable_get(:@executor)
-  end
-
-  def test_root_uses_capture
-    @executor.stub('rev-parse', '/fake/repo')
-    root = @git.root
-    assert_equal '/fake/repo', root
-    assert @executor.called?('rev-parse')
-  end
-
-  def test_run_safe_returns_nil_for_empty_output
-    # NullExecutor returns '' by default — run_safe should return nil
-    result = @git.send(:run_safe, 'some-command')
-    assert_nil result
+  def test_dirty_discovery_preserves_filename_bytes_and_renamed_destination
+    Dir.mktmpdir do |sandbox|
+      repository(sandbox)
+      File.rename(File.join(sandbox, 'tracked'), File.join(sandbox, 'renamed file'))
+      system('git', '-C', sandbox, 'add', '--all') || raise('git add failed')
+      File.write(File.join(sandbox, "new\nfile"), 'untracked')
+      root = File.realpath(sandbox)
+      assert_equal [File.join(root, "new\nfile"), File.join(root, 'renamed file')].sort,
+        Hiiro::Git.new(nil, sandbox).dirty_files.sort
+    end
   end
 end

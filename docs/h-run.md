@@ -9,7 +9,9 @@ h run [change_set] [tool_type] [file_type_group] [--variation <name>]
 h run <subcmd> [args]
 ```
 
-Positional arguments can appear in any order. When no subcommand is given, matching tools are run against changed files.
+Positional arguments can appear in any order. When no subcommand is given, matching tools run in the resolved context’s effective directory. Git discovery uses that directory (including an injected Git owner), not the original process cwd. Dirty/branch paths are restricted to the effective subtree and are shell-quoted without splitting spaces or newlines.
+
+`t run TASK [--app APP] ...` and `h app run [--app APP] ...` pass the selected context into this same runner. The app selector precedes runner arguments. For example, `h app run --app api all test` runs test recipes in the api directory. Missing explicit directories and ambiguous app/task selectors fail before a tool runs.
 
 **change_set** — which files to consider:
 

@@ -20,7 +20,7 @@ class Hiiro
     # Relative base_dir sits under the git root; no base_dir means the cwd.
     def base_directory
       base = config[:base_dir]
-      base.nil? || base.to_s.empty? ? cwd : File.join(root, base)
+      base.nil? || base.to_s.empty? ? cwd : File.expand_path(base, root)
     end
 
     def host = config[:host] || 'localhost'

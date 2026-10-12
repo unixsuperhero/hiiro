@@ -1,8 +1,8 @@
 # h file
 
-Track frequently-used files per application and open them together in your editor. Files are resolved relative to the current task's tree root when an environment is available.
+Track frequently-used files per application and open them together in your editor. Files resolve from the shared context root: selected task code/home directory, otherwise the invocation Git root or cwd. An app mount retains that root while carrying its effective directory.
 
-Available as both `h file` (top-level) and `h app file` (scoped to `h app`).
+Available as `h file` and `h app file [--app APP] ...`. The app selector precedes the child command, for example `h app file --app api edit api`.
 
 ## Synopsis
 
@@ -28,7 +28,7 @@ Add one or more files to an app's tracked file list.
 h file edit <app_name>
 ```
 
-Open all tracked files for `<app_name>` in your editor. Uses `-O` for vertical splits in vim. Files are resolved relative to the current task's tree root when available.
+Open the tracked files in your editor, using `-O` for vim vertical splits. Resolve every configured filename from the selected context root, independent of the effective app cwd. Traversal, symlink escapes, and unresolved symlink ancestors fail before editor launch. A leading `--app APP` on the app mount selects its context, not a second prefix for stored filenames.
 
 ### `h file ls`
 

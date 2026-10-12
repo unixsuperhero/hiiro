@@ -12,6 +12,27 @@ A lightweight, extensible CLI framework for Ruby. Build your own multi-command t
 
 See [docs/](docs/) for detailed documentation on all subcommands.
 
+## Shared command context
+
+Directory and workflow commands use one resolved `Hiiro::TaskLocation` per operation. It carries the optional task, app/project identity, root and effective directory, selection provenance, and calling Herdr IDs. Explicit task selection wins; inference uses the calling workspace, then realpath directory containment. `t` also permits the saved task pin as its final fallback. Root workflows and table scope do not consult that pin.
+
+Exact names win over unique prefixes. Ambiguous selections open an object-mapped picker on a terminal and fail otherwise. Stale pins, conflicting terminal IDs, overlapping task directories, and missing explicit targets are errors, not fallback choices. Project and home operations require no task.
+
+Illustrative resolved values:
+
+```js
+{
+  task: "build", taskSource: "explicit", app: "api",
+  root: "/work/build", directory: "/work/build/apps/api",
+  directorySource: "app",
+  terminal: { workspaceId: "ws-build", paneId: "pane-1" }
+}
+```
+
+`t path build api` and `t cd build api` use the same directory. App `path` prints relative to the captured invocation directory; app `abspath` prints absolute. `cd` targets the calling pane, never whichever pane has focus. Native shell/editor/search payload arguments remain unchanged.
+
+`t run build --app api all test`, `t queue build ls`, and `h app run --app api all test` pass an explicitly selected context into the nested workflow. Task mounts are `queue`, `service`, and `run`; app mounts are `service`, `run`, and `file`. Configured service `base_dir` and tracked files remain root-relative; tools run in the effective directory. Project `path`/`abspath`/`sh`/`cd`/`open` and home `path`/`abspath`/`sh`/`cd`/`open` use taskless directory contexts. Home search retains its `rg -S` and `rgall --no-ignore-vcs` profiles. See [task selection](docs/t.md), [apps](docs/h-app.md), [projects](docs/h-project.md), [queue frontmatter](docs/h-queue.md), [services](docs/h-service.md), [tools](docs/h-run.md), and [tracked files](docs/h-file.md).
+
 ## Installation
 
 ### Via RubyGems

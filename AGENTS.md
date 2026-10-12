@@ -396,21 +396,24 @@ cmp.two_dot_range / cmp.three_dot_range / cmp.fork_range / cmp.changed_paths(rel
 
 `Hiiro::Git` gained the underlying queries: `ref_exists?`, `rev_list_count`, `merge_base`, `ancestor?`, `changed_files`.
 
-### Hiiro::TaskLocation (lib/hiiro/task_location.rb)
+### Hiiro::CurrentTask / Hiiro::TaskLocation (lib/hiiro/current_task.rb, lib/hiiro/task_location.rb)
 
-Where a task's directories are. `CurrentTask` and `TaskCli` delegate `code_directory`, `workspace_label`, `tree_path`, `start_directory`, and `app_directory` to it:
+`CurrentTask#context` resolves once to the existing `TaskLocation` value. Explicit task selection wins over calling workspace, realpath directory inference, and enabled pins. Optional `resolve` returns nil only when absent; ambiguity, stale pins, and terminal conflicts remain errors. Root workflows and `TableScope` disable pins. Project/home contexts use `TaskLocation.for(nil, root:, root_source:, project:)` without task inference.
 
 ```ruby
-loc = Hiiro::TaskLocation.for(task, override: opts[:directory], app: Hiiro::App.new(name:, path:))
-loc.home             # TaskRecord.home_for(task.name); never creates it
-loc.worktree_path    # task.tree, absolute or under WORK_DIR; nil without a tree
-loc.code_directory   # task.primary_directory || worktree_path
-loc.app_directory    # app.resolve(code_directory); nil unless both known
-loc.start_directory  # override || app_directory || code_directory || home
-loc.source           # :override | :app | :primary | :tree | :home  (callers run ensure_home only for :home)
-loc.workspace_label  # (task.session || task.name).tr('.', '_')
-Hiiro::TaskLocation.contains?(root, path)   # realpath containment
+loc = Hiiro::CurrentTask.new(task: "build", cwd: Dir.pwd, pin: false).context(app: "api")
+[loc.task, loc.app, loc.project]
+[loc.invocation_directory, loc.root_directory, loc.start_directory]
+loc.task_source       # :explicit | :workspace | :directory | :pin | nil
+loc.source           # directory provenance: :override, :app, :primary, :tree, :home, :project, :git, :cwd, :frontmatter
+loc.terminal         # Herdr::Location with captured calling IDs
+loc.for_app("api")   # derives without selecting the task again
+loc.with_directory(path, source: :override).validate!
+[loc.home, loc.worktree_path, loc.code_directory, loc.app_directory, loc.workspace_label]
+Hiiro::TaskLocation.contains?(root, path) # canonical realpath containment
 ```
+
+`Hiiro#context` and `Environment` share this value; children inherit it. Queue/service/runner/tracked-file builders accept `context:` and selector-stripped `args:`. App paths resolve beneath the context root; directory overrides win. Explicit missing directories fail. A task home may be computed before creation; only an operation that needs it runs `ensure_home`.
 
 ### Hiiro::Herdr::TabCreation / Hiiro::Herdr::Location (lib/hiiro/herdr.rb)
 
@@ -508,7 +511,7 @@ Hiiro::Notification.show(hiiro)   # Show notification based on hiiro.args
 
 ### Hiiro::Queue (lib/hiiro/queue.rb)
 
-Task queue that pipes prompts to `claude` via tmux. Tasks are markdown files with optional YAML frontmatter (`task_name`, `tree_name`, `session_name`) that flow through statuses: `wip` -> `pending` -> `running` -> `done`/`failed`.
+Task queue for native `omp` prompts, launched in Herdr tabs/panes or the current process. Markdown prompts carry optional YAML frontmatter (`task_name`, `tree_name`, `session_name`, `app`, `dir`); file statuses are `wip` -> `pending` -> `running` -> `done`/`failed`.
 
 Subcommands (`h queue <subcmd>`):
 - `ls`/`list` - List all tasks with status, elapsed time, and preview
@@ -516,26 +519,26 @@ Subcommands (`h queue <subcmd>`):
 - `add` - Create a new prompt (opens editor or accepts stdin/args, supports `-t <task>` flag)
 - `wip` - Create/edit a work-in-progress prompt
 - `ready` - Move wip task to pending
-- `run [name]` - Launch pending task(s) in tmux windows
+- `run [name]` - Launch pending task(s) in Herdr tabs
 - `watch` - Continuously poll and launch pending tasks
-- `attach [name]` - Switch to running task's tmux window (fuzzy select if no name)
-- `kill [name]` - Kill running task's tmux window, move to failed
+- `attach [name]` - Switch to a running task’s Herdr pane/tab (fuzzy select if no name)
+- `kill [name]` - Stop a running task and move it to failed
 - `retry [name]` - Move failed/done task back to pending
 - `clean` - Remove all done/failed task files
 - `dir` - Print queue directory path
 
-Config: `~/.config/hiiro/queue/{wip,pending,running,done,failed}/`
+Runtime files: `~/.local/share/hiiro/queue/{wip,pending,running,done,failed}/`.
 
 Key internals:
 - `Queue::Entry` - `Entry.find(dirs, name)` / `Entry.in(dirs, status)`; answers `prompt_path`, `meta_path`, `launcher_path`, `body_path`, `companion_files`, `modified_at`, `meta`, `preview`, `prompt`, `execution`, `moved_to(status)`, `to_h` ({ name:, status: }). `Queue#entry_for(name, status)` builds one; `tasks_in`, `all_tasks`, `meta_for`, `task_preview`, `find_task` are thin wrappers over it.
 - `Queue::Execution` - snapshot of a running entry's `.meta`: `started_at`, `elapsed` (Duration), `elapsed_minutes`, `working_directory`, `location` (Herdr::Location), `attach_target`
 - `Queue::Prompt` - Parses frontmatter to resolve task/tree/session for working directory; retains `path`; `body` strips frontmatter; `Prompt.frontmatter_lines(task_info:, ignore:, hints:)` is the editor template shared by add/wip
-- Tasks launch in tmux windows within the task's session (from frontmatter) or default `hq` session
-- Launcher script runs `cat prompt | claude`, then moves files to done/failed based on exit code
+- `resolve_prompt_context` handles normal launch and `pane-dir`: explicit task/tree/workspace/app/dir selectors are strict, provenance and calling terminal are retained, and invalid edited context stops before native `omp`.
+- Queue launch placement uses Herdr tabs or explicit calling-pane splits, not whichever pane is focused. Artifact/status outcome ownership is covered by the owned-execution redesign.
 
 ### Hiiro::ServiceManager (lib/hiiro/service_manager.rb)
 
-Manages background development services with tmux integration, env file management, and service groups.
+Manages background development services with Herdr integration, env file management, and service groups. Service definitions resolve `base_dir` against the selected context root; absent `base_dir` uses its effective directory. Environment preparation and launch share that resolution, and stop/cleanup retain the saved launch directory.
 
 Subcommands (`h service <subcmd>`):
 - `ls`/`list` - List all services with running status, port, and base_dir
@@ -632,7 +635,7 @@ Subcommands (`h file <subcmd>`):
 
 Config: `~/.config/hiiro/app_files.yml`
 
-Files are resolved relative to the current task's tree root when an environment is available.
+Tracked files resolve against the injected context root, not a second app-directory join; root escape (including dangling symlinks) fails before editor launch.
 
 ### Jumplist (bin/h-jumplist)
 

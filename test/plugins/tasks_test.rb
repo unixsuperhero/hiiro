@@ -240,7 +240,8 @@ class EnvironmentTest < Minitest::Test
     feature = Hiiro::TaskRecord.create(name: 'feature-auth', tree: 'feature-auth/main')
     child = Hiiro::TaskRecord.create(name: 'feature-auth/api', tree: 'feature-auth/api')
     env = Environment.new
-    assert_equal 'feature-auth', env.find_task('feat').name
+    assert_raises(Hiiro::Error) { env.find_task('feat', tty: false) }
+    assert_equal 'feature-auth', env.find_task('feature-auth').name
     assert_equal child.id, env.find_task('feature-auth/api').id
     feature.update(next_action: 'Review')
     Hiiro::TaskRecord.create(name: 'bugfix', tree: 'bugfix/main')
@@ -267,6 +268,41 @@ class EnvironmentTest < Minitest::Test
     assert_equal 'apps/frontend', env.find_app('front').relative_path
     app.update(path: 'apps/ui')
     assert_equal 'apps/ui', env.find_app('front').relative_path
+  end
+
+  def test_context_errors_are_not_replaced_with_focused_or_first_tasks
+    with_temp_dir do |dir|
+      Hiiro::TaskRecord.create(name: 'alpha', primary_directory: dir)
+      Hiiro::TaskRecord.create(name: 'alpine', primary_directory: dir)
+      env = Environment.new(path: dir)
+      assert_raises(Hiiro::Error) { env.task }
+      assert_raises(Hiiro::Error) { env.find_task('al', tty: false) }
+      selected = env.find_task('al', tty: true, chooser: ->(map) { map.fetch('alpine') })
+      assert_equal 'alpine', selected.name
+      assert_raises(Hiiro::Error) { env.find_task('al', tty: true, chooser: ->(_map) { nil }) }
+    end
+  end
+
+  def test_app_selection_is_exact_then_unique_or_mapped_and_cancellation_fails
+    Hiiro::AppRecord.create(name: 'web', path: 'apps/web')
+    Hiiro::AppRecord.create(name: 'webadmin', path: 'apps/admin')
+    env = Environment.new
+    assert_equal 'apps/web', env.find_app('web', tty: false).relative_path
+    assert_equal 'webadmin', env.find_app('weba', tty: false).name
+    assert_raises(Hiiro::Error) { env.find_app('we', tty: false) }
+    assert_equal 'webadmin', env.find_app('we', tty: true, chooser: ->(map) { map.fetch('webadmin') }).name
+    assert_raises(Hiiro::Error) { env.find_app('we', tty: true, chooser: ->(_map) { nil }) }
+  end
+
+  def test_shared_terminal_labels_remain_ambiguous_even_for_exact_reference
+    first = Hiiro::TaskRecord.create(name: 'alpha', session: 'shared')
+    second = Hiiro::TaskRecord.create(name: 'alpine', session: 'shared')
+    records = [first, second]
+    assert_raises(Hiiro::Error) { Hiiro::CurrentTask.select(records, 'shared', kind: 'task workspace', key: :session, tty: false) }
+    selected = Hiiro::CurrentTask.select(records, 'shared', kind: 'task workspace', key: :session, tty: true,
+                                         chooser: ->(map) { map.fetch('shared [2]') })
+    assert_equal second.id, selected.id
+    assert_raises(Hiiro::Error) { Hiiro::TaskManager.new(Hiiro.new('h'), environment: Environment.new).task_by_session('shared') }
   end
 end
 

@@ -9,20 +9,21 @@ class Hiiro
     HERDR_WORKSPACE = 'hq'
     STATUSES = %w[wip pending running done failed].freeze
 
-    def self.current(hiiro=nil)
-      @current ||= new(hiiro)
+    def self.current(hiiro=nil, context: nil)
+      new(hiiro, context: context)
     end
 
     attr_reader :hiiro
 
-    def initialize(hiiro=nil)
+    def initialize(hiiro=nil, context: nil)
       @hiiro = hiiro
+      @context = context
     end
 
     def read_prompt(filepath)
       return false unless File.exist?(filepath)
 
-      Prompt.from_file(filepath)
+      Prompt.from_file(filepath, hiiro: hiiro)
     end
 
     def queue_dirs
@@ -120,52 +121,13 @@ class Hiiro
       return unless File.exist?(md_file)
 
       running_md = File.join(dirs[:running], "#{name}.md")
+      prompt_obj = Prompt.from_file(md_file, hiiro: hiiro)
+      location = resolve_prompt_context(prompt_obj)
+      working_dir = location.start_directory
+      target_workspace = workspace_for_prompt(prompt_obj, location)
+      calling_pane = calling_pane!(location) if %i[hsplit vsplit].include?(mode)
+
       FileUtils.mv(md_file, running_md)
-
-      prompt_obj = Prompt.from_file(running_md, hiiro: hiiro)
-
-      # Determine target Herdr workspace and working directory from frontmatter.
-      target_workspace = HERDR_WORKSPACE
-      working_dir = Dir.pwd
-      tree_root = nil
-
-      if prompt_obj
-        fm = prompt_obj.frontmatter
-
-        # 1. session_name is retained in frontmatter for compatibility, but now
-        #    identifies a Herdr workspace label.
-        raw_session = fm['session_name'].to_s
-        if !raw_session.empty?
-          target_workspace = raw_session
-          workspace_dir = directory_for_workspace(raw_session)
-          working_dir = workspace_dir if workspace_dir
-        elsif prompt_obj.task
-          task_session = prompt_obj.task.session_name
-          target_workspace = task_session if task_session && !task_session.empty?
-        end
-
-        # 2. Tree: sets both working_dir and tree_root (overrides session pane dir)
-        tree = prompt_obj.tree || prompt_obj.task&.tree
-        if tree
-          working_dir = tree.path
-          tree_root = tree.path
-        end
-
-        # 3. App + dir: resolve on top of tree root
-        if prompt_obj.app_name
-          env = Environment.current rescue nil
-          app = env&.find_app(prompt_obj.app_name)
-          if app
-            root = tree_root || git_root_of(working_dir)
-            app_dir = File.join(root, app.relative_path)
-            working_dir = prompt_obj.rel_dir ? File.join(app_dir, prompt_obj.rel_dir) : app_dir
-          else
-            warn "hq: app '#{prompt_obj.app_name}' not found — falling back to tree/session dir"
-          end
-        elsif prompt_obj.rel_dir
-          working_dir = File.join(tree_root || working_dir, prompt_obj.rel_dir)
-        end
-      end
 
       # Write a clean prompt file (no frontmatter) for the agent
       raw = File.read(running_md).strip
@@ -181,7 +143,7 @@ class Hiiro
       File.write(script_path, <<~SH)
         #!/usr/bin/env bash
 
-        cd #{Shellwords.shellescape(working_dir)}
+        cd #{Shellwords.shellescape(working_dir)} || exit $?
         #{agent_cmd} @#{Shellwords.shellescape(prompt_file)}
         HQ_EXIT=$?
 
@@ -240,6 +202,7 @@ class Hiiro
       when :hsplit, :vsplit
         direction = mode == :hsplit ? :down : :right
         pane = herdr.split_pane(
+          target: calling_pane,
           direction: direction,
           start_directory: working_dir,
           command: script_path,
@@ -255,71 +218,50 @@ class Hiiro
 
     public
 
+    def context
+      @context ||= hiiro ? hiiro.context : CurrentTask.new(herdr: -> { herdr }, pin: false).context
+    end
+
+    def chooser
+      hiiro && ->(mapping) { hiiro.fuzzyfind_from_map(mapping) }
+    end
+
     def task_info_for(task_name)
-      env = Environment.current rescue nil
-      return nil unless env
-
-      task = env.find_task(task_name)
-      return nil unless task
-
-      {
-        task_name: task.name,
-        tree_name: task.tree_name,
-        session_name: task.session_name,
-      }
+      task = CurrentTask.new(task: task_name, pin: false, chooser: chooser).resolve!
+      { task_name: task.name }
     end
 
     def select_task_or_session(hiiro)
-      mapping = {}
-
-      env = Environment.current rescue nil
-      if env
-        env.all_tasks.sort_by(&:name).each do |task|
-          line = format("task     %-25s  tree: %s", task.name, task.tree_name || '(none)')
-          mapping[line] = { type: :task, task: task }
-        end
+      mapping = TaskRecord.all_as_list.to_h { |task| ["task     #{task.name}", { type: :task, task: task }] }
+      herdr.workspaces.each do |workspace|
+        mapping["workspace #{workspace.name}"] = { type: :session, name: workspace.name }
       end
-
-      workspaces = herdr.workspaces rescue nil
-      if workspaces
-        workspaces.names.sort.each do |name|
-          mapping[format("workspace %s", name)] = { type: :session, name: name }
-        end
-      end
-
-      return nil if mapping.empty?
-
-      hiiro.fuzzyfind_from_map(mapping)
+      hiiro.fuzzyfind_from_map(mapping) unless mapping.empty?
     end
 
     def resolve_task_info(opts, hiiro, default_task_info)
       if opts.find
         selection = select_task_or_session(hiiro)
-        if selection
-          case selection[:type]
-          when :task    then task_info_for(selection[:task].name)
-          when :session then { session_name: selection[:name] }
-          end
-        else
-          default_task_info
-        end
+        raise Error, "Selection cancelled" unless selection
+
+        selection[:type] == :task ? task_info_for(selection[:task].name) : { session_name: selection[:name] }
       elsif opts.task.is_a?(String)
-        task_info_for(opts.task) || session_info_for(opts.task)
+        matches = TaskRecord.all_as_list.select { |task| task.name.start_with?(opts.task) }
+        matches.empty? ? session_info_for(opts.task) : task_info_for(opts.task)
       else
-        default_task_info
+        default_task_info || (context.task && { task_name: context.task.name })
       end
     end
 
-    # Prefix-match opts.task against live Herdr workspace labels.
+    def select_workspace(ref)
+      workspaces = herdr.workspaces.to_a
+      workspace = workspaces.find { |item| item.id == ref } ||
+        CurrentTask.select(workspaces, ref, kind: "workspace", chooser: chooser)
+      workspace || raise(Error, "Workspace not found: #{ref}")
+    end
+
     def session_info_for(prefix)
-      workspaces = herdr.workspaces rescue nil
-      return nil unless workspaces
-
-      names   = workspaces.names
-      matches = names.select { |n| n.start_with?(prefix) }
-      return nil unless matches.length == 1
-
-      { session_name: matches.first }
+      { session_name: select_workspace(prefix).name }
     end
 
     def strip_frontmatter(text)
@@ -346,50 +288,87 @@ class Hiiro
       herdr.tabs(all: true).names.include?(wname)
     end
 
-    def directory_for_workspace(ref)
-      workspace = herdr.find_workspace(ref)
-      return nil unless workspace
-      return workspace.path if workspace.path && Dir.exist?(workspace.path)
+    def directory_for_workspace(ref, terminal: context.terminal)
+      workspace = select_workspace(ref)
+      path = workspace.path
+      if !path || path.empty?
+        terminal.validate!(herdr)
+        pane = herdr.get_pane(terminal.pane_id) if terminal.pane?
+        path = pane.foreground_cwd || pane.cwd if pane && pane.workspace_id == workspace.id
+      end
+      raise Error, "Workspace has no usable directory: #{workspace.name}" unless path && Dir.exist?(path)
 
-      pane = herdr.panes(workspace: workspace).first
-      path = pane&.foreground_cwd || pane&.cwd
-      path if path && Dir.exist?(path)
+      File.realpath(path)
     end
 
     def herdr
       hiiro&.herdr_client || Hiiro::Herdr.client
     end
 
-    # Given a (possibly-edited) prompt file and a base directory (task root),
-    # return the resolved working directory accounting for app: and dir: frontmatter.
-    def resolve_pane_dir(prompt_path, base_dir = Dir.pwd)
-      prompt_obj = Prompt.from_file(prompt_path.to_s, hiiro: @hiiro)
-      return base_dir unless prompt_obj
+    def calling_pane!(location = context)
+      terminal = location.terminal
+      terminal.validate!(herdr)
+      raise Error, "An explicit calling Herdr pane is required" unless terminal.pane?
 
-      tree_root   = base_dir
-      working_dir = base_dir
-
-      if prompt_obj.app_name
-        env = Environment.current rescue nil
-        app = env&.find_app(prompt_obj.app_name)
-        if app
-          app_dir     = File.join(tree_root, app.relative_path)
-          working_dir = prompt_obj.rel_dir ? File.join(app_dir, prompt_obj.rel_dir) : app_dir
-        elsif prompt_obj.rel_dir
-          working_dir = File.join(tree_root, prompt_obj.rel_dir)
-        end
-      elsif prompt_obj.rel_dir
-        working_dir = File.join(tree_root, prompt_obj.rel_dir)
-      end
-
-      Dir.exist?(working_dir) ? working_dir : base_dir
-    rescue
-      base_dir
+      terminal.pane_id
     end
 
-    def git_root_of(dir)
-      root = `git -C #{Shellwords.shellescape(dir)} rev-parse --show-toplevel 2>/dev/null`.strip
-      root.empty? ? dir : root
+    def calling_workspace_name
+      terminal = context.terminal.validate!(herdr)
+      workspace = herdr.get_workspace(terminal.workspace_id) if terminal.workspace_id
+      raise Error, "An explicit calling Herdr workspace is required" unless workspace
+
+      workspace.name
+    end
+
+    def resolve_prompt_context(prompt, base_dir: nil)
+      raise Error, "Prompt file not found" unless prompt
+      location = if prompt.task_name && @context&.task&.name == prompt.task_name
+        @context
+      elsif prompt.task_name
+        CurrentTask.new(task: prompt.task_name, cwd: base_dir || @context&.invocation_directory || Dir.pwd,
+          herdr: -> { herdr }, pin: false, chooser: chooser).context
+      else
+        context
+      end
+      root = nil
+      if prompt.tree_name
+        tree = Environment.new(path: location.invocation_directory).find_tree(prompt.tree_name, chooser: chooser)
+        raise Error, "Tree not found: #{prompt.tree_name}" unless tree
+        root = tree.path
+      end
+      if prompt.session_name
+        workspace = select_workspace(prompt.session_name)
+        root ||= directory_for_workspace(workspace.id, terminal: location.terminal) unless location.task
+      end
+      root ||= base_dir if base_dir && !location.task
+      if root
+        location = TaskLocation.for(location.task, root: root, root_source: :frontmatter,
+          invocation_directory: location.invocation_directory, terminal: location.terminal,
+          task_source: location.task_source, project: location.project, app: location.app)
+      end
+      if prompt.app_name
+        app = Environment.new(path: location.invocation_directory).find_app(prompt.app_name, chooser: chooser)
+        raise Error, "App not found: #{prompt.app_name}" unless app
+        location = location.for_app(app)
+      end
+      if prompt.rel_dir
+        raise Error, "Queue directory cannot be blank" if prompt.rel_dir.to_s.strip.empty?
+        directory = File.expand_path(prompt.rel_dir, location.start_directory)
+        location = location.with_directory(directory, source: :frontmatter)
+        raise Error, "Queue directory escapes its root: #{directory}" unless TaskLocation.contains?(location.root_directory, directory)
+      end
+      location.validate!
+      location
+    end
+
+    def workspace_for_prompt(prompt, location)
+      return select_workspace(prompt.session_name).name if prompt.session_name
+      location.task ? location.workspace_label : HERDR_WORKSPACE
+    end
+
+    def resolve_pane_dir(prompt_path, base_dir = nil)
+      resolve_prompt_context(Prompt.from_file(prompt_path.to_s, hiiro: hiiro), base_dir: base_dir).start_directory
     end
 
     def slugify(text)
@@ -397,8 +376,6 @@ class Hiiro
     end
 
     def add_with_frontmatter(content, task_info: nil, ignore: false, name: nil)
-      queue_dirs # ensure dirs exist
-
       if (task_info || ignore) && !content.start_with?("---")
         fm = {}
         fm['task_name'] = task_info[:task_name] if task_info&.dig(:task_name)
@@ -410,6 +387,7 @@ class Hiiro
           content = "---\n#{fm.map { |k, v| "#{k}: #{v}" }.join("\n")}\n---\n#{content}"
         end
       end
+      resolve_prompt_context(Prompt.new(FrontMatterParser::Parser.new(:md).call(content)))
 
       if name && !name.empty?
         name = slugify(name)
@@ -432,10 +410,10 @@ class Hiiro
       `gem which hiiro`.sub(/.*hiiro-/, '').sub(/\/.*/, '').strip
     end
 
-    def self.build_hiiro(parent_hiiro, q=nil, task_info: nil)
-      q ||= current(parent_hiiro)
+    def self.build_hiiro(parent_hiiro, q=nil, task_info: nil, context: nil, args: parent_hiiro.args)
+      q ||= current(parent_hiiro, context: context)
 
-      parent_hiiro.make_child do |h|
+      parent_hiiro.make_child(context: context || -> { q.context }, args: args) do |h|
         h.add_subcmd(:watch) {
           q.queue_dirs
           current_version = hiiro_version
@@ -679,20 +657,15 @@ class Hiiro
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
 
-          # Auto-detect current task from environment when no explicit context given
-          if ti.nil? && !opts.find && opts.task.nil?
-            env = Environment.current rescue nil
-            auto_task = env&.task
-            ti = q.task_info_for(auto_task.name) if auto_task
-          end
-
           if opts.session || session
-            session_name = h.herdr_client.current_workspace&.name
-            ti = (ti || {}).merge(session_name: session_name) if session_name
+            ti = (ti || {}).merge(session_name: q.calling_workspace_name)
           end
+          template = Prompt.frontmatter_lines(task_info: ti, ignore: opts.ignore, hints: true).join("\n")
+          location = q.resolve_prompt_context(Prompt.new(FrontMatterParser::Parser.new(:md).call(template)))
+          calling_pane = q.calling_pane!(location) if %i[hsplit vsplit].include?(split)
 
           # Split+interactive: open the editor and omp in a new Herdr pane.
-          if split && args.empty? && $stdin.tty?
+          if %i[hsplit vsplit].include?(split) && args.empty? && $stdin.tty?
             fm_lines = Prompt.frontmatter_lines(task_info: ti, ignore: opts.ignore, hints: true)
 
             tmp_dir = File.join(Dir.home, '.config/hiiro/tmp')
@@ -702,42 +675,31 @@ class Hiiro
             script_path = "#{base}.sh"
             File.write(prompt_path, fm_lines.join("\n"))
 
-            # Resolve working dir and chdir so the new pane inherits it
-            task_base_dir = nil
-            if ti
-              if ti[:tree_name]
-                env = Environment.current rescue nil
-                if env
-                  tree = env.find_tree(ti[:tree_name])
-                  task_base_dir = tree&.path || File.join(Hiiro::WORK_DIR, ti[:tree_name])
-                  task_base_dir = nil unless task_base_dir && Dir.exist?(task_base_dir)
-                end
-              elsif ti[:session_name]
-                task_base_dir = q.directory_for_workspace(ti[:session_name])
-              end
-            end
-            Dir.chdir(task_base_dir) if task_base_dir
-
-            agent_cmd = opts.ignore ? 'omp -p' : 'omp'
-            shell_line = opts.ignore ? '' : "exec ${SHELL:-zsh}"
+            task_base_dir = location.start_directory
 
             File.write(script_path, <<~SH)
               #!/usr/bin/env bash
               _PROMPT=#{Shellwords.shellescape(prompt_path)}
-              _BASE_DIR="$(pwd)"
-              ${EDITOR:-vim} "$_PROMPT"
+              _BASE_DIR=#{Shellwords.shellescape(location.root_directory)}
+              _IGNORE=#{opts.ignore ? 'true' : 'false'}
+              ${EDITOR:-vim} "$_PROMPT" || exit $?
               if [ -s "$_PROMPT" ]; then
-                _WD="$(h queue pane-dir "$_PROMPT" "$_BASE_DIR" 2>/dev/null)"
-                [ -n "$_WD" ] && [ -d "$_WD" ] && cd "$_WD"
-                #{agent_cmd} "@$_PROMPT"
+                _WD="$(h queue pane-dir "$_PROMPT" "$_BASE_DIR")" || exit $?
+                [ -n "$_WD" ] && [ -d "$_WD" ] && cd "$_WD" || exit 1
+                _IGNORE="$(h queue pane-ignore "$_PROMPT")" || exit $?
+                if [ "$_IGNORE" = true ]; then
+                  omp -p "@$_PROMPT"
+                else
+                  omp "@$_PROMPT"
+                fi
               fi
               rm -f #{Shellwords.shellescape(prompt_path)} #{Shellwords.shellescape(script_path)}
-              #{shell_line}
+              [ "$_IGNORE" = true ] || exec ${SHELL:-zsh}
             SH
             FileUtils.chmod(0755, script_path)
 
             direction = split == :hsplit ? :down : :right
-            h.herdr_client.split_pane(direction: direction, start_directory: Dir.pwd, command: script_path, focus: true)
+            h.herdr_client.split_pane(target: calling_pane, direction: direction, start_directory: task_base_dir, command: script_path, focus: true)
             next
           end
 
@@ -749,14 +711,10 @@ class Hiiro
             fm_lines = Prompt.frontmatter_lines(task_info: ti, ignore: opts.ignore, hints: true)
             fm_content = fm_lines.join("\n")
 
-            # Start the editor from the selected workspace's active directory.
-            if ti&.dig(:session_name) && !ti[:tree_name]
-              pane_path = q.directory_for_workspace(ti[:session_name])
-              Dir.chdir(pane_path) if pane_path && Dir.exist?(pane_path)
-            end
+            input_directory = location.start_directory
 
             input = InputFile.md_file(hiiro: h, content: fm_content, append: !!fm_content, prefix: 'hq-')
-            input.edit
+            Dir.chdir(input_directory) { input.edit }
             content = input.contents
             input.cleanup
             if content.empty?
@@ -795,16 +753,7 @@ class Hiiro
           args = opts.args
           ti = q.resolve_task_info(opts, h, task_info)
 
-          if ti.nil? && !opts.find && opts.task.nil?
-            env = Environment.current rescue nil
-            auto_task = env&.task
-            ti = q.task_info_for(auto_task.name) if auto_task
-          end
-
-          if opts.session
-            session_name = h.herdr_client.current_workspace&.name
-            ti = (ti || {}).merge(session_name: session_name) if session_name
-          end
+          ti = (ti || {}).merge(session_name: q.calling_workspace_name) if opts.session
 
           name = args.first
 
@@ -942,8 +891,14 @@ class Hiiro
 
         # Internal: resolve working directory for a pane-launched prompt after editing.
         # Used by the cadd/hadd/vadd shell scripts: cd $(h queue pane-dir $file $base)
-        h.add_subcmd(:'pane-dir') { |prompt_path = nil, base_dir = Dir.pwd|
-          print q.resolve_pane_dir(prompt_path.to_s, base_dir.to_s)
+        h.add_subcmd(:'pane-dir') { |prompt_path = nil, base_dir = nil|
+          print q.resolve_pane_dir(prompt_path.to_s, base_dir)
+        }
+
+        h.add_subcmd(:'pane-ignore') { |prompt_path = nil|
+          prompt = Prompt.from_file(prompt_path.to_s)
+          raise Error, "Prompt file not found" unless prompt
+          print prompt.ignore?
         }
 
         h.add_subcmd(:migrate) {
@@ -1096,10 +1051,6 @@ class Hiiro
       # Prompt text without frontmatter.
       def body = doc.content.strip
 
-      def location_ingredients
-        { session_name: session_name, tree_name: tree_name, app_name: app_name, rel_dir: rel_dir }
-      end
-
       def ignore?
         frontmatter['ignore'] == true
       end
@@ -1121,22 +1072,7 @@ class Hiiro
       end
 
       def session_name
-        frontmatter['session_name'] || task&.session_name
-      end
-
-      def task
-        return nil unless task_name
-        hiiro&.environment&.find_task(task_name)
-      end
-
-      def session
-        return nil unless session_name
-        hiiro&.environment&.find_session(session_name)
-      end
-
-      def tree
-        return nil unless tree_name
-        hiiro&.environment&.find_tree(tree_name)
+        frontmatter['session_name']
       end
     end
   end

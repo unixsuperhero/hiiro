@@ -3,37 +3,25 @@
 require 'pathname'
 require 'hiiro'
 
-def task_root
-  # Fall back to current task's tree path if not in a git repo
-  env = Environment.current rescue nil
-  return nil unless env
-
-  task = env.task
-  return nil unless task
-
-  tree = env.find_tree(task.tree_name)
-  tree&.path
-end
-
-
-def relative_cd_path(target_path)
-  pwd = Pathname.new(Dir.pwd)
-  target = Pathname.new(target_path)
-  target.relative_path_from(pwd).to_s
-end
-
-def send_cd(path)
-  pane = ENV['HERDR_PANE_ID']
-  return warn('Not running inside a Herdr pane') unless pane
-
-  Hiiro::Herdr.client.run_in_pane(pane, "cd #{path.shellescape}")
-end
-
-
 Hiiro.run(*ARGV) {
-  add_subcmd(:show) {
-    puts Hiiro::AppRecord.editor_projection.to_yaml
-  }
+  app_context = ->(name = nil) do
+    selected = context
+    name.nil? ? selected.with_directory(selected.root_directory, source: selected.root_source) : selected.for_app(name)
+  end
+  nested_context = ->(native_args) do
+    remaining = native_args.dup
+    selected = context
+    if remaining.first == '--app'
+      remaining.shift
+      name = remaining.shift
+      raise Hiiro::Error, 'Missing app name after --app' if name.nil? || name.empty? || name.start_with?('-')
+      selected = selected.for_app(name)
+    end
+    selected.validate!
+    [selected, remaining]
+  end
+
+  add_subcmd(:show) { puts Hiiro::AppRecord.editor_projection.to_yaml }
 
   add_subcmd(:config, :edit) do
     puts(Hiiro::AppRecord.edit(hiiro: self) ? "Apps updated" : "No apps changed")
@@ -42,35 +30,21 @@ Hiiro.run(*ARGV) {
   end
 
   add_subcmd(:cd) { |app_name=nil|
-    root = git.root || task_root
+    selected = app_context.call(app_name).validate!
+    terminal = selected.terminal
+    raise Hiiro::Error, 'Not running inside a Herdr pane' unless terminal.pane_id
+    client = Hiiro::Herdr.client
+    terminal.validate!(client)
+    client.run_in_pane(terminal.pane_id, "cd #{selected.start_directory.shellescape}")
+  }
 
-    unless root
-      puts "Not in a git repo or task - cannot resolve path"
-      next
-    end
-
-    if app_name.nil? || app_name.empty?
-      send_cd(relative_cd_path(root))
-      next
-    end
-
-    result = environment.app_matcher.find(app_name)
-
-    if result.match?
-      app = result.first.item
-      target = File.join(root, app.relative_path)
-      send_cd(relative_cd_path(target))
-    else
-      puts "App '#{app_name}' not found"
-      puts
-      puts "Available apps:"
-      environment.all_apps.each { |a| puts format("  %-20s => %s", a.name, a.relative_path) }
-    end
+  add_subcmd(:open) { |app_name=nil|
+    selected = app_context.call(app_name).validate!
+    system('open', selected.start_directory)
   }
 
   add_subcmd(:ls, :list) {
     apps = environment.all_apps
-
     if apps.empty?
       puts "No apps configured."
       puts "Add one with: h app add <name> <relative_path>"
@@ -83,70 +57,25 @@ Hiiro.run(*ARGV) {
   }
 
   add_subcmd(:path) { |app_name=nil|
-    root = git.root || task_root
-
-    unless root
-      puts "Not in a git repo or task - cannot resolve path"
-      next
-    end
-
-    if app_name.nil? || app_name.empty?
-      puts relative_cd_path(root)
-      next
-    end
-
-    result = environment.app_matcher.find(app_name)
-
-    if result.match?
-      app = result.first.item
-      target = File.join(root, app.relative_path)
-      puts relative_cd_path(target)
-    else
-      puts "App '#{app_name}' not found"
-    end
+    selected = app_context.call(app_name)
+    puts Pathname.new(selected.start_directory).relative_path_from(Pathname.new(selected.invocation_directory))
   }
 
   add_subcmd(:abspath) { |app_name=nil|
-    root = git.root || task_root
-
-    unless root
-      puts "Not in a git repo or task - cannot resolve path"
-      next
-    end
-
-    if app_name.nil? || app_name.empty?
-      puts root
-      next
-    end
-
-    result = environment.app_matcher.find(app_name)
-
-    if result.match?
-      app = result.first.item
-      puts File.join(root, app.relative_path)
-    else
-      puts "App '#{app_name}' not found"
-    end
+    puts app_context.call(app_name).start_directory
   }
 
   add_subcmd(:add) { |app_name=nil, relative_path=nil|
-    if app_name.nil? || app_name.empty?
+    if app_name.nil? || app_name.empty? || relative_path.nil? || relative_path.empty?
       puts "Usage: h app add <app_name> <relative_path_from_root>"
       next
     end
-
-    if relative_path.nil? || relative_path.empty?
-      puts "Usage: h app add <app_name> <relative_path_from_root>"
-      next
-    end
-
     existing = Hiiro::AppRecord.find_by_name(app_name)
     if existing
       puts "App '#{app_name}' already exists with path: #{existing.path}"
       puts "Remove it first with: h app rm #{app_name}"
       next
     end
-
     Hiiro::AppRecord.create(name: app_name, path: relative_path)
     puts "Added app '#{app_name}' => #{relative_path}"
   }
@@ -156,7 +85,6 @@ Hiiro.run(*ARGV) {
       puts "Usage: h app rm <app_name>"
       next
     end
-
     record = Hiiro::AppRecord.find_by_name(app_name)
     unless record
       puts "App '#{app_name}' not found"
@@ -165,87 +93,39 @@ Hiiro.run(*ARGV) {
       Hiiro::AppRecord.all.each { |a| puts format("  %-20s => %s", a.name, a.path) }
       next
     end
-
     record.destroy
     puts "Removed app '#{app_name}' (was: #{record.path})"
   }
 
-  add_subcmd(:fd) { |app_name=nil, *args|
-    root = git.root || task_root
-    unless root
-      puts "Not in a git repo or task - cannot resolve path"
-      next
-    end
-    result = environment.app_matcher.find(app_name.to_s)
-    unless result.match?
-      puts "App '#{app_name}' not found"
-      next
-    end
-    app_path = File.join(root, result.first.item.relative_path)
-    Dir.chdir(app_path)
-    exec('fd', *args)
-  }
-
-  add_subcmd(:rg) { |app_name=nil, *args|
-    root = git.root || task_root
-    unless root
-      puts "Not in a git repo or task - cannot resolve path"
-      next
-    end
-    result = environment.app_matcher.find(app_name.to_s)
-    unless result.match?
-      puts "App '#{app_name}' not found"
-      next
-    end
-    app_path = File.join(root, result.first.item.relative_path)
-    Dir.chdir(app_path)
-    exec('rg', *args)
-  }
-
-  add_subcmd(:vim) { |app_name=nil, *args|
-    root = git.root || task_root
-    unless root
-      puts "Not in a git repo or task - cannot resolve path"
-      next
-    end
-    result = environment.app_matcher.find(app_name.to_s)
-    unless result.match?
-      puts "App '#{app_name}' not found"
-      next
-    end
-    app_path = File.join(root, result.first.item.relative_path)
-    Dir.chdir(app_path)
-    exec('vim', *args)
-  }
-
-  add_subcmd(:sh) { |app_name=nil, *args|
-    root = git.root || task_root
-    unless root
-      puts "Not in a git repo or task - cannot resolve path"
-      next
-    end
-    result = environment.app_matcher.find(app_name.to_s)
-    unless result.match?
-      puts "App '#{app_name}' not found"
-      next
-    end
-    app_path = File.join(root, result.first.item.relative_path)
-    Dir.chdir(app_path)
-    args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*args)
-  }
-
-  add_subcmd(:service) do |*svc_args|
-    sm = Hiiro::ServiceManager.new
-    Hiiro::ServiceManager.build_hiiro(this, sm).run
+  %w[fd rg vim].each do |tool|
+    add_subcmd(tool.to_sym) { |app_name=nil, *native_args|
+      selected = app_context.call(app_name).validate!
+      Dir.chdir(selected.start_directory)
+      exec(tool, *native_args)
+    }
   end
 
-  add_subcmd(:run) do |*run_args|
-    rt = Hiiro::RunnerTool.new
-    Hiiro::RunnerTool.build_hiiro(this, rt, git: git).run
+  add_subcmd(:sh) { |app_name=nil, *native_args|
+    selected = app_context.call(app_name).validate!
+    Dir.chdir(selected.start_directory)
+    native_args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*native_args)
+  }
+
+  add_subcmd(:service) do |*native_args|
+    selected, remaining = nested_context.call(native_args)
+    sm = Hiiro::ServiceManager.new(context: selected)
+    Hiiro::ServiceManager.build_hiiro(this, sm, context: selected, args: remaining).run
   end
 
-  add_subcmd(:file) do |*file_args|
-    af = Hiiro::AppFiles.new
-    Hiiro::AppFiles.build_hiiro(this, af, environment: environment).run
+  add_subcmd(:run) do |*native_args|
+    selected, remaining = nested_context.call(native_args)
+    rt = Hiiro::RunnerTool.new(context: selected)
+    Hiiro::RunnerTool.build_hiiro(this, rt, context: selected, args: remaining).run
+  end
+
+  add_subcmd(:file) do |*native_args|
+    selected, remaining = nested_context.call(native_args)
+    af = Hiiro::AppFiles.new(context: selected)
+    Hiiro::AppFiles.build_hiiro(this, af, context: selected, args: remaining).run
   end
 }

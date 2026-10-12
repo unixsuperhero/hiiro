@@ -86,4 +86,53 @@ class ProjectTest < Minitest::Test
       assert_equal ['alpha', '/alpha'], Hiiro::Project[record.id].values.values_at(:name, :path)
     end
   end
+
+  def test_paths_use_exact_project_identity_without_a_task
+    Dir.mktmpdir do |directory|
+      root = File.realpath(directory)
+      FileUtils.mkdir_p(File.join(root, 'alpha'))
+      FileUtils.mkdir_p(File.join(root, 'alphabet'))
+      Hiiro::Project.create(name: 'alphabet', path: File.join(root, 'alphabet'))
+      Hiiro::Project.create(name: 'alpha', path: File.join(root, 'alpha'))
+      @harness.stub_method(:fuzzyfind_from_map) { |_| raise 'Unexpected picker' }
+      output, = capture_io { @harness.run_subcmd(:path, 'alpha') }
+      assert_equal "#{root}/alpha", output
+      context = Hiiro::Projects.new.context('alphab', tty: false)
+      assert_equal [nil, 'alphabet', "#{root}/alphabet", :project],
+                   [context.task, context.project.name, context.start_directory, context.source]
+    end
+  end
+
+  def test_unknown_and_ambiguous_project_never_fall_back_to_project_root
+    Hiiro::Project.create(name: 'alpha', path: '/missing-alpha')
+    Hiiro::Project.create(name: 'alpine', path: '/missing-alpine')
+    manager = Hiiro::Projects.new
+    assert_raises(Hiiro::Error) { manager.context('al', tty: false) }
+    assert_raises(Hiiro::Error) { manager.context('unknown', tty: false) }
+    assert_raises(Hiiro::Error) { manager.context('alpha', tty: false) }
+  end
+
+  def test_ambiguous_project_picker_returns_mapped_identity_and_cancellation_fails
+    Hiiro::Project.create(name: 'alpha', path: '/alpha')
+    Hiiro::Project.create(name: 'alpine', path: '/alpine')
+    manager = Hiiro::Projects.new
+    chosen = manager.resolve('al', tty: true, chooser: ->(mapping) { mapping.values.find { |item| item.first == 'alpine' } })
+    assert_equal ['alpine', '/alpine'], chosen
+    assert_raises(Hiiro::Error) { manager.resolve('al', tty: true, chooser: ->(_) { nil }) }
+    assert_raises(Hiiro::Error) { manager.resolve('al', tty: true, chooser: ->(_) { ['forged', '/elsewhere'] }) }
+  end
+
+  def test_omitted_project_selector_keeps_taskless_project_root
+    Dir.mktmpdir do |directory|
+      home = File.realpath(directory)
+      root = File.join(home, 'proj')
+      FileUtils.mkdir_p(root)
+      Dir.stub(:home, home) do
+        selected = Hiiro::Projects.new.context
+        assert_equal [nil, 'proj', root, :project],
+                     [selected.task, selected.project, selected.start_directory, selected.source]
+        assert_raises(Hiiro::Error) { Hiiro::Projects.new.context('') }
+      end
+    end
+  end
 end

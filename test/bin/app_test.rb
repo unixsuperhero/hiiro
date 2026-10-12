@@ -86,4 +86,69 @@ class AppTest < Minitest::Test
     capture_io { @harness.run_subcmd(:edit) }
     assert_equal ['frontend', 'apps/frontend'], Hiiro::AppRecord[app.id].values.values_at(:name, :path)
   end
+
+  def test_paths_share_exact_app_selection_and_invocation_relative_output
+    Dir.mktmpdir do |directory|
+      root = File.realpath(directory)
+      FileUtils.mkdir_p(File.join(root, 'apps', 'api'))
+      FileUtils.mkdir_p(File.join(root, 'nested'))
+      Hiiro::AppRecord.create(name: 'apiary', path: 'apps/apiary')
+      Hiiro::AppRecord.create(name: 'api', path: 'apps/api')
+      selected = Hiiro::TaskLocation.for(nil, root: root, invocation_directory: File.join(root, 'nested'))
+      @harness.stub_method(:context) { selected }
+      relative, = capture_io { @harness.run_subcmd(:path, 'api') }
+      absolute, = capture_io { @harness.run_subcmd(:abspath, 'api') }
+      assert_equal "../apps/api\n", relative
+      assert_equal "#{root}/apps/api\n", absolute
+      root_output, = capture_io { @harness.run_subcmd(:path) }
+      assert_equal "..\n", root_output
+    end
+  end
+
+  def test_missing_and_ambiguous_apps_fail_instead_of_using_another_directory
+    Dir.mktmpdir do |root|
+      selected = Hiiro::TaskLocation.for(nil, root: root)
+      @harness.stub_method(:context) { selected }
+      Hiiro::AppRecord.create(name: 'alpha', path: 'alpha')
+      Hiiro::AppRecord.create(name: 'alpine', path: 'alpine')
+      $stdin.stub(:tty?, false) do
+        assert_raises(Hiiro::Error) { @harness.run_subcmd(:abspath, 'al') }
+        assert_raises(Hiiro::Error) { @harness.run_subcmd(:abspath, 'unknown') }
+        assert_raises(Hiiro::Error) { @harness.run_subcmd(:abspath, 'alpha') }
+      end
+    end
+  end
+
+  def test_blank_app_and_project_selectors_cannot_launch_native_commands
+    require 'open3'
+    Dir.mktmpdir do |directory|
+      sandbox = File.realpath(directory)
+      home = File.join(sandbox, 'home')
+      root = File.join(sandbox, 'code')
+      api = File.join(root, 'api')
+      FileUtils.mkdir_p([File.join(home, 'proj'), api])
+      repo = File.expand_path('../..', __dir__)
+      environment = {'HOME' => home, 'HIIRO_TEST_DB' => "sqlite://#{sandbox}/proof.db",
+                     'HERDR_WORKSPACE_ID' => nil, 'HERDR_TAB_ID' => nil, 'HERDR_PANE_ID' => nil}
+      ruby = [RbConfig.ruby, '-rbundler/setup', '-I', File.join(repo, 'lib')]
+      seed = "require 'hiiro'; Hiiro::DB.setup!; Hiiro::AppRecord.create(name: 'api', path: 'api'); Hiiro::Project.create(name: 'alpha', path: #{api.inspect})"
+      output, error, status = Open3.capture3(environment, *ruby, '-e', seed, chdir: root)
+      assert status.success?, "#{output} #{error}"
+      payload = 'File.write(ARGV.shift, JSON.generate(ARGV))'
+      {'h-app' => 'api', 'h-project' => 'alpha'}.each do |bin, valid_name|
+        ['', '  '].each_with_index do |blank, index|
+          marker = File.join(sandbox, "#{bin}-invalid-#{index}")
+          output, error, status = Open3.capture3(environment, *ruby, File.join(repo, 'bin', bin), 'sh', blank,
+                                               RbConfig.ruby, '-rjson', '-e', payload, marker, chdir: root)
+          assert_equal 1, status.exitstatus, "#{output} #{error}"
+          refute File.exist?(marker), "#{bin} launched with a blank selector"
+        end
+        marker = File.join(sandbox, "#{bin}-valid")
+        output, error, status = Open3.capture3(environment, *ruby, File.join(repo, 'bin', bin), 'sh', valid_name,
+                                             RbConfig.ruby, '-rjson', '-e', payload, marker, '', chdir: root)
+        assert status.success?, "#{output} #{error}"
+        assert_equal [''], JSON.parse(File.read(marker))
+      end
+    end
+  end
 end

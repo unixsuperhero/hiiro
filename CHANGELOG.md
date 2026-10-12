@@ -20,6 +20,7 @@
 
 ### Fixed
 - Fix `PsProcess::Snapshot.capture` constant lookup, which raised `NameError` in `h ps byport`, `h ps indir`, and parent/child process lookups.
+- Optional context resolution no longer hides ambiguity, and scoped Git commands honor their supplied directory.
 
 ### Added
 - `h herdr` and `hh` pane controls for Vim-style focus, two-pane reflow, resize, swap, and zoom
@@ -33,10 +34,14 @@
 - Task metadata, resources, project aliases, app mappings, saved links, branches, and tags use targeted database operations. Definitions, preferences, runtime files, and ordinary artifacts remain file-owned.
 - Legacy imports retain source bytes and verify selected records. Repeating accepted sources preserves later canonical changes and deletions; explicit restore can recreate exported deleted rows.
 - Database-backed editors use temporary projections and reject failed editors, invalid input, and conflicting changes without partial writes.
+- TaskLocation carries one optional task/app/project context, root/effective directory, separate provenance, and calling-terminal IDs through root/task/app workflows. Project/home operations require no task.
+- Exact names precede unique prefixes; terminal ambiguity uses original-object pickers, while non-interactive ambiguity/stale/missing targets fail before launch. Native arguments and explicit calling panes remain intact.
+- Queue normal and pane launch share strict frontmatter resolution; service definitions/env preparation, scoped Git/tool discovery, and root-relative tracked files reuse the selected context.
 
 ### Removed
 - Automatic legacy domain YAML import and mutable-record dual writers. Legacy sources remain explicit retained recovery inputs.
 - Obsolete todo file-path, saved-link snapshot, and task YAML backup APIs; `h db remigrate`, broad YAML retirement, and YAML/tar restore.
+- Conflicting first-match Environment/task/app/project selectors and queue pane-directory fallback joins.
 
 ## [0.1.384] - 2026-09-23
 

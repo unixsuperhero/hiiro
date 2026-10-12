@@ -19,7 +19,7 @@ class Hiiro
     def initialize(hiiro, scope: :task, environment: nil)
       @hiiro = hiiro
       @scope = scope
-      @environment = environment || Environment.current
+      @environment = environment || hiiro.environment
     end
 
     def config
@@ -58,7 +58,7 @@ class Hiiro
       return slash_lookup(name) if name.include?('/')
 
       key = (scope == :subtask) ? :short_name : :name
-      Hiiro::Matcher.new(tasks, key).by_prefix(name).first&.item
+      CurrentTask.select(tasks, name, kind: 'task', key: key, chooser: ->(map) { hiiro.fuzzyfind_from_map(map) })
     end
 
     # Resolve a name to a Task or FallbackTarget (~/proj/* directory).
@@ -71,37 +71,38 @@ class Hiiro
 
       proj_dirs = Dir.glob(File.expand_path('~/proj/*/'))
       dir_names = proj_dirs.map { |d| File.basename(d) }
-      result = Hiiro::Matcher.by_prefix(dir_names, name)
-      if result.one?
-        dir_name = result.first.item
-        return FallbackTarget.from_project(dir_name, File.expand_path("~/proj/#{dir_name}"))
-      elsif result.ambiguous?
-        STDERR.puts "Ambiguous project match for '#{name}': #{result.matches.map(&:item).join(', ')}"
-      end
-
-      nil
+      dir_name = CurrentTask.select(dir_names, name, kind: 'project', key: :itself, chooser: ->(map) { hiiro.fuzzyfind_from_map(map) })
+      FallbackTarget.from_project(dir_name, File.expand_path("~/proj/#{dir_name}")) if dir_name
     end
 
     # Resolve the filesystem path for a Task or FallbackTarget.
     def resolve_path(target)
       return nil unless target
 
-      return target.path if target.is_a?(FallbackTarget)
-      return target.home unless target.tree_name
+      context_for(target).start_directory
+    end
 
-      tree = environment.find_tree(target.tree_name)
-      return tree.path if tree
-      return target.tree_name if target.absolute_tree?
-
-      File.join(Hiiro::WORK_DIR, target.tree_name)
+    def context_for(target)
+      return environment.context unless target
+      if target.is_a?(FallbackTarget)
+        return TaskLocation.for(nil, root: target.path, root_source: :project, project: target.name,
+                                invocation_directory: environment.path, terminal: environment.terminal)
+      end
+      record = TaskRecord.find_by_name(target.name)
+      raise Error, "Task not found: #{target.name}" unless record
+      inherited = environment.resolved_context
+      return inherited if inherited&.task&.id == record.id
+      TaskLocation.for(record, invocation_directory: environment.path, task_source: :explicit, terminal: environment.terminal)
     end
 
     def task_by_tree(tree_name)
-      environment.task_matcher.resolve(tree_name, :tree_name).resolved&.item
+      return nil if tree_name.nil?
+      CurrentTask.select(environment.all_tasks, tree_name, kind: 'task tree', key: :tree_name, chooser: ->(map) { hiiro.fuzzyfind_from_map(map) })
     end
 
     def task_by_session(session_name)
-      environment.task_matcher.resolve(session_name, :session_name).resolved&.item
+      return nil if session_name.nil?
+      CurrentTask.select(environment.all_tasks, session_name, kind: 'task workspace', key: :session_name, chooser: ->(map) { hiiro.fuzzyfind_from_map(map) })
     end
 
     def current_task
@@ -223,27 +224,16 @@ class Hiiro
         return
       end
 
-      tree_path = resolve_path(task)
-
+      context = context_for(task)
+      context = context.for_app(app_name) if app_name
+      context.validate!
+      Herdr::Location.from_env.validate!(hiiro.herdr_client)
       session_name = task.session_name
       workspace = hiiro.herdr_client.find_workspace(session_name)
-
       if workspace
         hiiro.herdr_client.focus_workspace(workspace.id)
       else
-        base_dir = tree_path
-        if app_name
-          app = environment.find_app(app_name)
-          base_dir = app.resolve(tree_path) if app
-        end
-
-        if Dir.exist?(base_dir)
-          Dir.chdir(base_dir)
-          hiiro.start_herdr_workspace(session_name, start_directory: Dir.pwd)
-        else
-          puts "ERROR: Path '#{base_dir}' does not exist"
-          return
-        end
+        hiiro.start_herdr_workspace(session_name, start_directory: context.start_directory)
       end
 
       puts "Switched to '#{task.name}'"
@@ -496,32 +486,9 @@ class Hiiro
     end
 
     def app_path(app_name = nil)
-      task = current_task
-      tree_root = if task
-        resolve_path(task)
-      else
-        Hiiro::Git.new(nil, Dir.pwd).root
-      end
-
-      if app_name.nil?
-        print tree_root
-        return
-      end
-
-      result = environment.app_matcher.find_all(app_name)
-
-      case result.count
-      when 0
-        puts "ERROR: No matches found"
-        puts
-        puts "Possible Apps:"
-        environment.all_apps.each { |a| puts format("  %-20s => %s", a.name, a.relative_path) }
-      when 1
-        print result.first.item.resolve(tree_root)
-      else
-        puts "Multiple matches found:"
-        result.matches.each { |m| puts format("  %-20s => %s", m.item.name, m.item.relative_path) }
-      end
+      context = environment.context
+      context = context.for_app(app_name) if app_name
+      print context.validate!.start_directory
     end
 
     # --- Interactive selection with sk ---
@@ -593,10 +560,11 @@ class Hiiro
     end
 
     def send_cd(path)
-      pane = ENV['HERDR_PANE_ID']
-      return warn('Not running inside a Herdr pane') unless pane
-
-      hiiro.herdr_client.run_in_pane(pane, "cd #{path.shellescape}")
+      directory = TaskLocation.for(nil, root: path, invocation_directory: environment.path).validate!
+      terminal = environment.terminal
+      raise Error, 'Not running inside a Herdr pane' unless terminal.pane?
+      terminal = terminal.validate!(hiiro.herdr_client)
+      hiiro.herdr_client.run_in_pane(terminal.pane_id, "cd #{directory.start_directory.shellescape}")
     end
 
     # --- Private helpers ---
@@ -642,34 +610,8 @@ class Hiiro
     end
 
     def resolve_app(app_name, task)
-      tree_root = resolve_path(task)
-
-      result = environment.app_matcher.find_all(app_name)
-
-      case result.count
-      when 0
-        exact = File.join(tree_root, app_name)
-        return [app_name, exact] if Dir.exist?(exact)
-
-        nested = File.join(tree_root, app_name, app_name)
-        return [app_name, nested] if Dir.exist?(nested)
-
-        puts "ERROR: App '#{app_name}' not found"
-        list_apps
-        nil
-      when 1
-        app = result.first.item
-        [app.name, app.resolve(tree_root)]
-      else
-        exact = result.matches.find { |m| m.item.name == app_name }
-        if exact
-          [exact.item.name, exact.item.resolve(tree_root)]
-        else
-          puts "ERROR: '#{app_name}' matches multiple apps:"
-          result.matches.each { |m| puts "  #{m.item.name}" }
-          nil
-        end
-      end
+      context = context_for(task).for_app(app_name)
+      [context.app.name, context.validate!.start_directory]
     end
 
     public
@@ -755,19 +697,21 @@ class Hiiro
         # current task if no match.
         resolve_task = lambda do |opts, positional|
           if opts.find
-            sel = tm.select_task_interactive
-            next [nil, positional] unless sel
-            task = sel.is_a?(Hiiro::Task) ? sel : nil
+            task = tm.select_task_interactive
+            raise Error, 'No task selected' unless task.is_a?(Task)
             [task, positional]
           elsif opts.task
-            [tm.resolve_name(opts.task), positional]
+            [tm.resolve_name(opts.task) || raise(Error, "Task not found: #{opts.task}"), positional]
+          elsif positional.first == '.'
+            [tm.current_task, positional.drop(1)]
           elsif positional.any?
             found = tm.resolve_name(positional.first)
-            found ? [found, positional[1..]] : [tm.current_task, positional]
+            found ? [found, positional.drop(1)] : [tm.current_task, positional]
           else
             [tm.current_task, positional]
           end
         end
+
 
         task_opts_block = proc {
           option(:task, short: :t, desc: 'Task name')
@@ -969,9 +913,9 @@ class Hiiro
 
         h.add_subcmd(:app) do |app_name=nil|
           if app_name.nil?
-            names = tm.environment.all_apps.map(&:name)
-            app_name = h.fuzzyfind(names)
-            next unless app_name
+            app = h.fuzzyfind_from_map(tm.environment.all_apps.to_h { |item| [item.name, item] })
+            raise Error, 'No app selected' unless app
+            app_name = app.name
           end
           tm.open_app(app_name)
         end
@@ -988,22 +932,10 @@ class Hiiro
         h.add_subcmd(:cd) do |*raw_args|
           opts = Hiiro::Options.parse(raw_args, &task_opts_block)
           task, positional = resolve_task.call(opts, opts.args)
-          unless task
-            puts "No task found"
-            next
-          end
-          tree_path = tm.resolve_path(task)
-          app_name = positional[0]
-          if app_name.nil?
-            tm.send_cd(tree_path)
-          else
-            result = tm.environment.app_matcher.find(app_name)
-            unless result.match?
-              STDERR.puts "App '#{app_name}' not found"
-              next
-            end
-            tm.send_cd(File.join(tree_path, result.first.item.relative_path))
-          end
+          raise Error, 'Too many arguments' if positional.length > 1
+          context = tm.context_for(task)
+          context = context.for_app(positional.first) if positional.first
+          tm.send_cd(context.validate!.start_directory)
         end
 
         h.add_subcmd(:path) do |*raw_args|
@@ -1018,26 +950,15 @@ class Hiiro
           end
 
           task, positional = resolve_task.call(opts, opts.args)
-          unless task
-            STDERR.puts "No task found"
+          context = tm.context_for(task)
+          app_name = positional.first
+          globs = positional.drop(1)
+          context = context.for_app(app_name) if app_name
+          app_path = context.validate!.start_directory
+          unless app_name
+            print app_path
             next
           end
-          tree_path = tm.resolve_path(task)
-
-          app_name = positional[0]
-          globs    = positional[1..]
-
-          if app_name.nil?
-            print tree_path
-            next
-          end
-
-          result = tm.environment.app_matcher.find(app_name)
-          unless result.match?
-            STDERR.puts "App '#{app_name}' not found"
-            next
-          end
-          app_path = File.join(tree_path, result.first.item.relative_path)
 
           if globs.empty?
             print app_path
@@ -1318,33 +1239,37 @@ class Hiiro
           end
         end
 
-        h.add_subcmd(:queue) do |*queue_args|
-          task = tm.current_task
-          task_info = if task
-            {
-              task_name: task.name,
-              tree_name: task.tree_name,
-              session_name: task.session_name
-            }
+        %i[queue service run file].each do |mount|
+          h.add_subcmd(mount) do |*workflow_args|
+            remaining = workflow_args.dup
+            forced = nil
+            find = false
+            if %w[-t --task].include?(remaining.first)
+              remaining.shift
+              forced = remaining.shift || raise(Error, 'A task is required')
+            elsif %w[-f --find].include?(remaining.first)
+              remaining.shift
+              find = true
+            end
+            options = Struct.new(:task, :find).new(forced, find)
+            target, remaining = resolve_task.call(options, remaining)
+            context = tm.context_for(target)
+            if remaining.first == '--app'
+              remaining.shift
+              app = remaining.shift || raise(Error, 'An app is required')
+              context = context.for_app(app)
+            end
+            case mount
+            when :queue
+              Hiiro::Queue.build_hiiro(h, context: context, args: remaining).run
+            when :service
+              Hiiro::ServiceManager.build_hiiro(h, Hiiro::ServiceManager.new(context: context), context: context, args: remaining).run
+            when :run
+              Hiiro::RunnerTool.build_hiiro(h, Hiiro::RunnerTool.new(context: context), context: context, args: remaining).run
+            when :file
+              Hiiro::AppFiles.build_hiiro(h, Hiiro::AppFiles.new(context: context), context: context, args: remaining).run
+            end
           end
-
-          q = Hiiro::Queue.current(parent_hiiro)
-          Hiiro::Queue.build_hiiro(h, q, task_info: task_info).run
-        end
-
-        h.add_subcmd(:service) do |*svc_args|
-          sm = Hiiro::ServiceManager.new
-          Hiiro::ServiceManager.build_hiiro(h, sm, task_manager: tm).run
-        end
-
-        h.add_subcmd(:run) do |*run_args|
-          rt = Hiiro::RunnerTool.new
-          Hiiro::RunnerTool.build_hiiro(h, rt, git: parent_hiiro.git).run
-        end
-
-        h.add_subcmd(:file) do |*file_args|
-          af = Hiiro::AppFiles.new
-          Hiiro::AppFiles.build_hiiro(h, af, environment: tm.environment).run
         end
 
         h.add_subcmd(:prs) do |*args|
@@ -1555,16 +1480,26 @@ class Hiiro
   end
 
   class Environment
-    attr_reader :path
+    def path = @context.is_a?(TaskLocation) ? @context.invocation_directory : @path
 
-    def self.current
-      new(path: Dir.pwd)
-    end
+    def self.current = new(path: Dir.pwd)
 
-    def initialize(path: Dir.pwd, config: nil)
+    def initialize(path: Dir.pwd, config: nil, context: nil, chooser: nil)
       @path = path
       @config = config
+      @context = context
+      @terminal = context.is_a?(TaskLocation) ? context.terminal : Herdr::Location.from_env
+      @chooser = chooser || Hiiro.new('h').method(:fuzzyfind_from_map)
     end
+
+    def context
+      @context = @context.call if @context.respond_to?(:call)
+      @context ||= CurrentTask.new(herdr: -> { Hiiro::Herdr.client }, cwd: path, pin: false, chooser: @chooser).context
+    end
+
+    def terminal = @context.is_a?(TaskLocation) ? @context.terminal : @terminal
+
+    def resolved_context = (@context if @context.is_a?(TaskLocation))
 
     def config
       @config ||= TaskManager::Config.new
@@ -1603,66 +1538,57 @@ class Hiiro
     end
 
     def task
-      return @task if defined?(@task)
-
-      s = session
-      t = tree
-      @task = all_tasks.find { |task|
-        (s && task.session_name == s.name) ||
-          (t && (task.tree_name == t.name || task.tree_name == t.path))
-      }
-      @task ||= begin
-        record = CurrentTask.new(herdr: -> { Hiiro::Herdr.client }, cwd: path, pin: false).resolve
-        record && all_tasks.find { |task| task.name == record.name }
-      end
+      record = context.task
+      record && all_tasks.find { |item| item.name == record.name }
     end
 
     def session
-      @session ||= Hiiro::Herdr.client.current_workspace
+      terminal = context.terminal
+      terminal.workspace_id && Hiiro::Herdr.client.get_workspace(terminal.workspace_id)
     end
 
     def tree
-      @tree ||= all_trees.find { |t| t.match?(path) } || external_task_tree
+      directory = context.code_directory
+      return Tree.from_path(directory) if directory && Dir.exist?(directory)
+      matches = all_trees.select { |item| TaskLocation.contains?(item.path, path) }
+      raise Error, "Ambiguous directory tree: #{matches.map(&:name).join(', ')}" if matches.length > 1
+      matches.first
     end
 
-    def find_task(abbreviated)
+    def find_task(abbreviated, chooser: @chooser, tty: $stdin.tty?)
       return nil if abbreviated.nil?
-
-      if abbreviated.include?('/')
-        result = task_matcher.resolve_path(abbreviated)
-        return result.resolved&.item if result.match?
-
-        parent_prefix, child_prefix = abbreviated.split('/', 2)
-        if 'main'.start_with?(child_prefix)
-          return task_matcher.find(parent_prefix).first&.item
-        end
-
-        nil
-      else
-        task_matcher.find(abbreviated).first&.item
+      raise Error, 'Task reference cannot be empty' if abbreviated.strip.empty?
+      result = abbreviated.include?('/') ? task_matcher.resolve_path(abbreviated) : task_matcher.by_prefix(abbreviated)
+      return result.resolved.item if result.resolved
+      if result.ambiguous?
+        return CurrentTask.choose(result.matches.map(&:item), abbreviated, kind: 'task', chooser: chooser, tty: tty)
       end
+      parent, child = abbreviated.split('/', 2)
+      child && 'main'.start_with?(child) ? CurrentTask.select(all_tasks.select(&:top_level?), parent, kind: 'task', chooser: chooser, tty: tty) : nil
     end
 
-    def find_tree(abbreviated)
+    def find_tree(abbreviated, chooser: @chooser, tty: $stdin.tty?)
       return nil if abbreviated.nil?
-      return Tree.from_path(abbreviated) if abbreviated.to_s.start_with?('/') && Dir.exist?(abbreviated)
-
-      tree_matcher.find(abbreviated).first&.item
+      if abbreviated.to_s.start_with?('/')
+        raise Error, "Directory does not exist: #{abbreviated}" unless Dir.exist?(abbreviated)
+        return Tree.from_path(File.realpath(abbreviated))
+      end
+      CurrentTask.select(all_trees, abbreviated, kind: 'tree', chooser: chooser, tty: tty)
     end
 
-    def find_session(abbreviated)
+    def find_session(abbreviated, chooser: @chooser, tty: $stdin.tty?)
       return nil if abbreviated.nil?
-      session_matcher.find(abbreviated).resolved&.item
+      CurrentTask.select(all_sessions, abbreviated, kind: 'workspace', chooser: chooser, tty: tty)
     end
 
-    def find_app(abbreviated)
+    def find_app(abbreviated, chooser: @chooser, tty: $stdin.tty?)
       return nil if abbreviated.nil?
-      app_matcher.find(abbreviated).first&.item
+      CurrentTask.select(all_apps, abbreviated, kind: 'app', chooser: chooser, tty: tty)
     end
 
     def external_task_tree
-      task = all_tasks.find { |t| t.absolute_tree? && t.tree_name && (path == t.tree_name || path.start_with?(t.tree_name + '/')) }
-      Tree.from_path(task.tree_name) if task
+      directory = context.worktree_path
+      Tree.from_path(directory) if directory && Dir.exist?(directory)
     end
   end
 end
