@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.393] - 2026-10-12
+
+### Added
+- `h json` subcommand (`bin/h-json`)
+
 ## [0.1.392] - 2026-10-12
 
 ### Changed
