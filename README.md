@@ -446,7 +446,7 @@ All configuration lives in `~/.config/hiiro/`:
   bg-history.txt  # Background command history
   env_templates/  # Base .env templates for services
   tasks/          # Task metadata
-  projects.yml    # Project aliases
+  projects.yml    # Legacy; imported once into registry table project, then renamed .bak (edit aliases with h project edit)
   apps.yml        # App directory mappings
   services.yml    # Service and service group definitions
   tools.yml       # Runner tool definitions

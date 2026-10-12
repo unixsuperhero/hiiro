@@ -68,13 +68,4 @@ class FilesystemEffectsTest < Minitest::Test
   ensure
     Hiiro::DB.connection[:schema_migrations].where(name: 'full_migration').delete
   end
-
-  def test_projects_writes_yaml_on_save
-    skip "dual-write disabled" unless Hiiro::DB.dual_write?
-
-    projects = Hiiro::Projects.new(fs: @fs)
-    projects.save_project('myproj', '/home/user/proj/myproj')
-
-    assert_includes @fs.writes, Hiiro::Projects::CONFIG_FILE
-  end
 end

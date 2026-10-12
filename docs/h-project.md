@@ -24,13 +24,13 @@ h project <subcommand> [args]
 Projects are discovered from two sources:
 
 1. Directories in `~/proj/`
-2. Entries in `~/.config/hiiro/projects.yml`
+2. Aliases saved in registry table `project`
 
 The default subcommand (no subcommand) runs `help`.
 
 ### config
 
-Print the contents of `~/.config/hiiro/projects.yml`.
+Print the saved project aliases as YAML (`name: path` per line, sorted by name), or `No project aliases saved.` when there are none.
 
 **Examples**
 
@@ -50,7 +50,7 @@ h project copy
 
 ### edit
 
-Open `~/.config/hiiro/projects.yml` in your editor. Creates the file with a template comment if it doesn't exist.
+Open the saved project aliases as a YAML buffer in your editor. On save, changed paths are updated, new names are added, and removed names are deleted from table `project`. An invalid or empty buffer changes nothing and prints `No changes applied.`.
 
 **Examples**
 
@@ -104,9 +104,11 @@ h project sh hiiro bundle exec rake test
 
 ## Configuration
 
-`~/.config/hiiro/projects.yml`:
+Project aliases live in registry table `project` (name = alias, value = path). `h project config` and `h project edit` show them in this YAML shape:
 
 ```yaml
 my-app: /Users/me/work/my-app
 hiiro: /Users/me/proj/hiiro
 ```
+
+A legacy `~/.config/hiiro/projects.yml` (and the old `projects` SQLite table) is imported into table `project` once at startup; the YAML file is then renamed `projects.yml.bak`.

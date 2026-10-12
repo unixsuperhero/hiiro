@@ -1,9 +1,5 @@
-require 'yaml'
-
 class Hiiro
   class Projects
-    CONFIG_FILE = File.join(Dir.home, '.config', 'hiiro', 'projects.yml')
-
     def self.add_resolvers(hiiro)
       pm = new
       hiiro.add_resolver(:project,
@@ -22,10 +18,6 @@ class Hiiro
       end
     end
 
-    def initialize(fs: Hiiro::Effects::Filesystem.new)
-      @fs = fs
-    end
-
     def dirs
       Dir.glob(File.join(Dir.home, 'proj', '*/')).map { |path|
         [File.basename(path), path]
@@ -33,27 +25,16 @@ class Hiiro
     end
 
     def from_config
-      Project.all_as_hash
-    rescue => e
-      warn "Projects DB load failed: #{e}"
-      return {} unless File.exist?(CONFIG_FILE)
-      YAML.safe_load_file(CONFIG_FILE) || {}
+      table.entries.to_h { |e| [e.name, e.value] }
     end
 
     def save_project(name, path)
-      existing = Project.find_by_name(name)
+      existing = RegistryEntry.where(resource_type: table.name, name: name.to_s).first
       if existing
-        existing.update(path: path.to_s)
+        existing.update(value: path.to_s)
       else
-        Project.create(name: name.to_s, path: path.to_s)
+        table.add(name.to_s, value: path.to_s)
       end
-      # Dual-write: rewrite YAML backup
-      if Hiiro::DB.dual_write?
-        all_projects = Project.all_as_hash
-        @fs.write(CONFIG_FILE, YAML.dump(all_projects, stringify_names: true))
-      end
-    rescue => e
-      warn "Projects DB save failed: #{e}"
     end
 
     def from_config?(name)
@@ -73,5 +54,9 @@ class Hiiro
       matches = matches.select { |k, _| k == name } if matches.count > 1
       matches.count == 1 ? matches.values.first : nil
     end
+
+    private
+
+    def table = Hiiro::Table.named('project')
   end
 end

@@ -7,6 +7,10 @@ def open_project_workspace(name, path)
   Hiiro::Herdr.open_workspace(name.to_s.tr('.', '_'), start_directory: path)
 end
 
+def project_aliases_yaml(aliases)
+  aliases.sort.map { |name, path| "#{name}: #{path}\n" }.join
+end
+
 Hiiro.run(*ARGV) do
   projects = Hiiro::Projects.new
   Hiiro::Projects.add_resolvers(self)
@@ -71,28 +75,38 @@ Hiiro.run(*ARGV) do
     run_subcmd(:list, *ls_args)
   }
 
-  # === SHOW CONFIG FILE ===
+  # === SHOW PROJECT ALIASES ===
   add_subcmd(:config) { |*config_args|
-    if File.exist?(Hiiro::Projects::CONFIG_FILE)
-      puts File.read(Hiiro::Projects::CONFIG_FILE)
-    else
-      puts "No config file found at: #{Hiiro::Projects::CONFIG_FILE}"
+    aliases = projects.from_config
+
+    if aliases.empty?
+      puts "No project aliases saved."
       puts
       puts "Create it with YAML format:"
       puts "  project_name: /path/to/project"
+    else
+      puts project_aliases_yaml(aliases)
     end
   }
 
-  # === EDIT CONFIG FILE ===
+  # === EDIT PROJECT ALIASES ===
   add_subcmd(:edit) { |*edit_args|
-    config_dir = File.dirname(Hiiro::Projects::CONFIG_FILE)
-    Dir.mkdir(config_dir) unless Dir.exist?(config_dir)
+    aliases = projects.from_config
+    content = aliases.empty? ? "# project_name: /path/to/project\n" : project_aliases_yaml(aliases)
 
-    unless File.exist?(Hiiro::Projects::CONFIG_FILE)
-      File.write(Hiiro::Projects::CONFIG_FILE, "# Project aliases\n# project_name: /path/to/project\n")
+    input = yaml_input_file(content:, prefix: 'project-edit-')
+    doc = input.edit.document
+    input.cleanup
+    edited = doc.parsed
+
+    if !doc.valid? || doc.empty? || !edited.is_a?(Hash) || edited.empty?
+      puts "No changes applied."
+      next
     end
 
-    edit_files(Hiiro::Projects::CONFIG_FILE)
+    edited = edited.to_h { |name, path| [name.to_s, path.to_s] }
+    edited.each { |name, path| projects.save_project(name, path) unless aliases[name] == path }
+    (aliases.keys - edited.keys).each { |name| Hiiro::RegistryEntry.where(resource_type: 'project', name:).destroy }
   }
 
   # === SELECT PROJECT ===
@@ -177,16 +191,17 @@ Hiiro.run(*ARGV) do
         h-project open <project_name>   Same as above
         h-project list                  List all known projects
         h-project ls                    Alias for list
-        h-project config                Show config file contents
-        h-project edit                  Edit config file
+        h-project config                Show saved project aliases as YAML
+        h-project edit                  Edit saved project aliases as YAML
         h-project sh <project_name>     Open shell in project directory
 
       SOURCES:
         Projects are discovered from two sources:
         1. Directories in ~/proj/
-        2. Entries in ~/.config/hiiro/projects.yml
+        2. Aliases saved in registry table `project`
+           (~/.config/hiiro/projects.yml is imported once and renamed .bak)
 
-      CONFIG FORMAT (projects.yml):
+      ALIAS FORMAT (h-project config / edit):
         project_name: /path/to/project
         another: /some/other/path
 

@@ -721,7 +721,7 @@ All config lives in `~/.config/hiiro/`:
 - `services/` - Service runtime state
 - `jumplist/` - Per-client tmux navigation history
 - `env_templates/` - Base .env template files for services
-- `projects.yml` - Project directory aliases
+- `projects.yml` - Legacy project aliases; imported once into registry table `project` and renamed `.bak`. Aliases now live in that table; `h project edit` edits it through a YAML buffer
 - `apps.yml` - App directory mappings for task plugin
 - `services.yml` - Service and service group definitions
 - `tools.yml` - Runner tool definitions

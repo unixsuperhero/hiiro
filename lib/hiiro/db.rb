@@ -72,7 +72,7 @@ class Hiiro
         connection[:schema_migrations].insert_conflict.insert(name: 'full_migration', ran_at: Time.now.iso8601)
       end
 
-      ALL_IMPORTERS = %i[todos branches prs pinned_prs tasks assignments apps projects pane_homes reminders tags].freeze
+      ALL_IMPORTERS = %i[todos branches prs pinned_prs tasks assignments apps pane_homes reminders tags].freeze
 
       # Re-run import for specific tables (or all if none specified).
       # Useful after a migration that partially failed. The YAML source files must
@@ -91,6 +91,7 @@ class Hiiro
         import_pin_files(base)
         import_sounds(base)
         import_legacy_links(base)
+        import_legacy_projects(base)
       end
 
       # Registry name for a link: shorthand, else description, else the url.
@@ -113,7 +114,6 @@ class Hiiro
         import_tasks(base)
         import_assignments(base)
         import_apps(base)
-        import_projects(base)
         import_pane_homes(base)
         import_reminders(base)
         import_tags(base)
@@ -348,20 +348,6 @@ class Hiiro
         warn "Hiiro::DB: failed to import apps: #{e}"
       end
 
-      def import_projects(base)
-        path = File.join(base, 'projects.yml')
-        data = load_yaml(path)
-        return unless data
-
-        projects = data.is_a?(Hash) ? data : {}
-        projects.each do |name, proj_path|
-          connection[:projects].insert('name' => name.to_s, 'path' => proj_path.to_s)
-        end
-        bak(path)
-      rescue => e
-        warn "Hiiro::DB: failed to import projects: #{e}"
-      end
-
       def import_pane_homes(base)
         path = File.join(base, 'pane_homes.yml')
         data = load_yaml(path)
@@ -450,6 +436,26 @@ class Hiiro
         bak(path)
       rescue => e
         warn "Hiiro::DB: failed to import links: #{e}"
+      end
+
+      def import_legacy_projects(base)
+        if connection.table_exists?(:projects)
+          # The table stays until the installed gem no longer reads it, like pins.
+          connection[:projects].order(:name).each do |row|
+            insert_registry_row('project', row[:name].to_s, row[:path].to_s)
+          end
+        end
+
+        path = File.join(base, 'projects.yml')
+        return unless File.exist?(path)
+
+        data = load_yaml(path)
+        if data.is_a?(Hash)
+          data.each { |name, proj_path| insert_registry_row('project', name.to_s, proj_path.to_s) }
+        end
+        bak(path)
+      rescue => e
+        warn "Hiiro::DB: failed to import projects: #{e}"
       end
 
       # Returns the id of the row holding url (new or already present), or nil.

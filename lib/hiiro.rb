@@ -49,7 +49,6 @@ require_relative "hiiro/any_struct"
 require_relative "hiiro/pinned_pr"
 require_relative "hiiro/pinned_pr_manager"
 require_relative "hiiro/projects"
-require_relative "hiiro/project"
 require_relative "hiiro/pane_home"
 require_relative "hiiro/reminder"
 require_relative 'hiiro/registry'
