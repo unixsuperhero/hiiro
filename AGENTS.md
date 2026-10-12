@@ -24,6 +24,18 @@ Tests are organized under `test/`:
 
 The `Hiiro::TestHarness` class (in `test/test_helper.rb`) enables testing bin files by capturing the block passed to `Hiiro.run` and evaluating it in a test context with stubbed `system` calls.
 
+
+## Making Changes
+
+Hiiro is extensible, and when working on a bin or subcommand, there could be
+multiple variations of a bun and which one the user assumes is latest might not
+be accurate.  The common places for these bins are:
+
+- ~/bin/
+- ~/proj/phome/bin/
+- ~/proj/hiiro/bin/
+- any version of the gem installed via rbenv
+
 ## Architecture
 
 ### Core Components (bin/h)
