@@ -2,6 +2,8 @@
 
 Store, search, tag, and open saved URLs.
 
+Links live in the `link` registry table of the hiiro database (`~/.config/hiiro/hiiro.db`), one entry per URL: the URL is the entry's value, the shorthand its short name, and `created_at` sets the numbering in `ls`. The old `links` table and `~/.config/hiiro/links.yml` were imported into it once; `links.yml` was renamed `links.yml.bak`.
+
 ## Synopsis
 
 ```bash
@@ -20,11 +22,11 @@ h link <subcommand> [args]
 | `copy [terms]` | Fuzzy-select a link and copy URL to clipboard |
 | `open [ref]` | Open a link in the browser |
 | `edit <ref>` | Edit a specific link in editor |
-| `editall` | Edit the links YAML file directly |
+| `editall` | Edit every link as YAML in your editor |
 | `rm [ref]` | Remove a link |
 | `remove [ref]` | Alias for `rm` |
 | `tags [tag]` | List links grouped by tag |
-| `path` | Print path to the links storage file |
+| `path` | Print the database path that holds the `link` table |
 
 ### add
 
@@ -73,7 +75,7 @@ h link edit ex
 
 ### editall
 
-Open the raw links YAML file in your editor.
+Open every link in your editor as a YAML list (`url`, `description`, `shorthand`, `created_at`). On save the list is applied back by URL: changed rows are updated, new URLs are added, and links whose URL you removed are deleted. An empty or unparseable file changes nothing.
 
 **Examples**
 
@@ -122,7 +124,7 @@ h link paste "PR template" --tag github
 
 ### path
 
-Print the path to the links YAML file.
+Print the hiiro database path followed by ` (table link)`, e.g. `/Users/me/.config/hiiro/hiiro.db (table link)`.
 
 **Examples**
 

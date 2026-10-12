@@ -426,9 +426,9 @@ loc.target                                    # pane_id || tab_id || workspace_i
 loc.to_meta                                   # inverse of from_meta (queue/service metadata)
 ```
 
-### Hiiro::Link / Hiiro::URLTemplate (lib/hiiro/link.rb)
+### Hiiro::URLTemplate (lib/hiiro/link.rb)
 
-`bin/h-link` uses `Hiiro::Link` directly (its inline `LinkManager::Link` copy is gone). `Link.from_hash(yaml_row)` builds an unsaved instance; `to_h` / `to_yaml` give the links.yml shape.
+Saved links are the `link` registry table (url → value, shorthand → short_name, description, created_at for the numbered order); `bin/h-link` reads and writes them through `Hiiro::Table.named('link')` and wraps each `RegistryEntry` in its own `LinkPresenter`. `h link path` prints the database path. `DB.import_tables!` imported the legacy `links` table (kept for the installed gem) and `links.yml` (renamed `.bak`) once; `Hiiro::DB.link_name(url, shorthand, description)` picks the entry name.
 
 ```ruby
 t = Hiiro::URLTemplate.new('https://x/{org}/{repo}', values: { 'org' => 'a b' })

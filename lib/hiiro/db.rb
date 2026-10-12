@@ -72,7 +72,7 @@ class Hiiro
         connection[:schema_migrations].insert_conflict.insert(name: 'full_migration', ran_at: Time.now.iso8601)
       end
 
-      ALL_IMPORTERS = %i[todos links branches prs pinned_prs tasks assignments apps projects pane_homes reminders tags].freeze
+      ALL_IMPORTERS = %i[todos branches prs pinned_prs tasks assignments apps projects pane_homes reminders tags].freeze
 
       # Re-run import for specific tables (or all if none specified).
       # Useful after a migration that partially failed. The YAML source files must
@@ -90,6 +90,15 @@ class Hiiro
         import_legacy_pins_table
         import_pin_files(base)
         import_sounds(base)
+        import_legacy_links(base)
+      end
+
+      # Registry name for a link: shorthand, else description, else the url.
+      # Falls back to the url when another link already holds that name.
+      def link_name(url, shorthand, description)
+        preferred = [shorthand, description, url].map(&:to_s).find { |s| !s.empty? }
+        holder = connection[:registry].where(resource_type: 'link', name: preferred).get(:value)
+        holder.nil? || holder == url ? preferred : url
       end
 
       private
@@ -98,7 +107,6 @@ class Hiiro
         base = Hiiro::Config::BASE_DIR
 
         import_todos(base)
-        import_links(base)
         import_branches(base)
         import_prs(base)
         import_pinned_prs(base)
@@ -172,26 +180,6 @@ class Hiiro
         bak(path)
       rescue => e
         warn "Hiiro::DB: failed to import todos: #{e}"
-      end
-
-      def import_links(base)
-        path = File.join(base, 'links.yml')
-        data = load_yaml(path)
-        return unless data
-
-        links = data.is_a?(Array) ? data : []
-        links.each do |row|
-          next unless row.is_a?(Hash)
-          normalized = row.transform_keys(&:to_s)
-          url = normalized['url'].to_s
-          next if url.empty? || connection[:links].where(url: url).count > 0
-          connection[:links].insert(normalized)
-        rescue => e
-          warn "Hiiro::DB: skipping link row (#{e.class}: #{e.message.lines.first&.strip})"
-        end
-        bak(path)
-      rescue => e
-        warn "Hiiro::DB: failed to import links: #{e}"
       end
 
       def import_branches(base)
@@ -438,6 +426,67 @@ class Hiiro
         bak(path)
       rescue => e
         warn "Hiiro::DB: failed to import sounds: #{e}"
+      end
+
+      def import_legacy_links(base)
+        if connection.table_exists?(:links)
+          # The table stays until the installed gem no longer reads it, like pins.
+          new_ids = connection[:links].order(:id).each_with_object({}) do |row, ids|
+            id = insert_link_row(row[:url], row[:shorthand], row[:description], row[:created_at])
+            ids[row[:id].to_s] = id if id
+          end
+          copy_link_tags(new_ids)
+        end
+
+        path = File.join(base, 'links.yml')
+        data = load_yaml(path)
+        return unless data
+
+        Array(data).each do |row|
+          next unless row.is_a?(Hash)
+          r = row.transform_keys(&:to_s)
+          insert_link_row(r['url'], r['shorthand'], r['description'], r['created_at'])
+        end
+        bak(path)
+      rescue => e
+        warn "Hiiro::DB: failed to import links: #{e}"
+      end
+
+      # Returns the id of the row holding url (new or already present), or nil.
+      def insert_link_row(url, shorthand, description, created_at)
+        url = url.to_s
+        return if url.empty?
+
+        rows = connection[:registry].where(resource_type: 'link')
+        existing = rows.where(value: url).get(:id)
+        return existing if existing
+
+        name = link_name(url, shorthand, description)
+        return if rows.where(name: name).count > 0
+
+        created_at = created_at.iso8601 if created_at.respond_to?(:iso8601)
+        connection[:registry].insert(
+          resource_type: 'link',
+          name:          name,
+          value:         url,
+          short_name:    shorthand.to_s.empty? ? nil : shorthand.to_s,
+          description:   description,
+          created_at:    created_at&.to_s || Time.now.iso8601
+        )
+      end
+
+      # Copies rather than moves the 'Link' tags so the installed gem keeps them.
+      def copy_link_tags(new_ids)
+        return unless connection.table_exists?(:tags)
+
+        tags = connection[:tags]
+        tags.where(taggable_type: 'Link').order(:id).all.each do |t|
+          new_id = new_ids[t[:taggable_id].to_s] or next
+          target = { name: t[:name], taggable_type: 'RegistryEntry', taggable_id: new_id.to_s }
+          next if tags.where(target).count > 0
+
+          tags.insert(target.merge(created_at: t[:created_at]))
+        end
       end
 
       def scalar?(value) = !value.is_a?(Hash) && !value.is_a?(Array)

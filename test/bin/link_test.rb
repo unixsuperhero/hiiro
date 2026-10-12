@@ -2,9 +2,6 @@ require "test_helper"
 
 class LinkTest < Minitest::Test
   def setup
-    @mock_lm = MockLinkManager.new
-    mock = @mock_lm
-
     @harness = Hiiro::TestHarness.load_bin("bin/h-link")
   end
 
@@ -15,29 +12,10 @@ class LinkTest < Minitest::Test
     end
   end
 
-  class MockLinkManager
-    def load_links
-      []
-    end
+  def test_display_string_matches_the_numbered_ls_line
+    entry = Hiiro::RegistryEntry.new(resource_type: "link", name: "jf", short_name: "jf",
+                                     value: "http://x", description: "jellyfin")
 
-    def save_links(links)
-    end
-
-    def links_file
-      "/tmp/test_links.yml"
-    end
-
-    def load_link_hash(links = nil)
-      {}
-    end
-
-    def hash_matches?(lines, *args)
-      lines
-    end
-
-    def has_placeholders?(url)
-      false
-    end
+    assert_equal "2. [jf] http://x - jellyfin", LinkPresenter.new(entry).display_string(1)
   end
-
 end

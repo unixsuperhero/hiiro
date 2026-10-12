@@ -58,12 +58,12 @@ Surveyed 2026-10-12 before starting: links and projects already lived in their o
 **Build.**
 - [x] 3a. `DB.import_tables!` runs at every startup and inserts a row only when its (table, name) is absent. The `pins` table rows, every `pins/*` file (any extension, `h-` prefix stripped), and `sounds.yml` become tables named after the command plus `sound`. Files are renamed `.bak`. The `pins` table itself stays until the installed gem is republished, because the old library recreates and reads it. Drop it afterwards with `h db q "drop table pins"`.
 - [x] 3a. `PinRecord` deleted. `t use` and the pinned current task read and write table `t`, entry `current_task`. The Pins plugin (loaded by fifteen bins) stores pins in the table named after its bin and no longer writes YAML.
-- [ ] 3b. `bin/h-link` reads and writes table `link` (url to value, shorthand to short_name, description, created_at kept for the numbered order). The 10 `links` rows and their tags are imported once; `Hiiro::Link` is deleted and `URLTemplate` stays. `links.yml` dual-write stops.
+- [x] 3b. `bin/h-link` reads and writes table `link` (url to value, shorthand to short_name, description, created_at kept for the numbered order). The 10 `links` rows and their tags are imported once; `Hiiro::Link` is deleted and `URLTemplate` stays. `links.yml` dual-write stops.
 - [ ] 3c. `Hiiro::Projects` reads table `project`. The `projects` row and the `ane` alias still in `projects.yml` are imported once. `h project config` edits the table through the YAML edit helper.
 
 **Verify, unit.** 3a done 2026-10-12: table_import_test 2 runs 13 assertions, pins_test 8 runs, current_task_test 3 runs, all green; full suite shows only the six pre-existing failures.
 
-**Verify, live.** 3a done 2026-10-12 on the real database after backing it up to `hiiro.db.pre-tables-20261012-020244.sqlite`: 17 registry rows across `sha`, `sound`, `t`; `pins/h-sha` and `sounds.yml` renamed `.bak`; `t current` still prints the pinned task. 3b: `h link ls` and `h link list` byte-identical to the golden output captured before any change. 3c: `h project ls` identical and `ane` present.
+**Verify, live.** 3a done 2026-10-12 on the real database after backing it up to `hiiro.db.pre-tables-20261012-020244.sqlite`: 17 registry rows across `sha`, `sound`, `t`; `pins/h-sha` and `sounds.yml` renamed `.bak`; `t current` still prints the pinned task. 3b done 2026-10-12 on the real database after backing it up to `hiiro.db.pre-links-20261012-021156.sqlite`: 10 rows in table `link` with created_at kept; `h link ls` and `h link list` byte-identical to the golden output captured before any change. 3c: `h project ls` identical and `ane` present.
 
 ## PR 4. `h table`
 
