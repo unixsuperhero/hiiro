@@ -24,9 +24,6 @@ class CommandSpecificationTest < Minitest::Test
     three = Hiiro::Shell.run3('sh', '-c', 'echo err 1>&2')
     assert_equal "err\n", three.stderr
     assert_equal 'sh', three.spec.argv.first
-
-    streamed = Hiiro::Shell.stream('echo', 'x', tee: nil)
-    assert_equal 'echo x', streamed.command
   end
 
   def test_shell_text_stays_distinct_from_argv_and_round_trips
@@ -34,7 +31,7 @@ class CommandSpecificationTest < Minitest::Test
     assert_equal :shell, shell.kind
     assert_equal 'echo "$HOME" | wc -c', shell.preview
     assert_equal ['/bin/bash', '-c', 'echo "$HOME" | wc -c'], shell.argv
-    assert_equal({ 'kind' => 'shell', 'env' => { 'A' => '1' }, 'cwd' => '/tmp', 'shell' => 'echo "$HOME" | wc -c' }, shell.to_h)
+    assert_equal({ 'kind' => 'shell', 'env' => { 'A' => '1' }, 'cwd' => '/tmp', 'shell' => 'echo "$HOME" | wc -c', 'args' => [] }, shell.to_h)
     assert_equal shell.argv, Hiiro::CommandSpecification.from_h(shell.to_h).argv
 
     argv = Hiiro::CommandSpecification.new('printf', '%s', 'a b')
@@ -54,11 +51,16 @@ class CommandSpecificationTest < Minitest::Test
     assert_equal [nil, 'TERM', false, 143, 'signal TERM'], [outcome.exit_code, outcome.signal, outcome.success?, outcome.shell_code, outcome.to_s]
   end
 
-  def test_stream_writes_each_chunk_once
-    out = StringIO.new
-    result = Hiiro::Shell.stream('printf', 'one\ntwo\n', tee: out)
-    assert_equal "one\ntwo\n", out.string
-    assert_equal "one\ntwo\n", result.stdout
+  def test_shell_text_receives_args_as_positional_parameters_without_splicing
+    Dir.mktmpdir do |dir|
+      files = ['-lead.rb', "it's \"q\".rb", "new\nline.rb", '$(touch PWNED);x.rb', 'semi;&|.rb']
+      spec = Hiiro::CommandSpecification.shell('printf "%s|" "$@"', args: files, cwd: dir)
+      assert_equal ['/bin/bash', '-c', 'printf "%s|" "$@"', 'hiiro-shell', *files], spec.argv
+      assert_equal spec.argv, Hiiro::CommandSpecification.from_h(spec.to_h).argv
+      result = Hiiro::Shell.execute(spec)
+      assert_equal files.map { |file| "#{file}|" }.join, result.stdout
+      assert_equal [], Dir.children(dir)
+    end
   end
 
   def test_execute_passes_stdin_cwd_and_env_and_keeps_bytes_and_status

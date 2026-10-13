@@ -50,7 +50,7 @@ class CommandContextTest < Minitest::Test
     @db[:apps].insert(name: 'api-admin', path: 'apps/admin')
     @db[:projects].insert(name: 'demo', path: @git_root)
     @db[:projects].insert(name: 'demo-extra', path: @task_root)
-    File.write(File.join(@config, 'tools.yml'), {'observe' => {'command' => [RbConfig.ruby, @program].shelljoin, 'tool_type' => 'test'}}.to_yaml)
+    File.write(File.join(@config, 'tools.yml'), {'observe' => {'argv' => [RbConfig.ruby, @program], 'tool_type' => 'test'}}.to_yaml)
     File.write(File.join(@config, 'app_files.yml'), {'api' => ['apps/api/entry.rb']}.to_yaml)
   end
 
@@ -159,7 +159,7 @@ class CommandContextTest < Minitest::Test
 
   def test_scoped_git_and_runner_file_discovery_ignore_invocation_repository
     assert_equal @task_root, script("puts Hiiro::Git.new(nil, #{@task_root.inspect}).root", cwd: @git_root).strip
-    File.write(File.join(@config, 'tools.yml'), {'observe' => {'command' => [RbConfig.ruby, @program].shelljoin + ' [FILENAMES]', 'tool_type' => 'test', 'file_extensions' => 'rb'}}.to_yaml)
+    File.write(File.join(@config, 'tools.yml'), {'observe' => {'argv' => [RbConfig.ruby, @program, '[FILENAMES]'], 'tool_type' => 'test', 'file_extensions' => 'rb'}}.to_yaml)
     command('t', 'run', '-t', 'alpha', '--app', 'api', 'dirty', cwd: @git_root)
     assert_equal({'cwd' => File.join(@task_root, 'apps/api'), 'argv' => ['entry.rb'],
       'files' => {File.join(@task_root, 'apps/api/entry.rb') => "task-root file\n"}}, marker)

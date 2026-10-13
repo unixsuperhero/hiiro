@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'tempfile'
 require 'tmpdir'
 require 'time'
 require 'yaml'
@@ -8,8 +7,6 @@ require 'digest'
 require 'fileutils'
 require 'hiiro'
 
-TEMPFILE = Tempfile.new('codehiiro').tap(&:close)
-TMPFILE = File.open(TEMPFILE.path, 'w')
 NULL = '/dev/null'
 
 SCRIPT = '    "dist": "CSC_NAME=\"Joshua Toyota (R78J3KN7M4)\" bun run scripts/build-desktop-artifact.ts --signed --platform mac --target dir --arch arm64",'
@@ -288,23 +285,16 @@ Hiiro.run do
       File.write('package.json', newpkg.join("\n"))
     end
 
-    puts
-    puts "--TEMPFILE--"
-    puts TEMPFILE.path
-    puts TMPFILE.path
-    puts "--TEMPFILE--"
-    puts
+    argv = prev_package.any? { |line| line[/\bvp\b/] } ? ['pnpm', 'dist', *args] : ['bun', 'run', 'dist', '--verbose', *args]
+    # The build streams through the shared validation runner, so a failed dist
+    # keeps its log (with this tree as its context) for `h run queue`.
+    location = Hiiro::TaskLocation.for(nil, root: Dir.pwd, root_source: :ch_tree, invocation_directory: Dir.pwd)
+    step = Hiiro::RunnerTool::Step.new('dist', Hiiro::CommandSpecification.new(*argv, cwd: location.start_directory), nil)
+    code = Hiiro::RunnerTool.execute([step], context: location)
 
-    result =
-      if prev_package.any{|line| line[/\bvp\b/] }
-        Hiiro::Shell.stream_combined('pnpm', 'dist', *args, tee: TMPFILE)
-      else
-        Hiiro::Shell.stream_combined('bun', 'run', 'dist', '--verbose', *args, tee: TMPFILE)
-      end
-
-    unless result.success?
+    unless code.zero?
       puts 'FAIL: dist failed'
-      exit 1
+      exit code
     end
 
     # `bun run dist` exports the signed bundle directly to release/CodeHiiro.app.
@@ -366,12 +356,11 @@ Hiiro.run do
 
     home = resolve_home(Dir.pwd)
 
-    result = Hiiro::Shell.stream_combined(
-      'open', 'release/CodeHiiro.app', *args,
-      'T3CODE_HOME' => home,
+    outcome = Hiiro::Shell.foreground(
+      Hiiro::CommandSpecification.new('open', 'release/CodeHiiro.app', *args, env: { 'T3CODE_HOME' => home }),
     )
 
-    unless result.success?
+    unless outcome.success?
       puts 'FAIL: opening CodeHiiro.app failed'
       exit 1
     end

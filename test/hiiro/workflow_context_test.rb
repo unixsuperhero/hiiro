@@ -95,14 +95,12 @@ class WorkflowContextTest < Minitest::Test
       File.write(File.join(repo, 'other.rb'), 'outside-app')
       config = File.join(root, 'tools.yml')
       File.write(config, YAML.dump('proof' => { 'file_extensions' => 'rb',
-        'command' => "printf '%s\\n' [FILENAMES] > files.marker; pwd > cwd.marker" }))
+        'shell' => "printf '%s\\n' \"$@\" > files.marker; pwd > cwd.marker" }))
       runner = Hiiro::RunnerTool.new(config_file: config, context: context_for(repo, app))
       assert_equal 'proof', runner.find_tool('proof')[:name]
       assert_raises(Hiiro::Error) { runner.find_tool('') }
-      git = Hiiro::Git.new(nil, repo)
-      assert_equal File.realpath(repo), git.root
-      assert_equal ['a file.rb', "quote' space.rb"], runner.changed_files('dirty', git: git).sort
-      assert runner.run(git: git)
+      assert_equal ['a file.rb', "quote' space.rb"], Hiiro::RunnerTool::ChangeSet.collect('dirty', directory: app).files.sort
+      Dir.chdir(root) { assert_equal 0, runner.run(out: StringIO.new, stdin: File::NULL) }
       assert_equal app, File.read(File.join(app, 'cwd.marker')).strip
       assert_equal "a file.rb\nquote' space.rb\n", File.read(File.join(app, 'files.marker'))
     end

@@ -42,36 +42,14 @@ Hiiro.run do
     end
   end
 
+  # The package's four checks in this directory, through the shared validation
+  # runner: each runs even when an earlier one fails, failed logs are retained
+  # with the task context, and the exit status is the first failure's.
   add_cmd :all do
-    require 'fileutils'
-
-    tool_cmds = [
-      %w[yarn fmt],
-      %w[yarn typecheck],
-      %w[yarn test],
-      %w[yarn build],
-    ]
-
-    tool_results = tool_cmds.map do |cmd|
-      puts "\n==> #{cmd.join(' ')}"
-      [cmd, Hiiro::Shell.stream_combined(*cmd)]
+    location = context.with_directory(Dir.pwd, source: :invocation)
+    steps = [%w[yarn fmt], %w[yarn typecheck], %w[yarn test], %w[yarn build]].map do |argv|
+      Hiiro::RunnerTool::Step.new(argv.join(' '), Hiiro::CommandSpecification.new(*argv, cwd: location.start_directory), nil)
     end
-
-    all_passed = tool_results.all? { |_, r| r.success? }
-
-    failed = tool_results.reject { |_, r| r.success? }
-    unless failed.empty?
-      log_dir = File.expand_path('~/notes/files')
-      FileUtils.mkdir_p(log_dir)
-      ts = Time.now.strftime('%Y%m%d%H%M%S')
-
-      puts "\n--- failed ---"
-      failed.each do |cmd, result|
-        slug = cmd.join('-').gsub(/[^a-zA-Z0-9]/, '-')
-        log_path = File.join(log_dir, "h-js-all-#{ts}-#{slug}.log")
-        File.write(log_path, result.stdout)
-        puts log_path
-      end
-    end
+    exit Hiiro::RunnerTool.execute(steps, context: location)
   end
 end

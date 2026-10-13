@@ -58,6 +58,13 @@ class Hiiro
     def workspace_label = task && (task.session || task.name).tr('.', '_')
     def contains?(path) = self.class.contains?(root_directory, path)
 
+    # Which task/app/directory was chosen and why, as stored with run evidence.
+    def provenance
+      { 'task' => task&.name, 'task_source' => task_source&.to_s, 'app' => app&.name,
+        'app_directory' => app && File.expand_path(app_directory), 'root' => root_directory, 'root_source' => root_source.to_s,
+        'directory' => start_directory, 'directory_source' => source.to_s }
+    end
+
     def for_app(selected)
       self.class.for(task, **derivation, app: selected, override: override, directory_source: source)
     end

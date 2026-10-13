@@ -3,33 +3,43 @@ require 'shellwords'
 
 class Hiiro
   # What Shell ran: argv, environment (normalized to strings), working directory.
-  # A spec built with .shell keeps the authored shell text separate from argv.
+  # A spec built with .shell keeps the authored shell text separate from argv;
+  # its args reach the text as "$@", never spliced into it.
   class CommandSpecification
     SHELL = '/bin/bash'
+    SHELL_NAME = 'hiiro-shell'
 
-    attr_reader :argv, :env, :cwd, :shell_text
+    attr_reader :argv, :env, :cwd, :shell_text, :shell_args
 
-    def self.shell(text, env: {}, cwd: nil)
-      new(SHELL, '-c', text, env: env, cwd: cwd, shell_text: text)
+    def self.shell(text, args: [], env: {}, cwd: nil)
+      positional = args.empty? ? [] : [SHELL_NAME, *args]
+      new(SHELL, '-c', text, *positional, env: env, cwd: cwd, shell_text: text, shell_args: args)
     end
 
     def self.from_h(hash)
-      return shell(hash['shell'], env: hash['env'] || {}, cwd: hash['cwd']) if hash['kind'] == 'shell'
+      return shell(hash['shell'], args: hash['args'] || [], env: hash['env'] || {}, cwd: hash['cwd']) if hash['kind'] == 'shell'
 
       new(*hash.fetch('argv'), env: hash['env'] || {}, cwd: hash['cwd'])
     end
 
-    def initialize(*argv, env: {}, cwd: nil, shell_text: nil)
+    def initialize(*argv, env: {}, cwd: nil, shell_text: nil, shell_args: [])
       @argv = argv.flatten
       @env  = env.transform_keys(&:to_s).transform_values(&:to_s)
       @cwd  = cwd
       @shell_text = shell_text
+      @shell_args = shell_args.map(&:to_s)
     end
 
-    def kind       = shell_text ? :shell : :argv
-    def preview    = shell_text || Shellwords.join(argv)
+    def kind = shell_text ? :shell : :argv
+    def to_s = preview
+
+    def preview
+      return Shellwords.join(argv) unless shell_text
+
+      shell_args.empty? ? shell_text : "#{shell_text} -- #{Shellwords.join(shell_args)}"
+    end
+
     def open3_args = cwd ? [env, *argv, { chdir: cwd }] : [env, *argv]
-    def to_s       = preview
 
     def spawn_args(**options)
       options = options.merge(chdir: cwd) if cwd
@@ -38,7 +48,7 @@ class Hiiro
 
     def to_h
       base = { 'kind' => kind.to_s, 'env' => env, 'cwd' => cwd }
-      kind == :shell ? base.merge('shell' => shell_text) : base.merge('argv' => argv)
+      kind == :shell ? base.merge('shell' => shell_text, 'args' => shell_args) : base.merge('argv' => argv)
     end
   end
 
@@ -132,58 +142,9 @@ class Hiiro
       stdout, stderr, status = Open3.capture3(*spec.open3_args)
       Result.new(stdout, status, stderr: stderr, spec: spec)
     end
-
-    # Stream stdout live to $stdout as chunks arrive, buffering for Result.
-    # stderr passes through to the parent process (not captured).
-    #
-    # ~/bin/h-tds does this manually with popen2e for Chromatic:
-    #
-    #   Open3.popen2e('unbuffer pnpm chromatic') do |stdin, stdout_err, wait_thr|
-    #     stdin.close
-    #     loop do
-    #       chunk = stdout_err.readpartial(4096)
-    #       $stdout.write(chunk)
-    #       @output << chunk
-    #     rescue EOFError
-    #       break
-    #     end
-    #     @exit_status = wait_thr.value
-    #   end
-    #
-    # stream_combined replaces that pattern — stderr merged in, one Result back.
-    def self.stream(*command, tee: $stdout, **env)
-      spec = CommandSpecification.new(*command, env: env)
-      Open3.popen2(*spec.open3_args) do |stdin, stdout, wait_thr|
-        stdin.close
-        return Result.collect_chunks(stdout, wait_thr, tee: tee, spec: spec)
-      end
-    end
-
-    def self.stream_combined(*command, tee: $stdout, **env)
-      spec = CommandSpecification.new(*command, env: env)
-      Open3.popen2e(*spec.open3_args) do |stdin, stdout_err, wait_thr|
-        stdin.close
-        return Result.collect_chunks(stdout_err, wait_thr, tee: tee, spec: spec)
-      end
-    end
   end
 
   class Result
-    # Factory: reads chunks from an IO (popen handle), optionally tee-ing
-    # each chunk to `tee` as it arrives. Used by Shell.stream / stream_combined.
-    # Pass tee: nil to capture without printing.
-    def self.collect_chunks(io, wait_thr, tee: $stdout, spec: nil)
-      output = +""
-      loop do
-        chunk = io.readpartial(4096)
-        tee&.write(chunk)
-        output << chunk
-      rescue EOFError
-        break
-      end
-      new(output, wait_thr.value, spec: spec)
-    end
-
     # Matches the full ANSI/VT100 escape sequence spec:
     # cursor movement, erase, colors, SGR — everything a terminal interprets.
     # [^[] catches all single-char Fe sequences (e.g. \eM, \eD); \[...] catches CSI.

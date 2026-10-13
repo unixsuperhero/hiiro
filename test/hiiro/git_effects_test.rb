@@ -28,16 +28,4 @@ class GitEffectsTest < Minitest::Test
       end
     end
   end
-
-  def test_dirty_discovery_preserves_filename_bytes_and_renamed_destination
-    Dir.mktmpdir do |sandbox|
-      repository(sandbox)
-      File.rename(File.join(sandbox, 'tracked'), File.join(sandbox, 'renamed file'))
-      system('git', '-C', sandbox, 'add', '--all') || raise('git add failed')
-      File.write(File.join(sandbox, "new\nfile"), 'untracked')
-      root = File.realpath(sandbox)
-      assert_equal [File.join(root, "new\nfile"), File.join(root, 'renamed file')].sort,
-        Hiiro::Git.new(nil, sandbox).dirty_files.sort
-    end
-  end
 end

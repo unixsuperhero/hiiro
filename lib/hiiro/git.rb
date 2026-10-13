@@ -123,19 +123,6 @@ class Hiiro
       @executor.capture('git', '-C', pwd, *args).split("\0")
     end
 
-    def dirty_files
-      output = @executor.capture('git', '-C', pwd, 'status', '--porcelain', '-z', '--untracked-files=all')
-      entries = output.split("\0")
-      files = []
-      until entries.empty?
-        entry = entries.shift
-        path = entry[3..]
-        entries.shift if entry[0, 2].match?(/[RC]/)
-        files << File.expand_path(path, root || pwd)
-      end
-      files
-    end
-
     def create_branch(name, start_point = nil)
       args = ['checkout', '-b', name]
       args << start_point if start_point

@@ -41,8 +41,10 @@ end
 # Streams to the terminal and the file, records the capture, and exits with
 # the child's status (128 + signal number when it was killed).
 def capture_and_record(args, path:, name:)
-  _capture, outcome = Hiiro::Capture.record(Hiiro::CommandSpecification.new(*args), path: path, name: name)
-  exit(outcome ? outcome.shell_code : 130)
+  recorded = Hiiro::Capture.record(Hiiro::CommandSpecification.new(*args), path: path, name: name)
+  interrupted = recorded.status == 'interrupted' ? ', interrupted' : ''
+  warn "\n[capture saved: #{path} (#{recorded.outcome}#{interrupted})]"
+  exit(recorded.outcome.shell_code)
 end
 
 Hiiro.run(*ARGV) do

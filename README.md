@@ -45,6 +45,8 @@ Illustrative resolved values:
 
 Queue entries have one claimant and land in `done/` only on exit 0. The same service definition in two task directories runs as two instances that stop independently; stop signals only the recorded process and waits for its exit. Concurrent `h bg` launches never share a pane. `h capture` streams to disk, passes stdin and binary bytes through, and exits with the child's status. See [owned runs](docs/owned-runs.md).
 
+`h run`, `h js all`, and `h ch make` run their commands through one validation runner: filenames reach tools as exact arguments (argv recipes, or `"$@"` in authored shell recipes), every command runs even after an earlier failure, the exit status is the first failure's, and failed logs are kept with their run id, cwd, times, and task context. `h run queue` turns a run's retained failures into a queue prompt without launching anything. See [h run](docs/h-run.md).
+
 ## Installation
 
 ### Via RubyGems
@@ -287,7 +289,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h queue` | Claude prompt queue with Herdr-based task execution |
 | `h service` | Manage background dev services with env variations and groups |
 | `h file` | Track and open frequently-used files per app |
-| `h run` | Run dev tools (lint/test/format) against changed files |
+| `h run` | Run dev tools (lint/test/format) against changed files; keep failed logs and queue them on request |
 | `h session` | Compatibility commands for Herdr workspaces |
 | `h sha` | Extract short SHA from git log |
 | `h todo` | Todo list management with tags and task association |
@@ -541,7 +543,7 @@ Runtime data lives separately:
   queue/          # Prompt queue (wip, pending, running, done, failed)
   runs/           # Owned run records (RUN_ID.json) for queue, service, and background launches
   bg/             # Background pane reservations
-  captures/       # h capture output files
+  captures/       # h capture output files; validation/RUN_ID/ holds failed h run / h js all / h ch make logs
   notify_log.yml  # Herdr notification log
 ```
 
@@ -563,7 +565,7 @@ Each durable type has one current owner. The first operation that uses persisten
 | Generic named entries | SQLite `registry`, `Hiiro::RegistryEntry` through `Hiiro::Table` |
 | MCP registrations, saved catalogs, and sync ownership | SQLite `mcps` through `MCPRegistry`, and `registry` rows of type `mcp-sync`; see [h-mcp](docs/h-mcp.md) |
 | Tags | SQLite `tags`, `Hiiro::Tag` |
-| Captures, invocations, and resolutions | SQLite `captures`, `invocations`, and `invocation_resolutions`, `Hiiro::Capture`, `Hiiro::Invocation`, and `Hiiro::InvocationResolution` |
+| Captures (including retained validation failures), invocations, and resolutions | SQLite `captures`, `invocations`, and `invocation_resolutions`, `Hiiro::Capture`, `Hiiro::Invocation`, and `Hiiro::InvocationResolution` |
 | Import verification and row mappings | SQLite `schema_migrations`, `migration_sources`, and `migration_rows`, `Hiiro::DB` |
 | Service, tool, sparse, and table action definitions | `services.yml` through `Hiiro::ServiceManager`, `tools.yml` through `Hiiro::RunnerTool`, `sparse_groups.yml` through `Hiiro::SparseGroups`, and `tables.yml` through `Hiiro::TableActions` |
 | Preferences and tracked app files | `config.yml` through `Hiiro::Config`, `app_files.yml` through `Hiiro::AppFiles` |

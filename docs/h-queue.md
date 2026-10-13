@@ -309,3 +309,29 @@ Normal launch and `h queue pane-dir PROMPT [BASE_DIR]` use the same strict conte
 Exact names win over prefixes. Ambiguity uses mapped terminal selection or fails non-interactively. Missing task/tree/workspace/app/directory, blank explicit selectors, conflicting terminal IDs, and traversal/symlink escapes are errors rather than fallback choices. A directory-resolution failure happens before the claim: it leaves pending prompt bytes/status unchanged and creates no run or prompt body. Emitted shells stop on editor, resolution, or `cd` failure before starting the agent. Cancellation launches nothing.
 
 `t queue TASK [--app APP] ...` injects the selected task/app context. `h queue` keeps resolution lazy so explicit frontmatter can override ambient task inference. `pane-ignore` reads the edited `ignore` value for the pane launcher; true runs `omp -p` without a following shell.
+
+## Validation failure handoff
+
+`h run queue [RUN_ID]` adds a pending prompt for a validation run's retained failures (from `h run`, `h js all`, or `h ch make`). It goes through the same `add` path and context validation as any prompt, and only writes the file; the queue launches it when you run `h queue run` or a watcher picks it up.
+
+```yaml
+---
+validation_run: 20261013144713-ab12cd
+task_name: my-task           # the run's task, when it had one
+app: api                     # the run's app, when it had one
+dir: packages/api            # the run's directory relative to the task/app directory
+---
+Validation run 20261013144713-ab12cd has 1 failed command.
+
+Task: my-task (explicit)
+Root: /work/my-task (primary)
+Directory: /work/my-task/packages/api (override)
+
+- rubocop: failed (exit 1)
+  command: bundle exec rubocop -- lib/x.rb
+  cwd: /work/my-task/packages/api
+  log: ~/.local/share/hiiro/captures/validation/20261013144713-ab12cd/01-rubocop.log
+  ran: 2026-10-13T14:47:13.120-04:00 .. 2026-10-13T14:47:15.884-04:00
+```
+
+`validation_run` is informational. A taskless run has no `task_name` or `dir`; its absolute directory is in the body.

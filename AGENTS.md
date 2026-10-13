@@ -559,9 +559,9 @@ content = Hiiro::Shell.read_input(*args)          # files named in args ('-' = s
 
 `read_input` keeps only args that are readable paths (regular files, `/dev/fd/N`, `<(cmd)`) or `-`, concatenates them, and falls back to stdin when none remain. A named file wins over piped stdin unless `-` places it. At a terminal with no input it aborts with `no input: pipe data in or pass a file`.
 
-`run`, `run_combined`, `run3`, `stream`, and `stream_combined` all build one `CommandSpecification` and attach it to the `Result`. `Shell.execute(spec, stdin_data: "")` runs a prepared spec (argv, env, cwd) in binary mode and returns a `Result` with stdout, stderr, and the real status. `stream` writes each chunk to `tee` once.
+`run`, `run_combined`, and `run3` all build one `CommandSpecification` and attach it to the `Result`. `Shell.execute(spec, stdin_data: "")` runs a prepared spec (argv, env, cwd) in binary mode and returns a `Result` with stdout, stderr, and the real status. Streaming to the terminal goes through `Hiiro::Capture.stream` (bounded chunks to a file), not a buffered `Result`.
 
-`CommandSpecification.shell(text, cwd:, env:)` keeps authored shell text (`kind` `:shell`, `preview` is the text, argv `/bin/bash -c text`) distinct from argv specs; `to_h` / `from_h` round-trip both, and `spawn_args(**opts)` feeds `Process.spawn`. `Hiiro::ProcessOutcome.from_status(status)` answers `exit_code`, `signal` (`'TERM'`), `success?` (exit 0 only), and `shell_code` (exit code or 128 + signal).
+`CommandSpecification.shell(text, args: [], cwd:, env:)` keeps authored shell text (`kind` `:shell`, `preview` is the text, argv `/bin/bash -c text`, plus `hiiro-shell ARGS...` when args are given so the text reads them as `"$@"`) distinct from argv specs; `to_h` / `from_h` round-trip both, and `spawn_args(**opts)` feeds `Process.spawn`. `Hiiro::ProcessOutcome.from_status(status)` answers `exit_code`, `signal` (`'TERM'`), `success?` (exit 0 only), and `shell_code` (exit code or 128 + signal).
 
 ### Hiiro::OwnedRun (lib/hiiro/owned_run.rb)
 
@@ -581,7 +581,7 @@ store.update(id) { |run| run.fail('...') if run.allocated? }   # locked read-mod
 
 Launch failures (no tab, undelivered command, unspawnable child, start not observed) leave a `failed` record and raise `OwnedRun::LaunchError` (`#run`). `OwnedRun::Supervisor` runs in the allocated place without the rest of Hiiro; after the outcome it settles `queue` owners through `Hiiro::QueueClaim` and `background` owners through `Hiiro::PaneReservations`.
 
-`Hiiro::Capture.stream(spec, path:)` / `.record(spec, path:, name:)` run a command with the caller's stdin and stream combined output in bounded chunks to the terminal and the file; `h capture` exits with the outcome's `shell_code`.
+`Hiiro::Capture.stream(spec, path:)` / `.record(spec, path:, name:, run_id:, source:, context:, retain: :always | :failures)` run a command with the caller's stdin and stream combined output in bounded chunks to the file and the terminal (a closed terminal pipe stops only the terminal copy). Ctrl-C reaches the child; the parent notes it. `record` returns `Capture::Recorded{ capture, status (succeeded|failed|interrupted), outcome, path, error, started_at, finished_at }` and stores the row with `source`, `run_id`, `cwd`, timestamps, `outcome`, `exit_signal`, `task_name`, and `context_json` (`TaskLocation#provenance`); a command that cannot start is `exit 127` with the error in its log. `h capture` exits with the outcome's `shell_code`.
 
 ### Hiiro::Options (lib/hiiro/options.rb)
 
@@ -700,11 +700,13 @@ Key internals:
 Run dev tools (linters, formatters, test suites) against changed files.
 
 Subcommands (`h run [change_set] [tool_type] [file_group]`):
-- Default (no subcmd) - Run matching tools with positional filters
+- Default (no subcmd) - Run matching tools with positional filters; exits with the aggregate status
 - `ls` - List configured tools with type, group, extensions, and variations
 - `add` - Add new tool via editor template
 - `rm <name>` - Remove a tool
 - `config` - Edit tools.yml
+- `migrate` - Convert old `command:` strings to `argv:` / `shell:` (backup kept)
+- `queue [RUN_ID]` - Write a queue prompt naming a run's retained failure logs (never launches an agent)
 
 Arguments (positional, any order):
 - **change_set**: `dirty` (default, git status), `branch` (diff from main), `all`
@@ -716,15 +718,26 @@ Config (`~/.config/hiiro/tools.yml`):
 ```yaml
 rubocop:
   tool_type: lint
-  command: "rubocop [FILENAMES]"
+  argv: [rubocop, "[FILENAMES]"]
   file_type_group: ruby
   file_extensions: "rb"
   variations:
-    quick: "rubocop --only Style [FILENAMES]"
-    fix: "rubocop -A [FILENAMES]"
+    quick: { argv: [rubocop, --only, Style, "[FILENAMES]"] }
+    fix: { shell: 'rubocop -A "$@" && git diff --stat' }
 ```
 
-`[FILENAMES]` is replaced with the space-joined list of matching files.
+```ruby
+changes = Hiiro::RunnerTool::ChangeSet.collect('dirty', directory: dir)   # git failure raises Hiiro::Error
+changes.changes   # [Change{ path: 'app/new.rb', status: 'renamed', from: 'app/old.rb' }, ...] (root-relative)
+changes.files     # present, non-deleted paths under dir, relative to it
+template = Hiiro::RunnerTool::Template.from('rubocop', { 'argv' => ['rubocop', '--', '[FILENAMES]'] })
+template.spec(files, cwd: dir)   # CommandSpecification; "-x.rb" becomes "./-x.rb" unless "--" precedes [FILENAMES]
+steps = runner.steps(change_set: 'dirty', tool_type: 'lint')   # [Step{ name, spec, skip_reason }]; validates before running
+Hiiro::RunnerTool.execute(steps, context: location)             # => 0 | 130 | first failed shell_code
+Hiiro::RunnerTool::QueueJob.for_run(run_id)                     # { name: 'validation-RUN', content } for Queue#add_with_frontmatter
+```
+
+`[FILENAMES]` is a whole argv element and expands to one argument per file; shell recipes receive the files as `"$@"`. Steps run in tools.yml order, a failure does not stop later steps, and Ctrl-C stops the run (remaining steps `skipped`, exit 130). Failed and interrupted logs are retained under `~/.local/share/hiiro/captures/validation/RUN_ID/` as `Capture` rows (`source` `validation`); succeeded logs are deleted. `h js all` and `h ch make` use the same `execute`.
 
 ### Hiiro::AppFiles (lib/hiiro/app_files.rb)
 
