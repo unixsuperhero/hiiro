@@ -8,6 +8,7 @@ if $PROGRAM_NAME == __FILE__
     Hiiro.run(*ARGV, external_commands: false) do
       add_flag :dry_run, desc: 'Preview changes without writing files or installing hooks'
       add_flag :remove, desc: 'Remove the managed project instruction block'
+      add_flag :hosts, desc: 'Also list sessions on the hosts in the [hosts] config table'
       add_default { puts Hiiro::Tuios::USAGE }
       add_cmd(:gfy) { puts tuios.class }
       add_cmd(:help) { puts Hiiro::Tuios::USAGE; help }
@@ -75,6 +76,13 @@ if $PROGRAM_NAME == __FILE__
       add_cmd(:mail) do
         tuios.require_pane!
         tuios.native('read-agent-messages', '-s', ENV.fetch('TUIOS_SESSION'), '-w', ENV.fetch('TUIOS_PANE_ID'), '--unread')
+      end
+      add_cmd(:ui, flags: [:hosts]) do
+        raise Hiiro::Error, 'Use ui [--hosts]' unless opts.args.empty?
+        listing = Hiiro::TuiosListing.load(runner: tuios.method(:capture), hosts: opts.hosts)
+        current = Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve
+        Hiiro::TuiosScreen.new(listing:, current:).run
+        nil
       end
     end
   rescue Hiiro::Error, SystemCallError, JSON::ParserError => e

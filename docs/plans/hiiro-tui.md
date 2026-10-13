@@ -91,7 +91,7 @@ Built 2026-10-12 per `docs/plans/projects-screen.md`: `h project ui`, one row pe
 
 ## PR 7. Tuios screen
 
-Planned 2026-10-12 in `docs/plans/tuios-screen.md`: `h tuios ui`, one row per tuios window across sessions and hosts, with the pane's screen on request, jump, rename, minimize, new window, and mail, scoped to a task by each window's directory.
+Built 2026-10-12 per `docs/plans/tuios-screen.md`: `h tuios ui`, one row per tuios window across sessions, one summary row per remote session with `--hosts`, the pane's screen on request, jump, rename, minimize, new window, and mail, scoped to a task by each window's directory.
 
 ## PR 8. Trigger-character autocomplete
 

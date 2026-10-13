@@ -241,6 +241,21 @@ class Hiiro::Tuios
         integrations. Requires a running daemon and does not reload or restart it.
         Example: h tuios hooks
 
+    Navigate windows
+
+      ui [--hosts]
+        Opens a screen with one row per tuios window on this machine: session,
+        workspace, agent state mark, title, and harness, with a detail pane.
+        Enter jumps to the window; c captures its last 20 lines into the pane;
+        n renames it, M minimizes or restores it, N opens a new window in its
+        session and directory, m sends agent mail from your own pane, y copies
+        its id, g scopes the list to the current task by each window's directory,
+        R reloads, and H adds the configured hosts. Does not read any mailbox.
+        --hosts lists each session on the configured hosts as one summary row;
+        its window keys show the `tuios attach --host` command instead.
+        Examples: h tuios ui
+                  h tuios ui --hosts
+
     Read skills and use the current pane
 
       skill [TOPIC]
