@@ -1,6 +1,10 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+source_lib = [File.expand_path('../lib', __dir__), File.expand_path('~/proj/hiiro/lib')].find do |path|
+  File.file?(File.join(path, 'hiiro.rb')) && File.file?(File.join(path, 'hiiro/tuios_screen.rb'))
+end
+$LOAD_PATH.unshift(source_lib) if source_lib
 require 'hiiro'
 
 if $PROGRAM_NAME == __FILE__
@@ -8,48 +12,50 @@ if $PROGRAM_NAME == __FILE__
     Hiiro.run(*ARGV, external_commands: false) do
       add_flag :dry_run, desc: 'Preview changes without writing files or installing hooks'
       add_flag :remove, desc: 'Remove the managed project instruction block'
+      add_flag :foreground, desc: 'Run the inbox server in the foreground with terminal output'
       add_flag :hosts, desc: 'Also list sessions on the hosts in the [hosts] config table'
       add_default { puts Hiiro::Tuios::USAGE }
       add_cmd(:gfy) { puts tuios.class }
-      add_cmd(:help) { puts Hiiro::Tuios::USAGE; help }
-      add_cmd(:setup, args: ['HARNESS...'], flags: [:dry_run]) do
+      add_cmd(:help) { puts Hiiro::Tuios::USAGE }
+      add_cmd(:setup, args: ['HARNESS...'], opts: [:dry_run]) do
         tuios.apply(tuios.plan(opts.args, skills: true, rules: true), dry_run: opts.dry_run)
         tuios.install_integrations(opts.args, dry_run: opts.dry_run)
       end
-      add_cmd(:'skills-install', :'skills-refresh', args: ['HARNESS...'], flags: [:dry_run]) do
+      add_cmd(:'skills-install', :'skills-refresh', args: ['HARNESS...'], opts: [:dry_run]) do
         tuios.apply(tuios.plan(opts.args, skills: true), dry_run: opts.dry_run)
       end
-      add_cmd(:'bootstrap-project', args: ['DIRECTORY'], flags: [:dry_run, :remove]) do
+      add_cmd(:'bootstrap-project', args: ['DIRECTORY'], opts: [:dry_run, :remove]) do
         raise Hiiro::Error, 'Use bootstrap-project DIRECTORY [--remove]' unless opts.args.length == 1 && File.directory?(File.expand_path(opts.args.first))
         path = File.join(File.expand_path(opts.args.first), 'AGENTS.md')
         _, text = tuios.rule_text(path, remove: opts.remove)
         changes = opts.remove && !File.exist?(path) ? [] : [tuios.file_plan(path, text, backup: true)].compact
         tuios.apply(changes, dry_run: opts.dry_run)
       end
-      add_cmd(:'bootstrap-install', args: ['HARNESS...'], flags: [:dry_run]) do
+      add_cmd(:'bootstrap-install', args: ['HARNESS...'], opts: [:dry_run]) do
         tuios.apply(tuios.plan(opts.args, rules: true), dry_run: opts.dry_run)
       end
-      add_cmd(:'bootstrap-remove', args: ['HARNESS...'], flags: [:dry_run]) do
+      add_cmd(:'bootstrap-remove', args: ['HARNESS...'], opts: [:dry_run]) do
         tuios.apply(tuios.plan(opts.args, rules: true, remove: true), dry_run: opts.dry_run)
       end
-      add_cmd(:uninstall, args: ['HARNESS...'], flags: [:dry_run]) do
+      add_cmd(:uninstall, args: ['HARNESS...'], opts: [:dry_run]) do
         tuios.apply(tuios.plan(opts.args, skills: true, rules: true, remove: true), dry_run: opts.dry_run)
       end
-      add_cmd(:'integrations-install', args: ['ID...'], flags: [:dry_run]) { tuios.install_integrations(opts.args, dry_run: opts.dry_run) }
+      add_cmd(:'integrations-install', args: ['ID...'], opts: [:dry_run]) { tuios.install_integrations(opts.args, dry_run: opts.dry_run) }
       add_cmd(:'integrations-status') { tuios.native('integration', 'status', '--command', tuios.hook_command) }
       add_cmd(:targets) do
         tuios.targets(Hiiro::Tuios::TARGETS.keys).each { |t| puts "#{t[:name]}\n  skill: #{t[:skill]}\n  startup: #{t[:instruction] || '(manual; no verified global file)'}" }
       end
-      add_cmd(:start) do
-        raise Hiiro::Error, 'Use start without arguments' unless opts.args.empty?
+      add_cmd(:start, opts: [:foreground]) do
+        raise Hiiro::Error, 'Use start [--foreground]' unless opts.args.empty?
+        exec('bun', 'start', chdir: File.join(Dir.home, 'proj/tuios-inbox')) if opts.foreground
         tuios.server(:start)
       end
       add_cmd(:stop) do
         raise Hiiro::Error, 'Use stop without arguments' unless opts.args.empty?
         tuios.server(:stop)
       end
-      add_cmd(:status) do
-        raise Hiiro::Error, 'Use status without arguments; use setup-status [HARNESS...] for setup checks' unless opts.args.empty?
+      add_cmd(:status, args: ['HARNESS...']) do
+        next tuios.show_status(opts.args) unless opts.args.empty?
         exit(tuios.server(:status) ? 0 : 1)
       end
       add_cmd(:'setup-status', args: ['HARNESS...']) { tuios.show_status(opts.args) }
@@ -77,8 +83,9 @@ if $PROGRAM_NAME == __FILE__
         tuios.require_pane!
         tuios.native('read-agent-messages', '-s', ENV.fetch('TUIOS_SESSION'), '-w', ENV.fetch('TUIOS_PANE_ID'), '--unread')
       end
-      add_cmd(:ui, flags: [:hosts]) do
+      add_cmd(:ui, opts: [:hosts]) do
         raise Hiiro::Error, 'Use ui [--hosts]' unless opts.args.empty?
+        raise Hiiro::Error, 'The installed Hiiro lacks tuios UI support; restore ~/proj/hiiro or install a Hiiro version with TuiosScreen' unless defined?(Hiiro::TuiosScreen)
         listing = Hiiro::TuiosListing.load(runner: tuios.method(:capture), hosts: opts.hosts)
         current = Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve
         Hiiro::TuiosScreen.new(listing:, current:).run

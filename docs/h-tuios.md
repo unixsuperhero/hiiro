@@ -8,15 +8,17 @@ Set up TUIOS for agent harnesses, manage the inbox server, read your own pane's 
 h tuios <subcommand> [args] [options]
 ```
 
-The `h-tuios` executable accepts the same subcommands directly. `h tuios` with no subcommand prints the full guide (`h tuios help`).
+The synchronized `h-tuios` executables use the adjacent current Hiiro source when available, otherwise `~/proj/hiiro/lib`, before falling back to the installed gem. This keeps `ui` available when the installed gem predates its screen classes. The `h-tuios` executable accepts the same subcommands directly. `h tuios` with no subcommand prints the full guide (`h tuios help`).
+
+To check the five local copies for drift, run `ruby script/sync-tuios --check` from the Hiiro repository. After merging any new functionality into `bin/h-tuios`, use `--write` to synchronize them. The command prints SHA-256 hashes and preserves existing executable modes.
 
 ## Subcommands
 
 | Subcommand | Description |
 |------------|-------------|
-| `start` | Start the inbox server (`~/proj/tuios-inbox/server.mjs`) with Bun in the background and wait for HTTP readiness |
+| `start [--foreground]` | Start the inbox server (`~/proj/tuios-inbox/server.mjs`) with Bun in the background and wait for HTTP readiness; `--foreground` runs `bun start` attached to the terminal |
 | `stop` | Send SIGTERM to the inbox server and wait for it to exit; never stops the TUIOS daemon |
-| `status` | Print the server URL and PID and check its HTTP response; exit 0 when ready, 1 otherwise |
+| `status [HARNESS...]` | Print the server URL and PID and check its HTTP response; exit 0 when ready, 1 otherwise. With harness arguments, inspect their setup instead |
 | `setup [HARNESS...] [--dry-run]` | Install skills, global startup rules, and native integrations for the selected harnesses |
 | `skills-install [HARNESS...] [--dry-run]` | Save `tuios --skill all` as the shared `tuios-inbox` skill and link each harness to it |
 | `skills-refresh [HARNESS...] [--dry-run]` | Alias for `skills-install`; use after upgrading TUIOS |
