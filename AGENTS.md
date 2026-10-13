@@ -377,28 +377,49 @@ input.cleanup                      # unlink the tempfile when done
 One interpretation of a PR's `statusCheckRollup`, shared by `Git::Pr`, `PinnedPr`, `PinnedPRManager` display, `CheckRun` persistence, and `h pr status`:
 
 ```ruby
-s = Hiiro::CheckSummary.from_rollup(rollup, truncated: false)   # nil when rollup nil/empty
-s = pr.check_summary                                             # from stored counts (+ raw contexts when present)
+s = Hiiro::CheckSummary.from_rollup(rollup, truncated: false, freeze_active: nil)   # nil when rollup nil/empty
+s = pr.check_summary                  # PinnedPr: raw contexts + stored completeness + recorded freeze policy input
 s.total / s.success / s.pending / s.failed / s.frozen / s.complete?
-s.red? / s.green? / s.pending?        # the -r / -g / -p filter predicates (pr.red? etc. delegate here)
+s.red? / s.green? / s.pending?        # -r / -g / -p; green? is false while truncated
 s.any_pending? / s.only_frozen?       # display distinctions
 s.counts_by_outcome                   # { 'SUCCESS' => 12, 'FAILURE' => 1 } (missing keys read 0)
-s.contexts.each { |c| c.kind (:check_run|:status_context) ; c.name ; c.url ; c.outcome ; c.raw }
+s.contexts.each { |c| c.kind ; c.name ; c.url ; c.outcome ; c.raw_outcome ; c.assessed? ; c.raw }
 s.to_h                                # the stored { 'total','success','pending','failed','frozen'[,'truncated'] } hash
 ```
+
+`freeze_active:` (true/false) is the ISC freeze policy: it sets the ISC context's assessed outcome (`outcome`) while `raw` and `raw_outcome` keep GitHub's report; nil leaves GitHub's state.
 
 ### Hiiro::PullRequestReference / Hiiro::RepositoryIdentity (lib/hiiro/pull_request_reference.rb)
 
 ```ruby
-ref = Hiiro::PullRequestReference.parse(input)   # URL | '#123' | '123' | 123 → ref, else nil
-ref.number / ref.number_string / ref.repo        # repo: RepositoryIdentity or nil for a bare number
-ref.key            # [number, 'owner/name'] — the key PinnedPRManager batches by
-ref.repo_args      # ['-R', 'owner/name'] or []
-ref.matches?(pr)   # same number; same repo when both sides know it
+ref = Hiiro::PullRequestReference.parse(input, repo: nil)   # URL | 'owner/name#123' | '#123' | '123' | 123 → ref, else nil
+Hiiro::PullRequestReference.qualified(input)    # URL | 'owner/name#123' → ref; bare numbers → nil
+ref.number / ref.number_string / ref.repo / ref.qualified?   # repo: RepositoryIdentity or nil for a bare number
+ref.to_s           # 'owner/name#123' (the stored dependency form)
+ref.key / ref.repo_args / ref.url
+ref == other       # same number and same repository (a bare ref never equals a qualified one)
 pr.reference       # Git::Pr / PinnedPr → reference
-Hiiro::PinnedPr.find_by_reference(ref)           # repo-qualified lookup; legacy rows without repo still match
+Hiiro::PinnedPr.find_by_reference(ref)           # qualified: that repository only; bare: must match exactly one tracked PR
 Hiiro::RepositoryIdentity.parse('owner/name' | github URL)  # .host .owner .name .path .url
 ```
+
+### Hiiro::PrSnapshot / PinnedPRManager refresh (lib/hiiro/pr_snapshot.rb, lib/hiiro/pinned_pr_manager.rb)
+
+Remote observations are separate from local tracking preferences (tags, task/worktree/workspace, `pinned`/slot, `depends_on`):
+
+```ruby
+results = Hiiro::PrSnapshot::Fetcher.new.fetch([ref, ...])   # { ref => PrSnapshot | PrSnapshot::Failure }, one batch per repository
+snap.reference / snap.head_sha / snap.fetched_at / snap.fields     # fields: title state url headRefName isDraft mergeable reviewDecision
+snap.checks.nodes / .complete / .known_empty? ; snap.reviews (same) ; snap.complete? ; snap.error
+pm = Hiiro::PinnedPRManager.new
+record, outcome = pm.track(ref, task:, worktree:, herdr_workspace:)   # :created | :promoted | :already; no remote fields
+report = pm.refresh(prs, force: false)   # RefreshReport fresh/incomplete/failed/unqualified: [[record, message]]
+pm.lookup_reference(text_or_nil)         # URL/owner/name#N as given; bare number or nil via gh's current repository
+pr.freshness  # 'fresh' | 'stale' (refresh failed; last observation kept) | 'unknown' (never observed)
+pr.green?     # fresh, checks and reviews complete, and the assessed checks green
+```
+
+Checks and reviews page backward 100 at a time; every page re-reads `headRefOid`, and a head change, failed page, repeated cursor, or count mismatch never yields a complete snapshot. `apply_snapshot` updates only remote columns of one row and only when its `fetched_at` is older.
 
 ### Hiiro::Git::BranchComparison (lib/hiiro/git/branch_comparison.rb)
 

@@ -5,7 +5,7 @@ class Hiiro
       text = input.to_s.strip
       if (m = text.match(%r{github\.com[/:]([^/\s]+)/([^/\s#?]+)}))
         new(host: 'github.com', owner: m[1], name: m[2].delete_suffix('.git'))
-      elsif (m = text.match(%r{\A([^/\s]+)/([^/\s]+)\z}))
+      elsif (m = text.match(%r{\A([^/\s#]+)/([^/\s#]+)\z}))
         new(host: 'github.com', owner: m[1], name: m[2])
       end
     end
@@ -30,22 +30,36 @@ class Hiiro
     def hash = [host, owner, name].hash
   end
 
-  # A PR number, with the repository it belongs to when that is known.
+  # A PR number and the repository it belongs to. A bare number has no
+  # repository until explicit context (a tracked record, a URL, gh's current
+  # repository) qualifies it; persistence accepts qualified references only.
   class PullRequestReference
-    URL_PATTERN = %r{github\.com/([^/]+)/([^/]+)/pull/(\d+)}
+    URL_PATTERN = %r{github\.com/([^/\s]+)/([^/\s]+)/pull/(\d+)}
+    QUALIFIED_PATTERN = %r{\A([^/\s#]+/[^/\s#]+)#(\d+)\z}
 
     def self.from_url(url)
       m = url.to_s.match(URL_PATTERN) or return nil
       new(number: m[3], repo: RepositoryIdentity.new(owner: m[1], name: m[2]))
     end
 
-    # URL | '#123' | '123' | 123 → reference, or nil when none of those.
-    def self.parse(input, default_repo: nil)
-      return from_url(input) if input.to_s.match?(URL_PATTERN)
+    # URL | 'owner/name#123' | '#123' | '123' | 123 → reference, or nil when none of those.
+    # repo: qualifies a bare number; it never overrides a URL or owner/name#N.
+    def self.parse(input, repo: nil)
+      text = input.to_s.strip
+      return from_url(text) if text.match?(URL_PATTERN)
+      if (m = text.match(QUALIFIED_PATTERN))
+        return new(number: m[2], repo: RepositoryIdentity.parse(m[1]))
+      end
 
-      m = input.to_s.strip.match(/\A#?(\d+)\z/) or return nil
-      repo = default_repo.is_a?(RepositoryIdentity) ? default_repo : RepositoryIdentity.parse(default_repo)
+      m = text.match(/\A#?(\d+)\z/) or return nil
+      repo = RepositoryIdentity.parse(repo) unless repo.nil? || repo.is_a?(RepositoryIdentity)
       new(number: m[1], repo: repo)
+    end
+
+    # A qualified reference or nil: bare numbers are rejected.
+    def self.qualified(input)
+      ref = parse(input)
+      ref if ref&.qualified?
     end
 
     attr_reader :repo, :number
@@ -55,23 +69,15 @@ class Hiiro
       @repo = repo
     end
 
+    def qualified?    = !repo.nil? && number.positive?
     def number_string = number.to_s
     def url           = repo && "#{repo.url}/pull/#{number}"
     def key           = [number, repo&.path]
     def repo_args     = repo ? ['-R', repo.path] : []
     def to_s          = repo ? "#{repo.path}##{number}" : "##{number}"
 
-    # Same number; same repository when both sides know theirs.
-    def matches?(record)
-      return false unless record.number.to_i == number
-      return true unless repo
-
-      other = RepositoryIdentity.parse(record.repo || (record.respond_to?(:url) && record.url))
-      other.nil? || other == repo
-    end
-
-    def ==(other) = other.is_a?(PullRequestReference) && key == other.key
+    def ==(other) = other.is_a?(PullRequestReference) && number == other.number && repo == other.repo
     alias eql? ==
-    def hash = key.hash
+    def hash = [number, repo].hash
   end
 end

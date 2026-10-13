@@ -697,7 +697,7 @@ class Hiiro
           if key.to_s.end_with?('_json') && !(table == :pins && row[:value_format] == 'legacy')
             decoded = ::JSON.parse(value)
             shape = case key
-            when :tags_json, :depends_on_json, :check_runs_json then Array
+            when :tags_json, :depends_on_json, :check_runs_json, :review_nodes_json then Array
             when :herdr_json, :tmux_json, :checks_json, :reviews_json, :metadata_json, :meta_json, :data_json, :record_json then Hash
             end
             raise ImportError, "#{table}/#{key}: invalid JSON shape" if shape && !decoded.nil? && !decoded.is_a?(shape)
@@ -706,6 +706,10 @@ class Hiiro
             end
             if key == :check_runs_json && decoded && !decoded.all? { |run| run.is_a?(Hash) }
               raise ImportError, 'prs/check_runs_json: check runs must be mappings'
+            end
+            # Legacy positive integers are retained until qualified; new entries are owner/name#N.
+            if key == :depends_on_json && decoded && !decoded.all? { |dep| (dep.is_a?(Integer) && dep.positive?) || (dep.is_a?(String) && Hiiro::PullRequestReference.qualified(dep)&.to_s == dep) }
+              raise ImportError, 'prs/depends_on_json: dependencies must be owner/name#N or legacy PR numbers'
             end
           end
         end

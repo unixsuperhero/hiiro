@@ -124,6 +124,18 @@ class DBMigrationTest < Minitest::Test
     assert_equal [[30, 'one/repo', 1], [31, 'two/repo', 1]], result['prs']
   end
 
+  def test_legacy_pr_dependencies_are_retained_then_qualified_only_when_unambiguous
+    source('prs.yml', {'prs' => [{'number' => 1, 'url' => 'https://github.com/one/repo/pull/1', 'depends_on' => [2, 3]},
+                                 {'number' => 2, 'repo' => 'one/repo'}, {'number' => 3, 'repo' => 'one/repo'}, {'number' => 3, 'repo' => 'two/repo'}]})
+    result = child("p=Hiiro::DB.migration_plan(only: ['prs']); Hiiro::DB.migrate!(plan:p); puts JSON.generate(deps:Hiiro::PinnedPr.order(:id).first.depends_on)")
+    assert_equal [2, 3], result['deps']
+    result = child("puts JSON.generate(deps:Hiiro::PinnedPr.order(:id).first.depends_on, repo:Hiiro::PinnedPr.order(:id).first.repo)")
+    assert_equal({'deps' => ['one/repo#2', 3], 'repo' => 'one/repo'}, result)
+    source('pinned_prs.yml', [{'number' => 9, 'repo' => 'one/repo', 'depends_on' => ['9']}])
+    result = child("p=Hiiro::DB.migration_plan(only: ['pinned_prs']); puts JSON.generate(errors:p[:errors])")
+    assert_match(%r{prs/depends_on_json: dependencies must be owner/name#N or legacy PR numbers}, result['errors'].join)
+  end
+
   def test_interrupted_import_rolls_back_rows_ledger_and_completion_and_retry_succeeds
     path = source('todo.yml', {'todos' => [{'id' => 1, 'text' => 'first'}, {'id' => 2, 'text' => 'second'}]})
     original = File.binread(path)

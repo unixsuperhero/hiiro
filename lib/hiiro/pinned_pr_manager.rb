@@ -44,56 +44,50 @@ class Hiiro
       opts.option(:tag,     short: 't', desc: 'filter by tag (OR when multiple; AND with flag filters)', multi: true)
     end
 
-    def pr_repo(pr)
-      pr.repo || Hiiro::Git::Pr.repo_from_url(pr.url)
-    end
-
     def load_pinned = Hiiro::PinnedPr.by_slot.all
 
     def reference_text(pr) = pr.reference.url || pr.number.to_s
 
+    # PinnedPr | PullRequestReference | object with number + repo/url | text
+    # (URL, owner/name#N, #N, N). A bare number must match one tracked PR.
     def find(ref, pinned_only: true)
       if ref.is_a?(Hiiro::PinnedPr)
         scope = Hiiro::PinnedPr.where(id: ref.id)
         scope = scope.where(pinned: true) if pinned_only
         return scope.first
       end
-      reference = if ref.respond_to?(:number) && ref.respond_to?(:repo)
-        Hiiro::PullRequestReference.new(number: ref.number, repo: Hiiro::RepositoryIdentity.parse(ref.repo || ref.url))
-      elsif ref.is_a?(Hiiro::PullRequestReference)
+      reference = if ref.is_a?(Hiiro::PullRequestReference)
         ref
-      elsif (match = ref.to_s.match(/\A([^\s#]+\/[^\s#]+)#(\d+)\z/))
-        Hiiro::PullRequestReference.new(number: match[2], repo: Hiiro::RepositoryIdentity.parse(match[1]))
+      elsif ref.respond_to?(:number) && ref.respond_to?(:repo)
+        Hiiro::PullRequestReference.new(number: ref.number, repo: Hiiro::RepositoryIdentity.parse(ref.repo || ref.url))
       else
         Hiiro::PullRequestReference.parse(ref)
       end
       reference && Hiiro::PinnedPr.find_by_reference(reference, pinned_only: pinned_only)
     end
 
-    def pin(pr)
+    # Starts tracking a qualified reference with local preferences only; the
+    # remote snapshot arrives through #refresh. Returns [record, :created |
+    # :promoted | :already].
+    def track(reference, task: nil, worktree: nil, herdr_workspace: nil)
+      raise Hiiro::Error, "Cannot track #{reference}: no repository" unless reference.qualified?
+
       Hiiro::DB.connection.transaction(mode: :immediate) do
-        existing = find(pr, pinned_only: false)
-        raise Hiiro::Error, 'PR was removed while pinning' if pr.is_a?(Hiiro::PinnedPr) && !existing
-        if existing
-          attrs = Hiiro::PinnedPr.from_git_pr(pr).values
-          %i[title state url head_ref_name is_draft mergeable review_decision checks_json check_runs_json reviews_json last_checked].each do |field|
-            existing[field] = attrs[field] unless attrs[field].nil?
-          end
-          unless existing.pinned
-            existing.pinned = true
-            existing.slot ||= Hiiro::PinnedPr.max(:slot).to_i + 1
-            existing.pinned_at ||= Time.now.iso8601
-          end
-          existing.save_changes
+        existing = find(reference, pinned_only: false)
+        if existing&.pinned
+          [existing, :already]
+        elsif existing
+          slot = existing.slot || Hiiro::PinnedPr.max(:slot).to_i + 1
+          Hiiro::PinnedPr.where(id: existing.id).update(pinned: true, slot: slot, pinned_at: existing.pinned_at || Time.now.iso8601)
+          [existing.refresh, :promoted]
         else
-          existing = Hiiro::PinnedPr.from_git_pr(pr)
-          existing.repo ||= Hiiro::Git::Pr.repo_from_url(pr.url)
-          existing.slot = Hiiro::PinnedPr.max(:slot).to_i + 1
-          existing.pinned_at ||= Time.now.iso8601
-          existing.save
+          record = Hiiro::PinnedPr.create(
+            number: reference.number, repo: reference.repo.path, url: reference.url, pinned: true,
+            slot: Hiiro::PinnedPr.max(:slot).to_i + 1, pinned_at: Time.now.iso8601, created_at: Time.now.iso8601,
+            task: task, worktree: worktree, herdr_workspace: herdr_workspace,
+          )
+          [record, :created]
         end
-        existing.sync_check_runs
-        existing
       end
     end
 
@@ -114,8 +108,15 @@ class Hiiro
       mutate_array(ref, :tags, add: add, remove: remove, clear: clear)
     end
 
+    # add/remove: qualified PullRequestReferences, stored as 'owner/name#N'.
+    # remove also accepts legacy integers that were never qualified.
     def change_dependencies(ref, add: [], remove: [], clear: false)
-      mutate_array(ref, :depends_on, add: add, remove: remove, clear: clear)
+      added = add.map do |dep|
+        raise Hiiro::Error, "Dependency #{dep} has no repository; use owner/name#N or its URL" unless dep.qualified?
+        dep.to_s
+      end
+      removed = remove.map { |dep| dep.is_a?(Integer) ? dep : dep.to_s }
+      mutate_array(ref, :depends_on, add: added, remove: removed, clear: clear)
     end
 
     def mutate_array(ref, field, add:, remove:, clear:)
@@ -130,6 +131,10 @@ class Hiiro
     end
 
     EDIT_FIELDS = %w[tags depends_on task worktree herdr_workspace assigned authored].freeze
+    # Local preferences a deletion must not silently discard. Remote snapshot
+    # columns and check rows belong to #refresh and never block a deletion.
+    LOCAL_COLUMNS = (EDIT_FIELDS.map { |field| :"#{field}_json" if %w[tags depends_on].include?(field) } +
+                     EDIT_FIELDS.map(&:to_sym) + %i[pinned slot branch tmux_json]).compact.freeze
 
     def edit_rows(prs)
       prs.map { |pr| { 'id' => pr.id }.merge(EDIT_FIELDS.to_h { |field| [field, pr.public_send(field)] }) }
@@ -138,10 +143,11 @@ class Hiiro
     def edit_baseline(prs)
       prs.to_h do |pr|
         [pr.id, { record: pr,
-                  tags: Hiiro::Tag.where(taggable_type: 'PinnedPr', taggable_id: pr.id.to_s).order(:id).all.map(&:values),
-                  checks: Hiiro::CheckRun.where(pr_id: pr.id).order(:id).all.map(&:values) }]
+                  tags: Hiiro::Tag.where(taggable_type: 'PinnedPr', taggable_id: pr.id.to_s).order(:id).all.map(&:values) }]
       end
     end
+
+    def local_values(pr) = pr.values.slice(*LOCAL_COLUMNS)
 
     def apply_edits(rows, baseline:)
       raise Hiiro::Error, 'Expected a list of PR records' unless rows.is_a?(Array)
@@ -149,11 +155,12 @@ class Hiiro
       ids = rows.map do |row|
         raise Hiiro::Error, 'Each PR needs its original integer id' unless row.is_a?(Hash) && row['id'].is_a?(Integer) && originals.key?(row['id'])
         raise Hiiro::Error, 'Unknown PR edit field' unless (row.keys - ['id'] - EDIT_FIELDS).empty?
-        %w[tags depends_on].each do |field|
-          value = row[field]
-          valid = value.nil? || (value.is_a?(Array) && value.all? { |v| field == 'tags' ? v.is_a?(String) : v.is_a?(Integer) && v.positive? })
-          raise Hiiro::Error, "Invalid #{field}" unless valid
-        end
+        value = row['tags']
+        raise Hiiro::Error, 'Invalid tags' unless value.nil? || (value.is_a?(Array) && value.all? { |v| v.is_a?(String) })
+        value = row['depends_on']
+        legacy = Array(originals.fetch(row['id']).depends_on).select { |dep| dep.is_a?(Integer) }
+        valid = value.nil? || (value.is_a?(Array) && value.all? { |v| (v.is_a?(String) && Hiiro::PullRequestReference.qualified(v)&.to_s == v) || legacy.include?(v) })
+        raise Hiiro::Error, 'Invalid depends_on: use owner/name#N entries' unless valid
         %w[task worktree herdr_workspace].each do |field|
           raise Hiiro::Error, "Invalid #{field}" unless row[field].nil? || row[field].is_a?(String)
         end
@@ -177,60 +184,55 @@ class Hiiro
           end
           current.save_changes
         end
-        (originals.keys - ids).each do |id|
-          before = originals.fetch(id)
+        remove(originals.keys - ids, baseline: baseline)
+      end
+    end
+
+    # Untracks the given ids, refusing any whose local preferences or tags
+    # changed after the baseline was read; already-removed ids are skipped.
+    def remove(ids, baseline:)
+      Hiiro::DB.connection.transaction(mode: :immediate) do
+        ids.each do |id|
+          before = baseline.fetch(id).fetch(:record)
           current = find(before)
           next unless current
-          relations = edit_baseline([current]).fetch(id)
-          unchanged = current.values == before.values && %i[tags checks].all? { |key| relations[key] == baseline.fetch(id)[key] }
+          unchanged = local_values(current) == local_values(before) && edit_baseline([current]).fetch(id)[:tags] == baseline.fetch(id)[:tags]
           raise Hiiro::Error, "Conflict deleting PR id #{id}" unless unchanged
           unpin(current)
         end
       end
     end
 
-    def fetch_pr_info(pr_number, repo: nil)
-      fields = 'number,title,url,headRefName,state,statusCheckRollup,reviewDecision,reviews,isDraft,mergeable'
-      repo_flag = repo ? " --repo #{repo}" : ""
-      output = `gh pr view #{pr_number}#{repo_flag} --json #{fields} 2>/dev/null`.strip
-      return nil if output.empty?
-      Hiiro::Git::Pr.from_gh_json(JSON.parse(output))
-    rescue JSON::ParserError
-      nil
+    # Qualifies a PR argument: URL or owner/name#N as given; a bare number or
+    # nil (the current branch) through gh's current repository.
+    def lookup_reference(text = nil)
+      if text
+        ref = Hiiro::PullRequestReference.qualified(text)
+        return ref if ref
+        raise Hiiro::Error, "Not a PR reference: #{text}" unless text.to_s.strip.match?(/\A#?\d+\z/)
+      end
+      data = gh_json('pr', 'view', *[text&.to_s&.strip&.delete_prefix('#')].compact, '--json', 'number,url')
+      ref = data.is_a?(Hash) && Hiiro::PullRequestReference.from_url(data['url'])
+      ref || raise(Hiiro::Error, text ? "PR #{text} not found in the current repository" : 'No PR for the current branch')
     end
 
     def fetch_current_branch_pr
-      fields = 'number,title,url,headRefName,state'
-      output = `gh pr view --json #{fields} 2>/dev/null`.strip
-      return nil if output.empty?
-      Hiiro::Git::Pr.from_gh_json(JSON.parse(output))
-    rescue JSON::ParserError
-      nil
+      data = gh_json('pr', 'view', '--json', 'number,title,url,headRefName,state')
+      data.is_a?(Hash) ? Hiiro::Git::Pr.from_gh_json(data) : nil
     end
 
-    def fetch_my_prs
-      output = `gh pr list --author @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
-      return [] if output.empty?
-      prs = JSON.parse(output) rescue []
-      prs.map { |data| Hiiro::Git::Pr.from_gh_json(data) }
-    end
-
-    def fetch_assigned_prs
-      output = `gh pr list --assignee @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
-      return [] if output.empty?
-      prs = JSON.parse(output) rescue []
-      prs.map { |data| Hiiro::Git::Pr.from_gh_json(data) }
-    end
+    def fetch_my_prs = fetch_pr_list('--author', '@me')
+    def fetch_assigned_prs = fetch_pr_list('--assignee', '@me')
 
     def fetch_my_and_assigned_prs
       authored_prs = fetch_my_prs
       assigned_prs = fetch_assigned_prs
 
-      authored_numbers = authored_prs.map(&:number).to_set
-      assigned_prs.each { |pr| pr.assigned = true unless authored_numbers.include?(pr.number) }
+      authored = authored_prs.map(&:reference).to_set
+      assigned_prs.each { |pr| pr.assigned = true unless authored.include?(pr.reference) }
       authored_prs.each { |pr| pr.authored = true }
 
-      (authored_prs + assigned_prs).uniq(&:number)
+      (authored_prs + assigned_prs).uniq(&:reference)
     end
 
     def needs_refresh?(pr, force: false)
@@ -244,14 +246,16 @@ class Hiiro
       (Time.now - last_check_time) > 120
     end
 
+    # The ISC freeze policy input: true while a freeze window is open, false
+    # outside one, nil when `isc` cannot answer (GitHub's state then stands).
     def code_freeze_active?
-      return @code_freeze_active unless @code_freeze_active.nil?
+      return @code_freeze_active if defined?(@code_freeze_active)
 
-      output = `isc codefreeze list 2>/dev/null`.strip
-      return @code_freeze_active = false if output.empty?
+      result = Hiiro::Shell.run3('isc', 'codefreeze', 'list')
+      return @code_freeze_active = nil unless result.success?
 
       now = Time.now
-      @code_freeze_active = output.lines.drop(1).any? do |line|
+      @code_freeze_active = result.stdout.lines.drop(1).any? do |line|
         parts = line.strip.split(/\s{2,}/)
         next false if parts.length < 2
 
@@ -261,99 +265,76 @@ class Hiiro
 
         now >= start_time && now <= end_time
       end
-    rescue
-      @code_freeze_active = false
+    rescue SystemCallError
+      @code_freeze_active = nil
     end
 
-    # Overrides the ISC code freeze StatusContext in a raw statusCheckRollup array
-    # to reflect the actual current freeze state rather than GitHub's cached value.
-    def apply_isc_code_freeze_override!(rollup, frozen)
-      return unless rollup.is_a?(Array)
+    def fetcher = @fetcher ||= Hiiro::PrSnapshot::Fetcher.new
 
-      rollup.each do |ctx|
-        next unless ctx['__typename'] == 'StatusContext' && ctx['context'] == 'ISC code freeze'
-        ctx['state'] = frozen ? 'FAILURE' : 'SUCCESS'
-      end
+    # Outcome lists of one refresh: each entry is [record, message or nil].
+    RefreshReport = Struct.new(:fresh, :incomplete, :failed, :unqualified, keyword_init: true) do
+      def attempted? = (fresh + incomplete + failed + unqualified).any?
     end
 
-    # Accepts an array of PR records (each with 'number' and optionally 'repo'/'url'),
-    # groups them by repo, and fetches in batches per repo via GraphQL.
-    def batch_fetch_pr_info(prs)
-      return {} if prs.empty?
+    # The one refresh path for single and bulk updates: qualified active
+    # records are fetched per repository, and each result is applied to its
+    # row by a targeted update of remote columns only.
+    def refresh(prs, force: false)
+      report = RefreshReport.new(fresh: [], incomplete: [], failed: [], unqualified: [])
+      targets = prs.select { |pr| pr.active? && needs_refresh?(pr, force: force) }
+      qualified, report.unqualified = targets.partition { |pr| pr.reference.qualified? }
+      report.unqualified.map! { |pr| [pr, 'no repository; track it again by URL'] }
+      return report if qualified.empty?
 
-      by_repo = prs.group_by { |pr| pr_repo(pr) || 'instacart/carrot' }
-
-      result = {}
-      by_repo.each do |repo_path, repo_prs|
-        owner, name = repo_path.split('/', 2)
-        pr_numbers = repo_prs.map(&:number)
-        result.merge!(fetch_batch_for_repo(owner, name, pr_numbers))
-      end
-      result
-    end
-
-    def refresh_all_status(prs, force: false, verbose: false)
-      prs_to_refresh = prs.select { |pr| pr.active? && needs_refresh?(pr, force: force) }
-
-      if prs_to_refresh.empty?
-        puts "All PRs recently checked (within last 2 minutes). Use -U to force update." if verbose
-        return prs
-      end
-
-      # infos is keyed by [number, repo] to avoid collisions across repos
-      infos = batch_fetch_pr_info(prs_to_refresh)
-      frozen = code_freeze_active?
-
-      prs_to_refresh.each do |pr|
-        info = infos[[pr.number, pr_repo(pr) || 'instacart/carrot']]
-        next unless info
-
-        rollup = info['statusCheckRollup']
-        apply_isc_code_freeze_override!(rollup, frozen)
-
-        changes = { last_checked: Time.now.iso8601 }
-        { 'state' => :state, 'title' => :title, 'reviewDecision' => :review_decision, 'isDraft' => :is_draft, 'mergeable' => :mergeable }.each do |key, field|
-          changes[field] = info[key] if info.key?(key)
+      started_at = Time.now.utc.iso8601(6)
+      results = fetcher.fetch(qualified.map(&:reference))
+      qualified.each do |pr|
+        result = results.fetch(pr.reference)
+        if result.is_a?(Hiiro::PrSnapshot)
+          # false: untracked meanwhile, or a newer observation already landed
+          next unless apply_snapshot(pr, result)
+          (result.complete? ? report.fresh : report.incomplete) << [pr, result.error]
+        else
+          record_failure(pr, result.error, started_at)
+          report.failed << [pr, result.error]
         end
-        if info.key?('statusCheckRollup')
-          changes[:check_runs] = rollup
-          changes[:checks] = Hiiro::Git::Pr.summarize_checks(rollup, truncated: info['checksTruncated'])
-        end
-        changes[:reviews] = Hiiro::Git::Pr.summarize_reviews(info['reviews']) if info.key?('reviews')
-        persist_status(pr, changes)
       end
-
-      prs
+      report
     end
 
-    def refresh_status(pr, force: false)
-      return pr unless needs_refresh?(pr, force: force)
-
-      info = fetch_pr_info(pr.number, repo: pr_repo(pr))
-      return pr unless info
-
-      rollup = info.check_runs
-      apply_isc_code_freeze_override!(rollup, code_freeze_active?)
-
-      persist_status(pr, state: info.state, title: info.title, check_runs: rollup,
-                     checks: Hiiro::Git::Pr.summarize_checks(rollup), reviews: info.reviews,
-                     review_decision: info.review_decision, is_draft: info.is_draft,
-                     mergeable: info.mergeable, last_checked: Time.now.iso8601)
-      pr
-    end
-
-    def persist_status(pr, changes)
+    # Writes one observation unless the row is gone or already holds a newer
+    # one; returns whether it wrote. Local columns (tags, task, dependencies,
+    # monitoring) are never in the update.
+    def apply_snapshot(pr, snapshot)
+      fields = snapshot.fields.to_h { |key, value| [Hiiro::PrSnapshot::FIELDS.fetch(key), value] }
+      fields.reject! { |key, value| value.nil? && %i[title state url head_ref_name].include?(key) }
+      checks = snapshot.checks.nodes
+      reviews = snapshot.reviews.nodes
+      values = fields.merge(
+        head_sha: snapshot.head_sha, fetched_at: snapshot.fetched_at,
+        checks_complete: snapshot.checks.complete, reviews_complete: snapshot.reviews.complete,
+        check_runs_json: Hiiro::DB::JSON.dump(checks),
+        checks_json: Hiiro::DB::JSON.dump(Hiiro::CheckSummary.from_rollup(checks, truncated: !snapshot.checks.complete)&.to_h),
+        review_nodes_json: Hiiro::DB::JSON.dump(reviews),
+        reviews_json: Hiiro::DB::JSON.dump(Hiiro::Git::Pr.summarize_reviews(reviews)),
+        refresh_outcome: 'fresh', refresh_error: snapshot.error,
+        freeze_active: code_freeze_active?, last_checked: Time.now.iso8601,
+      )
       Hiiro::DB.connection.transaction(mode: :immediate) do
-        current = pr.is_a?(Hiiro::PinnedPr) ? find(pr) : nil
-        return nil if pr.is_a?(Hiiro::PinnedPr) && !current
-        changes.each { |field, value| (current || pr).public_send("#{field}=", value) }
-        if current
-          current.save_changes
-          current.sync_check_runs if changes.key?(:check_runs)
-          changes.each { |field, value| pr.public_send("#{field}=", value) }
-        end
-        current || pr
+        scope = Hiiro::PinnedPr.where(id: pr.id).where(Sequel.|({ fetched_at: nil }, Sequel[:fetched_at] < snapshot.fetched_at))
+        written = scope.update(values) == 1
+        Hiiro::CheckRun.upsert_for_pr(pr.id, checks) if written
+        written
       end
+    end
+
+    # Keeps the last observation and marks it stale (or unknown when there is
+    # none), unless another refresh observed the PR after this one started.
+    def record_failure(pr, error, started_at)
+      Hiiro::PinnedPr.where(id: pr.id).where(Sequel.|({ fetched_at: nil }, Sequel[:fetched_at] <= started_at)).update(
+        refresh_outcome: Sequel.case([[Sequel.expr(fetched_at: nil), 'unknown']], 'stale'),
+        refresh_error: error, last_checked: Time.now.iso8601,
+      )
     end
 
     def display_pinned(pr, idx = nil, widths: {}, oneline: false)
@@ -402,24 +383,41 @@ class Hiiro
       conflict_str = pr.conflicting? ? " \e[30;101mC\e[0m" : ""
       reviews_str = "#{as_pad}#{as_colored}a/#{crs_pad}#{crs_colored}cr#{conflict_str}"
 
-      repo = pr_repo(pr)
-      repo_label = (repo && repo != 'instacart/carrot') ? "[#{repo}] " : ""
-
       tags = Array(pr.tags)
       tags_str = tags.any? ? tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') : nil
 
       branch_str = pr.head_branch ? " \e[90m#{pr.head_branch}\e[0m" : ""
       title_str = "\e[1m#{pr.title}\e[0m"
-      line1 = "#{num} ##{pr.number} #{state_icon} #{reviews_str}#{branch_str}"
-      line2 = "#{indent}#{repo_label}#{title_str}"
+      line1 = "#{num} #{pr.reference} #{state_icon} #{reviews_str}#{branch_str}#{freshness_label(pr)}"
+      line2 = "#{indent}#{title_str}"
       line3 = pr.url ? "#{indent}#{pr.url}" : nil
       line4 = tags_str ? "#{indent}#{tags_str}" : nil
+      line5 = "#{indent}#{snapshot_line(pr)}"
 
       if oneline
-        "#{line1} #{repo_label}#{title_str}#{tags_str ? "  #{tags_str}" : ""}"
+        "#{line1} #{title_str}#{tags_str ? "  #{tags_str}" : ""}"
       else
-        [line1, line2, line3, line4].compact.join("\n")
+        [line1, line2, line3, line4, line5].compact.join("\n")
       end
+    end
+
+    # '' for a fresh complete observation; otherwise why it is not evidence.
+    def freshness_label(pr)
+      case pr.freshness
+      when 'stale'   then " \e[33mstale\e[0m"
+      when 'unknown' then " \e[90munknown\e[0m"
+      else (pr.checks_complete? && pr.reviews_complete?) ? '' : " \e[33mincomplete\e[0m"
+      end
+    end
+
+    def snapshot_line(pr)
+      parts = ["snapshot #{pr.freshness}"]
+      parts << "head #{pr.head_sha[0, 7]}" if pr.head_sha
+      parts << "fetched #{pr.fetched_at}" if pr.fetched_at
+      parts << "checks #{pr.checks_complete? ? 'complete' : 'incomplete'}" if pr.fetched_at
+      parts << "reviews #{pr.reviews_complete? ? 'complete' : 'incomplete'}" if pr.fetched_at
+      parts << pr.refresh_error if pr.refresh_error
+      parts.join(' · ')
     end
 
     def filter_active?(opts)
@@ -449,10 +447,7 @@ class Hiiro
       else pr.draft? ? 'DRAFT' : 'OPEN'
       end
 
-      repo = pr_repo(pr)
-      repo_label = (repo && repo != 'instacart/carrot') ? " [#{repo}]" : ""
-
-      lines << "#{num} ##{pr.number}#{repo_label} - #{pr.title}"
+      lines << "#{num} #{pr.reference} - #{pr.title}"
       lines << "   State: #{state_str}"
       lines << "   Branch: #{pr.head_branch}" if pr.head_branch
       lines << "   URL: #{pr.url}" if pr.url
@@ -510,132 +505,33 @@ class Hiiro
     end
 
     def display_check_runs(pr, indent: "   ")
-      contexts = pr.check_summary&.contexts
-      return unless contexts&.any?
-
+      contexts = pr.check_summary&.contexts || []
       contexts.each do |ctx|
         emoji = case ctx.kind
                 when :check_run      then check_run_emoji(ctx.raw['conclusion'], ctx.raw['status'])
-                when :status_context then status_context_emoji(ctx.raw['state'])
+                when :status_context then status_context_emoji(ctx.outcome)
                 else '?'
                 end
         line = "#{indent}#{emoji}  #{ctx.name}"
+        line += "  (freeze policy: #{ctx.outcome}; GitHub: #{ctx.raw_outcome})" if ctx.assessed?
         line += "\n#{indent}   #{ctx.url}" if ctx.url
         puts line
       end
+      puts "#{indent}(incomplete: #{pr.refresh_error || 'not every check was fetched'})" if pr.fetched_at && !pr.checks_complete?
     end
 
     private
 
-    def fetch_batch_for_repo(owner, name, pr_numbers)
-      return {} if pr_numbers.empty?
-
-      context_fragment = <<~GRAPHQL.strip
-        __typename
-        ... on CheckRun { __typename name conclusion status detailsUrl }
-        ... on StatusContext { __typename context state targetUrl }
-      GRAPHQL
-
-      pr_queries = pr_numbers.map.with_index do |num, idx|
-        <<~GRAPHQL.strip
-          pr#{idx}: pullRequest(number: #{num}) {
-            number title url headRefName state isDraft mergeable reviewDecision
-            statusCheckRollup {
-              contexts(last: 100) {
-                totalCount
-                pageInfo { hasPreviousPage startCursor }
-                nodes { #{context_fragment} }
-              }
-            }
-            reviews(last: 50) { nodes { author { login } state } }
-          }
-        GRAPHQL
-      end
-
-      query = <<~GRAPHQL
-        query {
-          repository(owner: "#{owner}", name: "#{name}") {
-            #{pr_queries.join("\n")}
-          }
-        }
-      GRAPHQL
-
-      result = `gh api graphql -f query='#{query.gsub("'", "'\\''")}' 2>/dev/null`
-      return {} if result.empty?
-
-      data = JSON.parse(result)
-      repo_data = data.dig('data', 'repository')
-      return {} unless repo_data
-
-      pr_info_by_key = {}
-      repo_path = "#{owner}/#{name}"
-      pr_numbers.each_with_index do |num, idx|
-        pr_data = repo_data["pr#{idx}"]
-        next unless pr_data
-
-        contexts_data = pr_data.dig('statusCheckRollup', 'contexts')
-        nodes       = contexts_data&.[]('nodes') || []
-        total_count = contexts_data&.[]('totalCount').to_i
-        page_info   = contexts_data&.[]('pageInfo') || {}
-
-        # Paginate backwards to collect all checks beyond the first 100
-        all_nodes = nodes.dup
-        cursor = page_info['startCursor']
-        while page_info['hasPreviousPage'] && cursor
-          extra_nodes, page_info = fetch_contexts_page(owner, name, num, cursor, context_fragment)
-          break unless extra_nodes
-          all_nodes = extra_nodes + all_nodes
-          cursor = page_info&.[]('startCursor')
-        end
-
-        truncated = total_count > 0 && all_nodes.length < total_count
-
-        pr_info_by_key[[num, repo_path]] = {
-          'number'           => pr_data['number'],
-          'title'            => pr_data['title'],
-          'url'              => pr_data['url'],
-          'headRefName'      => pr_data['headRefName'],
-          'state'            => pr_data['state'],
-          'isDraft'          => pr_data['isDraft'],
-          'mergeable'        => pr_data['mergeable'],
-          'reviewDecision'   => pr_data['reviewDecision'],
-          'statusCheckRollup'=> all_nodes.any? ? all_nodes : nil,
-          'checksTruncated'  => truncated,
-          'reviews'          => pr_data.dig('reviews', 'nodes') || [],
-          'repo'             => repo_path
-        }
-      end
-
-      pr_info_by_key
-    rescue JSON::ParserError, StandardError
-      {}
+    def gh_json(*args)
+      result = Hiiro::Shell.run3('gh', *args)
+      result.success? ? JSON.parse(result.stdout) : nil
+    rescue JSON::ParserError, SystemCallError
+      nil
     end
 
-    def fetch_contexts_page(owner, name, pr_number, before_cursor, context_fragment)
-      query = <<~GRAPHQL
-        query {
-          repository(owner: "#{owner}", name: "#{name}") {
-            pullRequest(number: #{pr_number}) {
-              statusCheckRollup {
-                contexts(last: 100, before: "#{before_cursor}") {
-                  pageInfo { hasPreviousPage startCursor }
-                  nodes { #{context_fragment} }
-                }
-              }
-            }
-          }
-        }
-      GRAPHQL
-
-      result = `gh api graphql -f query='#{query.gsub("'", "'\\''")}' 2>/dev/null`
-      return [nil, nil] if result.empty?
-
-      contexts = JSON.parse(result).dig('data', 'repository', 'pullRequest', 'statusCheckRollup', 'contexts')
-      return [nil, nil] unless contexts
-
-      [contexts['nodes'] || [], contexts['pageInfo'] || {}]
-    rescue JSON::ParserError, StandardError
-      [nil, nil]
+    def fetch_pr_list(*filter)
+      data = gh_json('pr', 'list', *filter, '--state', 'open', '--json', 'number,title,headRefName,url')
+      data.is_a?(Array) ? data.map { |pr| Hiiro::Git::Pr.from_gh_json(pr) } : []
     end
 
     def check_run_emoji(conclusion, status)

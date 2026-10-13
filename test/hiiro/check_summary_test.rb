@@ -84,4 +84,22 @@ class CheckSummaryTest < Minitest::Test
     refute pr.green?
     assert_nil Hiiro::Git::Pr.new(number: 2).red?
   end
+
+  def test_freeze_policy_is_an_assessment_over_unchanged_raw_contexts
+    raw = JSON.parse(JSON.generate(ROLLUP))
+    active = Hiiro::CheckSummary.from_rollup(raw, freeze_active: true)
+    inactive = Hiiro::CheckSummary.from_rollup(raw, freeze_active: false)
+    freeze = inactive.contexts.find(&:freeze?)
+    assert_equal ['SUCCESS', 'FAILURE', true], [freeze.outcome, freeze.raw_outcome, freeze.assessed?]
+    assert_equal [1, 1], [active.failed, active.frozen]
+    assert_equal [0, 0, 3], [inactive.failed, inactive.frozen, inactive.success]
+    assert_equal ROLLUP, raw
+    assert_equal 'FAILURE', Hiiro::CheckSummary.from_rollup(raw).contexts.find(&:freeze?).outcome
+  end
+
+  def test_truncated_successes_are_never_green
+    nodes = [{ '__typename' => 'CheckRun', 'name' => 'a', 'status' => 'COMPLETED', 'conclusion' => 'SUCCESS' }]
+    assert Hiiro::CheckSummary.from_rollup(nodes).green?
+    refute Hiiro::CheckSummary.from_rollup(nodes, truncated: true).green?
+  end
 end

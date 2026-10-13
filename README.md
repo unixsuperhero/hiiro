@@ -280,7 +280,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | [`h mcp`](docs/h-mcp.md) | Local MCP registrations, saved tool schemas, direct tool calls, and HTTP-only client sync (`require 'hiiro/mcp'`) |
 | `h pane` | Herdr pane management |
 | `h plugin` | Manage hiiro plugins (list, edit, search) |
-| `h pr` | GitHub PR management via gh CLI |
+| `h pr` | GitHub PR management via gh CLI; PRs are `owner/name#N` with fresh/stale/unknown snapshots |
 | `h project` | Project navigation with Herdr workspace management |
 | `h queue` | Claude prompt queue with Herdr-based task execution |
 | `h service` | Manage background dev services with env variations and groups |
@@ -553,7 +553,7 @@ Each durable type has one current owner. The first operation that uses persisten
 | Tasks and task resources | SQLite `tasks` and `task_resources`, `Hiiro::TaskRecord` and `Hiiro::TaskResource` |
 | Worktree assignments | SQLite `assignments`, `Hiiro::Assignment` |
 | Saved links and branches | SQLite `links` and `branches`, `Hiiro::Link` and `Hiiro::Branch` |
-| Pinned PRs and check snapshots | SQLite `prs` and `check_runs`, `Hiiro::PinnedPr` and `Hiiro::CheckRun` |
+| Pinned PRs and check snapshots | SQLite `prs` and `check_runs`, `Hiiro::PinnedPr` and `Hiiro::CheckRun`; remote snapshots (head, fetch time, completeness, freshness) are written only by `PinnedPRManager#refresh`, local tags/task/dependencies only by tracking commands; see [h-pr](docs/h-pr.md) |
 | Project aliases and app mappings | SQLite `projects` and `apps`, `Hiiro::Project` and `Hiiro::AppRecord` |
 | Command pins and named pane homes | SQLite `pins` and `pane_homes`, `Hiiro::PinRecord` and `Hiiro::PaneHome` |
 | Reminders and scheduling checkpoints | SQLite `reminders`, `Hiiro::Reminder` |

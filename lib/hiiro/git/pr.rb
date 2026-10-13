@@ -21,11 +21,6 @@ class Hiiro
         new(number: ref.number_string, url: link, repo: ref.repo.path)
       end
 
-      def self.from_number(number)
-        ref = Hiiro::PullRequestReference.parse(number) or return nil
-        new(number: ref.number_string)
-      end
-
       def self.repo_from_url(url)
         Hiiro::PullRequestReference.from_url(url)&.repo&.path
       end
@@ -140,7 +135,7 @@ class Hiiro
         @tags            = tags
         @assigned        = assigned
         @authored        = authored
-        @depends_on      = depends_on ? Array(depends_on).map(&:to_i) : nil
+        @depends_on      = depends_on
       end
 
       # Compatibility accessors for older callers and serialized records.

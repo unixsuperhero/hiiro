@@ -18,7 +18,16 @@
 
 ## Unreleased
 
+### Changed
+- `h pr` keeps one repository-qualified snapshot per tracked PR: head revision, fetch time, raw checks and reviews with completeness, and `fresh` / `stale` / `unknown` freshness, separate from local tags, task, dependencies, and tracking. Lists, `update`, `track`, and `status` share one repository-batched refresh; output names PRs as `owner/name#N`.
+- `h pr dep` stores dependencies as `owner/name#N`; legacy numbers are qualified at startup only when unambiguous and are otherwise kept and reported by `dep ls`.
+- The ISC code freeze is applied as a policy when checks are counted; GitHub's raw contexts are stored unchanged and `ls -C` shows both. When `isc` is unavailable GitHub's state stands (it was previously forced to success).
+
 ### Fixed
+- `h pr` refresh now pages reviews (previously only the last 50) as well as checks, re-reads the head on every page, and never combines pages from two heads. A failed page, malformed output, partial GraphQL errors, or a repeated cursor leaves the snapshot incomplete instead of complete.
+- A failed refresh keeps the last observation and marks it `stale`; incomplete, stale, and unknown snapshots are never `green`.
+- A refresh no longer overwrites tags, task, or dependency changes made while it runs, does not replace a newer snapshot, and does not recreate an untracked PR.
+- PRs without a repository are no longer fetched from a hard-coded default repository; a bare number that matches PRs in two repositories is an error, and a dependency number is no longer matched against any repository.
 - `h git commit` no longer touches the real index while planning: `-n`, a cancelled confirmation, an invalid plan, or a failing planner leave index bytes, staged changes, `HEAD`, and working files unchanged (the old snapshot ran `git add -A` + `git reset` and dropped the staging selection, even on a dry run).
 - `h git commit` rejects plans with unknown, duplicated, or missing paths, empty messages, or bad JSON before staging anything, and fails when the planner exits nonzero or cannot start.
 - `h git commit` stops at the first failing `git add`, commit, or hook with exit 1, reports completed commits, and never runs later groups; each commit contains only its group, and the remaining paths keep their staging. `-y`/`--yes` and the `[y/N]` confirmation now exist as documented. Files with both staged and unstaged changes are committed whole only with the new `-w`/`--whole-files`; renames, deletions, untracked files, and unusual file names are handled exactly.

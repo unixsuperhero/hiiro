@@ -34,26 +34,23 @@ class PullRequestReferenceTest < Minitest::Test
     assert_nil Hiiro::PullRequestReference.from_url('https://example.com/pull/1')
   end
 
-  def test_default_repo
-    ref = Hiiro::PullRequestReference.parse('12', default_repo: 'instacart/carrot')
-    assert_equal 'instacart/carrot', ref.repo.path
+  def test_bare_numbers_are_qualified_only_by_explicit_repository_context
+    ref = Hiiro::PullRequestReference.parse('12', repo: 'instacart/carrot')
+    assert_equal ['instacart/carrot#12', true], [ref.to_s, ref.qualified?]
+    assert_equal 'other/repo#7', Hiiro::PullRequestReference.parse('other/repo#7', repo: 'instacart/carrot').to_s
+    assert_equal URL, Hiiro::PullRequestReference.parse(URL, repo: 'other/repo').url
+    assert_equal 'other/repo#7', Hiiro::PullRequestReference.qualified('other/repo#7').to_s
+    assert_nil Hiiro::PullRequestReference.qualified('7')
+    refute Hiiro::PullRequestReference.parse('#7').qualified?
   end
 
-  def test_matches_number_and_repo
-    ref = Hiiro::PullRequestReference.from_url(URL)
-    same_repo  = Hiiro::Git::Pr.new(number: '4521', repo: 'instacart/carrot')
-    other_repo = Hiiro::Git::Pr.new(number: 4521, repo: 'other/repo')
-    legacy     = Hiiro::Git::Pr.new(number: 4521)
-    by_url     = Hiiro::Git::Pr.new(number: 4521, url: URL)
-
-    assert ref.matches?(same_repo)
-    refute ref.matches?(other_repo)
-    assert ref.matches?(legacy)
-    assert ref.matches?(by_url)
-    refute ref.matches?(Hiiro::Git::Pr.new(number: 1))
-
-    bare = Hiiro::PullRequestReference.parse('4521')
-    assert bare.matches?(other_repo)
+  def test_equality_requires_the_same_repository
+    a = Hiiro::PullRequestReference.parse('team/one#42')
+    assert_equal a, Hiiro::PullRequestReference.from_url('https://github.com/team/one/pull/42')
+    refute_equal a, Hiiro::PullRequestReference.parse('team/two#42')
+    refute_equal a, Hiiro::PullRequestReference.parse('42')
+    assert_equal 2, [a, Hiiro::PullRequestReference.parse('team/two#42'), Hiiro::PullRequestReference.parse('team/one#42')].uniq.length
+    assert_equal a, Hiiro::Git::Pr.new(number: '42', url: 'https://github.com/team/one/pull/42').reference
   end
 
   def test_git_pr_factories_delegate
@@ -63,8 +60,6 @@ class PullRequestReferenceTest < Minitest::Test
     assert_equal URL, pr.url
     assert Hiiro::Git::Pr.is_link?(URL)
     refute Hiiro::Git::Pr.is_link?('4521')
-    assert_equal '77', Hiiro::Git::Pr.from_number(' 77 ').number
-    assert_nil Hiiro::Git::Pr.from_number('abc')
     assert_equal 'instacart/carrot', Hiiro::Git::Pr.repo_from_url(URL)
     assert_nil Hiiro::Git::Pr.repo_from_url(nil)
   end

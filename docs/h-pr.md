@@ -54,11 +54,42 @@ h pr <subcommand> [args]
 | `edit` | Edit the `h-pr` bin file |
 | `dep add <ref> <dependencies>` | Add dependencies to a tracked PR |
 | `dep rm <ref> [dependencies]` | Remove dependencies or clear them all |
+| `dep ls [ref]` | List dependencies with their qualified references |
 | `dep edit` / `config vim` | Edit tracked PR metadata in a temporary YAML document |
 | `config path` | Print the canonical database location |
 | `q [conditions]` | Query the canonical `prs` table |
 
-PR references can be a PR number, a GitHub pull-request URL, or omitted to select a tracked PR. When two repositories have the same number, a bare number is an error. Use the full URL to choose the repository. Stored rows keep their database ID, slot, and pin time across metadata changes and status refreshes.
+PR references can be a GitHub pull-request URL, `owner/name#N`, a PR number, a slot, or omitted to select a tracked PR. A bare number names a tracked PR first and a slot second. When two repositories track the same number, a bare number is an error (`ERROR: Ambiguous PR #42 (team/one#42, team/two#42); use owner/name#42 or its URL`, exit 1); hiiro never guesses a default repository. `track` and `status` qualify an untracked bare number through `gh`'s current repository. Output names PRs as `owner/name#N`. Stored rows keep their database ID, slot, and pin time across metadata changes and status refreshes.
+
+### Snapshots: what GitHub reported
+
+Each tracked PR holds one remote snapshot, separate from its local preferences:
+
+```js
+const local = { ref: "team/one#42", tags: ["review"], task: "work", dependsOn: ["team/two#42"], pinned: true, slot: 1 };
+const snapshot = {
+  ref: "team/one#42", headSha: "aaaa…", fetchedAt: "2026-10-13T17:26:25.156914Z",
+  checks:  { complete: true,  nodes: 250 },   // raw statusCheckRollup contexts
+  reviews: { complete: false, nodes: 100 },   // raw review nodes
+  outcome: "fresh",                           // fresh | stale | unknown
+  error: "reviews: page 2 failed: malformed gh output",
+};
+```
+
+- One refresh path (`ls -u`, `update`, `tags -u`, `track`, `status`) fetches one GraphQL batch per repository through `gh api graphql`, then pages checks and reviews backward 100 at a time. Each page re-reads the head revision.
+- **Incomplete**: a later page failed, returned malformed output or GraphQL errors, repeated a cursor, or the count fell short. What was fetched is stored with `complete: false`, shown as `incomplete` (and `❓`), and its error is kept.
+- **Stale**: the refresh produced nothing usable (gh failed, the PR could not be resolved, or the head changed between pages). The last observation is kept unchanged and marked `stale`; a PR never observed is `unknown`. Pages from two heads are never combined.
+- `green`, `-g`, and `ls -v` count a PR as passing only when its snapshot is fresh and both checks and reviews are complete. A partial list of successes is never passing evidence.
+- A refresh updates only remote columns of each row (title, state, head, checks, reviews, freshness) and only when the stored observation is older. Tags, task, dependencies, and tracking changes made while a refresh runs survive it, and an untracked PR is not recreated.
+- Rows with no repository evidence (no `repo`, no URL) are listed but not refreshed: `not refreshed id 35 #50: no repository; track it again by URL`.
+
+The ISC code freeze is a policy over the snapshot, not part of it. GitHub's raw contexts are stored unchanged. The policy input (`isc codefreeze list`: inside a window, outside, or unavailable) is recorded with each observation and applied when checks are counted: inside a window the `ISC code freeze` context counts as failed (`❄️`), outside it as passed, and when `isc` is unavailable GitHub's state stands. `ls -C` prints both, for example `❌  ISC code freeze  (freeze policy: FAILURE; GitHub: SUCCESS)`.
+
+### Dependencies
+
+Dependencies are stored as `owner/name#N`. `dep add` takes tracked PRs (number, slot, URL, `owner/name#N`); an untracked bare number means that number in the depending PR's repository. `dep rm` with a bare number also removes a legacy unqualified entry with that number.
+
+Older records stored bare numbers. At startup, a legacy number is qualified only when exactly one tracked record has that number and it is in the depending PR's repository; otherwise the integer is kept and `dep ls` reports it as `#44 (unresolved legacy number; re-add as owner/name#44 or URL)`. Records with no `repo` gain it from their PR URL.
 
 ### Data ownership and record editing
 
@@ -70,7 +101,7 @@ SQLite owns tracked and pinned PR records in `prs`. Check rows use `check_runs.p
 
 Cleared workspace associations stay cleared across restarts. An old `tmux_session` value seeds `herdr_workspace` only when the canonical column is first introduced; it remains available for recovery but is not a reader fallback.
 
-The `tag -e` and `mrm` selection documents use stable row IDs with repository comments. Failed, blank, or unchanged editors do not mutate PR records. Refresh writes only fetched status, check, review, and last-check fields. It leaves local tags, dependencies, task associations, worktrees, slots, and pin times unchanged.
+The `tag -e` and `mrm` selection documents use stable row IDs with repository comments. Failed, blank, or unchanged editors do not mutate PR records. `mrm` and editor deletions untrack each selected row individually and refuse a row whose local fields or tags changed after the document was opened; a refresh in the meantime does not block them. Editor `depends_on` entries must be `owner/name#N` (legacy numbers already on the row may stay).
 
 ### attach
 
@@ -145,7 +176,9 @@ List all tracked PRs with check status, review counts, and tags. Supports filter
 | `--green` | | Only PRs with all checks passing |
 | `--pending` | | Only PRs with pending checks |
 | `--conflicts` | | Only PRs with merge conflicts |
-| `--numbers` | | Print PR numbers only |
+| `--numbers` | | Print PR numbers only (bare numbers; not unique across repositories) |
+
+Each line names the PR as `owner/name#N`. A non-fresh snapshot is marked `stale`, `unknown`, or `incomplete` after the branch; `-v` adds `snapshot fresh · head aaaaaaa · fetched … · checks complete · reviews complete`.
 
 **Examples**
 
@@ -169,7 +202,16 @@ h pr prune
 ```
 ### status
 
-Show check status counts for a PR.
+Refresh one or more PRs through the snapshot path and print the reference, title, state, check counts by outcome (`checks unknown` when nothing was observed), `checks incomplete` when pages are missing, the refresh error, and the URL. Tracked PRs are stored as by `update`; untracked ones are only printed. Exits 1 when any PR is not fresh.
+
+```text
+team/one#42
+one
+open
+250 success
+snapshot stale: head changed during refresh (aaaaaaa → bbbbbbb at checks page 2)
+https://github.com/team/one/pull/42
+```
 
 **Examples**
 
@@ -211,7 +253,8 @@ Start tracking a PR. Automatically associates it with the current task/worktree/
 
 ```bash
 h pr track          # track current branch's PR (or fuzzy-select)
-h pr track 1234     # track by number
+h pr track 1234     # a number in gh's current repository
+h pr track team/repo#1234
 h pr track https://github.com/team/repo/pull/1234
 ```
 
@@ -221,7 +264,12 @@ Refresh statuses for all active tracked PRs, then display the list.
 
 **Options**
 
-Same filters as `ls`, plus `--force-update` / `-u` to force refresh even if recently checked.
+Same filters as `ls`, plus `--force-update` / `-u` to force refresh even if recently checked. Incomplete and failed refreshes are listed before the PRs:
+
+```text
+  incomplete team/one#42: checks: page 3 failed: gh exited 1: HTTP 502: Bad Gateway (https://api.github.com/graphql)
+  refresh failed team/two#42: head changed during refresh (bbbbbbb → ccccccc at reviews page 2)
+```
 
 **Examples**
 

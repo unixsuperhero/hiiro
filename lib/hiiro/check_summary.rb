@@ -2,22 +2,30 @@ require 'time'
 
 class Hiiro
   # One node of a GitHub statusCheckRollup: a CheckRun or a StatusContext.
-  # Retains the raw node so either provider's fields stay available.
+  # Retains the raw node so either provider's fields stay available. A policy
+  # assessment (the ISC freeze state) is held beside raw, never written into it.
   class CheckContext
     FAILED_CONCLUSIONS = %w[FAILURE ERROR TIMED_OUT STALE STARTUP_FAILURE ACTION_REQUIRED].freeze
     PENDING_STATUSES   = %w[QUEUED IN_PROGRESS PENDING REQUESTED WAITING].freeze
     FAILED_STATES      = %w[FAILURE ERROR].freeze
     FREEZE_CONTEXT     = 'ISC code freeze'
 
-    def self.from_node(hash)
-      new(hash.is_a?(Hash) ? hash : {})
+    def self.from_node(hash, freeze_active: nil)
+      raw = hash.is_a?(Hash) ? hash : {}
+      context = new(raw)
+      return context if freeze_active.nil? || !context.freeze?
+
+      new(raw, assessed_state: freeze_active ? 'FAILURE' : 'SUCCESS')
     end
 
-    attr_reader :raw
+    attr_reader :raw, :assessed_state
 
-    def initialize(raw)
+    def initialize(raw, assessed_state: nil)
       @raw = raw
+      @assessed_state = assessed_state
     end
+
+    def assessed? = !assessed_state.nil?
 
     def kind
       case raw['__typename']
@@ -49,14 +57,22 @@ class Hiiro
     # Upcased result the way `h pr status` tallies it:
     # CheckRun → conclusion, else status; StatusContext → state.
     def outcome
+      value = check_run? ? (raw['conclusion'] || raw['status']) : state
+      value.to_s.upcase
+    end
+
+    # GitHub's reported result, ignoring any policy assessment.
+    def raw_outcome
       value = check_run? ? (raw['conclusion'] || raw['status']) : raw['state']
       value.to_s.upcase
     end
 
-    def successful? = raw['conclusion'] == 'SUCCESS' || raw['state'] == 'SUCCESS'
-    def pending?    = PENDING_STATUSES.include?(raw['status']) || raw['state'] == 'PENDING'
-    def failed?     = FAILED_CONCLUSIONS.include?(raw['conclusion']) || FAILED_STATES.include?(raw['state'])
-    def freeze?     = raw['context'] == FREEZE_CONTEXT
+    def successful? = raw['conclusion'] == 'SUCCESS' || state == 'SUCCESS'
+    def pending?    = PENDING_STATUSES.include?(raw['status']) || state == 'PENDING'
+    def failed?     = FAILED_CONCLUSIONS.include?(raw['conclusion']) || FAILED_STATES.include?(state)
+    def freeze?     = raw['__typename'] == 'StatusContext' && raw['context'] == FREEZE_CONTEXT
+
+    private def state = assessed_state || raw['state']
 
     # Row shape stored by Hiiro::CheckRun.upsert_for_pr.
     def to_row(pr_number:)
@@ -75,10 +91,11 @@ class Hiiro
   # Built either from a raw rollup (fresh fetch) or from stored counts.
   class CheckSummary
     # nil when there is nothing to summarize (matches the old summarize_checks).
-    def self.from_rollup(rollup, truncated: false)
+    # freeze_active: the ISC freeze policy input; nil leaves GitHub's state as reported.
+    def self.from_rollup(rollup, truncated: false, freeze_active: nil)
       return nil unless rollup.is_a?(Array) && rollup.any?
 
-      contexts = rollup.map { |node| CheckContext.from_node(node) }
+      contexts = rollup.map { |node| CheckContext.from_node(node, freeze_active: freeze_active) }
       new(
         total:     contexts.length,
         success:   contexts.count(&:successful?),
@@ -122,9 +139,10 @@ class Hiiro
     def only_frozen? = failed > 0 && failed == frozen
     def any_pending? = pending > 0
 
-    # The three filter predicates (h pr -r / -g / -p), unchanged from Git::Pr.
+    # The three filter predicates (h pr -r / -g / -p). A truncated list of
+    # successes is never green: unfetched checks may be failing.
     def red?     = failed > 0
-    def green?   = failed == 0 && pending == 0 && success > 0
+    def green?   = complete? && failed == 0 && pending == 0 && success > 0
     def pending? = pending > 0 && failed == 0
 
     # { 'SUCCESS' => 12, 'FAILURE' => 1 }; missing outcomes read as 0.

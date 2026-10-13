@@ -208,66 +208,51 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
   # === PR Tracking ===
 
   add_subcmd(:track) do |ref = nil|
-    pr_info = nil
-
-    case ref
-    when nil, '-'
-      # Try current branch's PR first, fall back to fuzzy select
-      pr_info = pinned_manager.fetch_current_branch_pr
-
-      unless pr_info
+    reference = if ref.nil? || ref == '-'
+      # Current branch's PR first, then a fuzzy pick from your open PRs
+      current = pinned_manager.fetch_current_branch_pr
+      if current
+        current.reference
+      else
         my_prs = pinned_manager.fetch_my_prs
-        if my_prs.empty?
-          puts "No open PRs found"
-          next
-        end
+        next puts "No open PRs found" if my_prs.empty?
 
         lines = my_prs.each_with_object({}) do |pr, h|
-          display = "##{pr.number} [#{pr.head_branch}] #{pr.title}"
-          h[display] = pr
+          h["#{pr.reference} [#{pr.head_branch}] #{pr.title}"] = pr.reference
         end
-
-        pr_info = fuzzyfind_from_map(lines)
-        unless pr_info
-          puts "No PR selected"
-          next
-        end
-      end
-    when /^\d+$/
-      # Track by PR number
-      pr_info = pinned_manager.fetch_pr_info(ref)
-      unless pr_info
-        puts "PR ##{ref} not found"
-        next
+        selected = fuzzyfind_from_map(lines)
+        next puts "No PR selected" unless selected
+        selected
       end
     else
-      reference = Hiiro::PullRequestReference.parse(ref)
-      unless reference
-        puts 'Usage: h pr track [-|PR_NUMBER|GITHUB_URL]'
-        next
-      end
-      pr_info = pinned_manager.fetch_pr_info(reference.number, repo: reference.repo&.path)
-      next puts "PR #{ref} not found" unless pr_info
+      pinned_manager.lookup_reference(ref)
     end
 
-    if pinned_manager.pinned?(pr_info)
-      puts "Already tracking ##{pr_info.number}"
-      next
-    end
-
+    local = {}
     env = Environment.current rescue nil
     if env
       task = env.task
-      pr_info.task         = task.name      if task
-      pr_info.worktree     = task.tree_name if task&.tree_name
-      pr_info.herdr_workspace = env.session&.name
+      local[:task]            = task.name      if task
+      local[:worktree]        = task.tree_name if task&.tree_name
+      local[:herdr_workspace] = env.session&.name
     end
 
-    pinned_manager.pin(pr_info)
-    puts "Now tracking ##{pr_info.number}: #{pr_info.title}"
+    record, outcome = pinned_manager.track(reference, **local)
+    next puts "Already tracking #{reference}" if outcome == :already
+
+    report = pinned_manager.refresh([record], force: true)
+    record.refresh
+    puts "Now tracking #{reference}: #{record.title}"
+    report.failed.each { |_, error| puts "  snapshot #{record.freshness}: #{error}" }
     puts
     run_subcmd(:update)
   end
+
+  print_refresh_problems = ->(report) {
+    report.incomplete.each { |pr, error| puts "  incomplete #{pr.reference}: #{error}" }
+    report.failed.each { |pr, error| puts "  refresh failed #{pr.reference}: #{error}" }
+    report.unqualified.each { |pr, error| puts "  not refreshed id #{pr.id} #{pr.reference}: #{error}" }
+  }
 
   add_subcmd(:ls) do |*ls_args|
     opts = Hiiro::Options.parse(ls_args) { |o|
@@ -288,7 +273,9 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     pinned = pinned_manager.load_pinned
     next puts "No tracked PRs" if pinned.empty?
 
-    pinned_manager.refresh_all_status(pinned, force: opts.update)
+    report = pinned_manager.refresh(pinned, force: opts.update)
+    pinned = pinned_manager.load_pinned
+    print_refresh_problems.call(report)
 
     results = pinned_manager.apply_filters(pinned, opts)
 
@@ -300,7 +287,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     if opts.diff
       lines = results.each_with_index.each_with_object({}) do |(pr, idx), h|
         key = pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))
-        h[key] = pr.number.to_s
+        h[key] = pinned_manager.reference_text(pr)
       end
       pr_number = fuzzyfind_from_map(lines)
       system('gh', 'pr', 'diff', pr_number) if pr_number
@@ -328,37 +315,46 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
 
   add_subcmd(:status) do |*status_args|
     refs = status_args.empty? ? [nil] : status_args
-    pinned = pinned_manager.load_pinned
+    order = %w[FAILURE ERROR TIMED_OUT CANCELLED ACTION_REQUIRED PENDING IN_PROGRESS QUEUED SUCCESS SKIPPED NEUTRAL]
+    ok = true
 
     refs.each do |ref|
-      pr_number = ref ? resolve(:pr, ref) : nil
-
-      cmd = ['gh', 'pr', 'view', '--json', 'number,title,state,url,statusCheckRollup']
-      cmd << pr_number.to_s if pr_number
-      raw = `#{cmd.join(' ')} 2>&1`
-      if $?.exitstatus != 0
-        puts raw.strip
-        next
-      end
-
-      pr = JSON.parse(raw)
-      counts = Hiiro::CheckSummary.from_rollup(pr['statusCheckRollup'])&.counts_by_outcome || {}
-
-      if counts.empty?
-        summary = 'no checks'
+      reference = pinned_manager.lookup_reference(ref && resolve(:pr, ref))
+      tracked = pinned_manager.find(reference)
+      if tracked
+        pinned_manager.refresh([tracked], force: true)
+        tracked.refresh
+        summary, complete, error = tracked.check_summary, tracked.checks_complete?, tracked.refresh_error
+        title, state, url, freshness = tracked.title, tracked.state, tracked.url, tracked.freshness
       else
-        order = %w[FAILURE ERROR TIMED_OUT CANCELLED ACTION_REQUIRED PENDING IN_PROGRESS QUEUED SUCCESS SKIPPED NEUTRAL]
-        parts = order.filter_map { |s| "#{counts[s]} #{s.downcase}" if counts[s] > 0 }
-        summary = parts.join(', ')
+        result = pinned_manager.fetcher.fetch([reference]).fetch(reference)
+        if result.is_a?(Hiiro::PrSnapshot)
+          summary = Hiiro::CheckSummary.from_rollup(result.checks.nodes, truncated: !result.checks.complete,
+                                                    freeze_active: pinned_manager.code_freeze_active?)
+          complete, error, freshness = result.checks.complete, result.error, 'fresh'
+          title, state, url = result.fields.values_at('title', 'state', 'url')
+        else
+          title, state, url, freshness, error = nil, nil, reference.url, 'unknown', result.error
+        end
       end
 
-      puts "##{pr['number']}"
-      puts pr['title']
-      puts pr['state'].downcase
-      puts summary
-      puts pr['url']
+      counts = summary&.counts_by_outcome || {}
+      line = if freshness == 'unknown' then 'checks unknown'
+             elsif counts.empty? then 'no checks'
+             else order.filter_map { |s| "#{counts[s]} #{s.downcase}" if counts[s] > 0 }.join(', ')
+             end
+      ok &&= freshness == 'fresh'
+
+      puts reference.to_s
+      puts title if title
+      puts state.downcase if state
+      puts line
+      puts "checks incomplete" if freshness == 'fresh' && !complete
+      puts "snapshot #{freshness}: #{error}" if error
+      puts url
       puts if refs.length > 1
     end
+    ok
   end
 
   add_subcmd(:update) do |*update_args|
@@ -378,11 +374,14 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
 
     active = pinned.select(&:active?)
     puts "Updating status for #{active.length} active PR(s) (#{pinned.length - active.length} closed/merged skipped)..."
-    pinned_manager.refresh_all_status(pinned, force: opts.force_update, verbose: true)
+    report = pinned_manager.refresh(pinned, force: opts.force_update)
+    puts "All PRs recently checked (within last 2 minutes). Use -u to force update." unless report.attempted?
+    print_refresh_problems.call(report)
     puts "Done."
 
     puts
-    run_subcmd(:ls, *opts.original_args)
+    # The refresh just ran; listing with -u would fetch everything a second time.
+    run_subcmd(:ls, *opts.original_args.reject { |arg| %w[-u --force-update].include?(arg) })
   end
 
   add_subcmd(:green) do |*green_args|
@@ -488,12 +487,12 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       next
     end
 
-    pinned_numbers = pinned_manager.load_pinned.map(&:number).to_set
+    tracked_refs = pinned_manager.load_pinned.map(&:reference).to_set
     puts "PRs assigned to you (#{prs.count}):"
     puts
     prs.each_with_index do |pr, i|
-      tracked = pinned_numbers.include?(pr.number) ? ' [tracked]' : ''
-      puts "  #{i + 1}. ##{pr.number} #{pr.title} [#{pr.head_branch}]#{tracked}"
+      tracked = tracked_refs.include?(pr.reference) ? ' [tracked]' : ''
+      puts "  #{i + 1}. #{pr.reference} #{pr.title} [#{pr.head_branch}]#{tracked}"
     end
   end
 
@@ -505,19 +504,19 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       next
     end
 
-    pinned_numbers = pinned_manager.load_pinned.map(&:number).to_set
+    tracked_refs = pinned_manager.load_pinned.map(&:reference).to_set
     puts "PRs created by you (#{prs.count}):"
     puts
     prs.each_with_index do |pr, i|
-      tracked = pinned_numbers.include?(pr.number) ? ' [tracked]' : ''
-      puts "  #{i + 1}. ##{pr.number} #{pr.title} [#{pr.head_branch}]#{tracked}"
+      tracked = tracked_refs.include?(pr.reference) ? ' [tracked]' : ''
+      puts "  #{i + 1}. #{pr.reference} #{pr.title} [#{pr.head_branch}]#{tracked}"
     end
   end
 
   add_subcmd(:missing) do
     my_prs = pinned_manager.fetch_my_and_assigned_prs
-    pinned_numbers = pinned_manager.load_pinned.map(&:number)
-    missing = my_prs.reject { |pr| pinned_numbers.include?(pr.number) }
+    tracked_refs = pinned_manager.load_pinned.map(&:reference).to_set
+    missing = my_prs.reject { |pr| tracked_refs.include?(pr.reference) }
 
     if missing.empty?
       puts "All your PRs are tracked"
@@ -528,14 +527,14 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     puts
     missing.each do |pr|
       relationship = pr.assigned ? 'assigned' : 'authored'
-      puts "  ##{pr.number} [#{pr.head_branch}] #{pr.title} (#{relationship})"
+      puts "  #{pr.reference} [#{pr.head_branch}] #{pr.title} (#{relationship})"
     end
   end
 
   add_subcmd(:amissing) do
     my_prs = pinned_manager.fetch_my_and_assigned_prs
-    pinned_numbers = pinned_manager.load_pinned.map(&:number)
-    missing = my_prs.reject { |pr| pinned_numbers.include?(pr.number) }
+    tracked_refs = pinned_manager.load_pinned.map(&:reference).to_set
+    missing = my_prs.reject { |pr| tracked_refs.include?(pr.reference) }
 
     if missing.empty?
       puts "All your PRs are already tracked"
@@ -547,8 +546,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       relationship = pr.assigned ? 'assigned' : 'authored'
       lines << ''
       lines << "# [#{relationship}] [#{pr.head_branch}] #{pr.title}"
-      lines << "# url: #{pr.url}"
-      lines << "- #{pr.number}"
+      lines << "- #{pr.url}"
     end
 
     input = yaml_input_file(content: lines.join("\n"), prefix: 'pr-amissing-')
@@ -556,14 +554,18 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     to_add = input.parsed_file || []
     input.cleanup
 
-    added = 0
-    to_add.each do |num|
-      pr_info = pinned_manager.fetch_pr_info(num)
-      next unless pr_info
-      pinned_manager.pin(pr_info)
-      puts "Tracked: ##{pr_info.number} #{pr_info.title}"
-      added += 1
+    references = Array(to_add).map do |entry|
+      Hiiro::PullRequestReference.qualified(entry) || raise(Hiiro::Error, "Not a PR URL or owner/name#N: #{entry}")
     end
+    records = references.filter_map do |reference|
+      record, outcome = pinned_manager.track(reference)
+      record unless outcome == :already
+    end
+    pinned_manager.refresh(records, force: true)
+    added = records.each do |record|
+      record.refresh
+      puts "Tracked: #{record.reference} #{record.title}"
+    end.length
 
     puts
     puts "Added #{added} PR(s) to tracking."
@@ -664,10 +666,11 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       next unless pr_number
     end
 
-    if pinned_manager.unpin(pr_number)
-      puts "Removed PR ##{pr_number} from tracking"
+    pr = pinned_manager.find(pr_number)
+    if pr && pinned_manager.unpin(pr)
+      puts "Removed #{pr.reference} from tracking"
     else
-      puts "PR ##{pr_number} was not tracked"
+      puts "PR #{pr_number} was not tracked"
     end
   end
 
@@ -773,12 +776,12 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       }.compact
       task_info = nil if task_info.empty?
 
-      result = q.add_with_frontmatter("/pr:fix #{pr.number}", task_info: task_info)
+      result = q.add_with_frontmatter("/pr:fix #{pinned_manager.reference_text(pr)}", task_info: task_info)
       if result
-        puts "Queued fix for ##{pr.number}: #{pr.title}"
+        puts "Queued fix for #{pr.reference}: #{pr.title}"
         queued_names << result[:name]
       else
-        STDERR.puts "Failed to queue fix for ##{pr.number}"
+        STDERR.puts "Failed to queue fix for #{pr.reference}"
       end
     end
 
@@ -881,14 +884,10 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
   # === PR List by Context ===
 
   add_subcmd(:branch) do |arg = nil|
-    ref = Hiiro::PullRequestReference.parse(arg)
-
-    pr_number = resolve(:pr, ref ? ref.number_string : arg)
+    pr_number = resolve(:pr, arg)
     next unless pr_number
 
-    pinned = pinned_manager.load_pinned
-    ref ||= Hiiro::PullRequestReference.parse(pr_number)
-    pr = pinned_manager.find(ref)
+    pr = pinned_manager.find(pr_number)
 
     unless pr
       puts "PR ##{pr_number} not in tracked list"
@@ -933,10 +932,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
   end
 
   add_cmd(:review, :cr) do
-    prs = args.filter_map do |arg|
-      pr = Hiiro::Git::Pr.from_link(arg)
-      pr ||= Hiiro::Git::Pr.from_number(arg)
-    end
+    prs = args.filter_map { |arg| Hiiro::PullRequestReference.parse(arg) }
 
     exit 1 if prs.empty?
 
@@ -1039,7 +1035,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       end
 
       pr = pinned_manager.change_tags(pr, add: tag_names)
-      puts "Tagged ##{pr.number} with: #{tag_names.join(', ')}"
+      puts "Tagged #{pr.reference} with: #{tag_names.join(', ')}"
       puts "  Tags now: #{pr.tags.join(', ')}"
     end
   end
@@ -1062,10 +1058,10 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
 
     if tag_names.empty?
       pinned_manager.change_tags(pr, clear: true)
-      puts "Cleared all tags from ##{pr.number}"
+      puts "Cleared all tags from #{pr.reference}"
     else
       pinned_manager.change_tags(pr, remove: tag_names)
-      puts "Removed tag(s) #{tag_names.join(', ')} from ##{pr.number}"
+      puts "Removed tag(s) #{tag_names.join(', ')} from #{pr.reference}"
     end
 
   end
@@ -1085,7 +1081,8 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       next
     end
 
-    pinned_manager.refresh_all_status(pinned, force: opts.update)
+    pinned_manager.refresh(pinned, force: opts.update)
+    pinned = pinned_manager.load_pinned
 
     by_tag = Hash.new { |h, k| h[k] = [] }
     untagged = []
@@ -1180,12 +1177,12 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
 
       task_info = { task_name: pr.task, tree_name: pr.worktree, session_name: pr.herdr_workspace }.compact
       task_info = nil if task_info.empty?
-      result = q.add_with_frontmatter("/pr:fix #{pr.number}", task_info: task_info)
+      result = q.add_with_frontmatter("/pr:fix #{pinned_manager.reference_text(pr)}", task_info: task_info)
       if result
-        puts "Queued fix for ##{pr.number}: #{pr.title}"
+        puts "Queued fix for #{pr.reference}: #{pr.title}"
         queued_names << result[:name]
       else
-        STDERR.puts "Failed to queue fix for ##{pr.number}"
+        STDERR.puts "Failed to queue fix for #{pr.reference}"
       end
     end
 
@@ -1365,8 +1362,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       next
     end
     next puts 'Aborted: no selection changes' if selected_ids == pinned.map(&:id)
-    retained = pinned.reject { |pr| selected_ids.include?(pr.id) }
-    pinned_manager.apply_edits(pinned_manager.edit_rows(retained), baseline: baseline)
+    pinned_manager.remove(selected_ids, baseline: baseline)
     selected_ids.each { |id| puts "Removed PR id #{id}" }
   end
 
@@ -1418,6 +1414,24 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
 
   add_subcmd(:dep) do |*args|
     run_child(:dep) do |h|
+      # A dependency argument: a tracked PR (number, slot, pin, URL) or, for a
+      # bare number nobody tracks, that number in the depending PR's repository.
+      dependency_reference = ->(owner, text) {
+        value = resolve(:pr, text).to_s
+        Hiiro::PullRequestReference.parse(value, repo: owner.reference.repo) ||
+          raise(Hiiro::Error, "Not a PR reference: #{text}")
+      }
+
+      dependency_label = ->(dep, pinned) {
+        if dep.is_a?(Integer)
+          "##{dep} (unresolved legacy number; re-add as owner/name##{dep} or URL)"
+        else
+          ref = Hiiro::PullRequestReference.qualified(dep)
+          tracked = pinned.find { |p| p.reference == ref }
+          tracked ? "#{dep}: #{tracked.title}" : "#{dep} (not tracked)"
+        end
+      }
+
       h.add_subcmd(:add) { |ref = nil, *dep_refs|
         if ref.nil? || dep_refs.empty?
           puts "Usage: h pr dep add <pr> <dep1> [dep2 ...]"
@@ -1427,22 +1441,15 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
         pr_number = resolve(:pr, ref)
         next unless pr_number
 
-        dep_numbers = dep_refs.map { |r| resolve(:pr, r) }.compact
-        if dep_numbers.empty?
-          puts "No valid dependency PRs resolved"
-          next
-        end
-
-        pinned = pinned_manager.load_pinned
         pr = pinned_manager.find(pr_number)
         unless pr
-          puts "PR ##{pr_number} is not tracked — pin it first with: h pr track #{pr_number}"
-          next
+          puts "PR #{pr_number} is not tracked — pin it first with: h pr track #{pr_number}"
+          next false
         end
 
-        numbers = dep_numbers.map { |value| Hiiro::PullRequestReference.parse(value).number }
-        pr = pinned_manager.change_dependencies(pr, add: numbers)
-        puts "PR ##{pr_number} now depends on: #{pr.depends_on.map { |n| "##{n}" }.join(', ')}"
+        deps = dep_refs.map { |dep| dependency_reference.call(pr, dep) }
+        pr = pinned_manager.change_dependencies(pr, add: deps)
+        puts "#{pr.reference} now depends on: #{pr.depends_on.map { |dep| dep.is_a?(Integer) ? "##{dep}" : dep }.join(', ')}"
       }
 
       h.add_subcmd(:rm) { |ref = nil, *dep_refs|
@@ -1454,23 +1461,26 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
         pr_number = resolve(:pr, ref)
         next unless pr_number
 
-        pinned = pinned_manager.load_pinned
         pr = pinned_manager.find(pr_number)
         unless pr
-          puts "PR ##{pr_number} not in tracked list"
-          next
+          puts "PR #{pr_number} not in tracked list"
+          next false
         end
 
         if dep_refs.empty?
           pr = pinned_manager.change_dependencies(pr, clear: true)
-          puts "Cleared all dependencies from ##{pr_number}"
+          puts "Cleared all dependencies from #{pr.reference}"
         else
-          dep_numbers = dep_refs.map { |r| resolve(:pr, r) }.compact.map { |value| Hiiro::PullRequestReference.parse(value).number }
-          pr = pinned_manager.change_dependencies(pr, remove: dep_numbers)
-          puts "Removed dep(s) #{dep_numbers.map { |n| "##{n}" }.join(', ')} from ##{pr_number}"
-          puts "  Remaining: #{Array(pr.depends_on).map { |n| "##{n}" }.join(', ').then { |s| s.empty? ? '(none)' : s }}"
+          # A bare number also removes a legacy unqualified entry with that number.
+          removed = dep_refs.flat_map do |dep|
+            qualified = dependency_reference.call(pr, dep)
+            typed = dep.to_s.strip.delete_prefix('#')
+            typed.match?(/\A\d+\z/) && typed.to_i == qualified.number ? [qualified, qualified.number] : [qualified]
+          end
+          pr = pinned_manager.change_dependencies(pr, remove: removed)
+          puts "Removed dep(s) #{removed.grep(Hiiro::PullRequestReference).join(', ')} from #{pr.reference}"
+          puts "  Remaining: #{Array(pr.depends_on).map { |dep| dep.is_a?(Integer) ? "##{dep}" : dep }.join(', ').then { |s| s.empty? ? '(none)' : s }}"
         end
-
       }
 
       h.add_subcmd(:ls) { |ref = nil|
@@ -1481,20 +1491,16 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
           next unless pr_number
           pr = pinned_manager.find(pr_number)
           unless pr
-            puts "PR ##{pr_number} not in tracked list"
-            next
+            puts "PR #{pr_number} not in tracked list"
+            next false
           end
           deps = Array(pr.depends_on)
           if deps.empty?
-            puts "##{pr_number} has no dependencies"
+            puts "#{pr.reference} has no dependencies"
           else
-            puts "##{pr_number}: #{pr.title}"
+            puts "#{pr.reference}: #{pr.title}"
             puts "  depends on:"
-            deps.each do |dep_num|
-              dep = pinned.find { |p| p.number == dep_num }
-              label = dep ? "  ##{dep_num}: #{dep.title}" : "  ##{dep_num} (not tracked)"
-              puts label
-            end
+            deps.each { |dep| puts "    #{dependency_label.call(dep, pinned)}" }
           end
         else
           with_deps = pinned.select { |p| Array(p.depends_on).any? }
@@ -1503,12 +1509,8 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
             puts "Use: h pr dep add <pr> <dep1> [dep2 ...]"
           else
             with_deps.each do |pr|
-              puts "##{pr.number}: #{pr.title}"
-              Array(pr.depends_on).each do |dep_num|
-                dep = pinned.find { |p| p.number == dep_num }
-                label = dep ? "  └─ ##{dep_num}: #{dep.title}" : "  └─ ##{dep_num} (not tracked)"
-                puts label
-              end
+              puts "#{pr.reference}: #{pr.title}"
+              Array(pr.depends_on).each { |dep| puts "  └─ #{dependency_label.call(dep, pinned)}" }
             end
           end
         end

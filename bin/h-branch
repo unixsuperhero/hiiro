@@ -207,8 +207,8 @@ Hiiro.run(*ARGV) do
       selected, status = Open3.capture2('sk', '--no-sort', stdin_data: lines.keys.join("\n"))
       return nil unless status.success? && !selected.strip.empty?
       lines[selected.chomp]
-    elsif (ref = Hiiro::PullRequestReference.parse(arg))
-      pinned.find { |pr| ref.matches?(pr) }
+    else
+      Hiiro::PinnedPRManager.new.find(arg)
     end
   }
 
