@@ -67,6 +67,14 @@ class Hiiro
           end
           MODELS.each { |cls| install(conn, cls) }
           ensure_todo_allocator!
+          # MCPRegistry (lib/hiiro/mcp/registry.rb) owns these rows; the schema is
+          # here so export and restore know the table before h mcp first runs.
+          conn.create_table?(:mcps) do
+            String :name, text: true, primary_key: true, null: false
+            String :record_json, text: true, null: false
+            String :created_at, text: true, null: false
+            String :updated_at, text: true, null: false
+          end
           conn.create_table?(:migration_sources) do
             primary_key :id
             String :store, null: false
@@ -113,7 +121,9 @@ class Hiiro
         end + {task_resources: 'TaskResource', registry: 'RegistryEntry', check_runs: 'CheckRun', captures: 'Capture'}.map do |table, owner|
           {store: table.to_s, source: 'database only; canonical export', table: table.to_s, owner: owner,
            identity: 'stable row ID', dependencies: [], recovery: 'Full typed export; no legacy YAML authority', parser_version: PARSER_VERSION}
-        end
+        end + [{store: 'mcps', source: 'h mcp; legacy ~/.local/share/hiiro/mcp/*.json imported once and retained', table: 'mcps',
+                owner: 'MCPRegistry', identity: 'name', dependencies: [], recovery: 'Full typed export; legacy JSON is not read again',
+                parser_version: PARSER_VERSION}]
       end
 
       def migration_plan(only: nil, sources: nil, base: Hiiro::Config::BASE_DIR)
@@ -218,7 +228,7 @@ class Hiiro
               row = require_hash(raw, "#{table}/#{index}").transform_keys(&:to_sym)
               validate_row!(table, row)
               id = row.fetch(:id) { row.fetch(:name) }
-              key = table == :schema_migrations ? :name : :id
+              key = %i[schema_migrations mcps].include?(table) ? :name : :id
               existing = connection[table].where(key => id).first
               if existing
                 raise ImportError, "Recovery conflicts with later write: #{table}/#{id}" unless existing == row
@@ -297,7 +307,7 @@ class Hiiro
 
       def export_tables
         %i[tasks prs registry todos links branches assignments apps projects pane_homes pins reminders tags task_resources check_runs captures
-           schema_migrations migration_sources migration_rows pinned_prs].select { |table| connection.table_exists?(table) }
+           mcps schema_migrations migration_sources migration_rows pinned_prs].select { |table| connection.table_exists?(table) }
       end
 
       def sequences
@@ -688,7 +698,7 @@ class Hiiro
             decoded = ::JSON.parse(value)
             shape = case key
             when :tags_json, :depends_on_json, :check_runs_json then Array
-            when :herdr_json, :tmux_json, :checks_json, :reviews_json, :metadata_json, :meta_json, :data_json then Hash
+            when :herdr_json, :tmux_json, :checks_json, :reviews_json, :metadata_json, :meta_json, :data_json, :record_json then Hash
             end
             raise ImportError, "#{table}/#{key}: invalid JSON shape" if shape && !decoded.nil? && !decoded.is_a?(shape)
             if key == :tags_json && decoded && !decoded.all? { |tag| tag.is_a?(String) }

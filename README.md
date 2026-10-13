@@ -103,6 +103,8 @@ brew install sk # (or fzf)
 brew install gh
 ```
 
+`h mcp` needs no extra install: the gem depends on `mcp` (`~> 1.5`), `faraday`, and `event_stream_parser`.
+
 ## Quick Start
 
 ```sh
@@ -274,6 +276,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h env` | Append safely quoted environment variables |
 | [`h extract`](#extract-files-directories-and-links) | Extract file paths, directories, and HTTP(S) links from text |
 | `h link` | Manage saved links with URL, description, and shorthand |
+| [`h mcp`](docs/h-mcp.md) | Local MCP registrations, saved tool schemas, direct tool calls, and HTTP-only client sync (`require 'hiiro/mcp'`) |
 | `h pane` | Herdr pane management |
 | `h plugin` | Manage hiiro plugins (list, edit, search) |
 | `h pr` | GitHub PR management via gh CLI |
@@ -554,6 +557,7 @@ Each durable type has one current owner. The first operation that uses persisten
 | Command pins and named pane homes | SQLite `pins` and `pane_homes`, `Hiiro::PinRecord` and `Hiiro::PaneHome` |
 | Reminders and scheduling checkpoints | SQLite `reminders`, `Hiiro::Reminder` |
 | Generic named entries | SQLite `registry`, `Hiiro::RegistryEntry` through `Hiiro::Table` |
+| MCP registrations, saved catalogs, and sync ownership | SQLite `mcps` through `MCPRegistry`, and `registry` rows of type `mcp-sync`; see [h-mcp](docs/h-mcp.md) |
 | Tags | SQLite `tags`, `Hiiro::Tag` |
 | Captures, invocations, and resolutions | SQLite `captures`, `invocations`, and `invocation_resolutions`, `Hiiro::Capture`, `Hiiro::Invocation`, and `Hiiro::InvocationResolution` |
 | Import verification and row mappings | SQLite `schema_migrations`, `migration_sources`, and `migration_rows`, `Hiiro::DB` |

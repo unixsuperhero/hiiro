@@ -42,6 +42,7 @@
 - `t --help`, `t todo --help`, and `t tree --help` print help before any task lookup.
 - Managed installation (`Hiiro::Install`): an install manifest (`~/.config/hiiro/install-manifest.json`) records each destination hiiro wrote with source, package version and root, SHA-256, mode, and source link. `h setup` prints a read-only plan (`missing`, `unchanged`, `updatable`, `user-modified`, `collision`, `obsolete`); `--apply`, `--retire`, and `--adopt NAME` act on selected entries. Commands load supporting files from `bin/lib/`, installed beside them.
 - Catalog entries carry an origin (`managed hiiro VERSION`, `modified (managed ...)`, `package hiiro VERSION`, `user`) in `h bin list`, `h bin docs [--json]`, and `h edit`.
+- The gem ships the `h mcp` implementation (`require 'hiiro/mcp'`: `MCPRegistry`, `MCPCatalog`, `MCPCommands`, `MCPSync`) and its behavioral tests (`test/bin/mcp_test.rb`), with `docs/h-mcp.md`. `h db manifest`, `export`, and `restore` include the `mcps` table.
 
 ### Changed
 - Mutable domain records use SQLite without live YAML mirrors. `t`, `tt`, and `h todo` share database-owned todo IDs and targeted mutations.
@@ -63,6 +64,7 @@
 - `h setup` / `hiiro setup` no longer copy over existing files: without `--apply` they only plan; apply writes missing files and unmodified managed ones, rechecks each destination first, replaces by rename (never through a link), records ownership only for writes that landed, and exits 1 on a failed write.
 - `h update` (and `script/publish`, `script/update`) installs the gem in each compatible Ruby independently, then applies shared assets once from the Ruby with the newest installed hiiro and names that source; it exits 1 when any Ruby failed. `h update` reads its own arguments (it parsed the process `ARGV`). `h delayed_update VERSION` runs `h update -a --wait VERSION --notify` in the background. RubyGems polling for publish, `script/available`, and `--wait` is one `Hiiro::Rollout::RubyGems`.
 - `script/install`, `script/compare`, and `script/sync` read the same plan instead of rsync, `diff -qrs` copy commands, and interactive copies in both directions.
+- `bin/h-mcp` no longer needs `lib/h_mcp_catalog.rb` / `lib/h_mcp_registry.rb` beside it, and installs without support files. The gem declares `mcp ~> 1.5`, `faraday`, and `event_stream_parser`. Registrations, saved catalogs, the `mcp_json_catalogs_to_sqlite` marker, legacy JSON backups, and `mcp-sync` ownership are unchanged.
 
 ### Removed
 - Automatic legacy domain YAML import and mutable-record dual writers. Legacy sources remain explicit retained recovery inputs.

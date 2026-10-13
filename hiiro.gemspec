@@ -29,7 +29,11 @@ Gem::Specification.new do |spec|
   spec.add_dependency "pry", "~> 0.14"
   spec.add_dependency "front_matter_parser"
   spec.add_dependency "awesome_print"
-  spec.add_dependency "mcp"
+  # The mcp gem loads faraday (HTTP transport) and event_stream_parser (SSE
+  # responses) on demand without declaring them, so h mcp declares them here.
+  spec.add_dependency "mcp", "~> 1.5"
+  spec.add_dependency "faraday", ">= 2.0"
+  spec.add_dependency "event_stream_parser", ">= 1.0"
   spec.add_dependency "sqlite3", "~> 2.0"
   spec.add_dependency "sequel", "~> 5.0"
 

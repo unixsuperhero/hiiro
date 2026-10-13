@@ -1,0 +1,406 @@
+# frozen_string_literal: true
+
+require 'json'
+require 'uri'
+require 'digest'
+require 'fileutils'
+require 'tempfile'
+
+# HTTP-only legacy export of local registrations into client configs (h mcp sync,
+# status, agents). Connections themselves support stdio too; export does not.
+module MCPSync
+  OMP_SCHEMA = 'https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/coding-agent/src/config/mcp-schema.json'
+  HTTP_ENTRY = ->(url) { { 'type' => 'http', 'url' => url } }
+
+  # agent => [user-level config path, container keys, entry builder]
+  AGENT_TARGETS = {
+    'omp'      => ->(home) { [File.join(home, '.omp', 'agent', 'mcp.json'), ['mcpServers'], HTTP_ENTRY] },
+    'codex'    => ->(home) { [File.join(home, '.codex', 'config.toml'), nil, nil] },
+    'claude'   => ->(home) { [File.join(home, '.claude.json'), ['mcpServers'], HTTP_ENTRY] },
+    'cursor'   => ->(home) { [File.join(home, '.cursor', 'mcp.json'), ['mcpServers'], ->(u) { { 'url' => u } }] },
+    'vscode'   => ->(_home) { [nil, ['servers'], HTTP_ENTRY] },
+    'gemini'   => ->(home) { [File.join(home, '.gemini', 'settings.json'), ['mcpServers'], ->(u) { { 'httpUrl' => u } }] },
+    'windsurf' => ->(home) { [File.join(home, '.codeium', 'windsurf', 'mcp_config.json'), ['mcpServers'], ->(u) { { 'serverUrl' => u } }] },
+    'opencode' => ->(home) { [File.join(home, '.config', 'opencode', 'opencode.json'), ['mcp'], ->(u) { { 'type' => 'remote', 'url' => u, 'enabled' => true } }] },
+  }.freeze
+
+  PROJECT_PATHS = {
+    'claude'   => '.mcp.json',
+    'cursor'   => '.cursor/mcp.json',
+    'gemini'   => '.gemini/settings.json',
+    'windsurf' => '.windsurf/mcp_config.json',
+    'opencode' => 'opencode.json',
+  }.freeze
+
+  TOML_KEY = /"(?:[^"\\\r\n]|\\.)*"|'[^'\r\n]*'|[A-Za-z0-9_-]+/
+  CODEX_URL_LINE = /\A([ \t]*url[ \t]*=[ \t]*)("(?:[^"\\\r\n]|\\.)*"|'[^'\r\n]*')([ \t]*(?:#[^\r\n]*)?(?:\r?\n)?)\z/
+
+  module_function
+
+  def local_servers(catalog)
+    catalog.registry.each_with_object({}) do |registration, servers|
+      next if registration['enabled'] == false
+      name = registration.fetch('name')
+      server = catalog.resolve(name)
+      next unless server['enabled']
+      unless server['transport'] == 'http'
+        raise %(#{name} uses #{server['transport']}; legacy sync/status supports HTTP URLs only)
+      end
+      settings = catalog.connection_settings(server)
+      uri = URI.parse(settings.fetch(:url))
+      raise %(#{name} requires an absolute HTTP or HTTPS URL) unless uri.is_a?(URI::HTTP) && uri.host
+      servers[name] = settings
+    end
+  end
+
+  def target_entries(agent, servers, builder)
+    servers.to_h do |name, settings|
+      if agent == 'codex'
+        unless settings.fetch(:headers).empty?
+          raise %(codex: #{name} requires HTTP headers; legacy Codex sync supports unauthenticated URL-only settings)
+        end
+        entry = { 'url' => settings.fetch(:url) }
+      else
+        entry = builder.call(settings.fetch(:url))
+        entry['headers'] = settings.fetch(:headers) unless settings.fetch(:headers).empty?
+      end
+      [name, entry]
+    end
+  end
+
+  def export_fingerprint(value)
+    canonical = lambda do |item|
+      case item
+      when Hash then item.keys.sort.to_h { |key| [key, canonical.call(item[key])] }
+      when Array then item.map { |entry| canonical.call(entry) }
+      else item
+      end
+    end
+    Digest::SHA256.hexdigest(JSON.generate(canonical.call(value)))
+  end
+
+  def backup(path)
+    return unless File.exist?(path)
+    destination = "#{path}.bak-#{Time.now.strftime('%Y%m%d%H%M%S%6N')}"
+    FileUtils.cp(path, destination)
+    File.chmod(0600, destination)
+  end
+
+  def write_config(path, content)
+    destination = File.symlink?(path) ? File.realpath(path) : path
+    FileUtils.mkdir_p(File.dirname(destination))
+    Tempfile.create(['.h-mcp-', '.tmp'], File.dirname(destination)) do |file|
+      file.write(content)
+      file.flush
+      file.fsync
+      backup(path)
+      File.rename(file.path, destination)
+    end
+  end
+
+  def sync_json(path:, container_keys:, servers:, store:, opts:, schema: nil)
+    data = File.exist?(path) ? JSON.parse(File.read(path)) : {}
+    raise %(expected configuration object in #{path}) unless data.is_a?(Hash)
+    before = JSON.generate(data)
+    data = { '$schema' => schema }.merge(data) if schema && !data.key?('$schema')
+    container = container_keys.inject(data) do |parent, key|
+      raise %(expected server container object in #{path}) unless parent.is_a?(Hash)
+      parent[key] = {} unless parent.key?(key)
+      parent.fetch(key)
+    end
+    raise %(expected server container object in #{path}) unless container.is_a?(Hash)
+    ownership = store.sync_state(path)
+    removed = []
+    if opts.prune
+      (ownership.keys - servers.keys).each do |name|
+        if !container.key?(name)
+          ownership.delete(name)
+        elsif export_fingerprint(container[name]) == ownership[name]
+          container.delete(name)
+          ownership.delete(name)
+          removed << name
+        end
+      end
+    end
+    servers.each do |name, entry|
+      container[name] = entry
+      ownership[name] = export_fingerprint(entry)
+    end
+    if opts.dry_run
+      puts "[dry-run] #{path}"
+      puts JSON.pretty_generate(data)
+    else
+      if !File.exist?(path) || JSON.generate(data) != before
+        write_config(path, JSON.pretty_generate(data) + "\n")
+        puts "wrote #{path}"
+      else
+        puts "unchanged #{path}"
+      end
+      store.save_sync_state(path, ownership)
+    end
+    puts "  servers: #{container.keys.sort.join(', ')}"
+    puts "  pruned: #{removed.join(', ')}" unless removed.empty?
+  end
+
+  def toml_key(name)
+    name.match?(/\A[A-Za-z0-9_-]+\z/) ? name : name.to_json
+  end
+
+  def toml_string(value)
+    value.start_with?('"') ? JSON.parse(value) : value[1...-1]
+  end
+
+  # Deliberately limited to surgical URL blocks, not a TOML serializer.
+  def codex_blocks(text)
+    lines = text.lines
+    lines.each do |line|
+      next if line.lstrip.start_with?('#')
+      if line.include?('"""') || line.include?("'''")
+        raise 'codex: multiline TOML strings are unsupported by surgical URL sync/status'
+      end
+      if line.match?(/\A[ \t]*(?:mcp_servers|"mcp_servers"|'mcp_servers')[ \t]*(?:\.|=)/)
+        raise 'codex: inline or dotted MCP definitions are unsupported; use simple [mcp_servers.NAME] URL blocks'
+      end
+    end
+    headers = lines.each_index.select { |index| lines[index].lstrip.start_with?('[') }
+    blocks = {}
+    headers.each_with_index do |start, index|
+      header = lines[start]
+      next unless header.match?(/\A[ \t]*\[\[?[ \t]*(?:mcp_servers|"mcp_servers"|'mcp_servers')(?:[ \t]*[.\]])/)
+      match = header.match(/\A[ \t]*\[[ \t]*mcp_servers[ \t]*\.[ \t]*(#{TOML_KEY.source})([^\]\r\n]*)\][ \t]*(?:#[^\r\n]*)?(?:\r?\n)?\z/)
+      raise 'codex: unsupported MCP table shape; use simple [mcp_servers.NAME] URL blocks' unless match
+      begin
+        name = match[1].start_with?('"', "'") ? toml_string(match[1]) : match[1]
+      rescue JSON::ParserError
+        raise 'codex: unsupported quoted MCP table key'
+      end
+      tail = match[2].strip
+      unless tail.empty?
+        raise 'codex: unsupported MCP table key' unless tail.start_with?('.')
+        blocks[name] ||= {}
+        blocks[name][:error] = 'MCP subtables are unsupported by URL-only sync'
+        next
+      end
+      raise %(codex: duplicate MCP table for #{name}) if blocks.dig(name, :range)
+      stop = headers[index + 1] || lines.length
+      block_lines = lines[start...stop]
+      block = { range: start...stop, text: block_lines.join, error: blocks.dig(name, :error) }
+      block_lines.each_with_index do |line, offset|
+        next if offset.zero? || line.strip.empty? || line.lstrip.start_with?('#')
+        assignment = CODEX_URL_LINE.match(line)
+        if !assignment || block.key?(:url_line)
+          block[:error] ||= 'expected a URL-only block; command, authentication, duplicate URL, and extra settings are unsupported'
+          next
+        end
+        begin
+          url = toml_string(assignment[2])
+          uri = URI.parse(url)
+          raise URI::InvalidURIError unless uri.is_a?(URI::HTTP) && uri.host
+          block.merge!(url: url, url_line: offset)
+        rescue JSON::ParserError, URI::InvalidURIError
+          block[:error] ||= 'expected a single-line absolute HTTP or HTTPS URL'
+        end
+      end
+      blocks[name] = block
+    end
+    blocks
+  end
+
+  def sync_codex(path:, servers:, store:, opts:)
+    original = File.exist?(path) ? File.read(path) : ''
+    text = original.dup
+    blocks = codex_blocks(text)
+    servers.each_key do |name|
+      error = blocks.dig(name, :error)
+      raise %(codex: cannot update #{name}: #{error}) if error
+    end
+    ownership = store.sync_state(path)
+    edits, removed = [], []
+    if opts.prune
+      (ownership.keys - servers.keys).each do |name|
+        block = blocks[name]
+        if !block
+          ownership.delete(name)
+        elsif !block[:error] && block[:range] && export_fingerprint(block[:text]) == ownership[name]
+          edits << [block[:range], []]
+          ownership.delete(name)
+          removed << name
+        end
+      end
+    end
+    servers.each do |name, entry|
+      block = blocks[name]
+      next unless block
+      updated = block.fetch(:text).lines
+      if block.key?(:url_line)
+        offset = block.fetch(:url_line)
+        assignment = CODEX_URL_LINE.match(updated[offset])
+        updated[offset] = assignment[1] + entry.fetch('url').to_json + assignment[3]
+      else
+        updated[0] += "\n" unless updated[0].end_with?("\n")
+        updated.insert(1, "url = #{entry.fetch('url').to_json}\n")
+      end
+      edits << [block.fetch(:range), updated]
+    end
+    lines = text.lines
+    edits.sort_by { |range, _| range.begin }.reverse_each { |range, replacement| lines[range] = replacement }
+    text = lines.join
+    servers.each do |name, entry|
+      next if blocks.key?(name)
+      text += "\n" unless text.empty? || text.end_with?("\n")
+      text += "[mcp_servers.#{toml_key(name)}]\nurl = #{entry.fetch('url').to_json}\n"
+    end
+    updated_blocks = codex_blocks(text)
+    servers.each_key { |name| ownership[name] = export_fingerprint(updated_blocks.fetch(name).fetch(:text)) }
+    if opts.dry_run
+      puts "[dry-run] #{path}"
+      puts text
+    else
+      if !File.exist?(path) || text != original
+        write_config(path, text)
+        puts "wrote #{path}"
+      else
+        puts "unchanged #{path}"
+      end
+      store.save_sync_state(path, ownership)
+    end
+    puts "  pruned: #{removed.join(', ')}" unless removed.empty?
+  end
+
+  def config_entries(agent, path, names: [])
+    return {} unless File.exist?(path)
+    if agent == 'codex'
+      codex_blocks(File.read(path)).to_h do |name, block|
+        raise %(codex: cannot compare #{name}: #{block[:error]}) if block[:error] && names.include?(name)
+        [name, block[:error] ? nil : { 'url' => block[:url] }]
+      end
+    else
+      _, keys, = AGENT_TARGETS.fetch(agent).call(Dir.home)
+      data = JSON.parse(File.read(path))
+      container = keys.inject(data) do |parent, key|
+        raise %(expected configuration object in #{path}) unless parent.is_a?(Hash)
+        parent.fetch(key, {})
+      end
+      raise %(expected server container object in #{path}) unless container.is_a?(Hash)
+      container
+    end
+  end
+
+  def sync_options(args, status: false)
+    parser = Hiiro::Options.setup do
+      option(:profile, desc: 'OMP profile name')
+      flag(:project, short: 'P', desc: 'use project-level config in cwd')
+      if status
+        flag(:json, desc: 'machine-readable definition comparison')
+      else
+        flag(:prune, short: 'p', desc: 'remove unchanged stale entries previously exported here')
+        flag(:dry_run, long: 'dry-run', short: 'n', desc: 'print proposed config without writing')
+      end
+    end
+    tokens = args.dup
+    until tokens.empty?
+      argument = tokens.shift
+      break if argument == '--'
+      next unless argument.start_with?('-')
+      if argument.start_with?('--')
+        token, value = argument.split('=', 2)
+        definition = parser.option_set.definition_for(token)
+        raise %(unknown option #{token}; use --help) unless definition
+        if definition.flag?
+          raise %(#{token} does not take a value) if value
+        elsif value.nil?
+          raise %(#{token} requires a value) if tokens.empty? || tokens.first.start_with?('-')
+          tokens.shift
+        elsif value.empty?
+          raise %(#{token} requires a value)
+        end
+      else
+        flags = argument.delete_prefix('-').chars.map { |char| parser.option_set.definition_for("-#{char}") }
+        raise %(unknown option #{argument}; use --help) if flags.empty? || flags.any? { |flag| !flag || !flag.flag? }
+      end
+    end
+    parser.parse(args)
+  end
+
+  def target_config(agent, opts)
+    raise %(unknown agent #{agent}; choose #{AGENT_TARGETS.keys.join(', ')}) unless AGENT_TARGETS.key?(agent)
+    if opts[:profile]
+      raise '--profile is only supported for omp' unless agent == 'omp'
+      raise 'select --profile or --project, not both' if opts.project
+      unless opts[:profile].match?(/\A[A-Za-z0-9_.-]+\z/) && !%w[. ..].include?(opts[:profile])
+        raise '--profile must be a profile name, not a path'
+      end
+    end
+    path, keys, builder = AGENT_TARGETS.fetch(agent).call(Dir.home)
+    if opts.project || agent == 'vscode'
+      relative = { 'omp' => '.omp/mcp.json', 'codex' => '.codex/config.toml', 'vscode' => '.vscode/mcp.json' }[agent] || PROJECT_PATHS.fetch(agent)
+      path = File.join(Dir.pwd, relative)
+    elsif opts[:profile]
+      path = File.join(Dir.home, '.omp', 'profiles', opts[:profile], 'agent', 'mcp.json')
+    end
+    [File.expand_path(path), keys, builder]
+  end
+
+  def sync(args)
+    opts = sync_options(args)
+    return puts(opts.help_text) if opts.help?
+    if opts.args.empty?
+      puts 'Usage: h mcp sync AGENT [--prune] [--dry-run] [--project | --profile NAME]'
+      return puts("agents: #{AGENT_TARGETS.keys.join(', ')}")
+    end
+    raise 'sync accepts one AGENT' unless opts.args.length == 1
+    agent = opts.args.first
+    path, keys, builder = target_config(agent, opts)
+    catalog = MCPCatalog.new
+    entries = target_entries(agent, local_servers(catalog), builder)
+    if agent == 'codex'
+      sync_codex(path: path, servers: entries, store: catalog.store, opts: opts)
+    else
+      sync_json(path: path, container_keys: keys, servers: entries, store: catalog.store, opts: opts,
+                schema: agent == 'omp' ? OMP_SCHEMA : nil)
+    end
+  rescue StandardError => error
+    abort %(h mcp sync: #{MCPCommands.error_message(error)})
+  end
+
+  def status(args)
+    opts = sync_options(args, status: true)
+    return puts(opts.help_text) if opts.help?
+    raise 'status accepts at most one AGENT' if opts.args.length > 1
+    selected = opts.args.first
+    agents = selected ? [selected] : (opts[:profile] ? ['omp'] : AGENT_TARGETS.keys)
+    targets = agents.map { |agent| [agent, *target_config(agent, opts)] }
+    catalog = MCPCatalog.new
+    servers = local_servers(catalog)
+    rows = targets.filter_map do |agent, path, _keys, builder|
+      next unless selected || File.exist?(path)
+      expected = target_entries(agent, servers, builder)
+      entries = config_entries(agent, path, names: expected.keys)
+      ownership = catalog.store.sync_state(path)
+      { agent: agent, config: path, missing: (expected.keys - entries.keys).sort,
+        changed: (expected.keys & entries.keys).reject { |name| entries[name] == expected[name] }.sort,
+        stale: (ownership.keys - expected.keys).select { |name| entries.key?(name) }.sort }
+    end
+    if opts.json
+      puts JSON.pretty_generate(rows)
+    else
+      drift = rows.reject { |row| row[:missing].empty? && row[:changed].empty? && row[:stale].empty? }
+      if drift.empty?
+        puts 'all inspected agent configs are in sync with enabled local HTTP registrations'
+      else
+        MCPCommands.print_table(drift.map { |row| row.transform_values { |value| value.is_a?(Array) ? value.join(',') : value } })
+        puts 'run: h mcp sync AGENT [--prune] with the same project/profile selection'
+      end
+    end
+  rescue StandardError => error
+    abort %(h mcp status: #{MCPCommands.error_message(error)})
+  end
+
+  def agents
+    rows = AGENT_TARGETS.map do |agent, target|
+      path, = target.call(Dir.home)
+      { agent: agent, config: path || '(project-only)', exists: path && File.exist?(path) ? 'yes' : 'no' }
+    end
+    MCPCommands.print_table(rows)
+  end
+end

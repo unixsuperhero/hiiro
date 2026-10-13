@@ -26,7 +26,7 @@ h db <subcommand> [args]
 
 The manifest identifies the database owner and identity for each durable domain type. Legacy import stores are `todos`, `links`, `branches`, `prs`, `pinned_prs`, `tasks`, `assignments`, `apps`, `projects`, `pane_homes`, `pins`, `reminders`, and `tags`.
 
-Task resources, generic registry entries, check snapshots, and capture metadata are canonical database records included in export/recovery, not separate legacy YAML import stores. Registry entries keep stable IDs, aliases, values, metadata, nullable `task_id`, and tags. Their `Table` and `TableScope` behavior is unchanged.
+Task resources, generic registry entries, check snapshots, capture metadata, and MCP registrations (`mcps`, identified by name; see [h-mcp](h-mcp.md)) are canonical database records included in export/recovery, not separate legacy YAML import stores. `h mcp` imports its legacy JSON catalogs once by itself; they are not `plan`/`migrate` stores. Registry entries keep stable IDs, aliases, values, metadata, nullable `task_id`, and tags. Their `Table` and `TableScope` behavior is unchanged.
 
 Definitions, preferences, runtime files, prompts, task note bodies, capture bodies, and other ordinary artifacts remain file-owned. They are not domain migration or export targets. Invocation and resolution audit history remain in the original database and are excluded from canonical exports.
 
@@ -74,7 +74,7 @@ h db plan --only=pinned_prs --sources=sqlite:pinned_prs
 
 `export` requires one new destination path in an existing directory. It uses exclusive creation and refuses an existing file or symlink.
 
-The checksummed JSON document contains typed domain rows, IDs, relationships, tags, task resources, RegistryEntry metadata, PR/check snapshots, capture metadata, import verification records, and domain allocator state. Retained legacy PR rows and extra PR columns are included. Definitions, preferences, ordinary files, and invocation/resolution audit history are not included.
+The checksummed JSON document contains typed domain rows, IDs, relationships, tags, task resources, RegistryEntry metadata (including `mcp-sync` ownership), MCP registrations and saved catalogs, PR/check snapshots, capture metadata, import verification records, and domain allocator state. Retained legacy PR rows and extra PR columns are included. Definitions, preferences, ordinary files, and invocation/resolution audit history are not included.
 
 ```bash
 h db export ~/backups/hiiro-records.json

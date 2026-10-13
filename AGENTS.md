@@ -305,6 +305,21 @@ MyScreen.new(items: rows).run        # j/k/h/l move, '/' searches, '@' picks, q/
 - `Tui::Pane.new(width:, height:).lines(texts)` pads and truncates to an exact rectangle.
 - `ListScreen` is `Screen` without a detail pane and keeps the `Showing a-b of n` footer.
 
+### MCP (lib/hiiro/mcp.rb, lib/hiiro/mcp/*.rb)
+
+`require 'hiiro/mcp'` loads the `h mcp` implementation under its historical top-level names; `bin/h-mcp` only registers subcommands. See `docs/h-mcp.md`.
+
+```ruby
+store = MCPRegistry.new                 # mcps rows (schema from Hiiro::DB.setup!); imports ~/.local/share/hiiro/mcp/*.json once
+store.all / store.find(name) / store.register(record) / store.save(snapshot) / store.remove(name)
+store.sync_state(path) / store.save_sync_state(path, { name => sha256 })   # registry rows of type mcp-sync
+catalog = MCPCatalog.new(config: nil, agent: nil)
+catalog.resolve(name, url: nil)         # exact saved source (config path/keys/name/cwd, codex name/cwd, or url); never a same-name fallback
+catalog.discover(server) / catalog.cached(name) / catalog.tool(name, tool) / catalog.connect(server) { |client| }
+MCPCommands.run('call', args)         # list ls info add import remove configured discover saved tools tool call guide test url
+MCPSync.sync(args) / MCPSync.status(args) / MCPSync.agents   # HTTP-only export; AGENT_TARGETS, PROJECT_PATHS
+```
+
 ### Hiiro::Fuzzyfind (lib/hiiro/fuzzyfind.rb)
 
 Integration with `sk` (skim) or `fzf` fuzzy finders:
