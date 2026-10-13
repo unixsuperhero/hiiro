@@ -48,8 +48,6 @@ end
 class Git
   def self.current_branch  = `git branch --show-current`.strip
   def self.pending_changes? = !`git status --porcelain`.strip.empty?
-  def self.diff             = `git diff HEAD`
-  def self.status           = `git status --short`
 
   def self.ensure_up_to_date!
     system("git", "fetch", "origin")
@@ -63,13 +61,6 @@ class Git
   def self.commits_since_last_tag
     last_tag = `git describe --tags --abbrev=0 2>/dev/null`.strip
     last_tag.empty? ? `git log --oneline` : `git log #{last_tag}..HEAD --oneline`
-  end
-
-  def self.stage_and_commit(files, message)
-    system("git", "reset", "HEAD")
-    files.each { |f| system("git", "add", "--", f) }
-    system("git", "commit", "-m", message)
-    puts "  → #{message}"
   end
 
   def self.commit_all(message)
@@ -104,7 +95,7 @@ class Claude
   Result = Struct.new(:commits, :changelog)
 
   # Single call: returns a Result with commit plan + updated changelog
-  def self.prepare_release(version:, diff:, status:, git_log:, existing_changelog:)
+  def self.prepare_release(version:, change_set:, git_log:, existing_changelog:)
     prompt = <<~PROMPT
       You are preparing a release for the Ruby gem "hiiro" version #{version}.
       Do two things and return them as a single JSON object — no explanation, no markdown fences.
@@ -112,13 +103,14 @@ class Claude
       ## 1. Commit plan
       Analyze the pending git changes below and group them into logical commits.
       Use conventional commit format (feat:, fix:, chore:, refactor:, docs:, etc.).
-      Only include files that appear in the git status output.
+      Every changed file listed below must appear in exactly ONE commit. Use the exact
+      "path" values; a rename's "from" path moves with it.
 
-      git status:
-      #{status.strip}
+      Changed files (one JSON object per line):
+      #{change_set.listing}
 
-      git diff:
-      #{diff.strip}
+      git diff#{change_set.diff_truncated? ? ' (TRUNCATED — some changes omitted)' : ''}:
+      #{change_set.prompt_diff.strip}
 
       ## 2. Changelog
       Write a complete updated CHANGELOG.md. Add a new section for v#{version} at the top
@@ -195,21 +187,23 @@ puts "Latest: #{current_version}  →  New: #{new_version}"
 
 if pending_before
   puts "\nAsking Claude to plan commits and generate changelog..."
+  repo = Hiiro::Git::IndexGit.at(Dir.pwd) || abort("ERROR: not inside a git work tree")
+  change_set = Hiiro::Git::ChangeSet.capture(repo)
   release = Claude.prepare_release(
     version:            new_version,
-    diff:               Git.diff,
-    status:             Git.status,
+    change_set:         change_set,
     git_log:            Git.commits_since_last_tag,
     existing_changelog: File.exist?("CHANGELOG.md") ? File.read("CHANGELOG.md") : ""
   )
 
-  begin
-    system("git", "add", "--all")
-    release.commits.each { |c| Git.stage_and_commit(c["files"], c["message"]) }
-  rescue => e
-    puts "Warning: could not apply Claude commit plan (#{e.message}) — committing all as one"
-    Git.commit_all("chore: pre-publish changes")
+  # Publishing commits every pending change whole; the plan only groups them.
+  validation = Hiiro::Git::CommitPlan.validate(JSON.generate(release.commits), change_set)
+  abort("ERROR: unusable commit plan; nothing was committed:\n  #{validation.errors.join("\n  ")}") unless validation.valid?
+
+  outcome = Hiiro::Git::CommitExecution.new(repo, change_set).call(validation.plan) do |event|
+    puts event.is_a?(Hiiro::Git::CommitExecution::Step) ? "  → #{event.group.subject}" : "  ✗ #{event.operation} failed: #{event.message}"
   end
+  abort("ERROR: stopped after #{outcome.completed.size} of #{validation.plan.groups.size} commit(s); nothing was published") unless outcome.success?
 
   File.write("CHANGELOG.md", release.changelog) if release.changelog && !release.changelog.strip.empty?
 else

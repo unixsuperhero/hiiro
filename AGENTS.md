@@ -414,6 +414,23 @@ cmp.two_dot_range / cmp.three_dot_range / cmp.fork_range / cmp.changed_paths(rel
 
 `Hiiro::Git` gained the underlying queries: `ref_exists?`, `rev_list_count`, `merge_base`, `ancestor?`, `changed_files`.
 
+### Commit planning (lib/hiiro/git/commit_planning.rb)
+
+`h git commit` and `script/publish` plan and make commits through these; none of them writes the real index before execution:
+
+```ruby
+git = Hiiro::Git::IndexGit.at(Dir.pwd)        # git via Shell.execute, GIT_OPTIONAL_LOCKS=0; run(*args, index:, stdin:) / run!
+cs  = Hiiro::Git::ChangeSet.capture(git)       # status + add -A + diff on disposable index copies (GIT_INDEX_FILE)
+cs.changes   # [Change { path: "new.txt", status: "R", source: "old.txt", staged: true, unstaged: false, untracked: false, binary: false }]
+cs.partial / cs.listing / cs.diff / cs.prompt_diff / cs.diff_truncated? / cs.fingerprint   # { head:, index:, worktree: } tree ids
+raw = Hiiro::Git::CommitPlanner.new(model: "sonnet").call(cs, cwd: git.root)   # raises CommitPlanner::Failed on nonzero/unstartable
+v   = Hiiro::Git::CommitPlan.validate(raw, cs) # the one validation: v.valid? v.shape v.unknown v.duplicate v.missing v.errors v.plan
+out = Hiiro::Git::CommitExecution.new(git, cs).call(v.plan) { |step_or_failure| ... }   # stops at first add/commit/update failure
+out.success? / out.completed (Step: number, group, sha) / out.failure (Failure: number, group, operation, message)
+```
+
+Each group commits whole files from a temporary index seeded with `HEAD`, then only its paths are set to `HEAD` in the real index (`update-index --index-info`). See `docs/h-commit.md`.
+
 ### Hiiro::CurrentTask / Hiiro::TaskLocation (lib/hiiro/current_task.rb, lib/hiiro/task_location.rb)
 
 `CurrentTask#context` resolves once to the existing `TaskLocation` value. Explicit task selection wins over calling workspace, realpath directory inference, and enabled pins. Optional `resolve` returns nil only when absent; ambiguity, stale pins, and terminal conflicts remain errors. Root workflows and `TableScope` disable pins. Project/home contexts use `TaskLocation.for(nil, root:, root_source:, project:)` without task inference.
@@ -500,7 +517,7 @@ content = Hiiro::Shell.read_input(*args)          # files named in args ('-' = s
 
 `read_input` keeps only args that are readable paths (regular files, `/dev/fd/N`, `<(cmd)`) or `-`, concatenates them, and falls back to stdin when none remain. A named file wins over piped stdin unless `-` places it. At a terminal with no input it aborts with `no input: pipe data in or pass a file`.
 
-`run`, `run_combined`, `run3`, `stream`, and `stream_combined` all build one `CommandSpecification` and attach it to the `Result`. `stream` writes each chunk to `tee` once.
+`run`, `run_combined`, `run3`, `stream`, and `stream_combined` all build one `CommandSpecification` and attach it to the `Result`. `Shell.execute(spec, stdin_data: "")` runs a prepared spec (argv, env, cwd) in binary mode and returns a `Result` with stdout, stderr, and the real status. `stream` writes each chunk to `tee` once.
 
 `CommandSpecification.shell(text, cwd:, env:)` keeps authored shell text (`kind` `:shell`, `preview` is the text, argv `/bin/bash -c text`) distinct from argv specs; `to_h` / `from_h` round-trip both, and `spawn_args(**opts)` feeds `Process.spawn`. `Hiiro::ProcessOutcome.from_status(status)` answers `exit_code`, `signal` (`'TERM'`), `success?` (exit 0 only), and `shell_code` (exit code or 128 + signal).
 

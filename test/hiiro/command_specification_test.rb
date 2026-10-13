@@ -60,4 +60,19 @@ class CommandSpecificationTest < Minitest::Test
     assert_equal "one\ntwo\n", out.string
     assert_equal "one\ntwo\n", result.stdout
   end
+
+  def test_execute_passes_stdin_cwd_and_env_and_keeps_bytes_and_status
+    Dir.mktmpdir do |dir|
+      dir = File.realpath(dir)
+      input = "\x00\xFFbytes\n".b
+      spec = Hiiro::CommandSpecification.new('/bin/sh', '-c', 'cat; pwd; echo "$NAME" >&2; exit 5', env: { NAME: 'x y' }, cwd: dir)
+      result = Hiiro::Shell.execute(spec, stdin_data: input)
+
+      assert_equal input + "#{dir}\n", result.stdout
+      assert_equal Encoding::BINARY, result.stdout.encoding
+      assert_equal "x y\n", result.stderr
+      assert_equal [5, false], [result.exit_code, result.success?]
+      assert_same spec, result.spec
+    end
+  end
 end

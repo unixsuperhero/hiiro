@@ -5,6 +5,7 @@ require_relative 'git/branches'
 require_relative 'git/remote'
 require_relative 'git/pr'
 require_relative 'git/branch_comparison'
+require_relative 'git/commit_planning'
 
 class Hiiro
   class Git

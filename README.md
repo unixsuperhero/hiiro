@@ -274,6 +274,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h commit` | Select commits using fuzzy finder |
 | `h config` | Open config files (vim, git, Herdr, zsh, starship, claude) |
 | `h env` | Append safely quoted environment variables |
+| [`h git commit`](docs/h-commit.md#h-git-commit) | Plan logical commits for all pending changes with `claude`; `-n` previews without touching the index, and invalid plans or failures stop before or at the failing commit |
 | [`h extract`](#extract-files-directories-and-links) | Extract file paths, directories, and HTTP(S) links from text |
 | `h link` | Manage saved links with URL, description, and shorthand |
 | [`h mcp`](docs/h-mcp.md) | Local MCP registrations, saved tool schemas, direct tool calls, and HTTP-only client sync (`require 'hiiro/mcp'`) |

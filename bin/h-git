@@ -7,23 +7,6 @@ require 'shellwords'
 require 'tempfile'
 require 'yaml'
 
-# Cap the diff we send to the model so we never blow the context window.
-MAX_DIFF_CHARS = 120_000
-
-# Snapshot the whole working tree (tracked edits, deletions, AND untracked
-# files) as a single unified diff, without leaving staging mutated.
-#
-#   git add -A                 -> stage everything (incl. untracked/deleted)
-#   git diff --cached HEAD     -> one diff covering all of it
-#   git reset -q               -> restore the original (unstaged) state
-def snapshot_diff
-  system('git', 'add', '-A')
-  diff = `git diff --cached HEAD`
-ensure
-  system('git', 'reset', '-q')
-  diff
-end
-
 def clean?
   status = `git status --porcelain -uall`.strip
   status.empty?
@@ -33,69 +16,22 @@ def dirty?
   !clean?
 end
 
-# Ask Claude (sonnet) to partition the changed files into logical commits.
-# Returns an array of { "message" => String, "files" => [String, ...] }.
-def plan_commits(model:, status:, diff:)
-  truncated = diff.length > MAX_DIFF_CHARS
-  diff = diff[0, MAX_DIFF_CHARS] if truncated
+def plan_line(change)
+  notes = []
+  notes << "renamed from #{change.source.inspect}" if change.source
+  notes << 'deleted' if change.status == 'D'
+  notes << 'binary' if change.binary
+  notes << 'staged+unstaged: whole file' if change.partial?
+  notes.empty? ? change.path.inspect : "#{change.path.inspect}  (#{notes.join(', ')})"
+end
 
-  prompt = build_commit_prompt(status, diff, truncated)
-
-  raw = IO.popen(['claude', '-p', '--model', model], 'r+') do |io|
-    io.write(prompt)
-    io.close_write
-    io.read
+def print_plan(plan, change_set)
+  puts
+  plan.groups.each_with_index do |group, i|
+    puts "  [#{i + 1}] #{group.subject}"
+    group.paths.each { |path| puts "        - #{plan_line(change_set.find(path))}" }
   end
-
-  parse_plan(raw)
-end
-
-# ── The grouping strategy: this prompt is the heart of the command. ──
-def build_commit_prompt(status, diff, truncated)
-  <<~PROMPT
-    You are organizing a git working tree's uncommitted changes into a series of
-    logical commits.
-
-    Respond with ONLY a JSON array (no prose, no markdown fences). Each element:
-      { "message": "<commit message>", "files": ["path/one", "path/two"] }
-
-    Rules:
-    - Every changed file listed below must appear in exactly ONE commit.
-    - Group by logical concern (feature, fix, refactor, docs, tests, config,
-      chore) rather than by directory.
-    - Order the commits so that prerequisite changes come first.
-    - "message" is a Conventional-Commits-style subject line in the imperative
-      mood (e.g. "fix: handle empty diff"). Add a blank line + short body only
-      when it genuinely helps.
-    - Use the exact file paths shown in the status block below.
-
-    Changed files (git status --porcelain):
-    #{status}
-
-    Unified diff#{truncated ? ' (TRUNCATED — some changes omitted)' : ''}:
-    #{diff}
-  PROMPT
-end
-
-# Claude may wrap JSON in ```fences``` or add stray prose — extract the array.
-def parse_plan(raw)
-  text = raw.to_s.strip
-  text = text.gsub(/\A```(?:json)?\n?/, '').gsub(/```\z/, '').strip
-  start = text.index('[')
-  finish = text.rindex(']')
-  raise "no JSON array in model output:\n#{raw}" unless start && finish
-
-  JSON.parse(text[start..finish])
-end
-
-# Files git currently sees as changed (porcelain paths, dequoted).
-def changed_files
-  `git status --porcelain -uall`.lines.map do |line|
-    path = line[3..].to_s.chomp
-    path = path.split(' -> ').last if path.include?(' -> ') # renames
-    path = path.delete_prefix('"').delete_suffix('"')
-    path
-  end.reject(&:empty?)
+  puts
 end
 
 def untracked_files(repo_root)
@@ -163,6 +99,8 @@ end
 
 Hiiro.run(*ARGV, plugins: [:Pins]) do
   add_flag(:dry_run, short: :n, default: false)
+  add_flag(:yes, short: :y, default: false)
+  add_flag(:whole_files, short: :w, default: false)
   add_option(:model, short: :m, default: 'sonnet')
 
   add_cmd(:clean) do
@@ -215,63 +153,81 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
   end
 
-  add_cmd(:commit, opts: %i[dry_run yes model]) do
-    unless system('git', 'rev-parse', '--is-inside-work-tree', out: File::NULL, err: File::NULL)
+  add_cmd(:commit, opts: %i[dry_run yes whole_files model]) do
+    git = Hiiro::Git::IndexGit.at(Dir.pwd)
+    unless git
       puts 'Not inside a git work tree.'
       next false
     end
 
-    status = `git status --porcelain -uall`.strip
-    if status.empty?
+    change_set = Hiiro::Git::ChangeSet.capture(git)
+    if change_set.empty?
       puts 'Nothing to commit — working tree is clean.'
-      exit 0
-    end
-
-    all_changed = changed_files
-    puts "Analyzing #{all_changed.size} changed file(s) with claude (#{@opts.model})..."
-
-    diff = snapshot_diff
-    plan = plan_commits(model: @opts.model, status: status, diff: diff)
-
-    # Validate coverage: warn about files the plan missed or invented.
-    planned = plan.flat_map { |c| c['files'] }
-    missing = all_changed - planned
-    unknown = planned - all_changed
-    puts "WARNING: not committed by plan: #{missing.join(', ')}" if missing.any?
-    puts "WARNING: unknown paths in plan (skipped): #{unknown.join(', ')}" if unknown.any?
-
-    # Show the plan.
-    puts
-    plan.each_with_index do |commit, i|
-      subject = commit['message'].to_s.lines.first.to_s.chomp
-      puts "  [#{i + 1}] #{subject}"
-      commit['files'].each { |f| puts "        - #{f}" }
-    end
-    puts
-
-    if @opts.dry_run
-      puts '(dry run — no commits made)'
       next
     end
 
-    next if @opts.dry_run
+    planner = Hiiro::Git::CommitPlanner.new(model: @opts.model)
+    puts "Analyzing #{change_set.changes.size} changed file(s) with #{planner.command.first} (#{@opts.model})..."
+    if change_set.diff_truncated?
+      puts "The diff is #{change_set.diff.bytesize} bytes; the planner sees the first #{Hiiro::Git::ChangeSet::MAX_DIFF_BYTES}."
+    end
 
-    # Clean slate, then stage + commit each group independently.
-    system('git', 'reset', '-q')
+    validation = Hiiro::Git::CommitPlan.validate(planner.call(change_set, cwd: git.root), change_set)
+    unless validation.valid?
+      puts 'The planner returned an unusable plan; nothing was staged or committed:'
+      validation.errors.each { |error| puts "  - #{error}" }
+      next false
+    end
+    plan = validation.plan
+    print_plan(plan, change_set)
 
-    plan.each_with_index do |commit, i|
-      files = commit['files'] & all_changed
-      next if files.empty?
+    partial = change_set.partial
+    if partial.any?
+      puts 'These files have staged and unstaged changes; a commit takes the whole working file:'
+      partial.each { |change| puts "  #{change.path.inspect}" }
+      puts
+    end
 
-      system('git', 'add', '-A', '--', *files)
-      _out, err, st = Open3.capture3('git', 'commit', '-F', '-', stdin_data: commit['message'].to_s)
+    if @opts.dry_run
+      puts '(dry run — no commits made; index and working tree unchanged)'
+      next
+    end
 
-      if st.success?
-        puts "✓ [#{i + 1}] #{commit['message'].to_s.lines.first.to_s.chomp}"
-      else
-        puts "✗ [#{i + 1}] commit failed: #{err.strip}"
+    if partial.any? && !@opts.whole_files
+      puts 'Nothing was committed. Rerun with --whole-files to commit those files whole,'
+      puts 'or stage/commit them yourself first.'
+      next false
+    end
+
+    unless @opts.yes
+      print "Create #{plan.groups.size} commit(s)? [y/N] "
+      answer = $stdin.gets
+      puts unless $stdin.tty?
+      unless answer&.strip&.match?(/\Ay(es)?\z/i)
+        puts 'Cancelled; nothing was committed.'
+        next false
       end
     end
+
+    if Hiiro::Git::ChangeSet.capture(git).fingerprint != change_set.fingerprint
+      puts 'HEAD, the index, or working files changed after planning; nothing was committed. Run again.'
+      next false
+    end
+
+    outcome = Hiiro::Git::CommitExecution.new(git, change_set).call(plan) do |event|
+      if event.is_a?(Hiiro::Git::CommitExecution::Step)
+        puts "✓ [#{event.number}] #{event.sha[0, 12]} #{event.group.subject}"
+      else
+        puts "✗ [#{event.number}] #{event.operation} failed: #{event.message}"
+      end
+    end
+    next true if outcome.success?
+
+    failed = outcome.failure.number
+    puts
+    puts "Stopped: #{outcome.completed.size} of #{plan.groups.size} commit(s) made."
+    puts "Commits #{failed}-#{plan.groups.size} were not made; their files keep their original staging."
+    false
   end
 
   add_subcmd(:edit) { edit_files(__FILE__) }
@@ -284,6 +240,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     puts '  commit  Group dirty files into logical commits via claude sonnet'
     puts '          -n/--dry-run   show the plan without committing'
     puts '          -y/--yes       skip the confirmation prompt'
+    puts '          -w/--whole-files  commit files that also have unstaged changes whole'
     puts '          -m/--model M   model to use (default: sonnet)'
   end
 end

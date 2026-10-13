@@ -102,6 +102,13 @@ class Hiiro
       Result.new(stdout, status, spec: spec)
     end
 
+    # Run a prepared spec (argv, env, cwd) with optional stdin; bytes in and out
+    # are binary so diffs and file contents survive unchanged.
+    def self.execute(spec, stdin_data: '')
+      stdout, stderr, status = Open3.capture3(*spec.spawn_args(stdin_data: stdin_data, binmode: true))
+      Result.new(stdout, status, stderr: stderr, spec: spec)
+    end
+
     def self.run_combined(*command, **env)
       spec = CommandSpecification.new(*command, env: env)
       output, status = Open3.capture2e(*spec.open3_args)

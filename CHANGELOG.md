@@ -19,6 +19,10 @@
 ## Unreleased
 
 ### Fixed
+- `h git commit` no longer touches the real index while planning: `-n`, a cancelled confirmation, an invalid plan, or a failing planner leave index bytes, staged changes, `HEAD`, and working files unchanged (the old snapshot ran `git add -A` + `git reset` and dropped the staging selection, even on a dry run).
+- `h git commit` rejects plans with unknown, duplicated, or missing paths, empty messages, or bad JSON before staging anything, and fails when the planner exits nonzero or cannot start.
+- `h git commit` stops at the first failing `git add`, commit, or hook with exit 1, reports completed commits, and never runs later groups; each commit contains only its group, and the remaining paths keep their staging. `-y`/`--yes` and the `[y/N]` confirmation now exist as documented. Files with both staged and unstaged changes are committed whole only with the new `-w`/`--whole-files`; renames, deletions, untracked files, and unusual file names are handled exactly.
+- `script/publish` commits its release plan through the same validated path; an unusable plan or a failed commit aborts the publish instead of falling back to one catch-all commit.
 - Fix `PsProcess::Snapshot.capture` constant lookup, which raised `NameError` in `h ps byport`, `h ps indir`, and parent/child process lookups.
 - Optional context resolution no longer hides ambiguity, and scoped Git commands honor their supplied directory.
 - Queue entries move to `done/` only when the agent exits 0; the launcher previously read an unexported `HQ_EXIT` and filed every finished entry as done.

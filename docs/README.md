@@ -13,7 +13,7 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 | Command | Description |
 |---------|-------------|
 | [h-branch](h-branch.md) | Manage, tag, search, and inspect git branches with task and PR associations |
-| [h-commit](h-commit.md) | Fuzzy-select a git commit SHA from the recent log |
+| [h-commit](h-commit.md) | Fuzzy-select a git commit SHA from the recent log; `h git commit` plans and makes logical commits |
 | [h-sha](h-sha.md) | Fuzzy-select, show, and copy git commit SHAs |
 | [h-sparse](h-sparse.md) | Manage named git sparse-checkout path groups |
 | [h-wtree](h-wtree.md) | Manage git worktrees with fuzzy selection and Herdr workspace switching |
