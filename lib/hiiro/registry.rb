@@ -90,10 +90,13 @@ class Hiiro
       (name_matches + short_matches).uniq(&:id)
     end
 
-    # Fuzzy-finder display lines: "type  short  name  description"
-    def self.fuzzy_lines(type: nil)
-      entries = type ? of_type(type) : all_ordered
-      entries.map(&:fuzzy_line)
+    # The shared picker over entries (row ID is the identity, the columns only
+    # the label); the chosen entry or nil.
+    def self.pick(entries, type: nil, hiiro: nil)
+      items = entries.map do |entry|
+        Hiiro::Picker.saved_item(store: 'registry', id: entry.id, name: entry.name, target: entry.value, label: entry.picker_label, record: entry)
+      end
+      Hiiro::Picker.choose(type ? "registry-#{type}" : 'registry', items, family: :saved, hiiro: hiiro)&.value
     end
 
     # ── Instance helpers ─────────────────────────────────────────────────────
@@ -113,7 +116,7 @@ class Hiiro
     def tag(*names)   = Hiiro::Tag.tag!(self, *names)
     def untag(*names) = Hiiro::Tag.untag!(self, *names)
 
-    def fuzzy_line
+    def picker_label
       parts = [resource_type.ljust(14), short_name&.ljust(16) || ' ' * 16, name]
       parts << " = #{value}" if value && !value.empty?
       parts << "  # #{description}" if description && !description.empty?

@@ -13,10 +13,7 @@ class Hiiro
             STDERR.puts "No tracked PRs. Use a PR number or 'h pr track' to track PRs."
             nil
           else
-            lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-              h[pm.strip_ansi(pm.display_pinned(pr, idx, oneline: true))] = pm.reference_text(pr)
-            end
-            hiiro.fuzzyfind_from_map(lines)
+            pm.pick(pinned, hiiro: hiiro)&.then { |pr| pm.reference_text(pr) }
           end
         }
       ) do |ref|
@@ -497,6 +494,15 @@ class Hiiro
 
     def strip_ansi(str)
       str.gsub(/\e\[[0-9;]*m/, '')
+    end
+
+    # The shared picker over tracked PRs, labelled as the one-line listing
+    # shows them; the chosen PinnedPr, or nil when cancelled.
+    def pick(prs, hiiro:, name: 'tracked-prs')
+      items = prs.each_with_index.map do |pr, idx|
+        Picker.pr_record_item(pr, label: strip_ansi(display_pinned(pr, idx, oneline: true)))
+      end
+      Picker.choose(name, items, family: :pr, hiiro: hiiro)&.value
     end
 
     def display_check_runs(pr, indent: "   ")

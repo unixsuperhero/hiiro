@@ -18,7 +18,7 @@ module Project
 
   def self.add_subcommands(hiiro)
     hiiro.add_subcmd(:project) do |project_name=nil|
-      selected = Hiiro::Projects.new.context(project_name, chooser: hiiro.method(:fuzzyfind_from_map)).validate!
+      selected = Hiiro::Projects.new.context(project_name, chooser: Hiiro::Projects.chooser(hiiro)).validate!
       name = selected.project.respond_to?(:name) ? selected.project.name : selected.project
       puts "changing dir: #{selected.start_directory}"
       Dir.chdir(selected.start_directory)

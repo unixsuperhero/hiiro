@@ -18,8 +18,8 @@ h link <subcommand> [args]
 | `paste [desc]` | Add URL from clipboard |
 | `ls` / `list` | List all saved links |
 | `search <terms>` | Search links by URL, description, or shorthand |
-| `select [terms]` | Fuzzy-select a link and print its URL |
-| `copy [terms]` | Fuzzy-select a link and copy URL to clipboard |
+| `select [terms]` | Pick a link with the [shared picker](picker.md) and print its URL |
+| `copy [terms]` | Pick a link and copy URL to clipboard |
 | `open [ref]` | Open a link in the browser |
 | `edit <ref>` | Edit a specific link in editor |
 | `editall` | Edit saved database links in a temporary YAML document |
@@ -34,7 +34,7 @@ Add a URL. With no arguments, opens an editor with a YAML template. With a URL, 
 
 Links can contain `{placeholder}` syntax — when opened/selected/copied, you'll be prompted to fill in values in a YAML editor. Leaving the template unchanged or a failing editor cancels (exit 1, nothing opened or copied). Invalid YAML, unknown placeholder names, or non-scalar values exit 1 and keep the edited text under `~/.local/share/hiiro/edits/link-params-*.yml`; the message names the file.
 
-`select`, `copy`, and `open` share one picker: rows are numbered as in `h link ls`, and the chosen row is identified by its position in the list, never by parsing its label, so links whose labels look alike resolve to the record you picked. Cancelling the picker exits 1 with `No link selected.`
+`select`, `copy`, and `open` share one picker: rows are numbered as in `h link ls`, and the chosen row is identified by its link ID, never by parsing its label, so links whose labels look alike resolve to the record you picked. Cancelling the picker exits 1 with `No link selected.`
 
 **Options**
 
@@ -55,7 +55,7 @@ h link add "https://jira.example.com/browse/{ticket}" --tag jira
 
 ### copy
 
-Fuzzy-select a link and copy its URL to the clipboard. Supports placeholder substitution. Exits 1 when `pbcopy` fails.
+Pick a link and copy its URL to the clipboard. Supports placeholder substitution. Exits 1 when `pbcopy` fails.
 
 **Examples**
 
@@ -135,7 +135,7 @@ h link path
 ```
 ### rm / remove
 
-Remove a link and its owned tags by the selected stable database ID. With no argument, fuzzy-selects. With a number or shorthand, removes directly. Supports substring URL matching.
+Remove a link and its owned tags by the selected stable database ID. With no argument, picks. With a number or shorthand, removes directly. Supports substring URL matching.
 
 **Examples**
 
@@ -158,7 +158,7 @@ h link search jira ticket
 
 ### select
 
-Fuzzy-select a link and print its URL. If the URL has `{placeholder}` variables, opens an editor to fill them in. Optionally pre-filter with search terms.
+Pick a link and print its URL. If the URL has `{placeholder}` variables, opens an editor to fill them in. Optionally pre-filter with search terms.
 
 **Examples**
 

@@ -6,20 +6,12 @@ require 'json'
 require 'pty'
 
 # Select, open, and copy across bookmarks, Obsidian notes, and Portfolio
-# documents, run as real processes. `fzf`, `open`, and `pbcopy` on PATH are
-# recorders; the finder prints the row named by FINDER_PICK or cancels.
+# documents, run as real processes. Several matches open the shared picker on
+# a pseudo-terminal, driven by keys; `open` and `pbcopy` on PATH are recorders.
 class SavedSelectionTest < Minitest::Test
   ROOT = File.expand_path('../..', __dir__)
 
   FIXTURES = {
-    'fzf' => <<~'SH',
-      #!/bin/sh
-      printf '%s\n' "$*" >> "$FINDER_LOG"
-      rows=$(cat)
-      printf '%s\n' "$rows" >> "$FINDER_LOG"
-      [ -z "$FINDER_PICK" ] && exit 130
-      printf '%s\n' "$rows" | sed -n "${FINDER_PICK}p"
-    SH
     'pbcopy' => <<~'SH',
       #!/bin/sh
       cat > "$COPY_LOG"
@@ -64,7 +56,7 @@ class SavedSelectionTest < Minitest::Test
   def env(**extra)
     { 'HOME' => @home, 'USER' => 'tester', 'PATH' => "#{@bin}:#{File.dirname(RbConfig.ruby)}:/usr/bin:/bin", 'LANG' => 'en_US.UTF-8',
       'HIIRO_TEST_DB' => "sqlite://#{@db_path}", 'EDITOR' => File.join(@bin, 'editor'), 'TERM' => 'dumb',
-      'FINDER_LOG' => log('finder'), 'OPEN_LOG' => log('open'), 'COPY_LOG' => log('copy') }.merge(extra.transform_keys(&:to_s))
+      'OPEN_LOG' => log('open'), 'COPY_LOG' => log('copy'), 'LINES' => '8', 'COLUMNS' => '70' }.merge(extra.transform_keys(&:to_s))
   end
 
   def h(bin, *args, **extra)
@@ -73,34 +65,49 @@ class SavedSelectionTest < Minitest::Test
     [out, err, status.exitstatus]
   end
 
-  # Runs the command with a terminal on stdin and stdout (as an interactive
-  # shell would) and returns [output, exit status].
-  def h_tty(bin, *args, **extra)
+  # Runs the command on a pseudo-terminal. With keys, waits for the picker to
+  # draw, types them, and returns [output after the picker closed, exit
+  # status, the last picker frame as plain rows]; without keys, [output,
+  # status, nil].
+  def h_tty(bin, *args, keys: nil, **extra) = run_tty([File.join(ROOT, 'bin', "h-#{bin}"), *args], keys: keys, **extra)
+
+  def run_tty(argv, keys: nil, **extra)
     output = +''
     status = nil
-    PTY.spawn(env(**extra), RbConfig.ruby, '-I', File.join(ROOT, 'lib'), File.join(ROOT, 'bin', "h-#{bin}"), *args,
-              chdir: @root, unsetenv_others: true) do |reader, _writer, pid|
+    PTY.spawn(env(**extra), RbConfig.ruby, '-I', File.join(ROOT, 'lib'), *argv, chdir: @root, unsetenv_others: true) do |reader, writer, pid|
+      if keys
+        deadline = Time.now + 15
+        until output.include?('Enter choose')
+          flunk "picker never drew:\n#{output}" if Time.now > deadline
+          output << reader.readpartial(4096) if IO.select([reader], nil, nil, 0.2)
+        end
+        writer.write(keys)
+      end
       begin
         loop { output << reader.readpartial(4096) }
       rescue EOFError, Errno::EIO
       end
       status = Process.wait2(pid).last
     end
-    [output.gsub("\r\n", "\n"), status.exitstatus]
+    return [output.gsub("\r\n", "\n"), status.exitstatus, nil] unless keys
+
+    screen, _, after = output.rpartition("\e[?1049l")
+    frame = screen.split("\e[H\e[2J").last.to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, '').split("\r\n").map(&:rstrip)
+    [after.gsub("\r\n", "\n"), status.exitstatus, frame]
   end
 
   def test_equal_labels_resolve_to_the_chosen_original_record
     script = <<~'RUBY'
       require 'hiiro'
       items = [1, 2, 3].map { |n| Hiiro::Selection::Item.new(id: "rec:#{n}", title: 'Same title', record: n) }
-      p Hiiro::Selection.pick(items, tty: true)&.record
+      p Hiiro::Selection.pick(items, picker: 'same', tty: true)&.record
     RUBY
-    out, err, status = Open3.capture3(env(FINDER_PICK: '2'), RbConfig.ruby, '-I', File.join(ROOT, 'lib'), '-e', script, unsetenv_others: true)
-    assert_equal ["2\n", '', 0], [out, err, status.exitstatus]
-    assert_equal ["--delimiter \t --with-nth 2..", "1\tSame title", "2\tSame title", "3\tSame title"], lines('finder')
+    out, status, frame = run_tty(['-e', script], keys: "j\r")
+    assert_equal ["2\n", 0], [out, status]
+    assert_equal ['same  choices  (0 excluded)', 'Enter choose  ^E edit  ^X excluded', '   Same title', '>  Same title', '   Same title', '', '', '2/3'], frame
 
-    out, _, status = Open3.capture3(env, RbConfig.ruby, '-I', File.join(ROOT, 'lib'), '-e', script, unsetenv_others: true)
-    assert_equal ["nil\n", 0], [out, status.exitstatus]
+    out, status, = run_tty(['-e', script], keys: 'q')
+    assert_equal ["nil\n", 0], [out, status]
   end
 
   def test_bookmarks_open_copy_and_select_the_picked_link_with_its_template_filled
@@ -110,21 +117,22 @@ class SavedSelectionTest < Minitest::Test
     values = File.join(@root, 'values.yml')
     File.write(values, "org: a b\nrepo: r\n")
 
-    out, err, status = h('link', 'open', 'docs', FINDER_PICK: '2', EDIT_CONTENT_FILE: values)
-    assert_equal ['', '', 0], [out, err, status]
+    out, status, frame = h_tty('link', 'open', 'docs', keys: "j\r", EDIT_CONTENT_FILE: values)
+    assert_equal ['', 0], [out, status]
     assert_equal ['https://example.com/a+b/r'], lines('open')
-    assert_equal ["--delimiter \t --with-nth 2..", "1\t1. https://example.com/a - Docs", "2\t2. https://example.com/{org}/{repo} - Docs"], lines('finder')
+    assert_equal ['links  choices  (0 excluded)', 'Enter choose  ^E edit  ^X excluded', '   1. https://example.com/a - Docs',
+                  '>  2. https://example.com/{org}/{repo} - Docs', '', '', '', '2/2'], frame
 
-    out, _, status = h('link', 'copy', 'docs', FINDER_PICK: '1')
+    out, status, = h_tty('link', 'copy', 'docs', keys: "\r")
     assert_equal ["Copied URL 'https://example.com/a' to clipboard\n", 0], [out, status]
     assert_equal 'https://example.com/a', File.read(log('copy'))
 
-    out, _, status = h('link', 'select', FINDER_PICK: '3')
+    out, status, = h_tty('link', 'select', keys: "/other\r\r")
     assert_equal ["https://other.test\n", 0], [out, status]
 
     FileUtils.rm_f(log('open'))
-    out, err, status = h('link', 'open', 'docs')
-    assert_equal ['', "No link selected.\n", 1], [out, err, status]
+    out, status, = h_tty('link', 'open', 'docs', keys: 'q')
+    assert_equal ["No link selected.\n", 1], [out, status]
     out, err, status = h('link', 'open', 'zzz')
     assert_equal ['', "Link not found: zzz\n", 1], [out, err, status]
     out, err, status = h('link', 'open', '2')
@@ -159,10 +167,10 @@ class SavedSelectionTest < Minitest::Test
     assert_equal ['', 1], [out, status]
     assert_equal "Multiple notes matched:\n  1. Plan [cld/tasks/plan.md]\n  2. Plan [cld/refs/plan.md]\n", err
 
-    output, status = h_tty('obsidian', 'copy', 'Plan', FINDER_PICK: '2')
+    output, status, = h_tty('obsidian', 'copy', 'Plan', keys: "j\r")
     assert_equal ["Copied obsidian://open?vault=Work+Vault&file=cld%2Frefs%2Fplan\n", 0], [output, status]
     assert_equal 'obsidian://open?vault=Work+Vault&file=cld%2Frefs%2Fplan', File.read(log('copy'))
-    output, status = h_tty('obsidian', 'open', 'Plan')
+    output, status, = h_tty('obsidian', 'open', 'Plan', keys: 'q')
     assert_equal ["No note selected.\n", 1], [output, status]
     assert_equal 1, lines('open').length
   end
@@ -191,12 +199,12 @@ class SavedSelectionTest < Minitest::Test
       { 'id' => 42, 'title' => 'Plan', 'type' => 'doc', 'href' => '/d/42', 'source_path' => '/notes/b.md' },
       { 'id' => 43, 'title' => 'Ext', 'type' => 'link', 'href' => 'https://ext.test/x', 'source_path' => nil }
     ])
-    out, err, status = h('docs', 'open', 'plan', HDOCS_SERVER: base, FINDER_PICK: '2')
-    assert_equal ['', '', 0], [out, err, status]
+    out, status, = h_tty('docs', 'open', 'plan', keys: "j\r", HDOCS_SERVER: base)
+    assert_equal ['', 0], [out, status]
     assert_equal ["#{base}/d/42"], lines('open')
     assert_equal '/api/items?q=plan', @requests.pop
 
-    out, _, status = h('docs', 'copy', 'plan', HDOCS_SERVER: base, FINDER_PICK: '1')
+    out, status, = h_tty('docs', 'copy', 'plan', keys: "\r", HDOCS_SERVER: base)
     assert_equal ["#{base}/d/41\n", 0], [out, status]
     assert_equal "#{base}/d/41", File.read(log('copy'))
 
@@ -206,8 +214,8 @@ class SavedSelectionTest < Minitest::Test
     assert_equal 0, status
     assert_equal ["#{base}/d/42", "#{base}/d/41", "#{base}/d/42", 'https://ext.test/x'], lines('open')
 
-    out, _, status = h('docs', 'open', 'plan', HDOCS_SERVER: base)
-    assert_equal ['', 1], [out, status]
+    out, status, = h_tty('docs', 'open', 'plan', keys: 'q', HDOCS_SERVER: base)
+    assert_equal 1, status
     assert_equal 4, lines('open').length
   end
 end

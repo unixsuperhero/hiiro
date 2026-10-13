@@ -18,8 +18,8 @@ h project <subcommand> [args]
 | `rm <name>` / `remove <name>` | Remove a saved project alias |
 | `config` | Print saved project aliases as YAML |
 | `edit` | Edit a temporary projection of saved project aliases |
-| `select` | Fuzzy-select a project and print its path |
-| `copy` | Fuzzy-select a project and copy path to clipboard |
+| `select` | Choose a project with the shared picker and print its path |
+| `copy` | Choose a project with the shared picker and copy its path to the clipboard |
 | `sh <name> [cmd]` | Open a shell or run unchanged native arguments in a project directory |
 | `path [name]` / `abspath [name]` | Print the absolute project path without a newline |
 | `cd [name]` | Send `cd` to the explicit calling Herdr pane |
@@ -44,7 +44,7 @@ h project config
 
 ### copy
 
-Fuzzy-select a project and copy its path to the clipboard.
+Choose a project with the [shared picker](picker.md) and copy its path to the clipboard.
 
 **Examples**
 
@@ -77,7 +77,7 @@ h project ls
 
 ### open
 
-Open a project and focus or create its Herdr workspace at the resolved directory. Exact case-sensitive names win, followed by unique prefixes. A terminal disambiguates through an object-mapped picker; non-interactive ambiguity and missing explicit names fail. An unnamed target means `~/proj`, not a fallback for an unknown name.
+Open a project and focus or create its Herdr workspace at the resolved directory. Exact case-sensitive names win, followed by unique prefixes. A terminal disambiguates through the [shared picker](picker.md) (`projects`, identity = project name); non-interactive ambiguity and missing explicit names fail. An unnamed target means `~/proj`, not a fallback for an unknown name.
 
 **Examples**
 
@@ -88,7 +88,7 @@ h project open my-app
 
 ### select
 
-Fuzzy-select a project and print its absolute path.
+Choose a project with the [shared picker](picker.md) and print its absolute path. The picker is named `projects`. Its rows are identified by project name, with fields `name` and `path`, so a rule such as `{mode: glob, field: path, pattern: "**/archive/*"}` hides archived checkouts in every later `select`, `copy`, `open`, and ambiguous lookup. `Ctrl-X` lists hidden projects and `u` restores one; no project or directory is changed.
 
 **Examples**
 

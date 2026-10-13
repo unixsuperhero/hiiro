@@ -45,12 +45,12 @@ class Hiiro
       # Exact name, else unique prefix. An ambiguous prefix opens the fuzzy finder
       # over the candidates on a TTY and fails otherwise. nil when nothing matches.
       def lookup_task(reference)
-        Hiiro::CurrentTask.select(Hiiro::TaskRecord.all_as_list, reference, kind: 'task', chooser: method(:fuzzyfind_from_map))
+        Hiiro::CurrentTask.select(Hiiro::TaskRecord.all_as_list, reference, kind: 'task', chooser: Hiiro::Picker.task_chooser(hiiro: self))
       end
 
       def pick_task(candidates)
         raise Error, 'No tasks; create one with t new NAME' if candidates.empty?
-        task = fuzzyfind_from_map(candidates.to_h { |candidate| [candidate.name, candidate] })
+        task = Hiiro::Picker.choose('tasks', candidates.map { |candidate| Hiiro::Picker.task_item(candidate) }, family: :task, hiiro: self)&.value
         raise Error, 'No task selected' unless candidates.include?(task)
         task
       end
@@ -70,7 +70,7 @@ class Hiiro
       def context
         return super if defined?(@context) || global_values[:context]
         @context = Hiiro::CurrentTask.new(herdr: -> { herdr_client }, cwd: global_values[:cwd] || Dir.pwd, pin: true,
-                                         chooser: method(:fuzzyfind_from_map)).context
+                                         chooser: Hiiro::Picker.task_chooser(hiiro: self)).context
       end
 
       def current_task
@@ -401,12 +401,20 @@ class Hiiro
       end
 
       # Pick one value from [[value, names], ...]: exact name, then unique prefix
-      # via Hiiro::Matcher, or an interactive fuzzyfind when no reference is given.
-      def choose(kind, candidates, reference, hint: 'use an ID or full path/URL')
+      # via Hiiro::Matcher, or an interactive choice when no reference is given:
+      # the shared picker (task scoped) when item builds each candidate's
+      # Picker::Item from value and names, else the plain fuzzy finder (live
+      # panes, tabs, and worktrees).
+      def choose(kind, candidates, reference, task: nil, item: nil, hint: 'use an ID or full path/URL')
         raise Error, "No #{kind} found" if candidates.empty?
         if reference.nil?
           return candidates.first.first if candidates.one?
-          chosen = fuzzyfind_from_map(candidates.to_h { |value, names| [names.first, value] })
+          chosen = if item
+            items = candidates.map { |value, names| item.call(value, names) }
+            Hiiro::Picker.choose("task-#{kind}", items, family: items.first.family, context: Hiiro::Picker::Context.for_task(task), hiiro: self)&.value
+          else
+            fuzzyfind_from_map(candidates.to_h { |value, names| [names.first, value] })
+          end
           return chosen if chosen
           raise Error, "No #{kind} selected"
         end
@@ -426,7 +434,13 @@ class Hiiro
         if group == 'file'
           candidates.concat(home_files(task).map { |path| [path, [path, path.delete_prefix(task.home + '/'), File.basename(path)]] })
         end
-        path = choose(group, candidates, reference)
+        item = lambda do |value, names|
+          next Hiiro::Picker.file_item(value, base: task.home) if %w[file directory].include?(group)
+
+          Hiiro::Picker.saved_item(store: 'task-resource', id: names[0], name: names[2] || value, target: value,
+                                   label: [names[2], value].compact.join('  '), record: value)
+        end
+        path = choose(group, candidates, reference, task: task, item: item)
         existing_path(path, directory: group == 'directory') if %w[file directory].include?(group)
         check_result(open_default(path), "Could not open #{path}")
       end
@@ -452,7 +466,8 @@ class Hiiro
           short_name = File.basename(path, '.md').delete_prefix(doc_prefix(task))
           [path, [short_name, path.delete_prefix(task.home + '/'), File.basename(path), File.basename(path, '.md'), "#{short_name}.md", path]]
         end
-        path = choose('document', candidates, reference, hint: 'use its relative or absolute path')
+        item = ->(value, _names) { Hiiro::Picker.file_item(value, base: task.home) }
+        path = choose('document', candidates, reference, task: task, item: item, hint: 'use its relative or absolute path')
         check_result(system('mdoc', path), 'mdoc could not open the document; install mdoc and check its configuration')
       end
 

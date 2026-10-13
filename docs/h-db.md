@@ -74,7 +74,7 @@ h db plan --only=pinned_prs --sources=sqlite:pinned_prs
 
 `export` requires one new destination path in an existing directory. It uses exclusive creation and refuses an existing file or symlink.
 
-The checksummed JSON document contains typed domain rows, IDs, relationships, tags, task resources, RegistryEntry metadata (including `mcp-sync` ownership), MCP registrations and saved catalogs, PR/check snapshots, PR monitor and schedule checkpoints, recurring-work claims and outcomes (`job_claims`, `job_outcomes`), capture metadata, import verification records, and domain allocator state. Retained legacy PR rows and extra PR columns are included. Definitions, preferences, ordinary files, and invocation/resolution audit history are not included.
+The checksummed JSON document contains typed domain rows, IDs, relationships, tags, task resources, RegistryEntry metadata (including `mcp-sync` ownership), MCP registrations and saved catalogs, PR/check snapshots, PR monitor and schedule checkpoints, recurring-work claims and outcomes (`job_claims`, `job_outcomes`), picker exclusion rules (`picker_exclusions`), capture metadata, import verification records, and domain allocator state. Retained legacy PR rows and extra PR columns are included. Definitions, preferences, ordinary files, and invocation/resolution audit history are not included.
 
 ```bash
 h db export ~/backups/hiiro-records.json

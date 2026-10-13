@@ -26,9 +26,9 @@ h branch <subcommand> [args]
 | `tag [branch] <tags>` | Tag a branch |
 | `untag [branch] [tags]` | Remove tags from a branch |
 | `tags` | List all tagged branches grouped by tag |
-| `select` | Fuzzy-select a branch and print its name |
-| `copy` | Fuzzy-select a branch and copy to clipboard |
-| `co` / `checkout [branch]` | Fuzzy-select and checkout a branch |
+| `select` | Pick a branch with the [shared picker](picker.md) and print its name |
+| `copy` | Pick a branch and copy to clipboard |
+| `co` / `checkout [branch]` | Pick and checkout a branch |
 | `rm` / `remove [branch]` | Delete a branch |
 | `rename <new> [old]` | Rename branch (locally and on remote) |
 | `push [args]` | Push branch to remote |
@@ -86,7 +86,7 @@ h branch clean --all --force
 
 ### co / checkout
 
-Fuzzy-select and checkout a branch. Pass a branch name to skip the picker.
+Pick and checkout a branch. Pass a branch name to skip the picker.
 
 **Options**
 
@@ -103,7 +103,7 @@ h branch co my-feature
 
 ### copy
 
-Fuzzy-select a branch and copy its name to the clipboard.
+Pick a branch and copy its name to the clipboard.
 
 **Examples**
 
@@ -125,7 +125,7 @@ h branch diff main my-feature
 
 ### for-pr / pr
 
-Get the branch name for a tracked PR. With no arg, uses fuzzy select.
+Get the branch name for a tracked PR. With no arg, opens the shared picker.
 
 **Examples**
 
@@ -307,7 +307,7 @@ h branch search -a refactor
 
 ### select
 
-Fuzzy-select from saved branches (or all with `-a`) and print the name.
+Pick from saved branches (or all with `-a`) and print the name.
 
 **Options**
 

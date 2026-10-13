@@ -11,7 +11,7 @@ Hiiro.run(*ARGV) do
   projects = Hiiro::Projects.new
   Hiiro::Projects.add_resolvers(self)
 
-  project_context = ->(name = nil) { projects.context(name, chooser: method(:fuzzyfind_from_map)) }
+  project_context = ->(name = nil) { projects.context(name, chooser: Hiiro::Projects.chooser(self)) }
 
   add_subcmd(:open) { |project_name=nil|
     selected = project_context.call(project_name).validate!
@@ -83,12 +83,12 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:select) {
-    selection = projects.pick(chooser: method(:fuzzyfind_from_map))
+    selection = projects.pick(chooser: Hiiro::Projects.chooser(self))
     print projects.context(selection: selection).start_directory
   }
 
   add_subcmd(:copy) {
-    selection = projects.pick(chooser: method(:fuzzyfind_from_map))
+    selection = projects.pick(chooser: Hiiro::Projects.chooser(self))
     selected = projects.context(selection: selection).start_directory
     Hiiro::Shell.pipe(selected, 'pbcopy')
     puts "Copied project path '#{selected}' to clipboard"

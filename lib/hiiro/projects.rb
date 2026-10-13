@@ -2,9 +2,14 @@ class Hiiro
   class Projects
     def self.add_resolvers(hiiro)
       projects = new
-      hiiro.add_resolver(:project, -> { projects.context(selection: projects.pick(chooser: hiiro.method(:fuzzyfind_from_map))).start_directory }) do |name|
-        projects.context(name, chooser: hiiro.method(:fuzzyfind_from_map)).start_directory
+      hiiro.add_resolver(:project, -> { projects.context(selection: projects.pick(chooser: chooser(hiiro))).start_directory }) do |name|
+        projects.context(name, chooser: chooser(hiiro)).start_directory
       end
+    end
+
+    # The shared picker over [name, path] values; identity is the project name.
+    def self.chooser(hiiro = nil)
+      Picker.chooser('projects', family: :project, hiiro: hiiro) { |(name, path), label| Picker.project_item(name, path, label: label) }
     end
 
     def dirs
@@ -34,7 +39,7 @@ class Hiiro
       dirs.merge(from_config)
     end
 
-    def pick(chooser: Fuzzyfind.method(:map_select), tty: $stdin.tty?, candidates: all.to_a)
+    def pick(chooser: Projects.chooser, tty: $stdin.tty?, candidates: all.to_a)
       raise Hiiro::Error, 'No projects found' if candidates.empty?
       raise Hiiro::Error, 'Project selection requires a TTY; supply a project name' unless tty
 
@@ -48,7 +53,7 @@ class Hiiro
       selected
     end
 
-    def resolve(name, chooser: Fuzzyfind.method(:map_select), tty: $stdin.tty?)
+    def resolve(name, chooser: Projects.chooser, tty: $stdin.tty?)
       return ['proj', File.join(Dir.home, 'proj')] if name.nil?
       raise Hiiro::Error, 'Project name cannot be empty' if name.strip.empty?
 
@@ -66,7 +71,7 @@ class Hiiro
       File.expand_path(path)
     end
 
-    def context(name = nil, chooser: Fuzzyfind.method(:map_select), tty: $stdin.tty?, invocation_directory: Dir.pwd,
+    def context(name = nil, chooser: Projects.chooser, tty: $stdin.tty?, invocation_directory: Dir.pwd,
                 terminal: Herdr::Location.from_env, selection: nil)
       project_name, path = selection || resolve(name, chooser: chooser, tty: tty)
       identity = Project.find_by_name(project_name) || project_name

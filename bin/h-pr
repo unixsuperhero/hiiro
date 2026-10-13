@@ -9,6 +9,7 @@ require "json"
 Hiiro.run(*ARGV, plugins: [:Pins]) do
   pm = pinned_manager = Hiiro::PinnedPRManager.new
   Hiiro::PinnedPRManager.add_resolvers(self)
+  pick_pinned = ->(prs, name) { pinned_manager.pick(prs, hiiro: self, name: name) }
 
   # Set by `h cpr`: the current branch's PR, qualified in the selected
   # directory. A command that takes one PR uses it in place of that argument,
@@ -144,7 +145,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
 
   add_subcmd(:select) do |*args|
     # Get my open PRs
-    output = `gh pr list --author @me --state open --json number,title,headRefName 2>/dev/null`.strip
+    output = `gh pr list --author @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
 
     if output.empty?
       STDERR.puts "No open PRs found"
@@ -157,17 +158,13 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       next
     end
 
-    lines = prs.each_with_object({}) do |pr, h|
-      display = "##{pr.number} [#{pr.head_branch}] #{pr.title}"
-      h[display] = pr.number.to_s
-    end
-
-    selected = fuzzyfind_from_map(lines)
+    items = prs.map { |pr| Hiiro::Picker.pr_record_item(pr, value: pr.number.to_s) }
+    selected = Hiiro::Picker.choose('my-prs', items, family: :pr, hiiro: self)&.value
     print selected if selected
   end
 
   add_subcmd(:copy) do |*args|
-    output = `gh pr list --author @me --state open --json number,title,headRefName 2>/dev/null`.strip
+    output = `gh pr list --author @me --state open --json number,title,headRefName,url 2>/dev/null`.strip
 
     if output.empty?
       STDERR.puts "No open PRs found"
@@ -180,12 +177,8 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       next
     end
 
-    lines = prs.each_with_object({}) do |pr, h|
-      display = "##{pr.number} [#{pr.head_branch}] #{pr.title}"
-      h[display] = pr.number.to_s
-    end
-
-    selected = fuzzyfind_from_map(lines)
+    items = prs.map { |pr| Hiiro::Picker.pr_record_item(pr, value: pr.number.to_s) }
+    selected = Hiiro::Picker.choose('my-prs', items, family: :pr, hiiro: self)&.value
 
     if selected
       Hiiro::Shell.pipe(selected, 'pbcopy')
@@ -206,10 +199,8 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
         my_prs = pinned_manager.fetch_my_prs
         next puts "No open PRs found" if my_prs.empty?
 
-        lines = my_prs.each_with_object({}) do |pr, h|
-          h["#{pr.reference} [#{pr.head_branch}] #{pr.title}"] = pr.reference
-        end
-        selected = fuzzyfind_from_map(lines)
+        items = my_prs.map { |pr| Hiiro::Picker.pr_record_item(pr, label: "#{pr.reference} [#{pr.head_branch}] #{pr.title}", value: pr.reference) }
+        selected = Hiiro::Picker.choose('my-prs', items, family: :pr, hiiro: self)&.value
         next puts "No PR selected" unless selected
         selected
       end
@@ -274,11 +265,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
 
     if opts.diff
-      lines = results.each_with_index.each_with_object({}) do |(pr, idx), h|
-        key = pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))
-        h[key] = pinned_manager.reference_text(pr)
-      end
-      pr_number = fuzzyfind_from_map(lines)
+      pr_number = pick_pinned.(results, 'tracked-prs')&.then { |pr| pinned_manager.reference_text(pr) }
       run_action.('diff', actions.targets([pr_number])) if pr_number
       next
     end
@@ -588,10 +575,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     next puts('No tracked PRs') if pinned.empty?
 
     text = ref || begin
-      lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pinned_manager.reference_text(pr)
-      end
-      fuzzyfind_from_map(lines)
+      pick_pinned.(pinned, 'tracked-prs')&.then { |pr| pinned_manager.reference_text(pr) }
     end
     next puts('No PR selected') unless text
 
@@ -646,10 +630,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       failing = pinned.select(&:red?)
       candidates = failing.empty? ? pinned : failing
       next puts('No tracked PRs') if candidates.empty?
-      lines = candidates.each_with_index.each_with_object({}) do |(pr, idx), h|
-        h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pr
-      end
-      selected = fuzzyfind_from_map(lines)
+      selected = pick_pinned.(candidates, 'tracked-prs')
       next puts('No PR selected') unless selected
       actions.for_records([selected])
     else
@@ -731,13 +712,11 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     next puts('No PR selected') if texts.empty?
     targets = actions.targets(texts)
 
-    template_map = files.each_with_object({}) do |f, h|
-      name = File.basename(f, '.md')
+    items = files.map do |f|
       first_line = File.readlines(f).first&.strip || ''
-      h["#{name.ljust(20)}  #{first_line}"] = f
+      Hiiro::Picker.file_item(f, base: TEMPLATES_DIR, label: "#{File.basename(f, '.md').ljust(20)}  #{first_line}")
     end
-
-    template_path = fuzzyfind_from_map(template_map)
+    template_path = Hiiro::Picker.choose('pr-templates', items, family: :file, hiiro: self)&.value
     next unless template_path
 
     run_action.('comment', targets, 'comment' => File.read(template_path).strip)

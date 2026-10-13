@@ -139,18 +139,15 @@ Hiiro.run(*ARGV, tasks: true) do
     end
   end
 
-  # h registry select [type] — fuzzyfinder, prints canonical name
+  # h registry select [type] — the shared picker, prints the canonical name
   add_subcmd(:select) do |type = nil|
-    lines = Hiiro::RegistryEntry.fuzzy_lines(type: type)
-    if lines.empty?
+    entries = type ? Hiiro::RegistryEntry.of_type(type) : Hiiro::RegistryEntry.all_ordered
+    if entries.empty?
       puts type ? "No entries for type '#{type}'." : "Registry is empty."
       next
     end
-    chosen = fuzzyfind(lines)
-    next unless chosen
-    # Extract name from "type  short  name  # desc" — name is the 3rd word
-    name = chosen.strip.split(/\s{2,}/)[2]
-    puts name
+    chosen = Hiiro::RegistryEntry.pick(entries, type: type, hiiro: self)
+    puts chosen.name if chosen
   end
 
   # h registry set-alias <name_or_alias> <new_alias> [type] [-s]

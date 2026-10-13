@@ -181,7 +181,7 @@ class ObsidianNotes
   def pick(notes)
     return nil if notes.empty?
 
-    item = Hiiro::Selection.pick(items(notes), tty: $stdin.tty? && $stdout.tty?)
+    item = Hiiro::Selection.pick(items(notes), picker: 'obsidian-notes', tty: $stdin.tty? && $stdout.tty?)
     raise NoSelectionError if item.nil?
 
     item.record

@@ -146,7 +146,7 @@ class LinkManager
   # picker; the chosen original Link, or nil when none match or it was cancelled.
   def pick(links, *terms)
     offered = items(links).select { |item| item.record.matches?(*terms) }
-    Hiiro::Selection.pick(offered, tty: true)&.record
+    Hiiro::Selection.pick(offered, picker: 'links', tty: true)&.record
   end
 
   def substitute_placeholders(url, values)

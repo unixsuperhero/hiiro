@@ -58,7 +58,7 @@ class Hiiro
       return slash_lookup(name) if name.include?('/')
 
       key = (scope == :subtask) ? :short_name : :name
-      CurrentTask.select(tasks, name, kind: 'task', key: key, chooser: ->(map) { hiiro.fuzzyfind_from_map(map) })
+      CurrentTask.select(tasks, name, kind: 'task', key: key, chooser: Picker.task_chooser(hiiro: hiiro))
     end
 
     # Resolve a name to a Task or FallbackTarget (~/proj/* directory).
@@ -71,7 +71,10 @@ class Hiiro
 
       proj_dirs = Dir.glob(File.expand_path('~/proj/*/'))
       dir_names = proj_dirs.map { |d| File.basename(d) }
-      dir_name = CurrentTask.select(dir_names, name, kind: 'project', key: :itself, chooser: ->(map) { hiiro.fuzzyfind_from_map(map) })
+      chooser = Picker.chooser('projects', family: :project, hiiro: hiiro) do |dir, label|
+        Picker.project_item(dir, File.expand_path("~/proj/#{dir}"), label: label, value: dir)
+      end
+      dir_name = CurrentTask.select(dir_names, name, kind: 'project', key: :itself, chooser: chooser)
       FallbackTarget.from_project(dir_name, File.expand_path("~/proj/#{dir_name}")) if dir_name
     end
 
@@ -97,12 +100,12 @@ class Hiiro
 
     def task_by_tree(tree_name)
       return nil if tree_name.nil?
-      CurrentTask.select(environment.all_tasks, tree_name, kind: 'task tree', key: :tree_name, chooser: ->(map) { hiiro.fuzzyfind_from_map(map) })
+      CurrentTask.select(environment.all_tasks, tree_name, kind: 'task tree', key: :tree_name, chooser: Picker.task_chooser(hiiro: hiiro))
     end
 
     def task_by_session(session_name)
       return nil if session_name.nil?
-      CurrentTask.select(environment.all_tasks, session_name, kind: 'task workspace', key: :session_name, chooser: ->(map) { hiiro.fuzzyfind_from_map(map) })
+      CurrentTask.select(environment.all_tasks, session_name, kind: 'task workspace', key: :session_name, chooser: Picker.task_chooser(hiiro: hiiro))
     end
 
     def current_task
@@ -525,8 +528,12 @@ class Hiiro
 
       return nil if mapping.empty?
 
-      selected = hiiro.fuzzyfind_from_map(mapping)
-      selected
+      items = mapping.map do |label, value|
+        next Picker.task_item(value, label: label) if value.is_a?(Task)
+
+        Picker.item(:task, "workspace:#{value.name}", label: label, value: value, name: value.name)
+      end
+      Picker.choose('tasks', items, family: :task, hiiro: hiiro)&.value
     end
 
     def value_for_task(task_name = nil, &block)
@@ -537,26 +544,24 @@ class Hiiro
 
       task_list = scope == :subtask ? tasks.sort_by(&:short_name) : environment.all_tasks.sort_by(&:name)
 
-      mapping = task_list.each_with_object({}) do |task, h|
+      items = task_list.map do |task|
         name = scope == :subtask ? task.short_name : task.name
         val = block.call(task)&.to_s
-
-        line = format("%-25s  | %s", name, val)
-        h[line] = val
+        Picker.task_item(task, label: format("%-25s  | %s", name, val), value: val)
       end
 
-      hiiro.fuzzyfind_from_map(mapping)
+      Picker.choose('task-values', items, family: :task, hiiro: hiiro)&.value
     end
 
     def select_branch_interactive(prompt = nil)
-      name_map = if scope == :subtask
-        tasks.sort_by(&:short_name).each_with_object({}) { |t, h| h[format('%-25s  | %s', t.short_name, t.branch)] = t.branch }
+      items = if scope == :subtask
+        tasks.sort_by(&:short_name).map { |t| Picker.task_item(t, label: format('%-25s  | %s', t.short_name, t.branch), value: t.branch) }
       else
-        environment.all_tasks.sort_by(&:name).each_with_object({}) { |t, h| h[format('%-25s  | %s', t.name, t.branch)] = t.branch }
+        environment.all_tasks.sort_by(&:name).map { |t| Picker.task_item(t, label: format('%-25s  | %s', t.name, t.branch), value: t.branch) }
       end
-      return nil if name_map.empty?
+      return nil if items.empty?
 
-      hiiro.fuzzyfind_from_map(name_map)
+      Picker.choose('task-branches', items, family: :task, hiiro: hiiro)&.value
     end
 
     def send_cd(path)
@@ -1490,11 +1495,12 @@ class Hiiro
       @context = context
       @terminal = context.is_a?(TaskLocation) ? context.terminal : Herdr::Location.from_env
       @chooser = chooser || Hiiro.new('h').method(:fuzzyfind_from_map)
+      @task_chooser = chooser || Picker.task_chooser
     end
 
     def context
       @context = @context.call if @context.respond_to?(:call)
-      @context ||= CurrentTask.new(herdr: -> { Hiiro::Herdr.client }, cwd: path, pin: false, chooser: @chooser).context
+      @context ||= CurrentTask.new(herdr: -> { Hiiro::Herdr.client }, cwd: path, pin: false, chooser: @task_chooser).context
     end
 
     def terminal = @context.is_a?(TaskLocation) ? @context.terminal : @terminal
@@ -1555,7 +1561,7 @@ class Hiiro
       matches.first
     end
 
-    def find_task(abbreviated, chooser: @chooser, tty: $stdin.tty?)
+    def find_task(abbreviated, chooser: @task_chooser, tty: $stdin.tty?)
       return nil if abbreviated.nil?
       raise Error, 'Task reference cannot be empty' if abbreviated.strip.empty?
       result = abbreviated.include?('/') ? task_matcher.resolve_path(abbreviated) : task_matcher.by_prefix(abbreviated)

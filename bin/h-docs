@@ -112,7 +112,7 @@ def selection_items(items)
 end
 
 def pick_one(items)
-  Hiiro::Selection.pick(selection_items(items), tty: true)
+  Hiiro::Selection.pick(selection_items(items), picker: 'portfolio-docs', tty: true)
 end
 
 def service_loaded?

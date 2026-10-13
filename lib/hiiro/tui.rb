@@ -161,12 +161,13 @@ class Hiiro
       end
 
       def run
-        if items.empty?
+        if nothing_to_show?
           puts @empty_message
           return false
         end
 
         with_screen do |input|
+          @input = input
           loop do
             render
 
@@ -178,6 +179,25 @@ class Hiiro
             result = handle_key(read_key(input))
             return result unless result == :continue
           end
+        end
+      end
+
+      def nothing_to_show?
+        items.empty?
+      end
+
+      # Leaves the alternate screen and raw mode while the block runs (an
+      # editor, say), then takes the terminal back. Outside run it just yields.
+      def suspend
+        return yield unless @input
+
+        $stdout.write("\r\e[0m\e[?25h\e[?1049l")
+        $stdout.flush
+        @input.cooked { yield }
+      ensure
+        if @input
+          $stdout.write("\e[?1049h\e[?25l")
+          $stdout.flush
         end
       end
 

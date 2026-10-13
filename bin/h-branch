@@ -196,17 +196,20 @@ FIND_BASE = -> {
 Hiiro.run(*ARGV) do
   manager   = BranchManager.new(self)
 
-  # Shared lambda: find a pinned PR by arg (number, URL, or fuzzy select)
+  # The shared picker over branch names of this repository; nil when cancelled.
+  pick_branch = ->(names, name: 'branches', multi: false) {
+    repo = Hiiro::Picker.git_repository
+    items = names.map { |branch| Hiiro::Picker.branch_item(branch, repo: repo) }.reverse
+    chosen = Hiiro::Picker.choose(name, items, family: :branch, multi: multi, hiiro: self)
+    multi ? chosen&.map(&:value) : chosen&.value
+  }
+
+  # Shared lambda: find a pinned PR by arg (number, URL, or the shared picker)
   find_pr_by_arg = ->(arg, pinned) {
     if arg.nil?
       return nil if pinned.empty?
-      lines = pinned.each_with_object({}) do |pr, h|
-        h["##{pr.number} [#{pr.head_branch}] #{pr.title}"] = pr
-      end
-      require 'open3'
-      selected, status = Open3.capture2('sk', '--no-sort', stdin_data: lines.keys.join("\n"))
-      return nil unless status.success? && !selected.strip.empty?
-      lines[selected.chomp]
+      items = pinned.map { |pr| Hiiro::Picker.pr_record_item(pr) }
+      Hiiro::Picker.choose('pinned-prs', items, family: :pr, hiiro: self)&.value
     else
       Hiiro::PinnedPRManager.new.find(arg)
     end
@@ -444,19 +447,11 @@ Hiiro.run(*ARGV) do
     opts     = Hiiro::Options.parse(select_args) { flag(:all, short: 'a', desc: 'Select from all local branches') }
     branches = manager.branch_names(all: opts.all)
 
-    lines = branches.each_with_object({}) do |name, h|
-      h["  #{name}"] = name
-    end
+    branches = branches.select { |name| opts.args.all? { |term| name.include?(term) } }
+    branch   = pick_branch.(branches)
 
-    if opts.args.any?
-      lines = hash_matches?(lines, *opts.args)
-    end
-
-    require 'open3'
-    selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: lines.keys.join("\n"))
-
-    if status.success? && !selected.strip.empty?
-      puts lines[selected.chomp]
+    if branch
+      puts branch
     end
   end
 
@@ -464,19 +459,10 @@ Hiiro.run(*ARGV) do
     opts     = Hiiro::Options.parse(copy_args) { flag(:all, short: 'a', desc: 'Select from all local branches') }
     branches = manager.branch_names(all: opts.all)
 
-    lines = branches.each_with_object({}) do |name, h|
-      h["  #{name}"] = name
-    end
+    branches = branches.select { |name| opts.args.all? { |term| name.include?(term) } }
+    branch   = pick_branch.(branches)
 
-    if opts.args.any?
-      lines = hash_matches?(lines, *opts.args)
-    end
-
-    require 'open3'
-    selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: lines.keys.join("\n"))
-
-    if status.success? && !selected.strip.empty?
-      branch = lines[selected.chomp]
+    if branch
       Hiiro::Shell.pipe(branch, 'pbcopy')
       puts "Copied branch '#{branch}' to clipboard"
     end
@@ -487,14 +473,11 @@ Hiiro.run(*ARGV) do
     branch = opts.args.first
 
     unless branch
-      branches = manager.branch_names(all: opts.all)
-      require 'open3'
-      selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: branches.join("\n"))
-      unless status.success? && !selected.strip.empty?
+      branch = pick_branch.(manager.branch_names(all: opts.all))
+      unless branch
         puts "No branch selected"
         next
       end
-      branch = selected.strip
     end
 
     system('git', 'checkout', branch, *opts.args[1..])
@@ -505,14 +488,11 @@ Hiiro.run(*ARGV) do
     branch = opts.args.first
 
     unless branch
-      branches = manager.branch_names(all: opts.all)
-      require 'open3'
-      selected, status = Open3.capture2('sk', '--no-sort', '--tac', stdin_data: branches.join("\n"))
-      unless status.success? && !selected.strip.empty?
+      branch = pick_branch.(manager.branch_names(all: opts.all))
+      unless branch
         puts "No branch selected"
         next
       end
-      branch = selected.strip
     end
 
     system('git', 'branch', '-d', branch, *opts.args[1..])
@@ -639,13 +619,12 @@ Hiiro.run(*ARGV) do
     to_delete = if opts.force
       to_consider
     else
-      require 'open3'
-      selected, status = Open3.capture2('sk', '--multi', '--no-sort', stdin_data: to_consider.join("\n"))
-      if !status.success? || selected.strip.empty?
+      selected = pick_branch.(to_consider.reverse, name: 'merged-branches', multi: true)
+      if selected.nil? || selected.empty?
         puts "Nothing selected."
         next
       end
-      selected.lines.map(&:strip).reject(&:empty?)
+      selected
     end
 
     to_delete.each do |b|

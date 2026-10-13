@@ -17,15 +17,20 @@ class Hiiro
 
     module_function
 
-    # One item passes through; several open the fuzzy finder on a terminal and
-    # raise Ambiguous otherwise. nil when nothing matches or the pick was cancelled.
-    def pick(items, tty: $stdin.tty?, finder: Fuzzyfind)
+    # One item passes through; several open the shared picker named picker on
+    # a terminal and raise Ambiguous otherwise. An id is 'store:key'; the store
+    # and key are the item's identity, the title only its label. nil when
+    # nothing matches or the pick was cancelled.
+    def pick(items, picker:, tty: $stdin.tty?, hiiro: nil)
       return nil if items.empty?
       return items.first if items.one?
       raise Ambiguous, items unless tty
 
-      index = finder.select_index(items.map(&:title))
-      index && items[index]
+      offered = items.map do |item|
+        store, key = item.id.split(':', 2)
+        Picker.saved_item(store: store, id: key, name: item.title, target: item.open_target, record: item)
+      end
+      Picker.choose(picker, offered, family: :saved, hiiro: hiiro)&.value
     end
 
     def open(item) = open_target(item.open_target)

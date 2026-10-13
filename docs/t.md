@@ -17,9 +17,9 @@ The command comes first. Commands that act on a task take it from the first posi
 
 1. If the first positional word names a task, exactly or by a unique case-sensitive prefix, it is the task and is removed from the arguments.
 2. Otherwise the current task is used and the word stays in the payload. So `t todo add fix build` adds to the current task and `t todo add prez fix build` adds to `prez`.
-3. An ambiguous prefix opens the fuzzy finder over the matching tasks when stdin is a terminal, and is an error otherwise.
+3. An ambiguous prefix opens the [shared picker](picker.md) (`tasks`) over the matching tasks when stdin is a terminal, and is an error otherwise.
 
-`-t TASK` / `--task TASK` forces a task and fails if it does not exist. `-f` / `--find` picks one with `sk` or `fzf`. `.` is the current task, useful when a payload could be mistaken for a name: `t next . Finish slides`. `-` selects orphan todos in todo commands only. Words starting with `-` are never treated as task names. Passthrough commands (`todo add`, `sh`, `pane run`, and the AI launchers) accept `-t`, `--task=NAME`, and `-f` only as their leading arguments.
+`-t TASK` / `--task TASK` forces a task and fails if it does not exist. `-f` / `--find` picks one with the shared picker. `.` is the current task, useful when a payload could be mistaken for a name: `t next . Finish slides`. `-` selects orphan todos in todo commands only. Words starting with `-` are never treated as task names. Passthrough commands (`todo add`, `sh`, `pane run`, and the AI launchers) accept `-t`, `--task=NAME`, and `-f` only as their leading arguments.
 
 The current task is resolved by `Hiiro::CurrentTask`: explicit selection, then the calling Herdr workspace, realpath directory containment, and the task saved by `t use`. With no context, a terminal gets a mapped task picker; non-interactive runs fail. Ambiguous directory/workspace matches, stale pins, conflicting IDs, and a Herdr context without calling IDs remain visible errors. Explicit task data commands bypass inference; terminal operations still validate their supplied IDs. List, create, and help commands do not resolve the current task.
 
@@ -73,7 +73,7 @@ t file ls [TASK]
 t file open [TASK] [ID|PATH|LABEL]
 ```
 
-Directories and files must exist and are stored as real paths. Adding the same target again keeps the one row (a new `--label` replaces the old one). `h save --task TASK` and `h context save|tmp|img|tmpimage --task TASK` attach the file they just captured through the same writer. `--primary` sets the task's code directory and applies only to directories. URLs must be absolute http or https. `file ls` also lists unregistered files in the task home. `open` accepts an ID, full target, or label, then a unique prefix of any of them; with no reference and several candidates it opens a fuzzy finder. Opening uses `open` on macOS and `xdg-open` elsewhere.
+Directories and files must exist and are stored as real paths. Adding the same target again keeps the one row (a new `--label` replaces the old one). `h save --task TASK` and `h context save|tmp|img|tmpimage --task TASK` attach the file they just captured through the same writer. `--primary` sets the task's code directory and applies only to directories. URLs must be absolute http or https. `file ls` also lists unregistered files in the task home. `open` accepts an ID, full target, or label, then a unique prefix of any of them; with no reference and several candidates it opens the [shared picker](picker.md) (`task-file`, `task-directory`, `task-link`, `task-pr`; files are identified by their path under the task home, links by resource ID), whose exclusions can be saved for this task only. `doc open` with no name uses `task-document` the same way. Opening uses `open` on macOS and `xdg-open` elsewhere.
 
 ## Documents
 

@@ -20,8 +20,8 @@ h pr <subcommand> [args]
 | `open [refs]` | Open PRs in the browser (`gh pr view --web`) |
 | `number` | Print PR number for current branch |
 | `link [ref]` | Print PR URL |
-| `select` | Fuzzy-select from your open PRs |
-| `copy` | Fuzzy-select and copy PR number to clipboard |
+| `select` | Pick one of your open PRs with the [shared picker](picker.md) |
+| `copy` | Pick and copy PR number to clipboard |
 | `diff [ref]` | Show PR diff |
 | `checkout [ref]` | Checkout a PR's branch |
 | `merge [ref] [--merge\|--squash\|--rebase] [-d]` | Merge a PR |
@@ -213,7 +213,7 @@ List all tracked PRs with check status, review counts, and tags. Supports filter
 | `--update` | `-u` | Refresh status before listing |
 | `--verbose` | `-v` | Multi-line output per PR |
 | `--checks` | `-C` | Show individual check run details |
-| `--diff` | `-d` | Open diff for fuzzy-selected PR |
+| `--diff` | `-d` | Open diff for picked PR |
 | `--all` | `-a` | Show all tracked PRs (no filters) |
 | `--active` | | Only active (open) PRs |
 | `--merged` | | Only merged PRs |
@@ -237,7 +237,7 @@ h pr ls --verbose --checks
 
 ### rm / prune
 
-`rm` stops tracking a specific PR (fuzzy-select if no ref given). `prune` removes all merged/closed PRs from tracking at once. Both are the `untrack` action (`✓ team/one#42 untrack: removed from tracking`); an untracked reference is an error.
+`rm` stops tracking a specific PR (pick if no ref given). `prune` removes all merged/closed PRs from tracking at once. Both are the `untrack` action (`✓ team/one#42 untrack: removed from tracking`); an untracked reference is an error.
 
 **Examples**
 
@@ -298,7 +298,7 @@ Start tracking a PR. Automatically associates it with the current task/worktree/
 **Examples**
 
 ```bash
-h pr track          # track current branch's PR (or fuzzy-select)
+h pr track          # track current branch's PR (or pick)
 h pr track 1234     # a number in gh's current repository
 h pr track team/repo#1234
 h pr track https://github.com/team/repo/pull/1234

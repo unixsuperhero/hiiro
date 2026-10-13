@@ -110,7 +110,7 @@ brew install terminal-notifier
 # Terminal workspace, tab, and pane management
 # Install Herdr 0.8.2 or newer.
 
-# For fuzzy-finder
+# For the remaining simple fuzzy-finder selectors (the shared picker needs neither)
 brew install sk # (or fzf)
 
 # For GitHub PR management
@@ -168,8 +168,26 @@ Bookmarks (`h link select|copy|open`), Obsidian notes (`h obsidian
 select|url|open|copy`), and Portfolio documents (`h docs open|url|copy`, `--all`
 for every match) share one picker and open/copy actions while keeping their own
 stores: the link database and URL templates, vault-relative `obsidian://` URIs,
-and Portfolio's API ids. The picker returns the record at the chosen position,
-so equal titles cannot select the wrong item.
+and Portfolio's API IDs. The picker returns the chosen record, so equal
+titles cannot select the wrong item.
+
+### Pick, prune, and restore choices
+
+Choosing among commands, task files and documents, tasks, projects, branches,
+PRs, and saved information opens one in-process picker. Search with `/`,
+choose with Enter, and mark several rows with Tab where a command accepts
+several. `Ctrl-E` opens the listed rows and this picker's exclusion rules in
+`$EDITOR`. Deleting a row excludes that item, keyed by its stable identity
+(file path under a base, task ID, branch qualified by repository, PR by
+repository and number, saved record ID). A rule can also hide a group: for
+example `{mode: extglob, field: path, pattern: "**/*.@(bak|tmp)"}`. Modes are
+`literal`, `substring`, `regex`, `glob`, and `extglob`, and each rule has a
+scope: this picker, this task, this project, or global. Global must be chosen
+explicitly. A preview lists every item that becomes excluded or restored, and
+nothing is saved until you confirm. Invalid edits save nothing and keep your
+text. `Ctrl-X` shows the excluded rows with their rules, and `u` restores one.
+Exclusions only hide choices; files, tasks, branches, PRs, and records are
+never changed. See [the picker](docs/picker.md).
 
 ### Extract files, directories, and links
 

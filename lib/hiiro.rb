@@ -47,6 +47,7 @@ class Hiiro
     'extractor' => %i[Extractor], 'fuzzyfind' => %i[Fuzzyfind], 'git' => %i[Git], 'glob' => %i[Glob],
     'herdr' => %i[Herdr], 'input_file' => %i[EditedDocument InputFile], 'install' => %i[Install], 'notification' => %i[Notification],
     'owned_run' => %i[OwnedRun], 'job_screen' => %i[JobScreen], 'pane_reservations' => %i[PaneReservations], 'paths' => %i[Paths],
+    'path_pattern' => %i[PathPattern], 'picker' => %i[Picker], 'picker_screen' => %i[PickerScreen],
     'pinned_pr_manager' => %i[PinnedPRManager], 'pr_actions' => %i[PrActions PrFixJob], 'pr_monitor' => %i[PrMonitor], 'pr_snapshot' => %i[PrSnapshot], 'projects' => %i[Projects], 'ps_process' => %i[PsProcess],
     'pull_request_reference' => %i[RepositoryIdentity PullRequestReference], 'queue' => %i[Queue],
     'queue_claim' => %i[QueueClaim], 'rbenv' => %i[Rbenv], 'root_commands' => %i[RootCommands], 'rollout' => %i[Rollout], 'runner_tool' => %i[RunnerTool],
@@ -58,7 +59,8 @@ class Hiiro
     'time_input' => %i[TimeInput], 'tui' => %i[Tui], 'tuios' => %i[Tuios],
     'persistence' => %i[DB AppRecord Assignment Branch Capture CheckRun Invocation InvocationResolution Link
                         URLTemplate PaneHome PinRecord PinnedPr PrMonitorCheckpoint Project RegistryEntry Reminder Tag Tags
-                        TaskRecord TaskResource TodoItem TodoManager Job JobClaim JobOutcome Schedule ScheduleCheckpoint]
+                        TaskRecord TaskResource TodoItem TodoManager Job JobClaim JobOutcome Schedule ScheduleCheckpoint
+                        PickerExclusion]
   }.freeze
   DOMAIN.each { |file, names| names.each { |name| autoload name, File.expand_path("hiiro/#{file}", __dir__) } }
 
@@ -132,7 +134,7 @@ class Hiiro
       supplied.respond_to?(:call) ? supplied.call : supplied
     else
       CurrentTask.new(herdr: -> { herdr_client }, cwd: global_values[:cwd] || Dir.pwd, pin: false,
-                      chooser: method(:fuzzyfind_from_map)).context
+                      chooser: Picker.task_chooser(hiiro: self)).context
     end
   end
 
@@ -287,11 +289,17 @@ class Hiiro
 
     sources = names.map do |name|
       resolution = catalog.resolve(name)
-      unless resolution.resolved?
-        found = resolution.candidates.map(&:name)
-        raise Hiiro::Error, found.empty? ? "No #{bin_name} command matches #{name.inspect}" : "Ambiguous #{bin_name} command #{name.inspect}: #{found.join(', ')}"
+      entry = resolution.entry if resolution.resolved?
+      unless entry
+        found = resolution.candidates
+        raise Hiiro::Error, "No #{bin_name} command matches #{name.inspect}" if found.empty?
+        raise Hiiro::Error, "Ambiguous #{bin_name} command #{name.inspect}: #{found.map(&:name).join(', ')}" unless $stdin.tty?
+
+        entry = Picker.choose("#{bin_name}-commands", found.map { |candidate| Picker.command_item(candidate) },
+                              family: :command, hiiro: self)&.value
+        raise Hiiro::Error, 'No command selected' unless entry
       end
-      resolution.entry.source.sub(/:\d+\z/, '')
+      entry.source.sub(/:\d+\z/, '')
     end
     sources.uniq.each { |source| warn "editing #{source} (#{catalog.origin(source)})" }
     edit_files(*sources.uniq)
@@ -301,16 +309,14 @@ class Hiiro
     { bin: File.basename(bin), subcmd: all_args.first, args: all_args[1..] || [] }
   end
 
-  # Pick a registry entry by fuzzyfinder. Returns the canonical name string, or nil.
+  # Pick a registry entry with the shared picker. Returns the canonical name string, or nil.
   # Usage inside a subcommand block:
   #   task = opts.task || registry_pick('isc_task')
   def registry_pick(type = nil)
-    lines = Hiiro::RegistryEntry.fuzzy_lines(type: type)
-    return nil if lines.empty?
-    chosen = fuzzyfind(lines)
-    return nil unless chosen
-    # fuzzy_line format: "type  short  name  # desc" — name is 3rd column
-    chosen.strip.split(/\s{2,}/)[2]
+    entries = type ? Hiiro::RegistryEntry.of_type(type) : Hiiro::RegistryEntry.all_ordered
+    return nil if entries.empty?
+
+    Hiiro::RegistryEntry.pick(entries, type: type, hiiro: self)&.name
   end
 
   def runners

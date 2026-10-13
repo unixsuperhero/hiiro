@@ -304,6 +304,28 @@ MyScreen.new(items: rows).run        # j/k/h/l move, '/' searches, '@' picks, q/
 - `frame(rows:, cols:)` returns plain strings with no ANSI, one per row, which is what tests assert against literally. `render` adds the highlight.
 - `Tui::Pane.new(width:, height:).lines(texts)` pads and truncates to an exact rectangle.
 - `ListScreen` is `Screen` without a detail pane and keeps the `Showing a-b of n` footer.
+- `suspend { system(editor, path) }` leaves the alternate screen and raw mode while the block runs, then takes the terminal back (outside `run` it only yields). `nothing_to_show?` (default `items.empty?`) decides whether `run` prints the empty message instead of opening.
+
+### Hiiro::Picker / Hiiro::PickerScreen / Hiiro::PickerExclusion (lib/hiiro/picker*.rb, lib/hiiro/path_pattern.rb)
+
+The one interactive chooser for command, file, task, project, branch, PR, and saved-information lists, on `Tui::Screen`. Items carry a stable identity separate from their label; exclusion rules persist in SQLite (`picker_exclusions`) and hide items, never resources. See `docs/picker.md`.
+
+```ruby
+item = Hiiro::Picker.branch_item('main', repo: Hiiro::Picker.git_repository)   # identity ["branch", repo, "main"]
+# also command_item(entry), file_item(path, base:), task_item(task), project_item(name, path),
+#      pr_record_item(pr) / pr_item(number:, repo:, ...), saved_item(store:, id:, name:, target:, record:)
+Hiiro::Picker.choose('branches', items, family: :branch, multi: false, hiiro: self)  # Item / [Item] / nil; needs a TTY
+Hiiro::Picker.chooser('projects', family: :project) { |value, label| Hiiro::Picker.project_item(*value, label: label) }  # ->(mapping) for CurrentTask/Projects choosers
+Hiiro::Picker.task_chooser(hiiro: self)                    # the 'tasks' picker as a chooser
+Hiiro::Picker::Rule.new(picker:, scope: 'picker'|'task'|'project'|'global', scope_key:, mode: 'exact'|'literal'|'substring'|'regex'|'glob'|'extglob', field:, pattern:).validate!(family)
+Hiiro::PickerExclusion.applicable(name, context)  # [Rule] for this picker in Picker::Context{ task_id, task_name, project }
+Hiiro::Picker::Document.new(picker:, family:, snapshot:, rules:, context:).change(parsed)  # Change{ add, remove } or Picker::Invalid
+Hiiro::PathPattern.compile('**/*.@(bak|tmp)', extglob: true).match?('a/b.tmp')        # Ruby glob/extglob, never a shell
+```
+
+- Keys: Enter choose, Tab mark (multi), Ctrl-E (or `HIIRO_PICKER_EDIT_KEY`) edit, Ctrl-X excluded view, `u` restore; every change goes through mode `:confirm` (a preview) before `PickerExclusion.apply!`.
+- Deleted document rows become `exact` rules only for identities in the snapshot that was edited; never parse a label back into a value.
+- `Fuzzyfind` stays for simple selectors outside those families; do not add new picker consumers on it.
 
 ### MCP (lib/hiiro/mcp.rb, lib/hiiro/mcp/*.rb)
 

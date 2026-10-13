@@ -18,7 +18,7 @@ h registry <subcommand> [args]
 | `rm` / `remove <ref> [type]` | Remove an entry |
 | `get <ref> [type]` | Print canonical name (scriptable) |
 | `show <ref> [type]` | Print human-readable entry detail |
-| `select [type]` | Fuzzy-select an entry and print canonical name |
+| `select [type]` | Choose an entry with the shared picker and print its canonical name |
 | `set-alias <ref> <alias> [type]` | Update an entry's short alias |
 
 References (`ref`) can be the canonical name or the short alias. `type` is optional when names are unique across types.
@@ -77,7 +77,7 @@ h registry rm rails service
 
 ### select
 
-Fuzzy-select an entry and print its canonical name. Optionally filter to a type.
+Choose an entry with the [shared picker](picker.md) and print its canonical name. Optionally filter to a type. The picker is named `registry`, or `registry-TYPE` for a type. Each row is identified by its row ID, not by the columns shown, so entries with the same name in different types stay separate choices, and `Ctrl-E` can exclude rows or add rules (for example `{mode: glob, field: name, pattern: "tmp-*"}`) without touching the entries. `Hiiro#registry_pick(type)` uses the same picker.
 
 **Examples**
 

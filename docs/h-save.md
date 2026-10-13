@@ -56,7 +56,7 @@ h save some quick note  # saves "some quick note" as text
 
 Every subcommand that takes a `name` matches it as a substring of the saved
 filenames. An exact or single match is used directly, several matches open a
-fuzzy finder over them, and no `name` opens a fuzzy finder over everything.
+the shared picker over them, and no `name` opens the shared picker over everything.
 `copy` exits 1 when the clipboard tool fails.
 
 | Subcommand | Description |
@@ -73,7 +73,7 @@ fuzzy finder over them, and no `name` opens a fuzzy finder over everything.
 h save ls
 h save show meeting     # matches 20260915120000-meeting-notes.txt
 h save copy image       # puts the PNG back on the clipboard
-h save rm               # fuzzy-select a file to delete
+h save rm               # pick a file to delete
 ```
 
 Set `HIIRO_SAVED_DIR` to use a directory other than `~/saved`.

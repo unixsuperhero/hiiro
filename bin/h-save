@@ -52,8 +52,8 @@ def resolve_saved(name)
     files = [exact] if exact
   end
 
-  items = files.map { |file| Hiiro::Selection::Item.new(id: file, title: file, open_target: File.join(saved_root, file), record: file) }
-  Hiiro::Selection.pick(items, tty: true)&.open_target
+  items = files.map { |file| Hiiro::Selection::Item.new(id: "saved:#{file}", title: file, open_target: File.join(saved_root, file), record: file) }
+  Hiiro::Selection.pick(items, picker: 'saved-files', tty: true)&.open_target
 end
 
 save_opts = Hiiro::Options.setup {
