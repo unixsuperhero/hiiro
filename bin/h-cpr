@@ -1,24 +1,24 @@
 #!/usr/bin/env ruby
 
 require "hiiro"
-require "json"
+require "rbconfig"
 
-output = `gh pr view --json number 2>/dev/null`.strip
-if output.empty?
-  STDERR.puts "No PR found for current branch"
-  exit 1
+# h cpr [-C DIR] [SUBCOMMAND [ARGS...]]: `h pr` with the current branch's PR
+# as the PR argument. The reference is passed out of band so every subcommand
+# keeps its own argv grammar and flags.
+args = ARGV.dup
+dir = nil
+if %w[-C --directory].include?(args.first)
+  args.shift
+  dir = args.shift or abort("ERROR: #{File.basename($0)}: -C needs a directory")
 end
 
-pr_number = begin
-  JSON.parse(output)['number'].to_s
-rescue JSON::ParserError
-  STDERR.puts "Could not parse PR info"
-  exit 1
+begin
+  current = Hiiro::Git::Pr.current(dir: dir)
+rescue Hiiro::Error => e
+  abort "ERROR: #{e.message}"
 end
 
-if ARGV.empty?
-  exec('h', 'pr', 'view', pr_number)
-end
-
-subcmd, *rest = ARGV
-exec('h', 'pr', subcmd, pr_number, *rest)
+args = ['view'] if args.empty?
+h_pr = File.expand_path('h-pr', __dir__)
+exec({ 'HIIRO_PR_CURRENT' => current.reference.to_s }, RbConfig.ruby, '-I', File.expand_path('../lib', __dir__), h_pr, *args)

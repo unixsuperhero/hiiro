@@ -24,7 +24,7 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 |---------|-------------|
 | [h-cpr](h-cpr.md) | Proxy `h pr` subcommands to the PR for the current branch |
 | [h-pr](h-pr.md) | Track, update, view, and act on GitHub pull requests |
-| [h-pr-monitor](h-pr-monitor.md) | Poll `gh pr status` and send notifications on status changes |
+| [h-pr-monitor](h-pr-monitor.md) | Notify once per check, review, or dependency change of tracked PRs; opt-in fix queueing |
 
 ## Herdr
 

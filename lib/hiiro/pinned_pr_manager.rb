@@ -203,22 +203,24 @@ class Hiiro
       end
     end
 
-    # Qualifies a PR argument: URL or owner/name#N as given; a bare number or
-    # nil (the current branch) through gh's current repository.
+    # Qualifies a PR argument: URL or owner/name#N as given; a bare number
+    # through gh's current repository; nil through the current-branch resolver.
     def lookup_reference(text = nil)
-      if text
-        ref = Hiiro::PullRequestReference.qualified(text)
-        return ref if ref
-        raise Hiiro::Error, "Not a PR reference: #{text}" unless text.to_s.strip.match?(/\A#?\d+\z/)
-      end
-      data = gh_json('pr', 'view', *[text&.to_s&.strip&.delete_prefix('#')].compact, '--json', 'number,url')
+      return Hiiro::Git::Pr.current.reference if text.nil?
+
+      ref = Hiiro::PullRequestReference.qualified(text)
+      return ref if ref
+      raise Hiiro::Error, "Not a PR reference: #{text}" unless text.to_s.strip.match?(/\A#?\d+\z/)
+
+      data = gh_json('pr', 'view', text.to_s.strip.delete_prefix('#'), '--json', 'number,url')
       ref = data.is_a?(Hash) && Hiiro::PullRequestReference.from_url(data['url'])
-      ref || raise(Hiiro::Error, text ? "PR #{text} not found in the current repository" : 'No PR for the current branch')
+      ref || raise(Hiiro::Error, "PR #{text} not found in the current repository")
     end
 
     def fetch_current_branch_pr
-      data = gh_json('pr', 'view', '--json', 'number,title,url,headRefName,state')
-      data.is_a?(Hash) ? Hiiro::Git::Pr.from_gh_json(data) : nil
+      Hiiro::Git::Pr.current
+    rescue Hiiro::Error
+      nil
     end
 
     def fetch_my_prs = fetch_pr_list('--author', '@me')
@@ -491,13 +493,6 @@ class Hiiro
       lines << "   Mergeable: #{pr.mergeable}" if pr.mergeable
 
       lines.join("\n")
-    end
-
-    def pr_yaml_lines(prs = nil)
-      (prs || load_pinned).map do |pr|
-        branch = pr.head_branch ? "[#{pr.head_branch}]" : "[##{pr.number}]"
-        "- #{reference_text(pr)}  # #{branch} #{pr.title}"
-      end
     end
 
     def strip_ansi(str)

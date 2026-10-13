@@ -5,11 +5,43 @@ require "time"
 require "fileutils"
 require "yaml"
 require "json"
-require "tempfile"
 
 Hiiro.run(*ARGV, plugins: [:Pins]) do
   pm = pinned_manager = Hiiro::PinnedPRManager.new
   Hiiro::PinnedPRManager.add_resolvers(self)
+
+  # Set by `h cpr`: the current branch's PR, qualified in the selected
+  # directory. A command that takes one PR uses it in place of that argument,
+  # so the rest of its argv keeps its own grammar.
+  current_target = ENV.delete('HIIRO_PR_CURRENT')&.then do |text|
+    Hiiro::PullRequestReference.qualified(text) || abort("ERROR: HIIRO_PR_CURRENT is not owner/name#N: #{text}")
+  end
+  split_target = ->(args) { current_target ? [current_target.to_s, args] : [args.first, args.drop(1)] }
+
+  actions = Hiiro::PrActions.new(manager: pm, resolver: ->(text) { pm.lookup_reference(resolve(:pr, text)) },
+                                 queue: -> { Hiiro::Queue.current(self) })
+
+  # One PR argument: as given, or the current branch's PR and/or a pick from
+  # the tracked PRs when omitted. [] when nothing was picked.
+  one_target = ->(ref, default: :pick) {
+    next [ref] if ref
+    if default == :current_or_pick
+      current = pm.fetch_current_branch_pr
+      next [current.reference.to_s] if current
+    end
+    [resolve(:pr, nil)].compact
+  }
+
+  # Exits 1 unless every target succeeded.
+  run_action = ->(name, targets, params = {}) {
+    outcomes = actions.perform(Hiiro::PrActions::Request.new(name: name, params: params, targets: targets))
+    exit 1 unless outcomes.all?(&:ok)
+    true
+  }
+
+  no_extra_args = ->(name, rest) {
+    raise Hiiro::Error, "#{name}: unexpected argument(s) #{rest.join(' ')}" if rest.any?
+  }
 
   edit_pr_records = -> {
     prs = pinned_manager.load_pinned
@@ -31,54 +63,44 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
   }
 
+  # Foreground waiting: native `gh pr checks` on this terminal, qualified by
+  # URL. The exit status is gh's own; a nonzero exit is called failing only
+  # when a snapshot shows a failed check, never for an error or interruption.
   watch_block = ->(*all_args) {
     opts = Hiiro::Options.setup {
       option(:select, short: :s, type: :flag, desc: 'Select PR via fuzzyfinder')
     }.parse(all_args)
-    
-    original_pr_number = opts.args.first
-    watch_args = opts.args[1..] || []
-    watch = get_value(:watch)
-    fail_fast = get_value(:fail_fast)
+    ref, extra = split_target.(opts.args)
+    text = opts.select ? resolve(:pr, nil) : (ref && resolve(:pr, ref))
+    next puts('No PR selected') if opts.select && text.nil?
 
-    pr_number = if opts.select
-      resolve(:pr, nil)  # triggers fuzzyfinder
-    elsif original_pr_number
-      resolve(:pr, original_pr_number)
-    else
-      # Default to current branch's PR
-      current_pr = pm.fetch_current_branch_pr
-      if current_pr
-        current_pr.number.to_s
-      else
-        STDERR.puts "No PR for current branch. Use -s to select or provide a PR number."
-        nil
-      end
+    reference = pm.lookup_reference(text)
+    argv = ['gh', 'pr', 'checks', reference.url]
+    argv << '--watch' if get_value(:watch)
+    argv << '--fail-fast' if get_value(:fail_fast)
+    outcome = Hiiro::Shell.foreground(Hiiro::CommandSpecification.new(*argv, *extra))
+    if outcome.signal == 'INT' || outcome.exit_code == 130
+      puts "#{reference}: interrupted"
+      exit 130
     end
-    return unless pr_number
 
-    base_cmd = %w[gh pr checks]
-    base_cmd << '--watch' if watch
-    base_cmd << '--fail-fast' if fail_fast
-
-    command = [*base_cmd, pr_number, *watch_args]
-
-    puts command: command, base_cmd: base_cmd, args: [pr_number, *watch_args];
-
-    result = system(*command)
-
-    pr_info = JSON.parse(`gh pr view #{pr_number} --json url,number,title`)
-    pr_url = pr_info['url']
-    pr_num = pr_info['number']
-    pr_title = pr_info['title']
-
-    if result
-      system('say', 'pr good')
-      system('/opt/homebrew/bin/terminal-notifier', '-title', 'PR Good', '-message', "##{pr_num}: #{pr_title}", '-open', pr_url)
-    else
-      system('say', 'pr bad')
-      system('/opt/homebrew/bin/terminal-notifier', '-title', 'PR Bad', '-message', "##{pr_num}: #{pr_title}", '-open', pr_url)
-    end
+    title = pm.find(reference)&.title
+    verdict = if outcome.success? then 'passed'
+              elsif outcome.exit_code == 8 then 'pending'
+              else
+                observed = pm.fetcher.fetch([reference]).fetch(reference)
+                if observed.is_a?(Hiiro::PrSnapshot)
+                  title ||= observed.fields['title']
+                  summary = Hiiro::CheckSummary.from_rollup(observed.checks.nodes, truncated: !observed.checks.complete,
+                                                            freeze_active: pm.code_freeze_active?)
+                  summary&.red? ? 'failing' : 'unknown'
+                else
+                  'unknown'
+                end
+              end
+    puts "#{reference}: checks #{verdict} (gh #{outcome})"
+    Hiiro::Notification.deliver(['-t', "PR checks #{verdict}", '-m', [reference.to_s, title].compact.join(': '), '-l', reference.url])
+    exit outcome.shell_code
   }
 
   add_subcmd(:check, &watch_block)
@@ -92,66 +114,32 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
   end
 
   add_subcmd(:number) { |*args|
-    stdout = `gh pr view`
-
-    number = stdout[/number:\s*(\d+)/, 1]
-
-    if number
-      print number
-    else
-      puts stdout
-    end
+    print Hiiro::Git::Pr.current.number
   }
 
-  add_subcmd(:link) { |ref=nil|
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
+  add_subcmd(:link) { |*args|
+    ref, = split_target.(args)
+    text = resolve(:pr, ref)
+    next unless text
 
-    pinned = pinned_manager.load_pinned
-    pr = pinned_manager.find(pr_number)
-
-    if pr && pr.url
-      print pr.url
-    else
-      output = `gh pr view #{pr_number} --json url 2>/dev/null`
-      info = JSON.parse(output) rescue nil
-      if info&.dig('url')
-        print info['url']
-      else
-        STDERR.puts "Could not find URL for PR ##{pr_number}"
-      end
-    end
+    print pm.lookup_reference(text).url
   }
 
   add_subcmd(:edit) { edit_files(__FILE__) }
+
   add_subcmd(:open) { |*refs|
-    if refs.empty?
-      current = pinned_manager.fetch_current_branch_pr
-      if current
-        pinned = pinned_manager.load_pinned
-        pr = pinned_manager.find(current)
-        url = pr&.url || current.url
-        url ? system('open', url) : system('gh', 'pr', 'view', current.number.to_s, '--web')
-        next
-      end
-    end
-    refs = [nil] if refs.empty?
-    pinned = pinned_manager.load_pinned
-    refs.each do |ref|
-      pr_number = resolve(:pr, ref)
-      next unless pr_number
-      pr = pinned_manager.find(pr_number)
-      pr&.url ? system('open', pr.url) : system('gh', 'pr', 'view', pr_number.to_s, '--web')
-    end
+    refs = [current_target.to_s] if current_target
+    targets = refs.empty? ? one_target.(nil, default: :current_or_pick) : refs
+    next puts('No PR selected') if targets.empty?
+    run_action.('open', actions.targets(targets))
   }
-  add_subcmd(:view) { |pr_number=nil|
-    if pr_number.nil?
-      current = pm.fetch_current_branch_pr
-      pr_number = current ? current.number.to_s : resolve(:pr, nil)
-    else
-      pr_number = resolve(:pr, pr_number)
-    end
-    system('gh', 'pr', 'view', pr_number.to_s) if pr_number
+
+  add_subcmd(:view) { |*args|
+    ref, rest = split_target.(args)
+    no_extra_args.('view', rest)
+    targets = one_target.(ref, default: :current_or_pick)
+    next puts('No PR selected') if targets.empty?
+    run_action.('view', actions.targets(targets))
   }
 
   add_subcmd(:select) do |*args|
@@ -208,6 +196,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
   # === PR Tracking ===
 
   add_subcmd(:track) do |ref = nil|
+    ref ||= current_target&.to_s
     reference = if ref.nil? || ref == '-'
       # Current branch's PR first, then a fuzzy pick from your open PRs
       current = pinned_manager.fetch_current_branch_pr
@@ -290,7 +279,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
         h[key] = pinned_manager.reference_text(pr)
       end
       pr_number = fuzzyfind_from_map(lines)
-      system('gh', 'pr', 'diff', pr_number) if pr_number
+      run_action.('diff', actions.targets([pr_number])) if pr_number
       next
     end
 
@@ -314,7 +303,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
   end
 
   add_subcmd(:status) do |*status_args|
-    refs = status_args.empty? ? [nil] : status_args
+    refs = current_target ? [current_target.to_s] : (status_args.empty? ? [nil] : status_args)
     order = %w[FAILURE ERROR TIMED_OUT CANCELLED ACTION_REQUIRED PENDING IN_PROGRESS QUEUED SUCCESS SKIPPED NEUTRAL]
     ok = true
 
@@ -452,12 +441,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
 
     puts "Pruning #{merged_or_closed.length} merged/closed PR(s):"
     puts
-
-    merged_or_closed.each do |pr|
-      puts "  ##{pr.number}: #{pr.title} [#{pr.state}]"
-      pinned_manager.unpin(pr)
-    end
-
+    run_action.('untrack', actions.for_records(merged_or_closed))
     puts
     puts "Done. #{pinned_manager.load_pinned.length} PR(s) still tracked."
   end
@@ -571,155 +555,78 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     puts "Added #{added} PR(s) to tracking."
   end
 
-  add_subcmd(:attach) do |ref = nil|
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
+  # Opens the task's Herdr workspace in the task directory. Nothing is staged,
+  # committed, or checked out; `h pr checkout` stays the explicit way to switch.
+  add_subcmd(:attach) do |*args|
+    ref, rest = split_target.(args)
+    no_extra_args.('attach', rest)
+    text = resolve(:pr, ref)
+    next unless text
 
-    pinned = pinned_manager.load_pinned
-    pr = pinned_manager.find(pr_number)
+    pr = pinned_manager.find(text)
+    raise Hiiro::Error, "#{text} is not tracked; run 'h pr track' first" unless pr
 
-    unless pr
-      puts "PR ##{pr_number} not in pinned list — run 'h pr update' first"
-      next
-    end
-
-    branch = pr.head_branch
-    task_name = pr.task
-
-    unless branch
-      puts "PR ##{pr_number} has no branch info"
-      next
-    end
-
-    # Resolve the task's Herdr workspace and working directory.
-    target_workspace = nil
+    workspace = nil
     working_dir = Dir.pwd
-
-    if task_name
-      env = Environment.current rescue nil
-      task = env&.find_task(task_name)
+    if pr.task
+      task = Hiiro::Environment.current.find_task(pr.task)
       if task
-        target_workspace = task.session_name
-        tree = task.tree
-        working_dir = tree.path if tree
+        workspace = herdr_client.find_workspace(task.session_name)
+        working_dir = task.tree.path if task.tree
       end
     end
+    raise Hiiro::Error, "Task '#{pr.task || '(none)'}' has no active Herdr workspace" unless workspace
 
-    workspace = target_workspace && herdr_client.find_workspace(target_workspace)
-    unless workspace
-      puts "Task '#{task_name || '(none)'}' has no active Herdr workspace"
-      next
-    end
-
-    # Write a launcher: commit WIP if dirty, checkout the PR branch, then drop into shell
-    launcher = Tempfile.create(["h-pr-attach-#{pr.id}-", '.sh'], '/tmp')
-    script_path = launcher.path
-    launcher.write(<<~SH)
-      #!/usr/bin/env bash
-      cd #{Shellwords.shellescape(working_dir)}
-
-      if [ -n "$(git status --porcelain)" ]; then
-        git add -A
-        git commit -m "WIP"
-        echo ""
-        echo "WIP COMMIT: ALL UNCOMMITTED CHANGES HAVE BEEN COMMITTED BEFORE SWITCHING BRANCHES"
-        echo ""
-      fi
-
-      git checkout #{Shellwords.shellescape(branch)}
-      exec #{Shellwords.shellescape(ENV['SHELL'] || 'zsh')}
-    SH
-    launcher.close
-    FileUtils.chmod(0755, script_path)
-
-    herdr_client.new_tab(
-      name: "pr-#{pr.number}",
-      workspace: workspace,
-      start_directory: working_dir,
-      command: script_path,
-      focus: true
-    )
+    herdr_client.new_tab(name: "pr-#{pr.number}", workspace: workspace, start_directory: working_dir, focus: true)
+    puts "Opened #{pr.reference} in #{working_dir} (head branch #{pr.head_branch || 'unknown'}; nothing checked out or committed)"
   end
 
-  add_subcmd(:rm) do |ref = nil|
+  add_subcmd(:rm) do |*args|
+    ref, rest = split_target.(args)
+    no_extra_args.('rm', rest)
     pinned = pinned_manager.load_pinned
+    next puts('No tracked PRs') if pinned.empty?
 
-    if pinned.empty?
-      puts "No tracked PRs"
-      next
-    end
-
-    pr_number = nil
-
-    if ref.nil?
+    text = ref || begin
       lines = pinned.each_with_index.each_with_object({}) do |(pr, idx), h|
         h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pinned_manager.reference_text(pr)
       end
-
-      pr_number = fuzzyfind_from_map(lines)
-      unless pr_number
-        puts "No PR selected"
-        next
-      end
-    else
-      pr_number = resolve(:pr, ref)
-      next unless pr_number
+      fuzzyfind_from_map(lines)
     end
+    next puts('No PR selected') unless text
 
-    pr = pinned_manager.find(pr_number)
-    if pr && pinned_manager.unpin(pr)
-      puts "Removed #{pr.reference} from tracking"
-    else
-      puts "PR #{pr_number} was not tracked"
+    run_action.('untrack', actions.targets([text]))
+  end
+
+  # === PR State and Actions ===
+
+  %w[ready to-draft diff checkout sync].each do |name|
+    add_subcmd(name.to_sym) do |*args|
+      ref, rest = split_target.(args)
+      no_extra_args.(name, rest)
+      targets = one_target.(ref)
+      next puts('No PR selected') if targets.empty?
+      run_action.(name, actions.targets(targets))
     end
   end
 
-  # === PR State ===
+  MERGE_FLAGS = {
+    '--merge' => ['strategy', 'merge'], '--squash' => ['strategy', 'squash'], '--rebase' => ['strategy', 'rebase'],
+    '-d' => ['delete_branch', true], '--delete-branch' => ['delete_branch', true],
+  }.freeze
 
-  add_subcmd(:ready) do |ref = nil|
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
-    system('gh', 'pr', 'ready', pr_number.to_s)
-  end
+  add_subcmd(:merge) do |*args|
+    flags, positional = args.partition { |arg| arg.start_with?('-') }
+    unknown = flags - MERGE_FLAGS.keys
+    raise Hiiro::Error, "merge: unknown flag(s) #{unknown.join(' ')} (use #{MERGE_FLAGS.keys.join(', ')})" if unknown.any?
+    strategies = flags.map { |flag| MERGE_FLAGS[flag] }.select { |key, _| key == 'strategy' }.uniq
+    raise Hiiro::Error, 'merge: choose one of --merge, --squash, --rebase' if strategies.length > 1
 
-  add_subcmd(:'to-draft') do |ref = nil|
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
-    system('gh', 'pr', 'ready', '--draft', pr_number.to_s)
-  end
-
-  # === PR Actions ===
-
-  add_subcmd(:diff) do |ref = nil|
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
-    system('gh', 'pr', 'diff', pr_number.to_s)
-  end
-
-  add_subcmd(:checkout) do |ref = nil|
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
-    system('gh', 'pr', 'checkout', pr_number.to_s)
-  end
-
-  add_subcmd(:merge) do |ref = nil, *merge_args|
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
-    system('gh', 'pr', 'merge', pr_number.to_s, *merge_args)
-  end
-
-  add_subcmd(:sync) do |ref = nil|
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
-
-    print "Syncing ##{pr_number} with base branch (rebase)... "
-    rebase_ok = system('gh', 'pr', 'update-branch', '--rebase', pr_number.to_s,
-                       out: $stdout, err: $stderr)
-
-    unless rebase_ok
-      puts "Rebase failed (conflicts?), falling back to merge..."
-      system('gh', 'pr', 'update-branch', pr_number.to_s)
-    end
+    ref, rest = split_target.(positional)
+    no_extra_args.('merge', rest)
+    targets = one_target.(ref)
+    next puts('No PR selected') if targets.empty?
+    run_action.('merge', actions.targets(targets), flags.to_h { |flag| MERGE_FLAGS[flag] })
   end
 
   add_subcmd(:fix) do |*fix_args|
@@ -729,94 +636,47 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
 
     pinned = pinned_manager.load_pinned
-
-    prs_to_fix = if opts.red
+    refs = current_target ? [current_target.to_s] : opts.args
+    targets = if opts.red
       failing = pinned.select(&:red?)
-      if failing.empty?
-        puts "No PRs with failing checks"
-        next
-      end
-      failing
-    elsif opts.args.empty?
+      next puts('No PRs with failing checks') if failing.empty?
+      actions.for_records(failing)
+    elsif refs.empty?
       # Default: fuzzy-select from failing PRs, fall back to all tracked
       failing = pinned.select(&:red?)
       candidates = failing.empty? ? pinned : failing
-      if candidates.empty?
-        puts "No tracked PRs"
-        next
-      end
+      next puts('No tracked PRs') if candidates.empty?
       lines = candidates.each_with_index.each_with_object({}) do |(pr, idx), h|
         h[pinned_manager.strip_ansi(pinned_manager.display_pinned(pr, idx, oneline: true))] = pr
       end
       selected = fuzzyfind_from_map(lines)
-      next unless selected
-      [selected]
+      next puts('No PR selected') unless selected
+      actions.for_records([selected])
     else
-      # Resolve each positional arg as a PR ref
-      opts.args.map { |ref|
-        pr_num = resolve(:pr, ref)
-        next nil unless pr_num
-        pinned_manager.find(pr_num)
-      }.compact
+      actions.targets(refs)
     end
 
-    if prs_to_fix.empty?
-      puts "No PRs to fix"
-      next
-    end
-
-    q = Hiiro::Queue.current(self)
-    queued_names = []
-
-    prs_to_fix.each do |pr|
-      task_info = {
-        task_name:    pr.task,
-        tree_name:    pr.worktree,
-        session_name: pr.herdr_workspace,
-      }.compact
-      task_info = nil if task_info.empty?
-
-      result = q.add_with_frontmatter("/pr:fix #{pinned_manager.reference_text(pr)}", task_info: task_info)
-      if result
-        puts "Queued fix for #{pr.reference}: #{pr.title}"
-        queued_names << result[:name]
-      else
-        STDERR.puts "Failed to queue fix for #{pr.reference}"
-      end
-    end
-
-    unless queued_names.empty?
-      puts
-      puts "Queued #{queued_names.length} fix task(s)."
-      if opts.run
-        puts "Launching..."
-        queued_names.each { |name| q.launch_task(name) }
-      else
-        puts "Run 'h queue run' to start."
-      end
-    end
+    run_action.('fix', targets, 'run' => opts.run == true)
   end
 
-  add_subcmd(:comment) do |ref = nil|
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
+  add_subcmd(:comment) do |*args|
+    opts = Hiiro::Options.parse(args) { option(:body, short: :b, desc: 'comment text (otherwise an editor opens)') }
+    ref, rest = split_target.(opts.args)
+    no_extra_args.('comment', rest)
+    texts = one_target.(ref)
+    next puts('No PR selected') if texts.empty?
+    targets = actions.targets(texts)
 
-    tmpfile = Tempfile.new(['pr-comment-', '.md'])
-    tmpfile.close
-    edit_files(tmpfile.path)
-
-    body = File.read(tmpfile.path).strip
-    tmpfile.unlink
-
-    if body.empty?
-      puts "Aborted: empty comment"
-      next
+    body = opts.body
+    unless body
+      input = md_input_file(prefix: 'pr-comment-')
+      document = input.edit.document
+      input.cleanup
+      next puts('Cancelled: editor exited unsuccessfully') unless document.editor_succeeded?
+      body = document.result.to_s
     end
-
-    system('gh', 'pr', 'comment', pr_number.to_s, '--body', body)
+    run_action.('comment', targets, 'comment' => body)
   end
-
-  # === Comment Templates ===
 
   TEMPLATES_DIR = File.join(Dir.home, '.config', 'hiiro', 'pr_templates')
 
@@ -856,7 +716,9 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     puts "Template saved: #{path}"
   end
 
-  add_subcmd(:'from-template') do |ref = nil|
+  add_subcmd(:'from-template') do |*args|
+    ref, rest = split_target.(args)
+    no_extra_args.('from-template', rest)
     FileUtils.mkdir_p(TEMPLATES_DIR)
     files = Dir.glob(File.join(TEMPLATES_DIR, '*.md')).sort
 
@@ -864,6 +726,10 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       STDERR.puts "No templates found. Use 'h pr new-template <name>' to create one."
       next
     end
+
+    texts = one_target.(ref)
+    next puts('No PR selected') if texts.empty?
+    targets = actions.targets(texts)
 
     template_map = files.each_with_object({}) do |f, h|
       name = File.basename(f, '.md')
@@ -874,16 +740,12 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     template_path = fuzzyfind_from_map(template_map)
     next unless template_path
 
-    pr_number = resolve(:pr, ref)
-    next unless pr_number
-
-    body = File.read(template_path).strip
-    system('gh', 'pr', 'comment', pr_number.to_s, '--body', body)
+    run_action.('comment', targets, 'comment' => File.read(template_path).strip)
   end
 
-  # === PR List by Context ===
-
-  add_subcmd(:branch) do |arg = nil|
+  add_subcmd(:branch) do |*args|
+    arg, rest = split_target.(args)
+    no_extra_args.('branch', rest)
     pr_number = resolve(:pr, arg)
     next unless pr_number
 
@@ -930,32 +792,6 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     puts
     matches.each_with_index { |pr, i| puts pinned_manager.display_pinned(pr, i) }
   end
-
-  add_cmd(:review, :cr) do
-    prs = args.filter_map { |arg| Hiiro::PullRequestReference.parse(arg) }
-
-    exit 1 if prs.empty?
-
-    parent_dir = File.join(Dir.home, 'work', 'codereviews')
-    FileUtils.mkdir_p(parent_dir)
-    Dir.chdir(parent_dir)
-
-    if `git rev-parse --is-inside-work-tree`.strip == 'true'
-      master = `git master`
-      system('git', 'checkout', `git rev-parse master`)
-    else
-      system('git', 'worktree', 'add', '--no-checkout', parent_dir)
-    end
-
-    system('git', 'checkout', `git rev-parse master`)
-
-    prs.each do |pr|
-      puts ['PR NUMBER', pr.number].join(': ')
-      # Hiiro::Shell.pipe_lines("/prcr #{pr.number}", 'claude -p')
-    end
-  end
-
-  # === Tags ===
 
   add_subcmd(:tag) do |*raw_args|
     opts = Hiiro::Options.parse(raw_args) do
@@ -1015,8 +851,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       end
       puts "Updated #{updated} PR(s)."
     else
-      ref       = opts.args[0]
-      tag_names = opts.args[1..]
+      ref, tag_names = split_target.(opts.args)
 
       if ref.nil? || tag_names.empty?
         puts "Usage: h pr tag <ref> <tag> [tag2 ...]"
@@ -1040,7 +875,8 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
   end
 
-  add_subcmd(:untag) do |ref = nil, *tag_names|
+  add_subcmd(:untag) do |*args|
+    ref, tag_names = split_target.(args)
     if ref.nil?
       puts "Usage: h pr untag <ref> [tag ...]  (omit tags to clear all)"
       next
@@ -1132,283 +968,33 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     render_group.call("(untagged) (#{untagged.length})", untagged, nil) if untagged.any? && filter_tags.empty?
   end
 
-  # === Multi-PR action commands (mCMD) ===
-  # Each opens a YAML editor pre-filled with all tracked PRs.
-  # Remove lines you don't want, then save to apply the action.
+  # === Multi-PR actions (mCMD) ===
+  # Each opens a YAML selection of all tracked PRs plus the action's fields,
+  # then runs the same action, validation, and outcomes as the single command.
 
-  add_subcmd(:mfix) do |*args|
-    pinned = pinned_manager.load_pinned
-    next puts "No tracked PRs" if pinned.empty?
+  Hiiro::PrActions.bulk_names.each do |bulk|
+    add_subcmd(bulk.to_sym) do |*args|
+      action = Hiiro::PrActions.for_bulk(bulk)
+      pinned = pinned_manager.load_pinned
+      next puts('No tracked PRs') if pinned.empty?
 
-    yaml_content = <<~YAML
-      # Select PRs to queue fixes for (remove lines you don't want).
-      # Set run: true to launch tasks immediately after queuing.
-
-      prs:
-      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
-
-      run: false
-    YAML
-
-    input = yaml_input_file(content: yaml_content, prefix: 'pr-mfix-')
-    input.edit
-    parsed = input.parsed_file
-    input.cleanup
-
-    unless parsed.is_a?(Hash)
-      puts "Aborted: could not parse YAML"
-      next
-    end
-
-    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
-
-    if selected_numbers.empty?
-      puts "Aborted: no PRs selected"
-      next
-    end
-
-    should_run = parsed['run'] == true
-    q = Hiiro::Queue.current(self)
-    queued_names = []
-
-    selected_numbers.each do |num|
-      pr = pinned_manager.find(num)
-      next unless pr
-
-      task_info = { task_name: pr.task, tree_name: pr.worktree, session_name: pr.herdr_workspace }.compact
-      task_info = nil if task_info.empty?
-      result = q.add_with_frontmatter("/pr:fix #{pinned_manager.reference_text(pr)}", task_info: task_info)
-      if result
-        puts "Queued fix for #{pr.reference}: #{pr.title}"
-        queued_names << result[:name]
+      editor = ->(text) {
+        input = yaml_input_file(content: text, prefix: "pr-#{bulk}-")
+        input.edit.document.tap { input.cleanup }
+      }
+      status, value = actions.edit(action.name, pinned, editor: editor)
+      case status
+      when :cancelled
+        puts "Cancelled: #{value}"
+      when :empty
+        puts 'No PRs selected; nothing to do.'
+      when :invalid
+        puts "Invalid selection: #{value}"
+        exit 1
       else
-        STDERR.puts "Failed to queue fix for #{pr.reference}"
+        exit 1 unless actions.perform(value).all?(&:ok)
       end
-    end
-
-    if queued_names.any?
-      puts
-      puts "Queued #{queued_names.length} fix task(s)."
-      if should_run
-        puts "Launching..."
-        queued_names.each { |name| q.launch_task(name) }
-      else
-        puts "Run 'h queue run' to start."
-      end
-    end
-  end
-
-  add_subcmd(:mopen) do |*args|
-    pinned = pinned_manager.load_pinned
-    next puts "No tracked PRs" if pinned.empty?
-
-    yaml_content = <<~YAML
-      # Select PRs to open in browser (remove lines you don't want).
-
-      prs:
-      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
-    YAML
-
-    input = yaml_input_file(content: yaml_content, prefix: 'pr-mopen-')
-    input.edit
-    parsed = input.parsed_file
-    input.cleanup
-
-    unless parsed.is_a?(Hash)
-      puts "Aborted: could not parse YAML"
-      next
-    end
-
-    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
-    next puts "Aborted: no PRs selected" if selected_numbers.empty?
-
-    selected_numbers.each do |num|
-      pr = pinned_manager.find(num)
-      pr&.url ? system('open', pr.url) : system('gh', 'pr', 'view', num, '--web')
-    end
-  end
-
-  add_subcmd(:mmerge) do |*args|
-    pinned = pinned_manager.load_pinned
-    next puts "No tracked PRs" if pinned.empty?
-
-    yaml_content = <<~YAML
-      # Select PRs to merge (remove lines you don't want).
-      # strategy: merge, squash, or rebase (leave blank for GitHub default)
-
-      prs:
-      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
-
-      strategy:
-    YAML
-
-    input = yaml_input_file(content: yaml_content, prefix: 'pr-mmerge-')
-    input.edit
-    parsed = input.parsed_file
-    input.cleanup
-
-    unless parsed.is_a?(Hash)
-      puts "Aborted: could not parse YAML"
-      next
-    end
-
-    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
-
-    if selected_numbers.empty?
-      puts "Aborted: no PRs selected"
-      next
-    end
-
-    strategy = parsed['strategy'].to_s.strip
-    merge_args = strategy.empty? ? [] : ["--#{strategy}"]
-
-    selected_numbers.each do |num|
-      pr = pinned_manager.find(num)
-      title = pr ? pr.title : num
-      puts "Merging ##{num}: #{title}"
-      system('gh', 'pr', 'merge', num, *merge_args)
-    end
-  end
-
-  add_subcmd(:mready) do |*args|
-    pinned = pinned_manager.load_pinned
-    next puts "No tracked PRs" if pinned.empty?
-
-    yaml_content = <<~YAML
-      # Select PRs to mark as ready for review (remove lines you don't want).
-
-      prs:
-      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
-    YAML
-
-    input = yaml_input_file(content: yaml_content, prefix: 'pr-mready-')
-    input.edit
-    parsed = input.parsed_file
-    input.cleanup
-
-    unless parsed.is_a?(Hash)
-      puts "Aborted: could not parse YAML"
-      next
-    end
-
-    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
-    next puts "Aborted: no PRs selected" if selected_numbers.empty?
-
-    selected_numbers.each do |num|
-      pr = pinned_manager.find(num)
-      puts "Marking ##{num} as ready: #{pr ? pr.title : num}"
-      system('gh', 'pr', 'ready', num)
-    end
-  end
-
-  add_subcmd(:'mto-draft') do |*args|
-    pinned = pinned_manager.load_pinned
-    next puts "No tracked PRs" if pinned.empty?
-
-    yaml_content = <<~YAML
-      # Select PRs to convert to draft (remove lines you don't want).
-
-      prs:
-      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
-    YAML
-
-    input = yaml_input_file(content: yaml_content, prefix: 'pr-mto-draft-')
-    input.edit
-    parsed = input.parsed_file
-    input.cleanup
-
-    unless parsed.is_a?(Hash)
-      puts "Aborted: could not parse YAML"
-      next
-    end
-
-    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
-    next puts "Aborted: no PRs selected" if selected_numbers.empty?
-
-    selected_numbers.each do |num|
-      pr = pinned_manager.find(num)
-      puts "Converting ##{num} to draft: #{pr ? pr.title : num}"
-      system('gh', 'pr', 'ready', '--draft', num)
-    end
-  end
-
-  add_subcmd(:mrm) do |*args|
-    pinned = pinned_manager.load_pinned
-    next puts "No tracked PRs" if pinned.empty?
-    baseline = pinned_manager.edit_baseline(pinned)
-
-    yaml_content = <<~YAML
-      # Select PRs to remove from tracking (remove lines you don't want).
-
-      prs:
-      #{pinned.map { |pr| "- #{pr.id}  # #{pr.reference}: #{pr.title}" }.join("\n")}
-    YAML
-
-    input = yaml_input_file(content: yaml_content, prefix: 'pr-mrm-')
-    input.edit
-    parsed = input.document.valid? ? input.document.parsed : nil
-    input.cleanup
-    next puts 'Aborted: no changes' unless input.document.changed? && !input.document.empty?
-
-    unless parsed.is_a?(Hash)
-      puts "Aborted: could not parse YAML"
-      next
-    end
-
-    selected_ids = Array(parsed['prs'])
-    next puts "Aborted: no PRs selected" if selected_ids.empty?
-    unless selected_ids.all? { |id| id.is_a?(Integer) && pinned.any? { |pr| pr.id == id } } && selected_ids.uniq == selected_ids
-      puts 'Aborted: select original PR ids only'
-      next
-    end
-    next puts 'Aborted: no selection changes' if selected_ids == pinned.map(&:id)
-    pinned_manager.remove(selected_ids, baseline: baseline)
-    selected_ids.each { |id| puts "Removed PR id #{id}" }
-  end
-
-  add_subcmd(:mcomment) do |*args|
-    pinned = pinned_manager.load_pinned
-    next puts "No tracked PRs" if pinned.empty?
-
-    yaml_content = <<~YAML
-      # Select PRs to comment on (remove lines you don't want).
-      # Write your comment in the 'comment' field below.
-
-      prs:
-      #{pinned_manager.pr_yaml_lines(pinned).join("\n")}
-
-      comment: |
-
-    YAML
-
-    input = yaml_input_file(content: yaml_content, prefix: 'pr-mcomment-')
-    input.edit
-    parsed = input.parsed_file
-    input.cleanup
-
-    unless parsed.is_a?(Hash)
-      puts "Aborted: could not parse YAML"
-      next
-    end
-
-    selected_numbers = Array(parsed['prs']).map(&:to_s).reject(&:empty?)
-    body = parsed['comment'].to_s.strip
-
-    if selected_numbers.empty?
-      puts "Aborted: no PRs selected"
-      next
-    end
-
-    if body.empty?
-      puts "Aborted: empty comment"
-      next
-    end
-
-    selected_numbers.each do |num|
-      pr = pinned_manager.find(num)
-      title = pr ? pr.title : num
-      puts "Commenting on ##{num}: #{title}"
-      system('gh', 'pr', 'comment', num, '--body', body)
+      true
     end
   end
 
@@ -1432,7 +1018,8 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
         end
       }
 
-      h.add_subcmd(:add) { |ref = nil, *dep_refs|
+      h.add_subcmd(:add) { |*args|
+        ref, dep_refs = split_target.(args)
         if ref.nil? || dep_refs.empty?
           puts "Usage: h pr dep add <pr> <dep1> [dep2 ...]"
           next
@@ -1452,7 +1039,8 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
         puts "#{pr.reference} now depends on: #{pr.depends_on.map { |dep| dep.is_a?(Integer) ? "##{dep}" : dep }.join(', ')}"
       }
 
-      h.add_subcmd(:rm) { |ref = nil, *dep_refs|
+      h.add_subcmd(:rm) { |*args|
+        ref, dep_refs = split_target.(args)
         if ref.nil?
           puts "Usage: h pr dep rm <pr> [dep1 dep2 ...]  (omit deps to clear all)"
           next
@@ -1484,6 +1072,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       }
 
       h.add_subcmd(:ls) { |ref = nil|
+        ref ||= current_target&.to_s
         pinned = pinned_manager.load_pinned
 
         if ref

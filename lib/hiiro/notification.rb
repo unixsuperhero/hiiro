@@ -4,6 +4,12 @@ class Hiiro
       new(hiiro).show
     end
 
+    # The same -m/-t/-l/-s grammar as `h alert`, delivered synchronously:
+    # true when terminal-notifier ran and succeeded, false otherwise.
+    def self.deliver(args)
+      new(Struct.new(:args).new(args)).deliver
+    end
+
     attr_reader :hiiro, :original_args
 
     def initialize(hiiro)
@@ -48,6 +54,12 @@ class Hiiro
       return unless has_cmd?
 
       Process.detach(spawn(*command))
+    end
+
+    def deliver
+      return false if binpath.empty?
+
+      system(*command) == true
     end
 
     def binpath

@@ -226,7 +226,7 @@ git.worktrees                     # List all worktrees (Git::Worktree: path, hea
 Hiiro::Git::Worktrees.fetch       # Porcelain-backed collection; bins should use this instead of splitting `git worktree list`
 git.add_worktree(path, branch:)   # Create worktree
 git.move_worktree(from, to)       # Rename worktree
-git.current_pr                    # Get current PR info
+git.current_pr                    # Git::Pr for the branch at pwd, or nil (Git::Pr.current(dir:) raises with gh's reason)
 ```
 
 ### Hiiro::DB (lib/hiiro/db.rb)
@@ -414,12 +414,33 @@ snap.checks.nodes / .complete / .known_empty? ; snap.reviews (same) ; snap.compl
 pm = Hiiro::PinnedPRManager.new
 record, outcome = pm.track(ref, task:, worktree:, herdr_workspace:)   # :created | :promoted | :already; no remote fields
 report = pm.refresh(prs, force: false)   # RefreshReport fresh/incomplete/failed/unqualified: [[record, message]]
-pm.lookup_reference(text_or_nil)         # URL/owner/name#N as given; bare number or nil via gh's current repository
+pm.lookup_reference(text_or_nil)         # URL/owner/name#N as given; bare number via gh's current repository; nil via Git::Pr.current
 pr.freshness  # 'fresh' | 'stale' (refresh failed; last observation kept) | 'unknown' (never observed)
 pr.green?     # fresh, checks and reviews complete, and the assessed checks green
 ```
 
 Checks and reviews page backward 100 at a time; every page re-reads `headRefOid`, and a head change, failed page, repeated cursor, or count mismatch never yields a complete snapshot. `apply_snapshot` updates only remote columns of one row and only when its `fetched_at` is older.
+
+### Hiiro::PrActions / Hiiro::PrFixJob / Hiiro::PrMonitor (lib/hiiro/pr_actions.rb, lib/hiiro/pr_monitor.rb)
+
+Every acting `h pr` command (single, `m*` YAML selection, `prune`, `h cpr`) goes through one `PrActions`; `h pr-monitor` is `PrMonitor#cycle` over stored snapshots:
+
+```ruby
+acts = Hiiro::PrActions.new(manager: pm, resolver: ->(text) { qualified_ref }, runner: Hiiro::Shell.method(:foreground), queue: -> { q })
+set  = acts.targets(%w[team/one#42 https://github.com/team/two/pull/5])   # TargetSet references/records/baseline; or acts.for_records(rows)
+req  = Hiiro::PrActions::Request.new(name: 'merge', params: { 'strategy' => 'squash' }, targets: set)
+acts.validate!(req)          # raises Hiiro::Error before anything runs (fields, tracked-only actions)
+acts.perform(req)            # [Outcome(reference, ok, detail, interrupted)], printed ✓/✗ per target
+acts.edit('merge', rows, editor: ->(text) { EditedDocument })   # [:ok, req] | [:empty, nil] | [:cancelled, why] | [:invalid, why]
+Hiiro::PrFixJob.for(record)  # .name 'pr-fix-team-one-42-aaaaaaa', .content (frontmatter pr/pr_url/head_sha/task + /pr:fix body)
+Hiiro::Shell.foreground(spec)                  # inherited stdio, Ctrl-C reaches the child; ProcessOutcome
+Hiiro::Notification.deliver(['-t', t, '-m', m, '-l', url])   # synchronous h alert; true when terminal-notifier succeeded
+Hiiro::PrMonitor.transitions(checkpoints, observation, channels)   # the one transition function → [Event]
+Hiiro::PrMonitor.new(manager:, options:, notifier:, queue:, ready:).cycle
+Hiiro::PrMonitorCheckpoint.for(ref) / .record!(ref, channel, head_sha:, state:, delivered:, detail:)
+```
+
+`h cpr` passes the current branch's PR to `h pr` in `HIIRO_PR_CURRENT`; commands that take one PR use it in place of their PR argument (`split_target` in bin/h-pr).
 
 ### Hiiro::Git::BranchComparison (lib/hiiro/git/branch_comparison.rb)
 

@@ -118,7 +118,8 @@ class Hiiro
           {store: store.to_s, source: source, table: table.to_s, owner: owner, identity: identity,
            dependencies: store == :tags ? %w[tasks links branches prs pinned_prs] : [],
            recovery: 'Sources retained byte-identical; .bak requires explicit selection', parser_version: PARSER_VERSION}
-        end + {task_resources: 'TaskResource', registry: 'RegistryEntry', check_runs: 'CheckRun', captures: 'Capture'}.map do |table, owner|
+        end + {task_resources: 'TaskResource', registry: 'RegistryEntry', check_runs: 'CheckRun', captures: 'Capture',
+           pr_monitor_checkpoints: 'PrMonitorCheckpoint'}.map do |table, owner|
           {store: table.to_s, source: 'database only; canonical export', table: table.to_s, owner: owner,
            identity: 'stable row ID', dependencies: [], recovery: 'Full typed export; no legacy YAML authority', parser_version: PARSER_VERSION}
         end + [{store: 'mcps', source: 'h mcp; legacy ~/.local/share/hiiro/mcp/*.json imported once and retained', table: 'mcps',
@@ -307,7 +308,7 @@ class Hiiro
 
       def export_tables
         %i[tasks prs registry todos links branches assignments apps projects pane_homes pins reminders tags task_resources check_runs captures
-           mcps schema_migrations migration_sources migration_rows pinned_prs].select { |table| connection.table_exists?(table) }
+           pr_monitor_checkpoints mcps schema_migrations migration_sources migration_rows pinned_prs].select { |table| connection.table_exists?(table) }
       end
 
       def sequences

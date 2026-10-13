@@ -63,7 +63,7 @@ These are separate `bin/h-*` executables dispatched by `h`:
 | [`h plugin`](h-plugin.md) | Plugin management |
 | [`h pm`](h-pm.md) | Project manager skill launcher |
 | [`h pr`](h-pr.md) | GitHub PR management |
-| [`h pr-monitor`](h-pr-monitor.md) | PR monitoring dashboard |
+| [`h pr-monitor`](h-pr-monitor.md) | Notify tracked PR check, review, and dependency changes |
 | [`h project`](h-project.md) | Project directory and Herdr workspace manager |
 | [`h registry`](h-registry.md) | Generic resource registry |
 | [`h session`](h-session.md) | Compatibility commands for Herdr workspaces |

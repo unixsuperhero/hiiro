@@ -9,6 +9,9 @@
 #                               "repeat_cursor": { "checks": true },
 #                               "error": { "reviews": "message" } } },
 #     "current": "https://github.com/team/one/pull/42",   # gh pr view with no argument
+#     "current_by_dir": { "/real/path": "https://github.com/team/two/pull/42" },  # by working directory
+#     "actions": { "team/two#42:merge": { "exit": 1, "stderr": "not mergeable" } },  # pr merge/ready/comment/...
+#     "pr_checks": { "team/one#42": { "exit": 8, "stdout": "...", "sleep": 30 } },
 #     "repo": "team/one",                                   # gh's current repository
 #     "mine": ["https://github.com/team/one/pull/42"],
 #     "hooks": { "team/one#42:checks:2": ["/abs/ruby", "..."] } }   # run before answering
@@ -35,6 +38,9 @@ module FakeGh
     when %w[api graphql] then graphql(argv.drop(2))
     when %w[pr view]     then pr_view(argv.drop(2))
     when %w[pr list]     then pr_list
+    when %w[pr checks]   then pr_checks(argv.drop(2))
+    when %w[pr merge], %w[pr ready], %w[pr comment], %w[pr diff], %w[pr checkout], %w[pr update-branch]
+      pr_action(argv[1], argv.drop(2))
     else fail_with("fake gh: unsupported #{argv.join(' ')}")
     end
   end
@@ -137,15 +143,53 @@ module FakeGh
     exit(body['errors'] ? 1 : 0)
   end
 
+  def self.key_of(url) = url.match(%r{github\.com/([^/]+/[^/]+)/pull/(\d+)})&.captures&.join('#')
+
+  def self.target_key(args)
+    url = args.find { |arg| arg.match?(%r{/pull/\d+}) } or fail_with("fake gh: no PR URL in #{args.join(' ')}")
+    key_of(url)
+  end
+
+  # Mutating and terminal verbs only log and answer; nothing is changed.
+  def self.pr_action(verb, args)
+    key = target_key(args)
+    pr(key) or fail_with("fake gh: no pull request #{key}")
+    flags = args.select { |arg| arg.start_with?('-') }
+    action = (@state['actions'] || {})["#{key}:#{verb}#{flags.include?('--rebase') ? ':rebase' : ''}"] || {}
+    $stdout.puts(action['stdout'] || "fake gh: #{verb} #{key}")
+    warn action['stderr'] if action['stderr']
+    exit action.fetch('exit', 0)
+  end
+
+  def self.pr_checks(args)
+    key = target_key(args)
+    spec = (@state['pr_checks'] || {})[key] or fail_with("fake gh: no checks configured for #{key}")
+    $stdout.puts spec.fetch('stdout', "fake checks for #{key}")
+    $stdout.flush
+    trap('INT', 'SYSTEM_DEFAULT') # die of the signal, as gh does
+    File.write(spec['ready_file'], Process.pid.to_s) if spec['ready_file']
+    sleep spec['sleep'] if spec['sleep']
+    exit spec.fetch('exit', 0)
+  end
+
   def self.pr_view(args)
+    if args.include?('--web')
+      key = target_key(args)
+      pr(key) or fail_with("fake gh: no pull request #{key}")
+      return puts("Opening #{key} in your browser.")
+    end
     target = args.first&.start_with?('-') ? nil : args.first
-    url = if target.nil? then @state['current']
+    by_dir = (@state['current_by_dir'] || {})
+    url = if target.nil? && by_dir.any? then by_dir[File.realpath(Dir.pwd)]
+          elsif target.nil? then @state['current']
           elsif target.match?(%r{/pull/\d+}) then target
           else "https://github.com/#{@state.fetch('repo')}/pull/#{target}"
           end
     key = url && url.match(%r{github\.com/([^/]+/[^/]+)/pull/(\d+)})&.captures&.join('#')
-    pr = key && pr(key) or fail_with('no pull requests found')
-    puts JSON.generate(view(key, pr))
+    pr = key && pr(key) or fail_with('no pull requests found for branch')
+    return puts(JSON.generate(view(key, pr))) if args.include?('--json')
+
+    puts "#{pr['title']} #{key}\nstate: #{pr['state']}"
   end
 
   def self.view(key, pr)

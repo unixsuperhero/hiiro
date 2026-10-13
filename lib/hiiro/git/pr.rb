@@ -95,14 +95,23 @@ class Hiiro
           'commented' => commented, 'reviewers' => latest_by_author }
       end
 
-      def self.current
-        output = `gh pr view --json number,title,state,url,headRefName,baseRefName 2>/dev/null`
-        return nil if output.empty?
+      # The shared current-branch resolver: gh's PR for the branch checked out
+      # in dir, qualified by the repository in its URL. Raises Hiiro::Error
+      # when there is none or gh cannot say which.
+      def self.current(dir: nil)
+        where = dir ? " in #{dir}" : ''
+        spec = Hiiro::CommandSpecification.new('gh', 'pr', 'view', '--json', 'number,title,state,url,headRefName,baseRefName', cwd: dir)
+        result = Hiiro::Shell.execute(spec)
+        raise Hiiro::Error, "No PR for the current branch#{where}: #{result.stderr.to_s.strip}" unless result.success?
 
         require 'json'
-        from_gh_json(JSON.parse(output))
-      rescue
-        nil
+        pr = from_gh_json(JSON.parse(result.stdout))
+        raise Hiiro::Error, "gh named no repository for the current branch's PR#{where}" unless pr.reference.qualified?
+        pr
+      rescue JSON::ParserError
+        raise Hiiro::Error, "Unreadable gh output for the current branch's PR#{where}"
+      rescue SystemCallError => e
+        raise Hiiro::Error, "gh could not start: #{e.message}"
       end
 
       def initialize(number:, title: nil, state: nil, url: nil, head_branch: nil, base_branch: nil,
@@ -185,19 +194,6 @@ class Hiiro
 
         state_match && check_match
       end
-
-      def view     = system('gh', 'pr', 'view', number.to_s)
-      def checkout = system('gh', 'pr', 'checkout', number.to_s)
-
-      def merge(method: nil, delete_branch: true)
-        args = ['gh', 'pr', 'merge', number.to_s]
-        args << "--#{method}" if method
-        args << '--delete-branch' if delete_branch
-        system(*args)
-      end
-
-      def close  = system('gh', 'pr', 'close', number.to_s)
-      def reopen = system('gh', 'pr', 'reopen', number.to_s)
 
       def to_s = "##{number}: #{title}"
 

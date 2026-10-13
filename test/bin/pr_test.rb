@@ -1,13 +1,35 @@
 require 'test_helper'
 require 'open3'
+require 'digest'
 require 'rbconfig'
 
 class PrAttachTest < Minitest::Test
-  def test_attach_bare_tracked_number_writes_executable_launcher_without_native_launch
+  def git(dir, *args) = IO.popen(['git', '-C', dir, *args], err: File::NULL, &:read)
+
+  def git_state(dir)
+    { head: git(dir, 'rev-parse', 'HEAD'), branch: git(dir, 'symbolic-ref', 'HEAD'), branches: git(dir, 'branch', '--list'),
+      status: git(dir, 'status', '--porcelain', '--untracked-files=all'), staged: git(dir, 'diff', '--cached'),
+      index: Digest::SHA256.file(File.join(dir, '.git/index')).hexdigest,
+      files: Dir.glob('**/*', File::FNM_DOTMATCH, base: dir).reject { |f| f.start_with?('.git') || File.directory?(File.join(dir, f)) }
+                .sort.to_h { |f| [f, Digest::SHA256.file(File.join(dir, f)).hexdigest] } }
+  end
+
+  def test_attach_opens_the_task_directory_without_touching_git
     root = File.expand_path('../..', __dir__)
     Dir.mktmpdir('hiiro-pr-attach-') do |dir|
       workdir = File.join(dir, 'workspace with spaces')
       FileUtils.mkdir_p(workdir)
+      git(workdir, 'init', '-q', '-b', 'main')
+      File.write(File.join(workdir, 'tracked.txt'), "one\n")
+      git(workdir, 'add', 'tracked.txt')
+      git(workdir, '-c', 'user.name=t', '-c', 'user.email=t@example.test', 'commit', '-qm', 'base')
+      git(workdir, 'branch', 'feature/pr')
+      File.write(File.join(workdir, 'tracked.txt'), "one\nstaged\n")
+      git(workdir, 'add', 'tracked.txt')
+      File.write(File.join(workdir, 'tracked.txt'), "one\nstaged\nunstaged\n")
+      File.write(File.join(workdir, 'untracked.txt'), "new\n")
+      before = git_state(workdir)
+
       fixture = File.join(dir, 'adapters.rb')
       File.write(fixture, <<~RUBY)
         require 'hiiro'
@@ -15,15 +37,7 @@ class PrAttachTest < Minitest::Test
         Hiiro::DB.setup!
         Hiiro::PinnedPr.create(number: 7, repo: 'team/one', pinned: true,
           head_ref_name: 'feature/pr', task: 'fixture-task')
-
-        class Environment
-          def self.current = new
-          def find_task(name)
-            raise 'unexpected task' unless name == 'fixture-task'
-            tree = Struct.new(:path).new(ENV.fetch('ATTACH_WORK_DIR'))
-            Struct.new(:session_name, :tree).new('fixture-workspace', tree)
-          end
-        end
+        Hiiro::TaskRecord.create(name: 'fixture-task', tree: ENV.fetch('ATTACH_WORK_DIR'), session: 'fixture-workspace')
 
         class FixtureHerdr
           def find_workspace(name)
@@ -31,23 +45,18 @@ class PrAttachTest < Minitest::Test
             'controlled-workspace'
           end
 
-          def new_tab(**options)
-            raise 'unexpected workspace selection' unless options.fetch(:workspace) == 'controlled-workspace'
-            path = options.fetch(:command)
-            puts JSON.dump({ executable: File.executable?(path), script: File.read(path) })
-          ensure
-            File.unlink(path) if path && File.file?(path)
-          end
+          def new_tab(**options) = warn(JSON.dump(options))
         end
 
         class Hiiro
           def herdr_client = FixtureHerdr.new
         end
 
+        # Reads (git branch for the task tree) stay allowed; the git-state
+        # comparison below proves nothing was written.
         module Kernel
           def system(*) = raise('native process launch forbidden')
           def spawn(*) = raise('native process launch forbidden')
-          def `(command) = raise('native process launch forbidden')
         end
         def Process.spawn(*) = raise('native process launch forbidden')
         def IO.popen(*) = raise('native process launch forbidden')
@@ -58,12 +67,15 @@ class PrAttachTest < Minitest::Test
         'ATTACH_WORK_DIR' => workdir,
       }
       stdout, stderr, status = Open3.capture3(environment, RbConfig.ruby,
-        '-I', File.join(root, 'lib'), '-r', fixture, File.join(root, 'bin/h-pr'), 'attach', '7')
-      assert status.success?, stderr
-      result = JSON.parse(stdout)
-      assert_equal true, result.fetch('executable')
-      assert_includes result.fetch('script').lines.map(&:chomp), "cd #{Shellwords.shellescape(workdir)}"
-      assert_includes result.fetch('script').lines.map(&:chomp), 'git checkout feature/pr'
+        '-I', File.join(root, 'lib'), '-r', fixture, File.join(root, 'bin/h-pr'), 'attach', '7', chdir: workdir)
+      assert status.success?, stdout + stderr
+      real = File.realpath(workdir)
+      assert_equal({ 'name' => 'pr-7', 'workspace' => 'controlled-workspace', 'start_directory' => real, 'focus' => true },
+                   JSON.parse(stderr.lines.last))
+      assert_equal "Opened team/one#7 in #{real} (head branch feature/pr; nothing checked out or committed)\n", stdout
+      assert_equal before, git_state(workdir)
+      assert_equal "refs/heads/main\n", before[:branch]
+      assert_equal "MM tracked.txt\n?? untracked.txt\n", before[:status]
     end
   end
 end
@@ -137,7 +149,7 @@ class PrSnapshotCliTest < Minitest::Test
     assert_equal ["team/one#42: one\n  └─ team/two#42: two\n  └─ team/one#7 (not tracked)\n", 0], pr('dep', 'ls')
     assert_equal ["Removed dep(s) team/two#42 from team/one#42\n  Remaining: team/one#7\n", 0], pr('dep', 'rm', 'team/one#42', 'https://github.com/team/two/pull/42')
 
-    assert_equal ["Removed team/one#42 from tracking\n", 0], pr('rm', 'team/one#42')
+    assert_equal ["✓ team/one#42 untrack: removed from tracking\n", 0], pr('rm', 'team/one#42')
     assert_equal [[2, 'team/two', '["two"]']], rows('select id, repo, tags_json from prs').map(&:values)
     assert_equal [[2, 2]], rows('select pr_id, count(*) n from check_runs group by pr_id').map(&:values)
   end

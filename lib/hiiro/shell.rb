@@ -109,6 +109,18 @@ class Hiiro
       Result.new(stdout, status, stderr: stderr, spec: spec)
     end
 
+    # Runs a prepared spec on this terminal: stdio is inherited, so prompts and
+    # streaming stay native. Ctrl-C reaches the child; the parent waits for the
+    # child's own outcome instead of dying first.
+    def self.foreground(spec)
+      previous = trap('INT') {}
+      pid = Process.spawn(*spec.spawn_args)
+      Process.wait(pid)
+      ProcessOutcome.from_status($?)
+    ensure
+      trap('INT', previous) if previous
+    end
+
     def self.run_combined(*command, **env)
       spec = CommandSpecification.new(*command, env: env)
       output, status = Open3.capture2e(*spec.open3_args)

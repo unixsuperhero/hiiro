@@ -19,11 +19,20 @@
 ## Unreleased
 
 ### Changed
+- `h pr` single and bulk actions are one implementation (`Hiiro::PrActions`): targets are resolved to `owner/name#N` first, then fields are validated for every target before anything runs, and each target prints its own `✓`/`✗` outcome; any failure exits 1. `mopen`, `mmerge`, `mready`, `mto-draft`, `mcomment`, `mfix`, `mrm`, and the new `msync` share one YAML selection (`prs:` plus the action's fields). An editor that fails, an empty file, or an unchanged document cancels; invalid YAML or fields exit 1; `prs: []` does nothing. `mrm` selects by reference instead of row id. `prune`, `ls -d`, and the fuzzy-picked forms use the same actions.
+- `h pr merge` accepts only `--merge`, `--squash`, `--rebase`, and `-d`/`--delete-branch`; anything else is refused before `gh` runs. `h pr open` goes through `gh pr view --web` with the PR URL. `h pr comment` takes `-b TEXT` or an editor; an empty comment is an error.
+- `h pr check`/`watch`/`fwatch` run native `gh pr checks` with the PR URL on the terminal and exit with gh's own status (130 when interrupted, without a notification). A nonzero exit is reported as failing only when a fresh snapshot shows a failed check; otherwise `unknown`. Notifications go through the `h alert` adapter (`terminal-notifier`); the `say` call and hard-coded notifier path are gone.
+- `h pr-monitor` watches tracked open PRs through the snapshot refresh instead of parsing `gh pr status`. The first cycle records a baseline; later cycles notify check, review, and dependency transitions once, from checkpoints keyed by repository, number, channel, head revision, and state in the `pr_monitor_checkpoints` table, so restarts do not repeat them and a new head is a new event. Stale, incomplete, or unknown observations never produce passing or approval events. `--queue-fixes` queues one fix job per failing head and never launches it; `--mark-ready` needs a fresh, complete, passing head. Dependency completion only notifies. New `--once`, `--interval`, `--tag`, and `--no-notify-dependencies`.
+- `h cpr [-C DIR] SUBCOMMAND ...` resolves the current branch's PR in the selected directory and passes it to `h pr` out of band (`HIIRO_PR_CURRENT`), so nested commands (`h cpr dep add team/two#5`, `h cpr merge --squash`) keep their grammar. No PR for the branch exits 1 and never falls back to another repository's same-number PR.
+- `h pr fix`/`mfix` queue jobs named `pr-fix-OWNER-NAME-N-HEAD7` whose frontmatter and body carry the PR URL, head revision, snapshot completeness, and failing checks, plus the PR's task, tree, and workspace.
 - `h pr` keeps one repository-qualified snapshot per tracked PR: head revision, fetch time, raw checks and reviews with completeness, and `fresh` / `stale` / `unknown` freshness, separate from local tags, task, dependencies, and tracking. Lists, `update`, `track`, and `status` share one repository-batched refresh; output names PRs as `owner/name#N`.
 - `h pr dep` stores dependencies as `owner/name#N`; legacy numbers are qualified at startup only when unambiguous and are otherwise kept and reported by `dep ls`.
 - The ISC code freeze is applied as a policy when checks are counted; GitHub's raw contexts are stored unchanged and `ls -C` shows both. When `isc` is unavailable GitHub's state stands (it was previously forced to success).
 
 ### Fixed
+- `h pr attach` no longer stages everything, makes a `WIP` commit, or checks out the PR branch: it opens a tab in the task's directory and leaves HEAD, the index, files, and branches as they were. It also finds the task again (it named a top-level `Environment` that hiiro never defines, so it always reported no workspace).
+- `h pr to-draft`/`mto-draft` call `gh pr ready --undo` (the `--draft` flag they passed does not exist).
+- `h pr-monitor` no longer opens a browser when checks pass and no longer links every PR to one hard-coded repository.
 - `h pr` refresh now pages reviews (previously only the last 50) as well as checks, re-reads the head on every page, and never combines pages from two heads. A failed page, malformed output, partial GraphQL errors, or a repeated cursor leaves the snapshot incomplete instead of complete.
 - A failed refresh keeps the last observation and marks it `stale`; incomplete, stale, and unknown snapshots are never `green`.
 - A refresh no longer overwrites tags, task, or dependency changes made while it runs, does not replace a newer snapshot, and does not recreate an untracked PR.
@@ -80,6 +89,7 @@
 - `bin/h-mcp` no longer needs `lib/h_mcp_catalog.rb` / `lib/h_mcp_registry.rb` beside it, and installs without support files. The gem declares `mcp ~> 1.5`, `faraday`, and `event_stream_parser`. Registrations, saved catalogs, the `mcp_json_catalogs_to_sqlite` marker, legacy JSON backups, and `mcp-sync` ownership are unchanged.
 
 ### Removed
+- `h pr review`/`cr` (it checked out master and could create a worktree, then only printed numbers), the per-action `m*` copies, `PinnedPRManager#pr_yaml_lines`, `Git::Pr#view`/`#checkout`/`#merge`/`#close`/`#reopen`, the backtick `Git::Pr.current`, `h pr number`'s text parsing, and `h pr-monitor`'s `gh pr status` parser and `pr_approved`/`pr_passing`/`pr_failing`/`pr_pending`/`pr_publishing` helper calls.
 - Automatic legacy domain YAML import and mutable-record dual writers. Legacy sources remain explicit retained recovery inputs.
 - Obsolete todo file-path, saved-link snapshot, and task YAML backup APIs; `h db remigrate`, broad YAML retirement, and YAML/tar restore.
 - Conflicting first-match Environment/task/app/project selectors and queue pane-directory fallback joins.

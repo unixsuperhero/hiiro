@@ -46,7 +46,7 @@ class Hiiro
     'extractor' => %i[Extractor], 'fuzzyfind' => %i[Fuzzyfind], 'git' => %i[Git], 'glob' => %i[Glob],
     'herdr' => %i[Herdr], 'input_file' => %i[EditedDocument InputFile], 'install' => %i[Install], 'notification' => %i[Notification],
     'owned_run' => %i[OwnedRun], 'pane_reservations' => %i[PaneReservations], 'paths' => %i[Paths],
-    'pinned_pr_manager' => %i[PinnedPRManager], 'pr_snapshot' => %i[PrSnapshot], 'projects' => %i[Projects], 'ps_process' => %i[PsProcess],
+    'pinned_pr_manager' => %i[PinnedPRManager], 'pr_actions' => %i[PrActions PrFixJob], 'pr_monitor' => %i[PrMonitor], 'pr_snapshot' => %i[PrSnapshot], 'projects' => %i[Projects], 'ps_process' => %i[PsProcess],
     'pull_request_reference' => %i[RepositoryIdentity PullRequestReference], 'queue' => %i[Queue],
     'queue_claim' => %i[QueueClaim], 'rbenv' => %i[Rbenv], 'root_commands' => %i[RootCommands], 'rollout' => %i[Rollout], 'runner_tool' => %i[RunnerTool],
     'service_definition' => %i[ServiceDefinition ServiceGroup EnvironmentFile],
@@ -56,7 +56,7 @@ class Hiiro
     'tasks' => %i[TaskManager SparseGroups Tasks Tree Task FallbackTarget App Environment],
     'time_input' => %i[TimeInput], 'tui' => %i[Tui], 'tuios' => %i[Tuios],
     'persistence' => %i[DB AppRecord Assignment Branch Capture CheckRun Invocation InvocationResolution Link
-                        URLTemplate PaneHome PinRecord PinnedPr Project RegistryEntry Reminder Tag Tags
+                        URLTemplate PaneHome PinRecord PinnedPr PrMonitorCheckpoint Project RegistryEntry Reminder Tag Tags
                         TaskRecord TaskResource TodoItem TodoManager]
   }.freeze
   DOMAIN.each { |file, names| names.each { |name| autoload name, File.expand_path("hiiro/#{file}", __dir__) } }

@@ -17,32 +17,32 @@ h pr <subcommand> [args]
 | `update [filters]` | Refresh PR statuses and list |
 | `status [refs]` | Show check status for a PR |
 | `view [ref]` | Show PR details via `gh pr view` |
-| `open [refs]` | Open PR URL in browser |
+| `open [refs]` | Open PRs in the browser (`gh pr view --web`) |
 | `number` | Print PR number for current branch |
 | `link [ref]` | Print PR URL |
 | `select` | Fuzzy-select from your open PRs |
 | `copy` | Fuzzy-select and copy PR number to clipboard |
 | `diff [ref]` | Show PR diff |
 | `checkout [ref]` | Checkout a PR's branch |
-| `merge [ref]` | Merge a PR |
+| `merge [ref] [--merge\|--squash\|--rebase] [-d]` | Merge a PR |
 | `sync [ref]` | Sync PR with its base branch (rebase, fallback to merge) |
 | `ready [ref]` | Mark a PR as ready for review |
 | `to-draft [ref]` | Convert a PR to draft |
-| `fix [refs]` | Queue `/pr:fix` prompt for failing PRs |
-| `comment [ref]` | Write and post a comment |
+| `fix [refs]` | Queue a revision-specific `/pr:fix` job for PRs |
+| `comment [ref] [-b TEXT]` | Post a comment (editor when `-b` is omitted) |
 | `templates` | List comment templates |
 | `new-template <name>` | Create a comment template |
 | `from-template [ref]` | Post a comment from a template |
 | `rm [ref]` | Stop tracking a PR |
 | `prune` | Remove all merged/closed PRs from tracking |
-| `check [ref]` | Run `gh pr checks` with notification on completion |
+| `check [ref]` | Run `gh pr checks` in the foreground, notify the result |
 | `watch [ref]` | Watch PR checks (keeps polling until done) |
 | `fwatch [ref]` | Watch PR checks with `--fail-fast` |
 | `tag <ref> <tags>` | Tag a tracked PR |
 | `untag <ref> [tags]` | Remove tags from a tracked PR |
 | `for-task [task]` | List tracked PRs for a task |
 | `branch [ref]` | Get the head branch for a tracked PR |
-| `attach [ref]` | Checkout a PR's branch in its task's Herdr workspace |
+| `attach [ref]` | Open a tab in the PR's task directory and Herdr workspace (no Git changes) |
 | `assigned` | List PRs assigned to you |
 | `created` | List PRs authored by you |
 | `missing` | List your untracked PRs |
@@ -52,12 +52,15 @@ h pr <subcommand> [args]
 | `old` | List merged/closed tracked PRs |
 | `draft` | List draft PRs |
 | `edit` | Edit the `h-pr` bin file |
+| `mopen`, `mmerge`, `mready`, `mto-draft`, `mcomment`, `msync`, `mfix`, `mrm` | The same action for PRs chosen in a YAML selection |
 | `dep add <ref> <dependencies>` | Add dependencies to a tracked PR |
 | `dep rm <ref> [dependencies]` | Remove dependencies or clear them all |
 | `dep ls [ref]` | List dependencies with their qualified references |
 | `dep edit` / `config vim` | Edit tracked PR metadata in a temporary YAML document |
 | `config path` | Print the canonical database location |
 | `q [conditions]` | Query the canonical `prs` table |
+
+See [actions](#actions-single-and-bulk) for how every acting subcommand resolves, validates, and reports. `h cpr` runs any of these on the current branch's PR ([h-cpr](h-cpr.md)).
 
 PR references can be a GitHub pull-request URL, `owner/name#N`, a PR number, a slot, or omitted to select a tracked PR. A bare number names a tracked PR first and a slot second. When two repositories track the same number, a bare number is an error (`ERROR: Ambiguous PR #42 (team/one#42, team/two#42); use owner/name#42 or its URL`, exit 1); hiiro never guesses a default repository. `track` and `status` qualify an untracked bare number through `gh`'s current repository. Output names PRs as `owner/name#N`. Stored rows keep their database ID, slot, and pin time across metadata changes and status refreshes.
 
@@ -103,9 +106,37 @@ Cleared workspace associations stay cleared across restarts. An old `tmux_sessio
 
 The `tag -e` and `mrm` selection documents use stable row IDs with repository comments. Failed, blank, or unchanged editors do not mutate PR records. `mrm` and editor deletions untrack each selected row individually and refuse a row whose local fields or tags changed after the document was opened; a refresh in the meantime does not block them. Editor `depends_on` entries must be `owner/name#N` (legacy numbers already on the row may stay).
 
+### Actions: single and bulk
+
+`open`, `view`, `diff`, `checkout`, `merge`, `ready`, `to-draft`, `comment`, `from-template`, `sync`, `fix`, `rm`, `prune`, and every `m*` command run one implementation:
+
+```js
+const targets = { references: ["team/one#42", "team/two#5"] };           // resolved first, qualified
+const request = { name: "merge", params: { strategy: "squash", delete_branch: false }, targets };
+const outcomes = [{ ref: "team/one#42", ok: true }, { ref: "team/two#5", ok: false, detail: "gh failed (exit 1)" }];
+```
+
+1. Targets are resolved as for every PR argument (URL, `owner/name#N`, tracked number or slot, pin) and must be distinct.
+2. The action's fields are checked for every target before anything runs: `merge` strategy is `merge`, `squash`, `rebase`, or blank; `comment` is not empty; `fix` and `rm` need tracked PRs. A refused request prints `ERROR: …` (single) or `Invalid selection: …` (bulk) and exits 1 without calling `gh`.
+3. Each target runs in turn (`gh pr … <URL>` on the terminal, so prompts and output stay native) and prints `✓ team/one#42 merge` or `✗ team/two#5 merge: gh failed (exit 1)`. Several targets end with `merge: 1 succeeded, 1 failed`. Any failure exits 1. Ctrl-C in one target stops the rest (`not attempted (interrupted)`).
+
+The `m*` commands open this selection document with every tracked PR:
+
+```yaml
+prs:
+- https://github.com/team/one/pull/42  # [branch-42] one
+- https://github.com/team/two/pull/5  # [branch-5] two
+
+strategy:   # merge | squash | rebase; blank for GitHub's default
+
+delete_branch: false   # true deletes the head branch after merging
+```
+
+Delete the PRs you do not want and set the fields. An editor that exits with an error, an empty file, or an unchanged document prints `Cancelled: …` and exits 0. Invalid YAML, unknown fields, or bad values print `Invalid selection: …` and exit 1. `prs: []` prints `No PRs selected; nothing to do.` `mrm` and editor deletions refuse a row whose local fields or tags changed after the document opened.
+
 ### attach
 
-Checkout a PR's branch in a new tab inside its associated task's Herdr workspace. Creates a WIP commit if there are uncommitted changes before switching.
+Open a new tab in the PR's task Herdr workspace, in the task's tree directory. Nothing is staged, committed, or checked out; HEAD, the index, working files, and branches are unchanged. Use `h pr checkout` to switch branches explicitly.
 
 **Examples**
 
@@ -116,7 +147,7 @@ h pr attach 1234
 
 ### check / watch / fwatch
 
-Run `gh pr checks` for a PR. `watch` keeps polling until checks complete. `fwatch` adds `--fail-fast`. On completion, speaks "pr good" or "pr bad" and sends a macOS notification.
+Foreground waiting: `gh pr checks <URL>` runs on the terminal with the PR's repository in the URL (`watch` adds `--watch`, `fwatch` adds `--fail-fast`; extra arguments pass through). The command exits with gh's own status. Ctrl-C reaches gh, prints `team/one#42: interrupted`, sends nothing, and exits 130. Otherwise one notification goes out through the `h alert` adapter: `passed` (exit 0), `pending` (exit 8), `failing` only when a fresh snapshot shows a failed check, and `unknown` for any other failure (network, auth, unresolvable PR). For continuous monitoring see [h-pr-monitor](h-pr-monitor.md).
 
 **Examples**
 
@@ -128,14 +159,29 @@ h pr fwatch 1234
 
 ### fix
 
-Queue a `/pr:fix` skill prompt for failing PRs via `h queue add`. With `-r`, launches tasks immediately.
+Queue a `/pr:fix` job for tracked PRs (`fix REF...`, `-r` for every failing PR, or a pick from failing PRs). Each job is named `pr-fix-OWNER-NAME-N-HEAD7` and records the PR URL, head revision, snapshot completeness, failing checks, and the PR's task, tree, and workspace. Jobs are only queued unless `-R` (or `run: true` in `mfix`) asks to launch them.
+
+```text
+---
+pr: team/two#5
+pr_url: https://github.com/team/two/pull/5
+head_sha: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+---
+/pr:fix https://github.com/team/two/pull/5
+
+PR: team/two#5 https://github.com/team/two/pull/5
+Head revision: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+Snapshot: fresh, fetched 2026-10-13T18:01:11.397435Z, checks complete
+Failing checks:
+- lint FAILURE https://ci.example.test/lint
+```
 
 **Options**
 
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--red` | `-r` | Fix all PRs with failing checks |
-| `--run` | `-R` | Launch queue tasks immediately |
+| `--run` | `-R` | Launch the queued jobs now |
 
 **Examples**
 
@@ -191,7 +237,7 @@ h pr ls --verbose --checks
 
 ### rm / prune
 
-`rm` stops tracking a specific PR (fuzzy-select if no ref given). `prune` removes all merged/closed PRs from tracking at once.
+`rm` stops tracking a specific PR (fuzzy-select if no ref given). `prune` removes all merged/closed PRs from tracking at once. Both are the `untrack` action (`✓ team/one#42 untrack: removed from tracking`); an untracked reference is an error.
 
 **Examples**
 

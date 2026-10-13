@@ -254,8 +254,11 @@ class Hiiro
 
     # PR convenience methods
 
+    # nil when the branch at pwd has no PR (Pr.current says why).
     def current_pr
-      Pr.current
+      Pr.current(dir: pwd)
+    rescue Hiiro::Error
+      nil
     end
 
     def list_prs(state: 'open', limit: 30)
