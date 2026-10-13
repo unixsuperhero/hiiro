@@ -42,18 +42,28 @@ be accurate.  The common places for these bins are:
 
 The `Hiiro` class is the main entry point with these nested classes:
 
-- **`Runners`** - Discovers executables matching `h-*` in PATH and manages inline subcommands. Implements exact and prefix-based matching.
-- **`Runners::Bin`** - Represents external executables found in PATH
-- **`Runners::Subcommand`** - Represents inline subcommands registered via blocks
+- **`Runners`** - Holds inline registrations (name, aliases, handler, args/opts metadata) and resolves the first argument through `Hiiro::Catalog`.
+- **`Runners::Bin`** - An external executable candidate found in PATH
+- **`Runners::Subcommand`** - An inline subcommand registered via `add_subcmd` / `add_cmd`; extra names are aliases
+- **`Catalog`** (lib/hiiro/catalog.rb) - The one command table used by dispatch, help, `edit`, `h bin list/edit/complete/docs`
+- **`Runtime`** (lib/hiiro/runtime.rb) - Starts persistence, invocation history, and task auto-tagging on first persistent use
 - **`Args`** - Parses single-dash flags (`-abc` becomes flags `a`, `b`, `c`)
 - **`Config`** - Manages `~/.config/hiiro/` directory structure
 
 ### Subcommand Resolution Flow
 
-1. `Hiiro.init()` parses first arg as subcommand name
-2. `Runners` searches for exact match in subcommands and PATH executables
-3. If no exact match, tries prefix matching (abbreviations)
-4. Ambiguous matches show help with possible options
+1. `Hiiro.init()` parses first arg as subcommand name and registers commands; it opens nothing.
+2. `Hiiro::Catalog` builds entries from inline registrations plus eligible `BIN-*` executables (regular executable files or links to them, PATH order, read at lookup time).
+3. Token ownership: external executable > inline name > inline alias. Losing claims stay visible as `shadowed`; same-name PATH copies are never ambiguous.
+4. Exact token wins; otherwise a unique prefix (a child `pr-monitor` yields to its parent `pr`). Ambiguous or missing names show help and launch nothing.
+
+```js
+const entry = { name: "service", kind: "inline", source: "lib/hiiro/root_commands.rb:171",
+  aliases: ["svc"], arguments: "[*svc_args]", shadowed: [] };
+const external = { name: "pr", kind: "external", source: "/home/me/bin/h-pr", aliases: [],
+  shadowed: [{ name: "pr", kind: "external", source: "/home/me/proj/hiiro/bin/h-pr" }] };
+const resolution = { query: "s", status: "ambiguous", candidates: ["save", "service", "session"] };
+```
 
 ### Plugin System
 
@@ -73,7 +83,7 @@ module MyPlugin
 end
 ```
 
-Plugins auto-load from `~/.config/hiiro/plugins/`. Load order matters when plugins depend on each other (e.g., Task and Project depend on Tmux).
+Plugins load only when a command names them: `Hiiro.run(*ARGV, plugins: [:Pins])` requires `pins.rb` from `~/.config/hiiro/plugins/`, else from the gem's `plugins/`. Importing `hiiro` loads no plugin. Load order matters when plugins depend on each other (e.g., Task and Project depend on Tmux).
 
 ### Global Values Pattern
 
@@ -223,7 +233,7 @@ git.current_pr                    # Get current PR info
 
 SQLite persistence uses Sequel at `~/.config/hiiro/hiiro.db`. Mutable domain records are database-owned; definitions, preferences, runtime state, and ordinary artifacts keep their existing file owners. The complete owner/table map is in [README persistence ownership](README.md#persistence-ownership).
 
-`Hiiro::DB.setup!` creates missing tables and runs model schema upgrades at startup. It does not import domain YAML. Legacy sources are explicit retained import inputs, never live fallbacks or dual-write destinations.
+`require 'hiiro'` loads only the framework; domain constants autoload, and `Hiiro::DB` or any model autoloads `hiiro/persistence`, which connects, defines every model, runs `Hiiro::DB.setup!` (create missing tables, model schema upgrades), and starts `Hiiro::Runtime`. Help, completion, and discovery never reach it. It does not import domain YAML. Legacy sources are explicit retained import inputs, never live fallbacks or dual-write destinations.
 
 **Model registration:** Each Sequel model calls `Hiiro::DB.register(self)` so `setup!` can create its table:
 
@@ -322,22 +332,15 @@ tm.filter_by_task("feature")      # Items for specific task
 
 ### Invocation Tracking (lib/hiiro/invocation.rb)
 
-Every CLI invocation is automatically recorded to SQLite via `Hiiro::Invocation` and `Hiiro::InvocationResolution`. This happens in `Hiiro.init` — no extra setup needed.
+Each `Hiiro.init` adds a frame `{ id, bin, subcmd, args, pwd }` to `HIIRO_INVOCATION_FRAMES` (the first allocates `HIIRO_INVOCATION_ID`); both are environment variables, so external commands inherit them. When an operation first uses persistence, `Hiiro::Runtime` writes one invocation for that ID and each pending frame as an ordered resolution (frames a child already wrote are skipped by `frame_id`). Help, completion, docs, and operations that never touch persistence record nothing.
 
 **Schema:**
-- `Hiiro::Invocation` — records `bin_name`, `argv_json`, `cwd`, `invoked_at`
-- `Hiiro::InvocationResolution` — linked to an invocation; records `resolved_name`, `resolution_type` (exact/prefix/abbreviated), `subcmd`
+- `Hiiro::Invocation` — `id`, `command` (root `bin subcmd args`), `pwd`, `task`, `worktree`, `git_branch`, Herdr IDs, `entered_at`
+- `Hiiro::InvocationResolution` — `invocation_id`, `frame_id`, `depth`, `bin`, `subcmd`, `args_json`, `created_at`
 
 **Query recent invocations:**
-```ruby
-Hiiro::Invocation.order(Sequel.desc(:invoked_at)).limit(20).each do |inv|
-  puts "#{inv.invoked_at}  #{inv.bin_name} #{JSON.parse(inv.argv_json).join(' ')}"
-end
-```
-
-Or via `h db q`:
 ```bash
-h db q "SELECT bin_name, argv_json, invoked_at FROM invocations ORDER BY invoked_at DESC LIMIT 10"
+h db q "SELECT i.command, r.depth, r.bin, r.subcmd FROM invocations i JOIN invocation_resolutions r ON r.invocation_id = i.id ORDER BY i.entered_at DESC, r.depth LIMIT 20"
 ```
 
 ### Hiiro::InputFile / Hiiro::EditedDocument (lib/hiiro/input_file.rb)
@@ -723,7 +726,7 @@ ALWAYS update `README.md` and any files in `docs/` or other markdown files that 
 
 ## Key Files
 
-- `exe/h` - Entry point that loads lib/hiiro.rb
+- `exe/h` - Entry point: `Hiiro.run` over `Hiiro::RootCommands.register` (lib/hiiro/root_commands.rb)
 - `exe/t`, `exe/tt` - Task CLI launchers over `Hiiro::TaskCli` (`lib/hiiro/task_cli.rb`)
 - `bin/h-*` - External subcommands (tmux wrappers, git helpers, jumplist, etc.)
 - `lib/hiiro.rb` - Main Hiiro class and Runners
@@ -745,7 +748,7 @@ ALWAYS update `README.md` and any files in `docs/` or other markdown files that 
 
 Current config-root stores under `~/.config/hiiro/`:
 - `hiiro.db` - Canonical mutable records through the owners listed in README
-- `plugins/` - Auto-loaded plugin files
+- `plugins/` - Plugin files, loaded when a command names them
 - `services/` - Service runtime state
 - `bg-history.txt` - Background command history
 - `jumplist/` - Per-client tmux navigation history

@@ -2,7 +2,7 @@
 
 require "hiiro"
 
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, plugins: [:Pins]) do
   tmux = tmux_client
   Hiiro::Tmux.add_resolvers(self)
 

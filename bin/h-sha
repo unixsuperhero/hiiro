@@ -2,7 +2,7 @@
 
 require 'hiiro'
 
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, plugins: [:Pins]) do
   add_subcmd(:select) do |*select_args|
     # Get git log with format: sha - subject
     log_output = `git log --oneline -100 #{select_args.join(' ')}`.strip

@@ -3,8 +3,6 @@
 require "hiiro"
 require "json"
 
-Hiiro.load_env
-
 output = `gh pr view --json number 2>/dev/null`.strip
 if output.empty?
   STDERR.puts "No PR found for current branch"

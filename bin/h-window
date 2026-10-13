@@ -3,7 +3,7 @@
 require 'hiiro'
 
 # Compatibility command: the legacy window name maps to a Herdr tab.
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, plugins: [:Pins]) do
   herdr = herdr_client
   Hiiro::Herdr.add_resolvers(self)
 

@@ -8,13 +8,7 @@ class CommandContextTest < Minitest::Test
   ROOT = File.expand_path('../..', __dir__)
   LIB = File.join(ROOT, 'lib')
   PRELOAD = <<~'RUBY'
-    class Hiiro
-      class Config
-        def self.plugin_files = []
-      end
-    end
     require 'hiiro'
-    require File.join(ENV.fetch('CONTEXT_REPO'), 'plugins/pins')
     Hiiro::DB.setup!
   RUBY
   MARKER = <<~'RUBY'

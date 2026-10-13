@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 require 'hiiro'
-require 'hiiro/registry'
 
 Hiiro.run(*ARGV, tasks: true) do
 

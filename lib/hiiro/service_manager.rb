@@ -45,7 +45,9 @@ class Hiiro
       @context = context
     end
 
+    # A callable context (the root `h` mounts pass one) resolves on first use, so help needs no task.
     def context
+      @context = @context.call if @context.respond_to?(:call)
       @context ||= CurrentTask.new(pin: false).context
     end
 
@@ -480,7 +482,7 @@ class Hiiro
 
     def self.build_hiiro(parent_hiiro, sm, context: parent_hiiro.context, args: parent_hiiro.args)
       sm.context = context
-      parent_hiiro.make_child(:service, args, context: context) do |h|
+      parent_hiiro.make_child(:service, args, context: -> { sm.context }) do |h|
         h.add_subcmd(:ls) do
           configs = sm.services
           if configs.empty?
@@ -538,7 +540,7 @@ class Hiiro
 
           sm.herdr = h.herdr_client
           task_info = {}
-          if (task = context.task)
+          if (task = sm.context.task)
             task_info = { task_name: task.name, tree: task.tree_name, branch: task.branch, session: task.session_name }
           end
 

@@ -8,32 +8,36 @@ The main entry point for the hiiro CLI framework. Hiiro provides multi-command d
 h <subcommand> [args]
 ```
 
-Subcommands support prefix matching — `h ver` matches `h version`, `h br s` matches `h branch save`. Ambiguous prefixes list all matching options.
+Subcommands support prefix matching — `h ver` matches `h version`, `h br s` matches `h branch save`. Ambiguous prefixes list all matching options and run nothing.
+
+Dispatch, this help, `h edit NAME`, and `h bin list|edit|complete|docs` share one command catalog. An external `h-NAME` executable (first in `PATH`; executable regular files or links to them only) beats an inline `NAME`, which beats an inline alias; losers are listed as shadowed. An exact name or alias wins over a unique prefix, and a child such as `pr-monitor` yields to its parent `pr`. See [the command catalog](../README.md#command-catalog).
+
+Help, completion, and docs open no database and create no config directories. Persistence, invocation history, and branch auto-tagging start when an operation first uses persistence ([lazy startup](../README.md#lazy-startup)).
 
 Workflow/directory commands share a resolved `TaskLocation` context rather than reselecting a task/app for each action. Explicit task selection wins over calling workspace, realpath directory, and (for `t` only) the saved pin. Root queue/service/run/file mounts disable that pin. Project/home commands use taskless roots. Native payload argv remains unchanged, and `cd` uses captured calling-pane IDs instead of focus. See [shared context](../README.md#shared-command-context).
 
 ## Inline subcommands
 
-These subcommands are defined directly in `exe/h` or loaded from `lib/`:
+These subcommands are registered by `Hiiro::RootCommands` (`lib/hiiro/root_commands.rb`, run by `exe/h`) or loaded from `lib/`:
 
 | Subcommand | Description | Source |
 |------------|-------------|--------|
-| `h alert` | Send a macOS notification | `exe/h` |
-| `h check_version` | Verify installed hiiro version across rbenv versions | `exe/h` |
-| `h delayed_update` | Poll RubyGems for a new version and install when available | `exe/h` |
-| `h edit` | Open the `h` bin file in your editor | `exe/h` |
+| `h alert` | Send a macOS notification | `lib/hiiro/root_commands.rb` |
+| `h check_version` | Verify installed hiiro version across rbenv versions | `lib/hiiro/root_commands.rb` |
+| `h delayed_update` | Poll RubyGems for a new version and install when available | `lib/hiiro/root_commands.rb` |
+| `h edit [NAME...]` | Open the `h` bin file, or the source each `NAME` dispatches to; ambiguous or unknown names open nothing | `lib/hiiro.rb` |
 | [`h file`](h-file.md) | Track frequently-used files per app and open them in your editor | `lib/hiiro/app_files.rb` |
-| `h install` / `h update` | Install or update the hiiro gem (`-a` compatible rbenv versions, `-p` pre-release) | `exe/h` |
-| `h ping` | Health check — prints `pong` | `exe/h` |
-| `h pry` | Open a pry REPL in the hiiro context | `exe/h` |
+| `h install` / `h update` | Install or update the hiiro gem (`-a` compatible rbenv versions, `-p` pre-release) | `lib/hiiro/root_commands.rb` |
+| `h ping` | Health check — prints `pong` | `lib/hiiro/root_commands.rb` |
+| `h pry` | Open a pry REPL in the hiiro context | `lib/hiiro.rb` |
 | [`h queue`](h-queue.md) | Native `omp` prompt queue with shared task/app/directory context and explicit Herdr placement | `lib/hiiro/queue.rb` |
-| `h rnext` | Run `git rnext` (rebase next) | `exe/h` |
+| `h rnext` | Run `git rnext` (rebase next) | `lib/hiiro/root_commands.rb` |
 | [`h run`](h-run.md) | Run dev tools (linters, formatters, tests) against changed files | `lib/hiiro/runner_tool.rb` |
-| [`h service`](h-service.md) | Dev service management with Herdr, env files, and service groups | `lib/hiiro/service_manager.rb` |
-| `h setup` | Install plugins and bin scripts to `~/bin` | `exe/h` |
+| [`h service`](h-service.md) / `h svc` | Dev service management with Herdr, env files, and service groups | `lib/hiiro/service_manager.rb` |
+| `h setup` | Install plugins and bin scripts to `~/bin` | `lib/hiiro/root_commands.rb` |
 | [`h task`](h-task.md) | Symlink to `t`: task records, todos, worktrees, and Herdr workspaces | `lib/hiiro/task_cli.rb` |
 | [`h herdr`](h-herdr.md) | Herdr plugin exposing `t` as keybound popups: switch task, add/copy todos, task shell, nvim | `bin/h-herdr`, `herdr-plugin/` |
-| `h version` | Print installed hiiro version (`-a` for all rbenv versions) | `exe/h` |
+| `h version` | Print installed hiiro version (`-a` for all rbenv versions) | `lib/hiiro/root_commands.rb` |
 
 ## External subcommands
 

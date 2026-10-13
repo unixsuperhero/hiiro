@@ -7,7 +7,7 @@ require "yaml"
 require "json"
 require "tempfile"
 
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, plugins: [:Pins]) do
   pm = pinned_manager = Hiiro::PinnedPRManager.new
   Hiiro::PinnedPRManager.add_resolvers(self)
 

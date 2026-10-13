@@ -162,7 +162,7 @@ end
 
 lm = LinkManager.new
 
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, plugins: [:Pins]) do
   add_subcmd(:add) do |*add_args|
     vals = opts.parse!(add_args)
 

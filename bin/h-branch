@@ -3,8 +3,6 @@
 require "hiiro"
 require "yaml"
 
-Hiiro.load_env
-
 class BranchManager
   attr_reader :hiiro
 
@@ -197,7 +195,6 @@ FIND_BASE = -> {
 
 Hiiro.run(*ARGV) do
   manager   = BranchManager.new(self)
-  tag_store = Hiiro::Tags.new(:branch)
 
   # Shared lambda: find a pinned PR by arg (number, URL, or fuzzy select)
   find_pr_by_arg = ->(arg, pinned) {
@@ -223,7 +220,7 @@ Hiiro.run(*ARGV) do
     tags = Array(opts.tag).reject(&:empty?)
     if tags.any?
       branch_name ||= git.branch
-      tag_store.add(branch_name, *tags)
+      Hiiro::Tags.new(:branch).add(branch_name, *tags)
       puts "Tagged with: #{tags.join(', ')}"
     end
   end
@@ -307,7 +304,7 @@ Hiiro.run(*ARGV) do
 
     entries  = manager.branch_entries(all: opts.all)
     current  = git.branch
-    tags_all = tag_store.all
+    tags_all = Hiiro::Tags.new(:branch).all
 
     tag_filter = Array(opts.tag).reject(&:empty?)
     if tag_filter.any?
@@ -347,7 +344,7 @@ Hiiro.run(*ARGV) do
 
     entries  = manager.branch_entries(all: opts.all)
     current  = git.branch
-    tags_all = tag_store.all
+    tags_all = Hiiro::Tags.new(:branch).all
 
     matched = entries.select do |b|
       terms.any? { |t|
@@ -393,7 +390,7 @@ Hiiro.run(*ARGV) do
           next
         end
         Hiiro::Tag.db.transaction(mode: :immediate) do
-          parsed.each { |branch, tags| tag_store.add(branch, *tags) }
+          parsed.each { |branch, tags| Hiiro::Tags.new(:branch).add(branch, *tags) }
         end
         parsed.each { |branch, tags| puts "Tagged #{branch} with: #{tags.join(', ')}" }
       ensure
@@ -409,7 +406,7 @@ Hiiro.run(*ARGV) do
         next
       end
 
-      result = tag_store.add(branch, *tag_names)
+      result = Hiiro::Tags.new(:branch).add(branch, *tag_names)
       puts "Tagged #{branch} with: #{tag_names.join(', ')}"
       puts "  Tags now: #{result.join(', ')}"
     end
@@ -419,7 +416,7 @@ Hiiro.run(*ARGV) do
     branch    = raw_args[0] || git.branch
     tag_names = raw_args[1..]
 
-    tag_store.remove(branch, *tag_names)
+    Hiiro::Tags.new(:branch).remove(branch, *tag_names)
     if tag_names.empty?
       puts "Cleared all tags from #{branch}"
     else
@@ -428,7 +425,7 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:tags) do
-    all = tag_store.all
+    all = Hiiro::Tags.new(:branch).all
     if all.empty?
       puts "No tagged branches."
       next
@@ -678,7 +675,7 @@ Hiiro.run(*ARGV) do
     end
 
     current     = git.branch
-    tags_all    = tag_store.all
+    tags_all    = Hiiro::Tags.new(:branch).all
     saved_names = manager.branch_names.to_set
 
     recent_branches.each do |name|

@@ -4,6 +4,7 @@ class Hiiro
   class Config
     BASE_DIR = File.join(Dir.home, '.config/hiiro')
     DATA_DIR = File.join(Dir.home, '.local/share/hiiro')
+    GEM_PLUGIN_DIR = File.expand_path('../../plugins', __dir__)
 
     class << self
       def open(file, dir: nil)
@@ -51,16 +52,10 @@ class Hiiro
         File.join(DATA_DIR, relpath)
       end
 
-      def plugin_files
-        user_files = Dir.glob(File.join(plugin_dir, '*.rb'))
-        user_basenames = user_files.map { |f| File.basename(f) }
-
-        gem_plugin_dir = File.join(File.expand_path('../..', __FILE__), 'plugins')
-        gem_files = Dir.exist?(gem_plugin_dir) ? Dir.glob(File.join(gem_plugin_dir, '*.rb')) : []
-
-        fallback_files = gem_files.reject { |f| user_basenames.include?(File.basename(f)) }
-
-        user_files + fallback_files
+      # The file for a plugin constant: ~/.config/hiiro/plugins first, then the gem's plugins/.
+      def plugin_file(name)
+        file = "#{name.to_s.underscore}.rb"
+        [plugin_dir, GEM_PLUGIN_DIR].map { |dir| File.join(dir, file) }.find { |path| File.file?(path) }
       end
 
       def plugin_dir
@@ -68,9 +63,7 @@ class Hiiro
       end
 
       def config_dir(subdir=nil)
-        File.join(Dir.home, '.config/hiiro', *[subdir].compact).tap do |config_path|
-          FileUtils.mkdir_p(config_path) unless Dir.exist?(config_path)
-        end
+        File.join(Dir.home, '.config/hiiro', *[subdir].compact)
       end
     end
   end

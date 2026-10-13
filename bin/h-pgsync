@@ -3,10 +3,8 @@
 require 'hiiro'
 
 Hiiro.run(tasks: true) do
-  env = environment
-
   add_subcmd(:fix) do |db,*tables|
-    task = env.task
+    task = environment.task
     path = task&.path
 
     matches =

@@ -64,24 +64,6 @@ class HiiroTest < Minitest::Test
 end
 
 class HiiroRunnersSubcommandTest < Minitest::Test
-  def test_subcommand_exact_match
-    handler = -> { :ok }
-    subcommand = Hiiro::Runners::Subcommand.new("h", "test", handler)
-
-    assert subcommand.exact_match?("test")
-    refute subcommand.exact_match?("tes")
-    refute subcommand.exact_match?("testing")
-  end
-
-  def test_subcommand_prefix_match
-    handler = -> { :ok }
-    subcommand = Hiiro::Runners::Subcommand.new("h", "testing", handler)
-
-    assert subcommand.match?("test")
-    assert subcommand.match?("testing")
-    refute subcommand.match?("xyz")
-  end
-
   def test_subcommand_full_name
     handler = -> { :ok }
     subcommand = Hiiro::Runners::Subcommand.new("mybin", "mysubcmd", handler)
@@ -291,21 +273,6 @@ class HiiroRunnersBinTest < Minitest::Test
     bin = Hiiro::Runners::Bin.new("h", "/usr/local/bin/h-project")
 
     assert_equal "project", bin.subcommand_name
-  end
-
-  def test_bin_exact_match
-    bin = Hiiro::Runners::Bin.new("h", "/usr/local/bin/h-project")
-
-    assert bin.exact_match?("project")
-    refute bin.exact_match?("proj")
-  end
-
-  def test_bin_prefix_match
-    bin = Hiiro::Runners::Bin.new("h", "/usr/local/bin/h-project")
-
-    assert bin.match?("proj")
-    assert bin.match?("project")
-    refute bin.match?("xyz")
   end
 
   def test_bin_type

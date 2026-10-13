@@ -1,8 +1,8 @@
 # h-bin
 
-Create, list, and edit Hiiro bin scripts.
+Create Hiiro bin scripts, and inspect the root `h` command catalog.
 
-`h bin add` creates executables in `~/bin`. The `list` and `edit` commands use `Hiiro::Bins` to scan the current `PATH`.
+`h bin add` creates executables in `~/bin`. `list`, `edit`, `complete`, and `docs` read the same catalog `h` dispatches through (`Hiiro::RootCommands` registrations plus eligible `h-*` executables on the current `PATH`), so they agree with `h` on winners, aliases, shadowed copies, and ambiguity. None of them runs a candidate, opens the database, or creates config directories.
 
 ## Synopsis
 
@@ -15,8 +15,10 @@ h bin <subcommand> [names...]
 | Subcommand | Description |
 |------------|-------------|
 | `add NAME [COMMAND ...]` | Create an executable template without overwriting an existing file |
-| `list [names]` | List matching bin files |
-| `edit [names]` | Open matching bin files in editor |
+| `list`, `ls [prefixes]` | List catalog entries, with shadowed claims |
+| `edit [names]` | Open the source each name dispatches to |
+| `complete [word]` | Print every command name and alias starting with `word` |
+| `docs [--json]` | Print the catalog as a Markdown table, or as JSON |
 
 ### add
 
@@ -66,7 +68,7 @@ Native Hiiro options handle `--help` and the `--` end-of-options marker.
 
 ### edit
 
-Open matching `h-*` bin files in your editor. With no arguments, opens `h-bin` itself.
+Open the source each name resolves to — the same file `h NAME` runs. An inline command opens the file that registers it; an alias opens its command. With no arguments, opens `h-bin` itself. An ambiguous or unknown name prints an error, exits 1, and opens nothing; `h edit NAME` behaves the same.
 
 **Examples**
 
@@ -74,14 +76,39 @@ Open matching `h-*` bin files in your editor. With no arguments, opens `h-bin` i
 h bin edit
 h bin edit branch
 h bin edit pr notify
+h bin edit svc         # lib/hiiro/root_commands.rb (service)
 ```
+
 ### list
 
-List `h-*` executables found in PATH. With no arguments, lists all. With names, filters to those matching `h-<name>` or `<name>` patterns. Deduplicates by basename (first occurrence wins).
+List catalog entries: name and aliases, arguments, kind (`inline` or `external`), and source, followed by any shadowed claims. With prefixes, lists the entries whose name or alias starts with one of them.
+
+```text
+  pr          (external)  $BIN/h-pr
+              shadows external /Users/me/proj/hiiro/bin/h-pr
+  pr-monitor  (external)  $BIN/h-pr-monitor
+```
 
 **Examples**
 
 ```bash
 h bin list
 h bin list branch pr
+```
+
+### complete
+
+Print, one per line and sorted, every name and alias that starts with `word` (all of them without a word). Each printed word resolves exactly to one catalog entry.
+
+```bash
+h bin complete se      # service, session, setup, ...
+```
+
+### docs
+
+Print the catalog as a Markdown table (`Command | Aliases | Kind | Arguments | Source | Shadowed`). With `--json`, print an array of entries:
+
+```js
+[{ name: "service", kind: "inline", source: "/path/lib/hiiro/root_commands.rb:171",
+   aliases: ["svc"], arguments: "[*svc_args]", shadowed: [] }]
 ```

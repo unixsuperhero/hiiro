@@ -13,7 +13,9 @@ class Hiiro
       @context = context
     end
 
+    # A callable context (the root `h` mounts pass one) resolves on first use, so help needs no task.
     def context
+      @context = @context.call if @context.respond_to?(:call)
       @context ||= CurrentTask.new(pin: false).context
     end
 
@@ -89,7 +91,7 @@ class Hiiro
 
     def self.build_hiiro(parent_hiiro, af, context: parent_hiiro.context, args: parent_hiiro.args)
       af.context = context
-      parent_hiiro.make_child(:file, args, context: context) do |h|
+      parent_hiiro.make_child(:file, args, context: -> { af.context }) do |h|
         h.add_subcmd(:ls) do |app_name=nil|
           af.list(app_name: app_name)
         end

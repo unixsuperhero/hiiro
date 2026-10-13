@@ -8,17 +8,6 @@ require "ostruct"
 # Use in-memory SQLite for tests so model files load cleanly and no real DB is touched
 ENV['HIIRO_TEST_DB'] = 'sqlite::memory:'
 
-# Stub out plugin loading to avoid side effects during tests
-class Hiiro
-  class Config
-    class << self
-      def plugin_files
-        []
-      end
-    end
-  end
-end
-
 require "hiiro"
 
 # Create tables so Sequel models are usable in tests
@@ -220,6 +209,11 @@ class Hiiro
       # Eval the block in our harness context
       harness.instance_eval(&block) if block
       harness
+    end
+
+    # Same helper as Hiiro#todo_manager.
+    def todo_manager
+      @todo_manager ||= Hiiro::TodoManager.new
     end
 
     # Allow tests to add stub methods to the harness

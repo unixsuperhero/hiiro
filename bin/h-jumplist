@@ -6,8 +6,6 @@ require "fileutils"
 JUMPLIST_DIR = File.join(Dir.home, '.config', 'hiiro', 'jumplist')
 MAX_SIZE = 50
 
-FileUtils.mkdir_p(JUMPLIST_DIR)
-
 def client_name
   @client_name ||= `tmux display-message -p '\#{client_name}'`.strip.tr('/', '_')
 end
@@ -26,6 +24,7 @@ def read_entries
 end
 
 def write_entries(entries)
+  FileUtils.mkdir_p(JUMPLIST_DIR)
   File.write(jumplist_file, entries.join("\n") + "\n")
 end
 
@@ -35,6 +34,7 @@ def get_pos
 end
 
 def set_pos(n)
+  FileUtils.mkdir_p(JUMPLIST_DIR)
   File.write(pos_file, n.to_s)
 end
 

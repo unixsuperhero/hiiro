@@ -143,7 +143,7 @@ def restart_service
   end
 end
 
-Hiiro.run(*ARGV, plugins: [Pins]) {
+Hiiro.run(*ARGV, plugins: [:Pins]) {
   add_subcmd(:setup, :install) { |*_args|
     installer = File.join(PROJECT_ROOT, 'bin', 'install')
     abort "Installer not found: #{installer}\nSet PORTFOLIO_HOME to the project directory." unless File.executable?(installer)

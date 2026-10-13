@@ -1,5 +1,5 @@
 require 'sequel'
-require 'securerandom'
+require 'open3'
 
 class Hiiro
   class Invocation < Sequel::Model(:invocations)
@@ -36,74 +36,64 @@ class Hiiro
       key: :invocation_id,
       order: :depth
 
-    # Record this process's context. Creates a new Invocation if none exists
-    # (no HIIRO_INVOCATION_ID env var), or appends a resolution if one does.
-    # Returns the invocation.
-    def self.record!(bin:, subcmd: nil, args: [])
-      invocation_id = ENV['HIIRO_INVOCATION_ID']
+    # Write the invocation `id` (from its root frame, unless it already exists)
+    # and each frame not yet written, as resolutions in order. See Hiiro::Runtime.
+    def self.record_frames!(id, frames)
+      db.transaction do
+        unless where(id: id).count.positive?
+          root = frames.first
+          dataset.insert_conflict.insert(
+            id: id,
+            command: [root['bin'], root['subcmd'], *Array(root['args'])].compact.join(' '),
+            pwd: root['pwd'],
+            task: ENV['HIIRO_TASK'],
+            worktree: detect_worktree(root['pwd']),
+            git_branch: detect_git_branch(root['pwd']),
+            herdr_workspace: ENV['HERDR_WORKSPACE_ID'],
+            herdr_tab: ENV['HERDR_TAB_ID'],
+            herdr_pane: ENV['HERDR_PANE_ID'],
+            entered_at: Time.now.iso8601
+          )
+        end
 
-      if invocation_id
-        inv = where(id: invocation_id).first
-        if inv
-          depth = InvocationResolution.where(invocation_id: invocation_id).count
+        frames.each do |frame|
+          resolutions = InvocationResolution.where(invocation_id: id)
+          next if resolutions.where(frame_id: frame['id']).count.positive?
+
           InvocationResolution.create(
-            invocation_id: invocation_id,
-            depth: depth,
-            bin: bin,
-            subcmd: subcmd,
-            args_json: Hiiro::DB::JSON.dump(Array(args)),
+            invocation_id: id,
+            frame_id: frame['id'],
+            depth: resolutions.count,
+            bin: frame['bin'],
+            subcmd: frame['subcmd'],
+            args_json: Hiiro::DB::JSON.dump(Array(frame['args'])),
             created_at: Time.now.iso8601
           )
         end
-        inv
-      else
-        id = "inv_#{Time.now.strftime('%Y%m%d%H%M%S%L')}_#{SecureRandom.hex(4)}"
-        ENV['HIIRO_INVOCATION_ID'] = id
-
-        command = ([bin] + Array(args)).join(' ')
-        inv = create(
-          id: id,
-          command: command,
-          pwd: Dir.pwd,
-          task: ENV['HIIRO_TASK'],
-          worktree: detect_worktree,
-          git_branch: detect_git_branch,
-          herdr_workspace: ENV['HERDR_WORKSPACE_ID'],
-          herdr_tab: ENV['HERDR_TAB_ID'],
-          herdr_pane: ENV['HERDR_PANE_ID'],
-          entered_at: Time.now.iso8601
-        )
-
-        InvocationResolution.create(
-          invocation_id: id,
-          depth: 0,
-          bin: bin,
-          subcmd: subcmd,
-          args_json: Hiiro::DB::JSON.dump(Array(args)),
-          created_at: Time.now.iso8601
-        )
-
-        inv
       end
+      self[id]
     rescue => e
       warn "Invocation tracking error: #{e}" if ENV['HIIRO_DEBUG']
       nil
     end
 
-    private
-
-    def self.detect_git_branch
-      `git rev-parse --abbrev-ref HEAD 2>/dev/null`.chomp.then { |b| b.empty? ? nil : b }
-    rescue
-      nil
+    def self.detect_git_branch(dir)
+      git_line(dir, 'rev-parse', '--abbrev-ref', 'HEAD')
     end
 
-    def self.detect_worktree
-      `git rev-parse --show-toplevel 2>/dev/null`.chomp.then { |w| w.empty? ? nil : w }
-    rescue
-      nil
+    def self.detect_worktree(dir)
+      git_line(dir, 'rev-parse', '--show-toplevel')
     end
 
+    def self.git_line(dir, *args)
+      return nil unless dir && Dir.exist?(dir)
+
+      out, status = Open3.capture2('git', '-C', dir, *args, err: File::NULL)
+      line = out.chomp
+      status.success? && !line.empty? ? line : nil
+    rescue SystemCallError
+      nil
+    end
   end
 
   class InvocationResolution < Sequel::Model(:invocation_resolutions)
@@ -113,12 +103,19 @@ class Hiiro
       db.create_table?(:invocation_resolutions) do
         primary_key :id
         String :invocation_id, null: false
+        String :frame_id
         Integer :depth, default: 0
         String :bin
         String :subcmd
         String :args_json
         String :created_at
       end
+    end
+
+    def self.migrate!(db)
+      return if db.schema(:invocation_resolutions).map(&:first).include?(:frame_id)
+
+      db.alter_table(:invocation_resolutions) { add_column :frame_id, String }
     end
 
     many_to_one :invocation, class: 'Hiiro::Invocation', key: :invocation_id

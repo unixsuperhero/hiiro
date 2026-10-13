@@ -15,4 +15,10 @@ class RequirePathsTest < Minitest::Test
 
     assert_empty missing
   end
+
+  def test_every_lazily_loaded_constant_is_defined_by_its_file
+    undefined = Hiiro::DOMAIN.values.flatten.reject { |name| Hiiro.const_get(name).is_a?(Module) }
+
+    assert_empty undefined
+  end
 end

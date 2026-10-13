@@ -2,12 +2,10 @@
 
 require 'hiiro'
 
-tm = Hiiro::TodoManager.new
-
 Hiiro.run(*ARGV) do
   select_todo = ->(pool) {
     return nil if pool.empty?
-    map = pool.each_with_object({}) { |item, h| h[tm.format_item(item)] = item.id.to_s }
+    map = pool.each_with_object({}) { |item, h| h[todo_manager.format_item(item)] = item.id.to_s }
     fuzzyfind_from_map(map)
   }
 
@@ -30,21 +28,21 @@ Hiiro.run(*ARGV) do
     end
 
     items = if status_filter
-      tm.filter_by_status(*status_filter.split(','))
+      todo_manager.filter_by_status(*status_filter.split(','))
     elsif tag_filter
-      tm.filter_by_tag(tag_filter)
+      todo_manager.filter_by_tag(tag_filter)
     elsif task_filter
-      tm.filter_by_task(task_filter)
+      todo_manager.filter_by_task(task_filter)
     elsif show_all
-      tm.all
+      todo_manager.all
     else
-      tm.active
+      todo_manager.active
     end
 
     if items.empty?
       puts "No todo items found."
     else
-      puts tm.list(items)
+      puts todo_manager.list(items)
     end
   end
 
@@ -54,18 +52,18 @@ Hiiro.run(*ARGV) do
 
   add_subcmd(:add) do |*add_args|
     if add_args.empty?
-      new_items = tm.edit_items(hiiro: self)
+      new_items = todo_manager.edit_items(hiiro: self)
       if new_items.empty?
         puts "No items added."
         next
       end
 
-      tm.add_items(new_items)
+      todo_manager.add_items(new_items)
       if new_items.length == 1
-        puts "Added: #{tm.format_item(new_items.first)}"
+        puts "Added: #{todo_manager.format_item(new_items.first)}"
       else
         puts "Added #{new_items.length} items:"
-        new_items.each { |item| puts "  #{tm.format_item(item)}" }
+        new_items.each { |item| puts "  #{todo_manager.format_item(item)}" }
       end
       next
     end
@@ -89,16 +87,16 @@ Hiiro.run(*ARGV) do
       exit 1
     end
 
-    item = tm.add(text, tags: tags)
-    puts "Added: #{tm.format_item(item)}"
+    item = todo_manager.add(text, tags: tags)
+    puts "Added: #{todo_manager.format_item(item)}"
   end
 
   add_subcmd(:rm) do |*rm_args|
     id_or_index = rm_args.shift
-    id_or_index ||= select_todo.call(tm.active)
+    id_or_index ||= select_todo.call(todo_manager.active)
     next puts "No item selected." if id_or_index.nil?
 
-    item = tm.remove(id_or_index)
+    item = todo_manager.remove(id_or_index)
     if item
       puts "Removed: #{item.text}"
     else
@@ -113,7 +111,7 @@ Hiiro.run(*ARGV) do
 
   add_subcmd(:change) do |*change_args|
     id_or_index = change_args.shift
-    id_or_index ||= select_todo.call(tm.active)
+    id_or_index ||= select_todo.call(todo_manager.active)
     next puts "No item selected." if id_or_index.nil?
 
     changes = {}
@@ -133,9 +131,9 @@ Hiiro.run(*ARGV) do
       end
     end
 
-    item = tm.change(id_or_index, **changes)
+    item = todo_manager.change(id_or_index, **changes)
     if item
-      puts "Updated: #{tm.format_item(item)}"
+      puts "Updated: #{todo_manager.format_item(item)}"
     else
       puts "Item not found: #{id_or_index}"
       exit 1
@@ -144,12 +142,12 @@ Hiiro.run(*ARGV) do
 
   add_subcmd(:start) do |*start_args|
     id_or_index = start_args.shift
-    id_or_index ||= select_todo.call(tm.active)
+    id_or_index ||= select_todo.call(todo_manager.active)
     next puts "No item selected." if id_or_index.nil?
 
-    item = tm.start(id_or_index)
+    item = todo_manager.start(id_or_index)
     if item
-      puts "Started: #{tm.format_item(item)}"
+      puts "Started: #{todo_manager.format_item(item)}"
     else
       puts "Item not found: #{id_or_index}"
       exit 1
@@ -158,12 +156,12 @@ Hiiro.run(*ARGV) do
 
   add_subcmd(:done) do |*done_args|
     id_or_index = done_args.shift
-    id_or_index ||= select_todo.call(tm.active)
+    id_or_index ||= select_todo.call(todo_manager.active)
     next puts "No item selected." if id_or_index.nil?
 
-    item = tm.done(id_or_index)
+    item = todo_manager.done(id_or_index)
     if item
-      puts "Done: #{tm.format_item(item)}"
+      puts "Done: #{todo_manager.format_item(item)}"
     else
       puts "Item not found: #{id_or_index}"
       exit 1
@@ -172,12 +170,12 @@ Hiiro.run(*ARGV) do
 
   add_subcmd(:skip) do |*skip_args|
     id_or_index = skip_args.shift
-    id_or_index ||= select_todo.call(tm.active)
+    id_or_index ||= select_todo.call(todo_manager.active)
     next puts "No item selected." if id_or_index.nil?
 
-    item = tm.skip(id_or_index)
+    item = todo_manager.skip(id_or_index)
     if item
-      puts "Skipped: #{tm.format_item(item)}"
+      puts "Skipped: #{todo_manager.format_item(item)}"
     else
       puts "Item not found: #{id_or_index}"
       exit 1
@@ -186,12 +184,12 @@ Hiiro.run(*ARGV) do
 
   add_subcmd(:reset) do |*reset_args|
     id_or_index = reset_args.shift
-    id_or_index ||= select_todo.call(tm.completed)
+    id_or_index ||= select_todo.call(todo_manager.completed)
     next puts "No item selected." if id_or_index.nil?
 
-    item = tm.reset(id_or_index)
+    item = todo_manager.reset(id_or_index)
     if item
-      puts "Reset: #{tm.format_item(item)}"
+      puts "Reset: #{todo_manager.format_item(item)}"
     else
       puts "Item not found: #{id_or_index}"
       exit 1
@@ -205,16 +203,16 @@ Hiiro.run(*ARGV) do
       exit 1
     end
 
-    items = tm.search(query)
+    items = todo_manager.search(query)
     if items.empty?
       puts "No items matching: #{query}"
     else
-      puts tm.list(items)
+      puts todo_manager.list(items)
     end
   end
 
   add_subcmd(:editall) do |*args|
-    tm.edit_items(tm.all, hiiro: self)
+    todo_manager.edit_items(todo_manager.all, hiiro: self)
   end
 
   add_subcmd(:help) do |*args|

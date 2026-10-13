@@ -3,13 +3,11 @@
 require 'hiiro'
 
 Hiiro.run(*ARGV) do
-  reminders = Hiiro::Reminder
-
   %w[add once every].each do |action|
     add_subcmd(action.to_sym) do |message = nil, time_arg = nil, sound = nil, *args|
       if message.nil?
         if action == 'add'
-          puts 'Saved reminders.' if reminders.edit(hiiro: self)
+          puts 'Saved reminders.' if Hiiro::Reminder.edit(hiiro: self)
         else
           puts "Usage: h remind #{action} 'message' <time> [sound]"
         end
@@ -19,20 +17,20 @@ Hiiro.run(*ARGV) do
       if action == 'every'
         once, trigger_at, interval = false, nil, time_arg || '1h'
       else
-        once, trigger_at, interval = reminders.parse_time_arg(time_arg)
+        once, trigger_at, interval = Hiiro::Reminder.parse_time_arg(time_arg)
         if action == 'once'
           once = true
           trigger_at ||= (Time.now + (Hiiro::Duration.parse(time_arg || '1h')&.seconds || 3600)).iso8601
         end
       end
-      row = reminders.add(message: message, interval: interval, sound: sound, once: once, trigger_at: trigger_at)
+      row = Hiiro::Reminder.add(message: message, interval: interval, sound: sound, once: once, trigger_at: trigger_at)
       schedule = row.one_time? ? "at #{Hiiro::TimeInput.parse(row.trigger_at).strftime('%Y-%m-%d %H:%M')}" : "every #{row.interval || '1h'}"
       puts "Saved #{row.one_time? ? 'one-time' : 'recurring'} reminder ##{row.id}: #{row.message} (#{schedule})"
     end
   end
 
   add_subcmd(:ls, :list) do |*args|
-    rows = reminders.order(:id).all
+    rows = Hiiro::Reminder.order(:id).all
     if rows.empty?
       puts 'No reminders saved.'
     else
@@ -43,9 +41,9 @@ Hiiro.run(*ARGV) do
   %w[remove pause resume].each do |action|
     add_subcmd(action.to_sym) do |ref = nil, *args|
       if ref
-        row = reminders[ref.to_i] if ref.match?(/\A[1-9]\d*\z/)
+        row = Hiiro::Reminder[ref.to_i] if ref.match?(/\A[1-9]\d*\z/)
       else
-        rows = reminders.order(:id).all
+        rows = Hiiro::Reminder.order(:id).all
         rows.select!(&:enabled) if action == 'pause'
         rows.reject!(&:enabled) if action == 'resume'
         if rows.empty?
@@ -54,16 +52,16 @@ Hiiro.run(*ARGV) do
         end
         choices = rows.to_h { |candidate| [candidate.display_string, candidate.id] }
         id = fuzzyfind_from_map(choices)
-        row = reminders[id] if id
+        row = Hiiro::Reminder[id] if id
       end
       unless row
         puts 'Reminder not found'
         next
       end
       changed = if action == 'remove'
-        reminders.remove(row.id)
+        Hiiro::Reminder.remove(row.id)
       else
-        reminders.set_enabled(row.id, action == 'resume')
+        Hiiro::Reminder.set_enabled(row.id, action == 'resume')
       end
       puts(changed ? "#{ { 'remove' => 'Removed', 'pause' => 'Paused', 'resume' => 'Resumed' }.fetch(action)} reminder: #{changed.message}" : 'Reminder not found')
     end
@@ -75,22 +73,22 @@ Hiiro.run(*ARGV) do
       notification_args += ['-s', row.sound] if row.sound
       Hiiro::Notification.show(OpenStruct.new(args: notification_args))
     end
-    triggered = reminders.check_due(notify: notify)
+    triggered = Hiiro::Reminder.check_due(notify: notify)
     if args.include?('-v') || args.include?('--verbose')
       triggered.each { |row| puts "Triggered#{row.one_time? ? ' (one-time)' : ''}: #{row.message}" }
-      puts "Checked #{reminders.active.count} enabled reminders, triggered #{triggered.length}"
-      completed = reminders.where(once: true, enabled: false).count
+      puts "Checked #{Hiiro::Reminder.active.count} enabled reminders, triggered #{triggered.length}"
+      completed = Hiiro::Reminder.where(once: true, enabled: false).count
       puts "#{completed} completed one-time reminder(s) (use 'h remind clean' to remove)" if completed.positive?
     end
   end
 
   add_subcmd(:clean) do |*args|
-    removed = reminders.clean
+    removed = Hiiro::Reminder.clean
     puts(removed.positive? ? "Removed #{removed} completed one-time reminder(s)" : 'No completed one-time reminders to clean up')
   end
 
   add_subcmd(:editall) do |*args|
-    puts 'Saved reminders.' if reminders.edit(hiiro: self, reminders: reminders.order(:id).all)
+    puts 'Saved reminders.' if Hiiro::Reminder.edit(hiiro: self, reminders: Hiiro::Reminder.order(:id).all)
   end
 
   add_subcmd(:path) do |*args|

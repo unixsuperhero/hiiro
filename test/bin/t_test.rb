@@ -11,11 +11,6 @@ class TaskCommandTest < Minitest::Test
   LIB = File.expand_path('../../lib', __dir__)
 
   PRELOAD = <<~'RUBY'
-    class Hiiro
-      class Config
-        def self.plugin_files = []
-      end
-    end
     require 'hiiro'
     executor = Hiiro::Effects::NullExecutor.new
     JSON.parse(File.read(ENV.fetch('TASK_TEST_STUBS'))).each do |pattern, response|

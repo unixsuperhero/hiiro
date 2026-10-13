@@ -5,7 +5,7 @@ require 'tempfile'
 require 'yaml'
 
 # Compatibility command: the legacy session name maps to a Herdr workspace.
-Hiiro.run(*ARGV, tasks: true, plugins: [Pins]) do
+Hiiro.run(*ARGV, tasks: true, plugins: [:Pins]) do
   herdr = herdr_client
   Hiiro::Herdr.add_resolvers(self)
 

@@ -7,8 +7,7 @@ require "fileutils"
 require "yaml"
 require "time"
 
-Hiiro.load_env
-hiiro = Hiiro.init(*ARGV, plugins: [Tmux, OldTask])
+hiiro = Hiiro.init(*ARGV, plugins: [:Tmux, :OldTask])
 
 tasks = hiiro.task_manager
 

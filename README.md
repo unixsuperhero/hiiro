@@ -233,7 +233,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h version` | Display the Hiiro version |
 | `h ping` | Simple test command (returns "pong") |
 | `h setup` | Install plugins and subcommands to system paths |
-| `h edit` | Open the h script in your editor |
+| `h edit [NAME...]` | Open the h script, or the source `h NAME` dispatches to (refuses ambiguous names) |
 | `h alert` | macOS desktop notifications via terminal-notifier |
 | `h herdr` | Herdr task popups plus Vim-style pane focus, movement, resize, swap, and zoom controls (`h herdr install`) |
 | `h task` | Same program as `t`: task records, todos, worktrees (`t NAME tree new`), and Herdr workspaces |
@@ -304,11 +304,31 @@ h ses ls      # matches h session ls
 h win         # matches h window
 ```
 
-If multiple commands match, the first match wins and a warning is logged (when logging is enabled).
+If multiple commands match, nothing runs: Hiiro lists the candidates and exits 1.
+
+### Command catalog
+
+`h`, help, `h edit NAME`, and `h bin list|edit|complete|docs` read one table (`Hiiro::Catalog`), so they agree on what runs.
+
+- **Candidates:** inline registrations (`add_subcmd` / `add_cmd`; extra names are aliases) and `h-NAME` executables on `PATH`. An executable candidate is a regular file, or a symlink to one, with the executable bit; directories, non-executables, and broken links are ignored. Discovery never runs a candidate.
+- **PATH:** searched in order and read when the command runs. An empty entry means the current directory, a relative entry resolves against it, and a repeated directory counts once.
+- **Precedence for a name:** an external `h-NAME` (first in PATH) beats an inline `NAME`, which beats an inline alias `NAME`. Every loser stays listed as *shadowed* under the winner; same-name copies later in PATH never make a prefix ambiguous.
+- **Prefixes:** an exact name or alias wins; otherwise a unique prefix. A child name yields to its parent (`h p` with only `pr` and `pr-monitor` runs `pr`). Unknown external grammar is not inspected.
+
+```sh
+h bin list pr        # winners for names starting with pr, with shadowed copies
+h bin complete se    # every name and alias starting with se
+h bin docs           # Markdown command table; --json for the catalog data
+h edit svc           # opens the file that defines `service` (alias svc)
+```
+
+### Lazy startup
+
+Importing `hiiro`, registering commands, help (`h`, `h queue`, `h version --help`, `t --help`), completion, and docs create no database, history, tags, or config/plugin directories. Persistence starts when an operation first uses it: that creates or upgrades the database, records the invocation, and (for `h`) tags the current branch with the current task. Every `Hiiro.init` adds a frame to `HIIRO_INVOCATION_FRAMES`, inherited by external commands, so `h registry add ...` records one invocation with resolutions `h registry` then `h-registry add`. An operation that never uses persistence (`h ping`) is not recorded.
 
 ## Plugins
 
-Plugins are Ruby modules loaded from `~/.config/hiiro/plugins/`:
+Plugins are Ruby modules a command names with `plugins: [:Name]`. The file `name.rb` loads from `~/.config/hiiro/plugins/`, else from the gem's `plugins/`, only for that command; importing `hiiro` loads none:
 
 | Plugin | Description |
 |--------|-------------|
@@ -434,7 +454,7 @@ and exits 1 without a backtrace; any other exception still prints its backtrace.
 Plugins are Ruby modules that extend Hiiro instances:
 
 ```ruby
-# ~/.config/hiiro/plugins/myplugin.rb
+# ~/.config/hiiro/plugins/my_plugin.rb
 
 module MyPlugin
   def self.load(hiiro)
@@ -461,7 +481,7 @@ end
 Load plugins in your command:
 
 ```ruby
-Hiiro.run(*ARGV, plugins: [MyPlugin]) do
+Hiiro.run(*ARGV, plugins: [:MyPlugin]) do   # requires my_plugin.rb on demand
   # ...
 end
 ```
@@ -472,7 +492,7 @@ The database, definitions, preferences, and some runtime files live in `~/.confi
 
 ```
 ~/.config/hiiro/
-  plugins/          # Plugin files (auto-loaded)
+  plugins/          # Plugin files (loaded when a command names them)
   hiiro.db          # Canonical mutable records
   services/         # Service instance state and per-instance launch scripts
   bg-history.txt    # Background command history
@@ -498,7 +518,7 @@ Runtime data lives separately:
 
 ### Persistence ownership
 
-Each durable type has one current owner. Startup creates or upgrades database schemas; it does not import legacy domain YAML.
+Each durable type has one current owner. The first operation that uses persistence creates or upgrades database schemas; it does not import legacy domain YAML.
 
 | Durable type | Owner |
 |-------------|-------|

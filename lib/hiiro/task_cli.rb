@@ -34,6 +34,8 @@ class Hiiro
       class Error < Hiiro::Error; end
 
       TASK_OPTIONS = %i[task find].freeze
+      # Defaults answer these with help before any task lookup touches the database.
+      HELP = %w[-h --help].freeze
 
       def task_options
         add_option :task, short: :t, desc: 'Task name (exact or unique prefix)'
@@ -785,7 +787,7 @@ class Hiiro
 
       def root_commands
         task_options
-        add_default { |*unexpected| no_args!(unexpected); list_tasks }
+        add_default { |*unexpected| next help if HELP.include?(unexpected.first); no_args!(unexpected); list_tasks }
         add_cmd(:help) { help }
         add_cmd(:list, :ls) { no_args!(opts.args); list_tasks }
         add_cmd(:show, args: ['task?'], opts: TASK_OPTIONS) { show(take_task_only(opts.args)) }
@@ -842,7 +844,7 @@ class Hiiro
             task_options
             add_option :app, desc: 'App directory to open in the workspace'
             add_option :sparse, short: :s, desc: 'Sparse checkout group (repeatable)', multi: true
-            add_default { |*rest| show_tree(take_task_only(rest, options: nil)) }
+            add_default { |*rest| HELP.include?(rest.first) ? help : show_tree(take_task_only(rest, options: nil)) }
             add_cmd(:help) { help }
             add_cmd(:new, args: ['name?', 'app?'], opts: [*TASK_OPTIONS, :app, :sparse]) do
               if opts.task
@@ -988,6 +990,7 @@ class Hiiro
         task_options
         add_option :plain, type: :flag, desc: 'Print only todo text, one per line'
         add_default do |*rest|
+          next help if HELP.include?(rest.first)
           task, rest = take_task(rest, orphan: true, options: nil)
           no_args!(rest)
           list_todos(task)

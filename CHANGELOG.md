@@ -26,6 +26,9 @@
 - `Shell.stream` / `stream_combined` no longer print every chunk twice.
 - `h bg` reports launch failures instead of returning nil, and concurrent launches no longer type into the same idle pane.
 - Herdr `new_tab` / `split_pane` with a command raise when Herdr does not run it.
+- Executable discovery reads `PATH` when a command runs instead of at load, honors empty and relative entries, and ignores directories, non-executables, and broken links. Same-name copies later in `PATH` no longer make a prefix ambiguous; dispatch, help, and edit pick the same file.
+- `h bin edit NAME` no longer opens non-Hiiro executables named `NAME`, and `h edit NAME` opens the command `NAME` dispatches to instead of the `h` script.
+- The invocation `command` column records the full root command line (it dropped the subcommand).
 
 ### Added
 - `h herdr` and `hh` pane controls for Vim-style focus, two-pane reflow, resize, swap, and zoom
@@ -34,6 +37,9 @@
 - `Hiiro::OwnedRun`: launch requests, durable run records (`~/.local/share/hiiro/runs/`), an allocated/started/ready/completed/failed state machine, a supervisor that records pid, start time, and actual exit status or signal, and process identity checks that reject reused pids. See `docs/owned-runs.md`.
 - `CommandSpecification.shell` keeps authored shell text distinct from argv; `Hiiro::ProcessOutcome` separates signals from exit codes.
 - Service `ready:` probes and `stop_timeout:`; `h bg ls` lists background runs with their outcomes.
+- `Hiiro::Catalog`: one command table (name, kind, source, aliases, shadowed claims) used by dispatch, help, `edit`, and the new `h bin complete` / `h bin docs [--json]`. Aliases from `add_subcmd(:service, :svc)` resolve to one entry.
+- `Hiiro::Runtime` and `hiiro/persistence`: persistence, invocation history, and task auto-tagging start on first persistent use; frames pass to external commands through `HIIRO_INVOCATION_FRAMES` so one root invocation keeps ordered resolutions across processes.
+- `t --help`, `t todo --help`, and `t tree --help` print help before any task lookup.
 
 ### Changed
 - Mutable domain records use SQLite without live YAML mirrors. `t`, `tt`, and `h todo` share database-owned todo IDs and targeted mutations.
@@ -48,12 +54,17 @@
 - Queue launches claim entries atomically, print `Launched:` only after the agent started, and leave allocation/start failures in `failed/` with the error; `kill` signals only the verified process and waits for its exit. Agent completion never changes task status.
 - Services run as instances keyed by definition, directory, task, and variations, each with its own run and scripts. Stop signals the verified process group (or runs `stop` with the real `$PID`), waits for the observed exit, and only then cleans up; unowned legacy records are not stopped by label.
 - Background commands reserve their Herdr pane under a lock and release it when the run finishes or fails.
+- `require 'hiiro'` loads only the framework; domain classes autoload. Import, registration, help, completion, and docs create no database, history, tags, or config/plugin directories. Operations that never use persistence are not recorded.
+- Plugins load only when a command names them (`plugins: [:Pins]`), from `~/.config/hiiro/plugins/` then the gem's `plugins/`. `Config.config_dir` and `plugin_dir` no longer create directories; the database directory is created when the database is first opened.
+- Root `h` commands live in `Hiiro::RootCommands` (`lib/hiiro/root_commands.rb`); `exe/h` runs them and `h bin` reads them. Root `service`/`run`/`file` mounts resolve task context on first use, so their help needs no task.
+- `h bin list` prints catalog entries (kind, source, shadowed claims) for prefixes rather than raw `h-NAME`/`NAME` PATH matches.
 
 ### Removed
 - Automatic legacy domain YAML import and mutable-record dual writers. Legacy sources remain explicit retained recovery inputs.
 - Obsolete todo file-path, saved-link snapshot, and task YAML backup APIs; `h db remigrate`, broad YAML retirement, and YAML/tar restore.
 - Conflicting first-match Environment/task/app/project selectors and queue pane-directory fallback joins.
 - Per-entry queue `.sh` launchers and the service launcher's `trap 'h service reset'`; the run supervisor owns completion.
+- `Hiiro.load_env`, eager plugin requiring at import, `Config.plugin_files`, `Invocation.record!`, the Runners PATH glob and its prefix/ambiguity helpers, and `Runners::Bin` / `Subcommand` `match?` / `exact_match?`.
 
 ## [0.1.384] - 2026-09-23
 

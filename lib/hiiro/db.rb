@@ -4,6 +4,7 @@ require 'time'
 require 'date'
 require 'digest'
 require 'yaml'
+require 'fileutils'
 
 class Hiiro
   module DB
@@ -38,10 +39,16 @@ class Hiiro
     class ImportError < StandardError; end
 
     class << self
-      def register(cls) = MODELS << cls
+      # A model registered after setup! (one defined by a bin) gets its table at once,
+      # so such a model registers at the end of its class body, after create_table!.
+      def register(cls)
+        MODELS << cls
+        install(connection, cls) if @setup_done
+      end
 
       def connection
         @connection ||= begin
+          FileUtils.mkdir_p(File.dirname(DB_FILE)) unless ENV.key?('HIIRO_TEST_DB')
           db = Sequel.connect(ENV.fetch('HIIRO_TEST_DB', "sqlite://#{DB_FILE}"), logger: nil)
           db.run('PRAGMA journal_mode=WAL')
           Sequel::Model.db = db
@@ -58,14 +65,7 @@ class Hiiro
             String :name, primary_key: true
             String :ran_at
           end
-          MODELS.each do |cls|
-            cls.create_table!(conn)
-            cls.migrate!(conn) if cls.respond_to?(:migrate!)
-            [cls, cls.superclass].each do |klass|
-              %i[@db_schema @columns @setter_methods].each { |cache| klass.instance_variable_set(cache, nil) }
-            end
-            cls.send(:get_db_schema)
-          end
+          MODELS.each { |cls| install(conn, cls) }
           ensure_todo_allocator!
           conn.create_table?(:migration_sources) do
             primary_key :id
@@ -89,6 +89,15 @@ class Hiiro
           end
         end
         @setup_done = true
+      end
+
+      def install(conn, cls)
+        cls.create_table!(conn)
+        cls.migrate!(conn) if cls.respond_to?(:migrate!)
+        [cls, cls.superclass].each do |klass|
+          %i[@db_schema @columns @setter_methods].each { |cache| klass.instance_variable_set(cache, nil) }
+        end
+        cls.send(:get_db_schema)
       end
 
       def migrated?
@@ -744,5 +753,3 @@ class Hiiro
   end
 end
 
-Hiiro::DB.connection
-Sequel::Model.require_valid_table = false

@@ -2,7 +2,7 @@
 
 require 'hiiro'
 
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, plugins: [:Pins]) do
   herdr = herdr_client
   Hiiro::Herdr.add_resolvers(self)
 

@@ -161,7 +161,7 @@ def append_gitignore(repo_root, patterns)
   [path, new_patterns]
 end
 
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, plugins: [:Pins]) do
   add_flag(:dry_run, short: :n, default: false)
   add_option(:model, short: :m, default: 'sonnet')
 

@@ -2,6 +2,8 @@
 
 List, edit, and search hiiro plugin files in `~/.config/hiiro/plugins/`.
 
+A plugin loads only for a command that names it, e.g. `Hiiro.run(*ARGV, plugins: [:Pins])`: `Pins` requires `pins.rb` from `~/.config/hiiro/plugins/`, else from the gem's `plugins/`. Importing `hiiro` loads no plugin and creates no plugin directory, and `h plugin path` prints the directory without creating it.
+
 ## Synopsis
 
 ```bash

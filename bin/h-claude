@@ -120,7 +120,7 @@ def claude_paths
     .select(&:exist?)
 end
 
-Hiiro.run(*ARGV, plugins: [Pins]) {
+Hiiro.run(*ARGV, plugins: [:Pins]) {
   add_subcmd(:split) { |*args|
     opts = opts.parse(args)
 

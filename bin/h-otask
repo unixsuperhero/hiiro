@@ -4,7 +4,7 @@ require "hiiro"
 require "fileutils"
 require "pathname"
 
-hiiro = Hiiro.init(*ARGV, plugins: [Tmux])
+hiiro = Hiiro.init(*ARGV, plugins: [:Tmux])
 
 class TaskManager
   attr_reader :hiiro

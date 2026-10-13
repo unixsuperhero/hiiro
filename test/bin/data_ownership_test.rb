@@ -10,13 +10,7 @@ class DataOwnershipCommandTest < Minitest::Test
   NOW = '2026-10-12T12:00:00Z'
 
   PRELOAD = <<~'RUBY'
-    class Hiiro
-      class Config
-        def self.plugin_files = []
-      end
-    end
     require 'hiiro'
-    require File.join(ENV.fetch('OWNERSHIP_REPO'), 'plugins/pins')
     fixed_time = Time.iso8601(ENV.fetch('OWNERSHIP_NOW'))
     Time.define_singleton_method(:now) { fixed_time }
     executor = Hiiro::Effects::NullExecutor.new

@@ -23,35 +23,29 @@ Hiiro.run do
     puts path
   end
 
-  add_subcmd(:list) do |*subcmd_names|
-    patterns = subcmd_names.flatten.compact.map { |sc|
-      sc.sub(/^(?!h-)/, '{h-,}')
-    }
+  # The root command's catalog: the same winners, aliases, and sources `h` dispatches.
+  root = -> { Hiiro::RootCommands.build(bin_name.delete_suffix('-bin')) }
 
-    all_bins = Hiiro::Bins.glob(patterns)
-    bins = all_bins.each_with_object({}) { |bin, h|
-      basename = File.basename(bin)
-      next if h.key?(basename)
-
-      h[basename] = bin
-    }.values
-
-    puts bins
+  add_subcmd(:list, :ls) do |*prefixes|
+    catalog = root.call.catalog
+    entries = if prefixes.empty?
+      catalog.entries
+    else
+      prefixes.flat_map { |prefix| catalog.complete(prefix).map { |token| catalog.resolve(token).entry } }.uniq
+    end
+    list_runners(entries)
   end
 
-  add_subcmd(:edit) do |*subcmd_names|
-    patterns = subcmd_names.flatten.compact.map { |sc|
-      sc.sub(/^(h-)?/, '{h-,}')
-    }
+  add_subcmd(:edit) do |*names|
+    names.empty? ? edit_files(bin) : root.call.edit_commands(*names)
+  end
 
-    all_bins = Hiiro::Bins.glob(patterns)
-    bins = all_bins.each_with_object({}) { |bin, h|
-      basename = File.basename(bin)
-      next if h.key?(basename)
+  add_subcmd(:complete) do |word = ''|
+    puts root.call.catalog.complete(word)
+  end
 
-      h[basename] = bin
-    }.values
-
-    edit_files(*bins)
+  add_cmd :docs, opts: %i[json] do
+    catalog = root.call.catalog
+    puts opts.json ? catalog.to_json : catalog.to_markdown
   end
 end

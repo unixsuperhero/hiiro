@@ -2,7 +2,7 @@
 
 require "hiiro"
 
-Hiiro.run(*ARGV, plugins: [Pins]) do
+Hiiro.run(*ARGV, plugins: [:Pins]) do
   add_subcmd(:edit) { edit_files(__FILE__) }
 
   add_subcmd(:select, :sk) { |*select_args|
