@@ -1,12 +1,14 @@
 # h queue
 
-Manage a directory-based prompt queue that launches native `omp` in Herdr tabs, explicit calling-pane splits, or the current process.
+Manage a directory-based prompt queue that launches native `omp` in Herdr tabs, explicit calling-pane splits, the current process, or (for a schedule) detached with no terminal.
 
 Queue directories live in `~/.local/share/hiiro/queue/{wip,pending,running,done,failed}/`. Each task is a Markdown file with optional YAML frontmatter.
 
 ## Launch ownership
 
-Launching resolves the prompt's context first, then claims the entry by renaming `pending/NAME.md` to `running/NAME.md`. The rename is atomic, so when several launchers (`run`, `watch`, `sadd`) race for one entry exactly one wins; the others print `Already claimed by another launcher: NAME`.
+Launching resolves the prompt's context first, then claims the entry by renaming `pending/NAME.md` to `running/NAME.md`. The rename is atomic, so when several launchers (`run`, `tick`, `sadd`) race for one entry exactly one wins; the others print `Already claimed by another launcher: NAME`.
+
+There is no foreground watcher. Unattended launching is `h queue tick`, run by an explicitly enabled schedule (see [h schedule](h-schedule.md)).
 
 Each launch is an owned run (see [owned runs](owned-runs.md)). `running/NAME.meta` records its `run_id` beside the working directory and Herdr IDs. A Herdr tab or split is only an allocation: `Launched:` is printed after the run's supervisor has actually started `omp`, and the entry moves to `done/` only when `omp` exits 0. A nonzero exit or a signal moves it to `failed/` with that outcome on the run. A tab or split Herdr did not create, a command Herdr did not run (the new tab or split is closed), an agent that cannot start, or a start not observed within 10 seconds fails the run and moves the entry to `failed/` with the error; nothing is left looking like it is running. `retry` returns it to `pending/`. The prompt file is never deleted.
 
@@ -163,7 +165,7 @@ cd "$directory" || exit $?
 
 ### ready
 
-Move a wip task to `pending`, making it eligible for `run`/`watch`. With no name and exactly one wip task, moves it automatically. With multiple wip tasks, opens a fuzzyfind selector.
+Move a wip task to `pending`, making it eligible for `run`/`tick`. With no name and exactly one wip task, moves it automatically. With multiple wip tasks, opens a fuzzyfind selector.
 
 **Examples**
 
@@ -250,14 +252,38 @@ h queue vadd "Fix the login bug"
 
 ---
 
-### watch
+### tick
 
-Poll the pending queue every 2 seconds and launch pending tasks as new Herdr tabs. Several watchers can run at once; each entry still has one claimant. Automatically restarts itself if a new Hiiro version is detected.
+One bounded pass for a scheduler (it replaces the former foreground `watch`). Under a lock on the queue directory it:
+
+1. settles `running/` entries whose run is still marked active but whose process is gone: the run is failed with `stale owner: process gone` and the entry moves to `failed/`;
+2. counts the entries still running (an active run, or one being launched);
+3. launches the oldest `pending/` entries, detached and without a terminal (`omp -p @PROMPT` in the prompt's directory), until `--max` (default 1) are running.
+
+A detached run's output goes to `running/NAME.log`, which moves with the entry to `done/` or `failed/` when the run's observed exit settles it. Overlapping ticks (two schedule runs, or a manual tick during a scheduled one) count and claim one at a time, so the bound holds and each entry has one claimant.
+
+```js
+// h queue tick --max 1 while job-a runs and job-b, job-c wait
+{ launched: [], stale: [], running: 1 }   // prints "tick: launched 0, running 1 of 1"
+```
+
+A queue schedule launches agents, so its definition must say `agent: true`:
+
+```yaml
+# ~/.config/hiiro/schedules.yml
+queue:
+  job: queue
+  every: 1m
+  agent: true
+  max_running: 2
+```
 
 **Examples**
 
 ```bash
-h queue watch
+h queue tick
+h queue tick --max 2
+h schedule enable queue
 ```
 
 ---
@@ -312,7 +338,7 @@ Exact names win over prefixes. Ambiguity uses mapped terminal selection or fails
 
 ## Validation failure handoff
 
-`h run queue [RUN_ID]` adds a pending prompt for a validation run's retained failures (from `h run`, `h js all`, or `h ch make`). It goes through the same `add` path and context validation as any prompt, and only writes the file; the queue launches it when you run `h queue run` or a watcher picks it up.
+`h run queue [RUN_ID]` adds a pending prompt for a validation run's retained failures (from `h run`, `h js all`, or `h ch make`). It goes through the same `add` path and context validation as any prompt, and only writes the file; the queue launches it when you run `h queue run` or an enabled queue schedule's `tick` picks it up.
 
 ```yaml
 ---

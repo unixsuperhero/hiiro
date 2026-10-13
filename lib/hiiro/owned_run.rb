@@ -326,9 +326,11 @@ class Hiiro
         raise
       end
 
-      def detached(request, on_allocated: nil)
+      # With log:, the supervisor and the child it spawns write stdout and stderr there.
+      def detached(request, on_allocated: nil, log: nil)
         run = allocate(request, nil, on_allocated)
-        pid = Process.spawn(*supervisor_argv(run.id), in: File::NULL, pgroup: true)
+        output = log ? { out: [log, 'a'], err: [:child, :out] } : {}
+        pid = Process.spawn(*supervisor_argv(run.id), in: File::NULL, pgroup: true, **output)
         Process.detach(pid)
         wait_started(run)
       end

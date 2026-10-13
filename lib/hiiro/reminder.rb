@@ -82,9 +82,25 @@ class Hiiro
       end
     end
 
-    def self.check_due(now: Time.now, notify:)
+    # One claim per reminder occurrence (Hiiro::Job), so overlapping checks
+    # deliver it once. The checkpoint advances only after a delivery succeeded;
+    # a failed delivery is recorded as failed and retried by the next check.
+    # A crash between delivery and checkpoint can repeat a notification once:
+    # delivery is at least once, never exactly once.
+    #   => [[row, JobOutcome], …] for the occurrences this check attempted
+    def self.check_due(now: Time.now, deliver:)
       due(now: now).filter_map do |row|
-        mark_triggered(row.id, now: now, expected_checkpoint: row.schedule_checkpoint) { |current| notify.call(current) }
+        expected = row.schedule_checkpoint
+        outcome = Job.perform("reminder:#{row.id}", row.occurrence, context: { 'message' => row.message }, now: now) do
+          if !deliver.call(row)
+            ['failed', 'notification delivery failed; retried on the next check']
+          elsif mark_triggered(row.id, now: now, expected_checkpoint: expected)
+            ['completed', 'delivered']
+          else
+            ['completed', 'delivered; the reminder changed meanwhile, so its checkpoint was left as edited']
+          end
+        end
+        outcome && [row, outcome]
       end
     end
 
@@ -173,6 +189,17 @@ class Hiiro
     def one_time? = self[:once] == true
     def interval_seconds = Duration.parse(interval)&.seconds || 3600
     def schedule_checkpoint = values.slice(*SCHEDULING_FIELDS)
+
+    # The occurrence a due check claims: the trigger time, or the end of the
+    # current interval (the first check of a recurring reminder is its own occurrence).
+    def occurrence
+      return trigger_at if one_time?
+      return "first:#{created_at}" unless last_triggered
+
+      (TimeInput.parse(last_triggered).time + interval_seconds).utc.iso8601
+    rescue ArgumentError
+      "first:#{created_at}"
+    end
 
     def due?(now: Time.now)
       return false unless enabled

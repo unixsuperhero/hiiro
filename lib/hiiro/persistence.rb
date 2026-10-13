@@ -6,7 +6,7 @@ Hiiro::DB.connection
 Sequel::Model.require_valid_table = false
 
 %w[invocation link capture branch check_run tags task_record app_record assignment todo
-   pinned_pr pr_monitor_checkpoint project pane_home pin_record reminder registry].each { |model| require_relative model }
+   pinned_pr pr_monitor_checkpoint project pane_home pin_record reminder registry job schedule].each { |model| require_relative model }
 
 Hiiro::DB.setup!
 Hiiro::Runtime.started!

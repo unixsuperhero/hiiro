@@ -170,10 +170,36 @@ class Hiiro
           loop do
             render
 
+            if refresh_interval && !IO.select([input], nil, nil, refresh_interval)
+              refresh!
+              next
+            end
+
             result = handle_key(read_key(input))
             return result unless result == :continue
           end
         end
+      end
+
+      # Seconds between background refreshes while no key arrives; nil never refreshes.
+      def refresh_interval
+        nil
+      end
+
+      def refresh!
+      end
+
+      # New rows from a refresh. The mode, query, and horizontal scroll stay as
+      # they were; the cursor stays on the row with the same key, at the same
+      # distance from the top of the list, so nothing the user did is reset.
+      def replace_items(new_items, key: ->(item) { item })
+        selected = current_item && key.call(current_item)
+        offset = cursor - top
+        @items = new_items
+        index = selected && filtered_items.index { |item| key.call(item) == selected }
+        state.cursor = (index || cursor).clamp(0, [filtered_items.length - 1, 0].max)
+        state.top = [state.cursor - offset, 0].max
+        scroll_into_view(body_rows_budget)
       end
 
       def handle_key(key)

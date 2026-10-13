@@ -31,7 +31,7 @@ class Hiiro
     def settle(status)
       destination = File.join(root, status)
       FileUtils.mkdir_p(destination)
-      %w[.md .meta].each do |ext|
+      %w[.md .meta .log].each do |ext|
         File.rename(running_path(ext), File.join(destination, "#{name}#{ext}"))
       rescue Errno::ENOENT
         nil

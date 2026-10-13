@@ -137,11 +137,13 @@ class Hiiro
       end
 
       prompt_file = claim.running_path('.prompt')
-      agent = prompt_obj.ignore? ? %w[omp -p] : %w[omp]
+      # A detached run has no terminal, so the agent runs in print mode.
+      agent = prompt_obj.ignore? || mode == :detached ? %w[omp -p] : %w[omp]
       request = OwnedRun::LaunchRequest.new(
         owner: claim.owner,
         command: CommandSpecification.new(*agent, "@#{prompt_file}", cwd: working_dir),
         placement: { 'kind' => mode.to_s },
+        process_group: mode == :detached,
       )
       meta = {
         'run_id' => request.id,
@@ -166,6 +168,8 @@ class Hiiro
           launcher.herdr_tab(request, workspace: workspace, name: short_window_name(name), on_allocated: write_meta)
         when :current
           launcher.current(request, on_allocated: write_meta)
+        when :detached
+          launcher.detached(request, on_allocated: write_meta, log: claim.running_path('.log'))
         when :hsplit, :vsplit
           launcher.herdr_split(request, target: calling_pane, direction: mode == :hsplit ? :down : :right,
             on_allocated: write_meta)
@@ -305,6 +309,33 @@ class Hiiro
       run
     end
 
+    # One bounded pass for a scheduler: settles running entries whose process
+    # is gone, then launches the oldest pending entries detached until max are
+    # running. The lock makes overlapping passes count and claim one at a time.
+    #   => { launched: ['name', …], stale: ['name', …], running: 1 }
+    def tick(max: 1)
+      File.open(File.join(queue_root, '.tick.lock'), File::RDWR | File::CREAT, 0o600) do |lock|
+        lock.flock(File::LOCK_EX)
+        stale = entries_in(:running).filter_map do |entry|
+          run = run_for(entry.name, :running)
+          next unless run&.active? && run.process && !run.process.alive?
+
+          launcher.store.update(run.id) { |record| record.fail('stale owner: process gone') if record.active? }
+          QueueClaim.new(queue_root, entry.name).settle('failed')
+          entry.name
+        end
+        running = entries_in(:running).count { |entry| (run = run_for(entry.name, :running)).nil? || run.active? }
+        launched = []
+        pending = entries_in(:pending).sort_by(&:modified_at).map(&:name)
+        pending.first([max - running, 0].max).each do |name|
+          launch_in_mode(name, mode: :detached) && launched << name
+        rescue Hiiro::Error => e
+          puts "Launch failed: #{name}: #{e.message}"
+        end
+        { launched: launched, stale: stale, running: running + launched.length }
+      end
+    end
+
     def calling_pane!(location = context)
       terminal = location.terminal
       terminal.validate!(herdr)
@@ -406,33 +437,20 @@ class Hiiro
       { name: name, path: path }
     end
 
-    def self.hiiro_version
-      `gem which hiiro`.sub(/.*hiiro-/, '').sub(/\/.*/, '').strip
-    end
-
     def self.build_hiiro(parent_hiiro, q=nil, task_info: nil, context: nil, args: parent_hiiro.args)
       q ||= current(parent_hiiro, context: context)
 
       parent_hiiro.make_child(context: context || -> { q.context }, args: args) do |h|
-        h.add_subcmd(:watch) {
-          q.queue_dirs
-          current_version = hiiro_version
-          puts "Watching #{File.join(DIR, 'pending')} (v#{current_version}) ..."
-          puts "Press Ctrl-C to stop"
-          loops = 0
-          loop do
-            loops += 1
-            if current_version
-              latest = hiiro_version rescue nil
-
-              if latest && latest != current_version
-                puts "New hiiro version detected (#{latest}), restarting..."
-                exec('h', 'queue', 'watch')
-              end
-            end
-            q.tasks_in(:pending).each { |name| q.launch_task(name) }
-            sleep 2
+        h.add_subcmd(:tick) { |*args|
+          opts = Hiiro::Options.parse(args) do
+            option(:max, short: :m, default: '1', desc: 'Most entries running at once')
           end
+          max = Integer(opts.max, exception: false)
+          raise Hiiro::Error, "--max must be a positive integer" unless max&.positive?
+
+          result = q.tick(max: max)
+          result[:stale].each { |name| puts "Settled stale entry as failed: #{name}" }
+          puts "tick: launched #{result[:launched].length}, running #{result[:running]} of #{max}"
         }
 
         h.add_subcmd(:run) { |name = nil|

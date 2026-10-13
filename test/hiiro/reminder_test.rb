@@ -5,7 +5,7 @@ class ReminderTest < Minitest::Test
   NOW = Time.iso8601('2026-10-12T12:00:00Z')
 
   def setup
-    Reminder.dataset.delete
+    [Reminder, Hiiro::JobClaim, Hiiro::JobOutcome].each { |model| model.dataset.delete }
   end
 
   def teardown
@@ -97,9 +97,10 @@ class ReminderTest < Minitest::Test
     future = add('Future', once: true, trigger_at: '2026-10-12T13:00:00Z')
     paused = add('Paused', enabled: false)
     delivered = []
-    triggered = Reminder.check_due(now: NOW, notify: ->(row) { delivered << [row.id, row.message, row.sound] })
+    triggered = Reminder.check_due(now: NOW, deliver: ->(row) { delivered << [row.id, row.message, row.sound] })
     assert_equal [[recurring.id, 'Recurring', 'basso'], [once.id, 'Once', nil]], delivered
-    assert_equal [recurring.id, once.id], triggered.map(&:id)
+    assert_equal [[recurring.id, 'completed', 'delivered'], [once.id, 'completed', 'delivered']],
+      triggered.map { |row, outcome| [row.id, outcome.outcome, outcome.detail] }
     assert_equal [NOW.iso8601, true, '30m', 'basso'], Reminder[recurring.id].values.values_at(:last_triggered, :enabled, :interval, :sound)
     assert_equal [NOW.iso8601, false, nil, '2026-10-12T11:59:00Z'], Reminder[once.id].values.values_at(:last_triggered, :enabled, :interval, :trigger_at)
     assert_equal [false, true], [Reminder[recurring.id].due?(now: NOW + 1799), Reminder[recurring.id].due?(now: NOW + 1800)]
@@ -122,11 +123,45 @@ class ReminderTest < Minitest::Test
     assert_equal [[survivor.id, 'Survivor']], Reminder.all.map { |row| [row.id, row.message] }
   end
 
-  def test_failed_notification_does_not_advance_checkpoint
+  def test_failed_delivery_is_recorded_as_failed_and_retried_without_advancing_checkpoint
     row = add
-    assert_raises(RuntimeError) { Reminder.check_due(now: NOW, notify: ->(_) { raise 'Adapter failed' }) }
+    failed = Reminder.check_due(now: NOW, deliver: ->(_) { false })
+    assert_equal [[row.id, 'failed', 'notification delivery failed; retried on the next check', 1]],
+      failed.map { |current, outcome| [current.id, outcome.outcome, outcome.detail, outcome.attempt] }
     assert_equal [row.id, nil, true], Reminder[row.id].values.values_at(:id, :last_triggered, :enabled)
-    assert_equal [row.id], Reminder.check_due(now: NOW, notify: ->(_) {}).map(&:id)
+    assert_raises(RuntimeError) { Reminder.check_due(now: NOW, deliver: ->(_) { raise 'Adapter failed' }) }
+    assert_equal ['failed', 'RuntimeError: Adapter failed'], Hiiro::JobOutcome.order(:id).last.values.values_at(:outcome, :detail)
+    delivered = Reminder.check_due(now: NOW, deliver: ->(_) { true })
+    assert_equal [['completed', 3]], delivered.map { |_row, outcome| [outcome.outcome, outcome.attempt] }
+    assert_equal NOW.iso8601, Reminder[row.id].last_triggered
+    assert_equal [["reminder:#{row.id}", "first:2026-10-01T10:00:00Z", 3, 'completed']],
+      Hiiro::JobClaim.select_map(%i[definition occurrence attempt outcome])
+  end
+
+  def test_overlapping_check_skips_an_occurrence_another_live_worker_holds
+    row = add('Held', once: true, interval: nil, trigger_at: '2026-10-12T11:59:00Z')
+    Hiiro::Job.claim("reminder:#{row.id}", '2026-10-12T11:59:00Z', run_id: 'run-other', now: NOW)
+    delivered = []
+    skipped = Reminder.check_due(now: NOW, deliver: ->(current) { delivered << current.id })
+    assert_equal [], delivered
+    assert_equal [['skipped-overlap', 'occurrence held by run-other']], skipped.map { |_row, outcome| outcome.values.values_at(:outcome, :detail) }
+    assert_equal [nil, true], Reminder[row.id].values.values_at(:last_triggered, :enabled)
+  end
+
+  def test_reloaded_due_one_time_and_recurring_reminders_are_claimed_once
+    once = add('Once', once: true, interval: nil, trigger_at: '2026-10-12T11:59:00Z')
+    recurring = add('Recurring', interval: '30m', last_triggered: '2026-10-12T11:30:00Z')
+    delivered = []
+    deliver = ->(row) { delivered << row.id }
+    stale_rows = Reminder.due(now: NOW)
+    Reminder.check_due(now: NOW, deliver: deliver)
+    assert_equal [], Reminder.check_due(now: NOW + 5, deliver: deliver)
+    # A worker that loaded the rows before the first check finished still claims nothing.
+    stale_rows.each { |row| assert_nil Hiiro::Job.perform("reminder:#{row.id}", row.occurrence, now: NOW) { flunk 'claimed twice' } }
+    assert_equal [once.id, recurring.id], delivered
+    assert_equal [["reminder:#{once.id}", '2026-10-12T11:59:00Z'], ["reminder:#{recurring.id}", '2026-10-12T12:00:00Z']],
+      Hiiro::JobClaim.order(:id).select_map(%i[definition occurrence])
+    assert_equal '2026-10-12T12:30:00Z', Reminder[recurring.id].occurrence
   end
 
   def test_legacy_invalid_interval_and_checkpoint_keep_the_recurrence_fallback

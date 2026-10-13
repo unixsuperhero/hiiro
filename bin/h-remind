@@ -68,18 +68,28 @@ Hiiro.run(*ARGV) do
   end
 
   add_subcmd(:check) do |*args|
-    notify = lambda do |row|
+    deliver = lambda do |row|
       notification_args = ['-m', row.message, '-t', 'Reminder']
       notification_args += ['-s', row.sound] if row.sound
-      Hiiro::Notification.show(OpenStruct.new(args: notification_args))
+      Hiiro::Notification.deliver(notification_args)
     end
-    triggered = Hiiro::Reminder.check_due(notify: notify)
+    attempts = Hiiro::Reminder.check_due(deliver: deliver)
+    triggered = attempts.select { |_row, outcome| outcome.completed? }
+    failed = attempts.select { |_row, outcome| outcome.outcome == 'failed' }
     if args.include?('-v') || args.include?('--verbose')
-      triggered.each { |row| puts "Triggered#{row.one_time? ? ' (one-time)' : ''}: #{row.message}" }
+      attempts.each do |row, outcome|
+        case outcome.outcome
+        when 'completed' then puts "Triggered#{row.one_time? ? ' (one-time)' : ''}: #{row.message}"
+        when 'failed' then puts "Delivery failed (#{outcome.run_id}): #{row.message}"
+        else puts "Skipped (#{outcome.detail}): #{row.message}"
+        end
+      end
       puts "Checked #{Hiiro::Reminder.active.count} enabled reminders, triggered #{triggered.length}"
       completed = Hiiro::Reminder.where(once: true, enabled: false).count
       puts "#{completed} completed one-time reminder(s) (use 'h remind clean' to remove)" if completed.positive?
     end
+    failed.each { |row, _outcome| warn "Reminder ##{row.id} not delivered: notification failed; it stays due" }
+    exit 1 unless failed.empty?
   end
 
   add_subcmd(:clean) do |*args|
@@ -133,9 +143,16 @@ Hiiro.run(*ARGV) do
       Legacy reminders.yml is an explicit 'h db migrate' input, not a live store.
       Sounds may be placed in ~/.config/hiiro/sounds/ (name without extension).
 
-      Cron (configure explicitly with 'crontab -e'):
-        * * * * * #{File.expand_path('~/.rbenv/shims/h')} remind check
-      Notifications are not an exactly-once delivery service.
+      Scheduling (nothing runs until you enable it):
+        # ~/.config/hiiro/schedules.yml
+        reminders:
+          job: reminders
+          every: 1m
+        h schedule plan reminders     # show the launchd job without installing it
+        h schedule enable reminders   # register it with launchd
+      Each check claims a reminder occurrence once, so overlapping checks notify once.
+      A failed notification is recorded (h schedule status reminder:) and retried
+      by the next check. Notifications are at least once, not exactly once.
     HOWTO
   end
 end

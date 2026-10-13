@@ -44,15 +44,17 @@ All transitions go through `OwnedRun#transition`; any other move raises `OwnedRu
 
 - The launcher (`OwnedRun::Launcher`) allocates a place (current terminal, new Herdr tab or split, a reserved pane, or a detached process), writes the `allocated` record, hands it to the supervisor, and waits up to 10 seconds for `started`. A tab Herdr did not create, a command Herdr did not run, an `exec` that failed, or a start not observed in time becomes `failed` with an error, and the launch raises `OwnedRun::LaunchError`.
 - The supervisor (`OwnedRun::Supervisor`, `ruby -I LIB -r hiiro/owned_run`) runs in the allocated place. It spawns the child, records `started` with the child's pid and start time, polls the `ready` command when one is configured, waits for the child, and records the outcome. A child that cannot be spawned (missing executable or directory) is `failed` without running. If the launcher already gave up on the run, the supervisor does not start the child.
+- A detached launch given a log (`Launcher#detached(request, log: PATH)`, used by `h queue tick`) sends the supervisor's and the child's stdout and stderr to that file.
 - Interactive children (queue agents) share the terminal's foreground process group and receive Ctrl-C themselves. Isolated children (services) get their own process group; the supervisor forwards INT, TERM, HUP, and QUIT to it.
 
 ## Owners
 
 | Owner | Settled after the run finishes by | Completion means |
 |-------|-----------------------------------|------------------|
-| `queue` | `Hiiro::QueueClaim` moves `running/NAME.{md,meta}` to `done/` (exit 0) or `failed/` and removes the body | queue entry done; the task is untouched |
+| `queue` | `Hiiro::QueueClaim` moves `running/NAME.{md,meta,log}` to `done/` (exit 0) or `failed/` and removes the body | queue entry done; the task is untouched |
 | `background` | `Hiiro::PaneReservations` releases the reserved `h-bg` pane | nothing else |
 | `service` | nothing; `h service` reads the run for `ls` / `status` / `clean` | process ended |
+| `job` | the scheduling worker (`Hiiro::Job.execute`) writes the `job_outcomes` row and settles the occurrence claim; a later worker does it from this record if that worker died | the occurrence ran; see [h schedule](h-schedule.md) |
 
 Stopping uses the recorded identity: a pid is signalled only while `ps` still reports the recorded start time, so a reused pid is never mistaken for the run. Callers wait for the exit to be observed before cleaning up.
 

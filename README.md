@@ -47,6 +47,18 @@ Queue entries have one claimant and land in `done/` only on exit 0. The same ser
 
 `h run`, `h js all`, and `h ch make` run their commands through one validation runner: filenames reach tools as exact arguments (argv recipes, or `"$@"` in authored shell recipes), every command runs even after an earlier failure, the exit status is the first failure's, and failed logs are kept with their run id, cwd, times, and task context. `h run queue` turns a run's retained failures into a queue prompt without launching anything. See [h run](docs/h-run.md).
 
+## Scheduled work
+
+Reminders, the queue, the PR monitor, loop recipes, and plain commands run on a recurrence through `h schedule`, defined in `~/.config/hiiro/schedules.yml` and registered with launchd only by `h schedule enable NAME` (`plan` shows the exact plist first). Each run claims its occurrence once, runs under the owned-run supervisor with a timeout, and records one outcome:
+
+```js
+{ run_id: "run-…", definition: "nightly", occurrence: "2026-10-13 02:30 local", outcome: "failed", exit_code: 3,
+  log_path: "~/.local/share/hiiro/jobs/nightly/run-….log", artifacts: [{ path: "/work/out/report.txt", bytes: 120 }] }
+// outcomes: completed | failed | interrupted | startup-failed | stale-owner | skipped-overlap
+```
+
+`h schedule status`, `h schedule ui`, `h loop status|render|ui`, and failure notifications read these records; no agent writes status files or rebuilds dashboards. Polling (reminders, PR monitor) starts no agent; queue and prompt-loop schedules start one only when configured with `agent:`. See [h schedule](docs/h-schedule.md), [h remind](docs/h-remind.md), and [h loop](docs/h-loop.md).
+
 ## Installation
 
 ### Via RubyGems
@@ -299,6 +311,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | [`h git commit`](docs/h-commit.md#h-git-commit) | Plan logical commits for all pending changes with `claude`; `-n` previews without touching the index, and invalid plans or failures stop before or at the failing commit |
 | [`h extract`](#extract-files-directories-and-links) | Extract file paths, directories, and HTTP(S) links from text |
 | `h link` | Manage saved links with URL, description, and shorthand |
+| [`h loop`](docs/h-loop.md) | Recurring loop recipes run as schedules; status and `render` read recorded cycle outcomes |
 | [`h mcp`](docs/h-mcp.md) | Local MCP registrations, saved tool schemas, direct tool calls, and HTTP-only client sync (`require 'hiiro/mcp'`) |
 | `h pane` | Herdr pane management |
 | `h plugin` | Manage hiiro plugins (list, edit, search) |
@@ -306,7 +319,9 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h pr-monitor` | Notify tracked PR check, review, and dependency changes once (checkpointed); opt-in fix queueing |
 | `h cpr` | Run an `h pr` subcommand on the current branch's PR |
 | `h project` | Project navigation with Herdr workspace management |
-| `h queue` | Claude prompt queue with Herdr-based task execution |
+| `h queue` | Prompt queue with Herdr-based task execution; `tick` is the bounded one-shot pass a schedule runs |
+| [`h remind`](docs/h-remind.md) | Reminders delivered once per occurrence by `h remind check`; failed deliveries stay due |
+| [`h schedule`](docs/h-schedule.md) | Explicitly enabled launchd schedules for existing one-shot workers, with recorded outcomes and an outcome screen |
 | `h service` | Manage background dev services with env variations and groups |
 | `h file` | Track and open frequently-used files per app |
 | `h run` | Run dev tools (lint/test/format) against changed files; keep failed logs and queue them on request |
@@ -582,12 +597,13 @@ Each durable type has one current owner. The first operation that uses persisten
 | Project aliases and app mappings | SQLite `projects` and `apps`, `Hiiro::Project` and `Hiiro::AppRecord` |
 | Command pins and named pane homes | SQLite `pins` and `pane_homes`, `Hiiro::PinRecord` and `Hiiro::PaneHome` |
 | Reminders and scheduling checkpoints | SQLite `reminders`, `Hiiro::Reminder` |
+| Recurring work: occurrence claims, outcomes, and schedule checkpoints | SQLite `job_claims`, `job_outcomes`, and `schedule_checkpoints`, `Hiiro::Job`, `Hiiro::JobOutcome`, and `Hiiro::Schedule`; see [h schedule](docs/h-schedule.md) |
 | Generic named entries | SQLite `registry`, `Hiiro::RegistryEntry` through `Hiiro::Table` |
 | MCP registrations, saved catalogs, and sync ownership | SQLite `mcps` through `MCPRegistry`, and `registry` rows of type `mcp-sync`; see [h-mcp](docs/h-mcp.md) |
 | Tags | SQLite `tags`, `Hiiro::Tag` |
 | Captures (including retained validation failures), invocations, and resolutions | SQLite `captures`, `invocations`, and `invocation_resolutions`, `Hiiro::Capture`, `Hiiro::Invocation`, and `Hiiro::InvocationResolution` |
 | Import verification and row mappings | SQLite `schema_migrations`, `migration_sources`, and `migration_rows`, `Hiiro::DB` |
-| Service, tool, sparse, and table action definitions | `services.yml` through `Hiiro::ServiceManager`, `tools.yml` through `Hiiro::RunnerTool`, `sparse_groups.yml` through `Hiiro::SparseGroups`, and `tables.yml` through `Hiiro::TableActions` |
+| Service, tool, sparse, table action, and schedule definitions | `services.yml` through `Hiiro::ServiceManager`, `tools.yml` through `Hiiro::RunnerTool`, `sparse_groups.yml` through `Hiiro::SparseGroups`, `tables.yml` through `Hiiro::TableActions`, and `schedules.yml` plus `~/ai/loops/*/config.yml` through `Hiiro::Schedule` (read, never rewritten) |
 | Preferences and tracked app files | `config.yml` through `Hiiro::Config`, `app_files.yml` through `Hiiro::AppFiles` |
 | Runtime state, history, and notification logs | Service instance files through `Hiiro::ServiceManager`, background history and pane reservations through `h bg`, navigation history through `h jumplist`, and notification logs through `h notify` |
 | Launch and process outcomes | Run files under `~/.local/share/hiiro/runs/` through `Hiiro::OwnedRun`; see [owned runs](docs/owned-runs.md) |

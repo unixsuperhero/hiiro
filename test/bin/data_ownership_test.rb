@@ -16,10 +16,11 @@ class DataOwnershipCommandTest < Minitest::Test
     executor = Hiiro::Effects::NullExecutor.new
     herdr = Hiiro::Herdr.new(executor: executor)
     Hiiro.define_method(:herdr_client) { herdr }
-    Hiiro::Notification.define_singleton_method(:show) do |hiiro|
+    Hiiro::Notification.define_singleton_method(:deliver) do |args|
       File.open(ENV.fetch('OWNERSHIP_NOTIFICATIONS'), 'a') do |file|
-        file.puts JSON.generate(hiiro.args)
+        file.puts JSON.generate(args)
       end
+      true
     end
   RUBY
 

@@ -3,6 +3,7 @@
 require 'fileutils'
 require 'hiiro'
 require 'yaml'
+require 'json'
 
 TYPE_PRESETS = {
   'success' => { prefix: '[OK]', title: 'Success', sound: 'done' },
@@ -15,6 +16,60 @@ LOG_FILE = Hiiro::Config.data_path('notify_log.yml')
 CLAUDE_SETTINGS = File.join(Dir.home, '.claude', 'settings.json')
 CLAUDE_NOTIFICATION_CMD = %q(MSG=$(cat | jq -r '.message // "Needs input"'); h notify push -t info "$MSG")
 CLAUDE_STOP_CMD = %q(h notify push -t success 'Work completed')
+# The only hook entries Hiiro owns in Claude settings, matched by exact command.
+OWNED_CLAUDE_HOOKS = { 'Notification' => CLAUDE_NOTIFICATION_CMD, 'Stop' => CLAUDE_STOP_CMD }.freeze
+
+def read_claude_settings
+  return {} unless File.exist?(CLAUDE_SETTINGS)
+
+  settings = JSON.parse(File.read(CLAUDE_SETTINGS))
+  raise Hiiro::Error, "#{CLAUDE_SETTINGS} is not a JSON object; left unchanged" unless settings.is_a?(Hash)
+
+  settings
+rescue JSON::ParserError => e
+  raise Hiiro::Error, "#{CLAUDE_SETTINGS} is not valid JSON (#{e.message.lines.first.strip}); left unchanged"
+end
+
+def write_claude_settings(settings)
+  FileUtils.mkdir_p(File.dirname(CLAUDE_SETTINGS))
+  tmp = "#{CLAUDE_SETTINGS}.#{Process.pid}.tmp"
+  File.write(tmp, JSON.pretty_generate(settings) + "\n")
+  File.rename(tmp, CLAUDE_SETTINGS)
+end
+
+def owned_hook?(hook, command) = hook.is_a?(Hash) && hook['type'] == 'command' && hook['command'] == command
+
+# Appends each owned entry that is missing; every other event, group, and hook stays as it was.
+def add_claude_hooks(settings)
+  hooks = (settings['hooks'] ||= {})
+  OWNED_CLAUDE_HOOKS.to_h do |event, command|
+    groups = (hooks[event] ||= [])
+    present = groups.any? { |group| Array(group['hooks']).any? { |hook| owned_hook?(hook, command) } }
+    groups << { 'hooks' => [{ 'type' => 'command', 'command' => command }] } unless present
+    [event, present ? 'already present' : 'added']
+  end
+end
+
+# Removes only owned entries, and only the groups and event keys that removal emptied.
+def remove_claude_hooks(settings)
+  hooks = settings['hooks']
+  OWNED_CLAUDE_HOOKS.to_h do |event, command|
+    groups = hooks.is_a?(Hash) ? hooks[event] : nil
+    next [event, 'not present'] unless groups.is_a?(Array)
+
+    removed = 0
+    groups.reject! do |group|
+      next false unless group.is_a?(Hash) && group['hooks'].is_a?(Array)
+
+      before = group['hooks'].length
+      group['hooks'].reject! { |hook| owned_hook?(hook, command) }
+      removed += before - group['hooks'].length
+      before.positive? && group['hooks'].empty?
+    end
+    hooks.delete(event) if removed.positive? && groups.empty?
+    [event, removed.positive? ? 'removed' : 'not present']
+  end.tap { settings.delete('hooks') if hooks.is_a?(Hash) && hooks.empty? }
+end
 
 def read_log
   return [] unless File.exist?(LOG_FILE)
@@ -153,37 +208,28 @@ Hiiro.run(*ARGV, tasks: true) do
   end
 
   add_subcmd(:claude) do
-    require 'json'
-
-    read_settings = lambda do
-      File.exist?(CLAUDE_SETTINGS) ? JSON.parse(File.read(CLAUDE_SETTINGS)) : {}
-    rescue JSON::ParserError
-      {}
-    end
-    write_settings = ->(settings) { File.write(CLAUDE_SETTINGS, JSON.pretty_generate(settings)) }
-
     run_child(:claude) do |child|
-      child.add_subcmd(:setup, :add_hooks) do
-        settings = read_settings.call
-        settings['hooks'] ||= {}
-        settings['hooks']['Notification'] = [{ 'hooks' => [{ 'type' => 'command', 'command' => CLAUDE_NOTIFICATION_CMD }] }]
-        settings['hooks']['Stop'] = [{ 'hooks' => [{ 'type' => 'command', 'command' => CLAUDE_STOP_CMD }] }]
-        write_settings.call(settings)
-        puts "Updated #{CLAUDE_SETTINGS} with Herdr-backed Hiiro notifications"
+      child.add_subcmd(:setup, :add_hooks) do |*flags|
+        settings = read_claude_settings
+        results = add_claude_hooks(settings)
+        dry_run = flags.include?('--dry-run')
+        write_claude_settings(settings) if !dry_run && results.value?('added')
+        results.each { |event, result| puts "#{dry_run ? '[dry-run] ' : ''}#{event}: #{result}" }
+        puts "#{CLAUDE_SETTINGS}: #{results.value?('added') ? (dry_run ? 'would be updated' : 'updated') : 'unchanged'}"
       end
 
-      child.add_subcmd(:reset_hooks) do
+      child.add_subcmd(:reset_hooks, :remove_hooks) do |*flags|
         unless File.exist?(CLAUDE_SETTINGS)
           puts "#{CLAUDE_SETTINGS} not found"
           next
         end
 
-        settings = read_settings.call
-        %w[Notification Stop].each do |event|
-          hooks = settings.dig('hooks', event, 0, 'hooks') || []
-          hooks.reject! { |hook| hook['command']&.include?('h notify push') }
-        end
-        write_settings.call(settings)
+        settings = read_claude_settings
+        results = remove_claude_hooks(settings)
+        dry_run = flags.include?('--dry-run')
+        write_claude_settings(settings) if !dry_run && results.value?('removed')
+        results.each { |event, result| puts "#{dry_run ? '[dry-run] ' : ''}#{event}: #{result}" }
+        puts "#{CLAUDE_SETTINGS}: #{results.value?('removed') ? (dry_run ? 'would be updated' : 'updated') : 'unchanged'}"
       end
 
       child.add_subcmd(:load_hooks) do

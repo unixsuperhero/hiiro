@@ -1,0 +1,100 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run(*ARGV) do
+  schedule = Hiiro::Schedule
+
+  add_subcmd(:ls, :list) do |*args|
+    definitions = schedule.definitions
+    if definitions.empty?
+      puts "No schedules defined (#{schedule.config_path})."
+      next
+    end
+    definitions.each do |name, definition|
+      if definition.is_a?(Hiiro::Schedule::Invalid)
+        puts format('%-18s  invalid: %s', name, definition.error)
+        next
+      end
+      checkpoint = Hiiro::ScheduleCheckpoint.for(name)
+      state = checkpoint&.enabled ? 'enabled' : 'off'
+      last = checkpoint&.last_due ? "last #{checkpoint.last_outcome || 'skipped'} for #{checkpoint.last_due}" : 'never ran'
+      puts format('%-18s  %-10s  %-24s  %-7s  %s', name, definition.job, definition.recurrence_text, state, last)
+    end
+  end
+
+  add_subcmd(:plan) do |name = nil, *args|
+    raise Hiiro::Error, 'Usage: h schedule plan NAME [--plist]' unless name
+
+    definition = schedule.definition(name)
+    launchd = Hiiro::Schedule::Launchd.new
+    puts launchd.plan(definition)
+    puts launchd.plist(definition) if args.include?('--plist')
+  end
+
+  add_subcmd(:enable) do |name = nil|
+    raise Hiiro::Error, 'Usage: h schedule enable NAME' unless name
+
+    definition = schedule.definition(name)
+    launchd = Hiiro::Schedule::Launchd.new
+    schedule.enable(definition, launchd: launchd)
+    puts "Enabled #{name} as #{launchd.label(name)} (#{launchd.plist_path(name)})"
+  end
+
+  add_subcmd(:disable) do |name = nil|
+    raise Hiiro::Error, 'Usage: h schedule disable NAME' unless name
+
+    launchd = Hiiro::Schedule::Launchd.new
+    schedule.disable(name, launchd: launchd)
+    puts "Disabled #{name}; removed #{launchd.label(name)}"
+  end
+
+  # What launchd runs (with --scheduled, which does nothing unless enabled).
+  add_subcmd(:run) do |name = nil, *args|
+    raise Hiiro::Error, 'Usage: h schedule run NAME [--scheduled]' unless name
+
+    result = schedule.tick(schedule.definition(name), scheduled: args.include?('--scheduled'))
+    case result[:status]
+    when :disabled then puts "#{name}: not enabled; nothing run"
+    when :not_due then puts "#{name}: #{result[:occurrence].key} already handled; nothing run"
+    when :missed then puts "#{name}: #{result[:occurrence].key} missed beyond its grace; skipped"
+    else
+      outcome = result[:outcome]
+      puts "#{name}: #{outcome.occurrence} #{outcome.status_text} (#{outcome.run_id})#{outcome.detail ? ": #{outcome.detail}" : ''}"
+      puts "  log #{outcome.log_path}" if outcome.log_path
+      outcome.artifacts.each { |artifact| puts "  artifact #{artifact['path']} (#{artifact['bytes']} bytes)" }
+      exit 1 unless %w[completed skipped-overlap].include?(outcome.outcome)
+    end
+  end
+
+  add_subcmd(:status) do |*args|
+    opts = Hiiro::Options.parse(args) do
+      option(:limit, short: :n, default: '20', desc: 'Rows to show')
+    end
+    name = opts.args.first
+    known = name && schedule.definitions.key?(name)
+    if known
+      registration = Hiiro::Schedule::Launchd.new.status(name)
+      checkpoint = Hiiro::ScheduleCheckpoint.for(name)
+      puts "#{name}: #{checkpoint&.enabled ? 'enabled' : 'not enabled'}; launchd #{registration ? registration.map { |k, v| "#{k}=#{v}" }.join(', ') : 'not registered'}"
+      puts "  last #{checkpoint.last_outcome || 'skipped'} for #{checkpoint.last_due}#{checkpoint.detail ? ": #{checkpoint.detail}" : ''}" if checkpoint&.last_due
+    end
+    rows = Hiiro::JobOutcome.recent(limit: Integer(opts.limit), definition: name)
+    # A schedule's own name is exact; anything else (reminder:, loop-) is a prefix.
+    rows.select! { |outcome| outcome.definition == name } if known
+    puts 'No recorded outcomes.' if rows.empty?
+    rows.each do |outcome|
+      puts format('%-20s  %-16s  %-16s  %s', outcome.finished_at, outcome.definition, outcome.status_text, outcome.detail)
+      puts "    log #{outcome.log_path}" if outcome.log_path
+      outcome.artifacts.each { |artifact| puts "    artifact #{artifact['path']} (#{artifact['bytes']} bytes)" }
+    end
+  end
+
+  add_subcmd(:ui) do |name = nil|
+    Hiiro::JobScreen.new(definition: name, interval: Float(ENV.fetch('HIIRO_UI_REFRESH', '5'))).run
+  end
+
+  add_subcmd(:path) do
+    puts schedule.config_path
+  end
+end

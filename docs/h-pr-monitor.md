@@ -53,6 +53,26 @@ team/two#5 dependencies waiting → satisfied at bbbbbbb: notified
 
 Ctrl-C exits with status 130.
 
+## Scheduling
+
+Run it unattended as a schedule instead of a long-lived loop. Each scheduled run is one `--once` cycle; the checkpoints above already make a repeat, an overlap, or a restart send nothing twice, so no second watcher is needed:
+
+```yaml
+# ~/.config/hiiro/schedules.yml
+pr-watch:
+  job: pr-monitor
+  every: 5m
+  args: [--queue-fixes, -t, mine]
+```
+
+```bash
+h schedule plan pr-watch     # the launchd job, without installing it
+h schedule enable pr-watch
+h schedule status pr-watch   # each cycle's recorded outcome and failed logs
+```
+
+Polling is deterministic and starts no agent. `--queue-fixes` only writes queue prompts; launching them is the separate, explicitly enabled queue schedule (`h queue tick`).
+
 ## Examples
 
 ```bash
@@ -64,4 +84,4 @@ SLEEP_FOR=30 h pr-monitor --mark-ready
 
 ## See also
 
-[h-pr](h-pr.md) (`track`, `update`, `fix`, `check`/`watch` for waiting in the foreground)
+[h-pr](h-pr.md) (`track`, `update`, `fix`, `check`/`watch` for waiting in the foreground), [h schedule](h-schedule.md)
