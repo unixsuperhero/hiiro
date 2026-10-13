@@ -95,7 +95,7 @@ Built 2026-10-12 per `docs/plans/tuios-screen.md`: `h tuios ui`, one row per tui
 
 ## PR 8. Trigger-character autocomplete
 
-`Tui::LineEditor` with a table of trigger characters to candidate sources, so `@` offers projects and worktrees and `#` offers tags inside any text input. Planned after PR 4, when the real inputs exist.
+Planned 2026-10-12 in `docs/plans/line-editor.md`: `Tui::LineEditor` with a cursor, editing keys, and a trigger table per prompt, so `@` offers projects and `#` offers tags inside free text and a name prompt completes its whole field, ranked by an in-process fuzzy matcher and shown inline in the status line; pick mode is deleted in its favour.
 
 ## Alternatives rejected
 
