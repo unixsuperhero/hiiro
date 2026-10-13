@@ -21,11 +21,19 @@
 ### Fixed
 - Fix `PsProcess::Snapshot.capture` constant lookup, which raised `NameError` in `h ps byport`, `h ps indir`, and parent/child process lookups.
 - Optional context resolution no longer hides ambiguity, and scoped Git commands honor their supplied directory.
+- Queue entries move to `done/` only when the agent exits 0; the launcher previously read an unexported `HQ_EXIT` and filed every finished entry as done.
+- `h capture` exits with the captured command's status (128 + signal when killed), passes stdin through untouched, and records `127` for a command that cannot start.
+- `Shell.stream` / `stream_combined` no longer print every chunk twice.
+- `h bg` reports launch failures instead of returning nil, and concurrent launches no longer type into the same idle pane.
+- Herdr `new_tab` / `split_pane` with a command raise when Herdr does not run it.
 
 ### Added
 - `h herdr` and `hh` pane controls for Vim-style focus, two-pane reflow, resize, swap, and zoom
 - `prefix+shift+h/j/k/l` reflows a two-pane tab toward an edge; `prefix+alt+h/j/k/l` resizes the current pane
 - `h db manifest`, inspectable `plan`, explicit owned-store `migrate`, and typed canonical `export`/`restore` with IDs, relations, import verification, and allocator state. Exports refuse existing destinations; recovery rejects conflicting later writes.
+- `Hiiro::OwnedRun`: launch requests, durable run records (`~/.local/share/hiiro/runs/`), an allocated/started/ready/completed/failed state machine, a supervisor that records pid, start time, and actual exit status or signal, and process identity checks that reject reused pids. See `docs/owned-runs.md`.
+- `CommandSpecification.shell` keeps authored shell text distinct from argv; `Hiiro::ProcessOutcome` separates signals from exit codes.
+- Service `ready:` probes and `stop_timeout:`; `h bg ls` lists background runs with their outcomes.
 
 ### Changed
 - Mutable domain records use SQLite without live YAML mirrors. `t`, `tt`, and `h todo` share database-owned todo IDs and targeted mutations.
@@ -37,11 +45,15 @@
 - TaskLocation carries one optional task/app/project context, root/effective directory, separate provenance, and calling-terminal IDs through root/task/app workflows. Project/home operations require no task.
 - Exact names precede unique prefixes; terminal ambiguity uses original-object pickers, while non-interactive ambiguity/stale/missing targets fail before launch. Native arguments and explicit calling panes remain intact.
 - Queue normal and pane launch share strict frontmatter resolution; service definitions/env preparation, scoped Git/tool discovery, and root-relative tracked files reuse the selected context.
+- Queue launches claim entries atomically, print `Launched:` only after the agent started, and leave allocation/start failures in `failed/` with the error; `kill` signals only the verified process and waits for its exit. Agent completion never changes task status.
+- Services run as instances keyed by definition, directory, task, and variations, each with its own run and scripts. Stop signals the verified process group (or runs `stop` with the real `$PID`), waits for the observed exit, and only then cleans up; unowned legacy records are not stopped by label.
+- Background commands reserve their Herdr pane under a lock and release it when the run finishes or fails.
 
 ### Removed
 - Automatic legacy domain YAML import and mutable-record dual writers. Legacy sources remain explicit retained recovery inputs.
 - Obsolete todo file-path, saved-link snapshot, and task YAML backup APIs; `h db remigrate`, broad YAML retirement, and YAML/tar restore.
 - Conflicting first-match Environment/task/app/project selectors and queue pane-directory fallback joins.
+- Per-entry queue `.sh` launchers and the service launcher's `trap 'h service reset'`; the run supervisor owns completion.
 
 ## [0.1.384] - 2026-09-23
 

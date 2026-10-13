@@ -3,18 +3,67 @@ require 'shellwords'
 
 class Hiiro
   # What Shell ran: argv, environment (normalized to strings), working directory.
+  # A spec built with .shell keeps the authored shell text separate from argv.
   class CommandSpecification
-    attr_reader :argv, :env, :cwd
+    SHELL = '/bin/bash'
 
-    def initialize(*argv, env: {}, cwd: nil)
+    attr_reader :argv, :env, :cwd, :shell_text
+
+    def self.shell(text, env: {}, cwd: nil)
+      new(SHELL, '-c', text, env: env, cwd: cwd, shell_text: text)
+    end
+
+    def self.from_h(hash)
+      return shell(hash['shell'], env: hash['env'] || {}, cwd: hash['cwd']) if hash['kind'] == 'shell'
+
+      new(*hash.fetch('argv'), env: hash['env'] || {}, cwd: hash['cwd'])
+    end
+
+    def initialize(*argv, env: {}, cwd: nil, shell_text: nil)
       @argv = argv.flatten
       @env  = env.transform_keys(&:to_s).transform_values(&:to_s)
       @cwd  = cwd
+      @shell_text = shell_text
     end
 
-    def preview    = Shellwords.join(argv)
+    def kind       = shell_text ? :shell : :argv
+    def preview    = shell_text || Shellwords.join(argv)
     def open3_args = cwd ? [env, *argv, { chdir: cwd }] : [env, *argv]
     def to_s       = preview
+
+    def spawn_args(**options)
+      options = options.merge(chdir: cwd) if cwd
+      [env, *argv, options]
+    end
+
+    def to_h
+      base = { 'kind' => kind.to_s, 'env' => env, 'cwd' => cwd }
+      kind == :shell ? base.merge('shell' => shell_text) : base.merge('argv' => argv)
+    end
+  end
+
+  # How a process ended. A signal death has no exit code and is never success.
+  class ProcessOutcome
+    attr_reader :exit_code, :signal
+
+    def self.from_status(status)
+      new(exit_code: status.exitstatus, signal: status.termsig && Signal.signame(status.termsig))
+    end
+
+    def self.from_h(hash) = hash && new(exit_code: hash['exit_code'], signal: hash['signal'])
+
+    def initialize(exit_code: nil, signal: nil)
+      @exit_code = exit_code
+      @signal = signal
+    end
+
+    def success? = exit_code == 0
+
+    # The status a shell reports for this outcome: the exit code, or 128 + signal number.
+    def shell_code = exit_code || 128 + Signal.list.fetch(signal.to_s, 0)
+
+    def to_s = signal ? "signal #{signal}" : "exit #{exit_code}"
+    def to_h = { 'exit_code' => exit_code, 'signal' => signal }
   end
 
   class Shell
@@ -109,7 +158,6 @@ class Hiiro
       loop do
         chunk = io.readpartial(4096)
         tee&.write(chunk)
-        puts chunk
         output << chunk
       rescue EOFError
         break

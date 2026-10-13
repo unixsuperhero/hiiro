@@ -5,7 +5,7 @@ This prompt set describes how to implement the design in [the proposal snapshot]
 ## Current status
 
 - Workspace and prompt set prepared.
-- Steps 01–02 are implemented and verified. Steps 03–16 remain unchecked and have not started.
+- Steps 01–03 are implemented and verified. Steps 04–16 remain unchecked and have not started.
 - User authorization: finish the remaining numbered steps sequentially; after final acceptance, package and publish the new `rehiiro` gem.
 - Clone baseline: `139aa0143644d73c257edb810bd8afef88ba39a8`, source branch `main`.
 - The clone’s `origin` is the local original repository. Do not push or change that remote, modify the original checkout, or replace installed commands.
@@ -49,6 +49,23 @@ This prompt set describes how to implement the design in [the proposal snapshot]
 - Review corrections exercised after repair: inherited child/legacy workflow context, blank selectors/directories, stale-pane home creation, dangling tracked symlink escapes, quoted native filenames, and live-inventory suppression. Native proof sessions, sockets, editors, and sentinel scripts were cleaned; evidence remains under `/tmp/rehiiro-step02-native.3RY9e3`. No live provider/account or original installation was used.
 - All 139 local links/anchors across the 13 affected Markdown files resolved before the completion record was added. Next: [03](03-owned-execution.md).
 
+### Step 03 implementation verification
+
+- Interfaces: `Hiiro::OwnedRun` (lib/hiiro/owned_run.rb) with `LaunchRequest` (`id`, `owner`, `command`, `placement`, `process_group`, `ready`), durable JSON run records under `~/.local/share/hiiro/runs/` (runtime files per step 01's ownership policy, not domain rows), one transition table (`allocated -> started -> ready -> completed|failed`, `allocated -> failed`), `ProcessIdentity` (pid + `ps` lstart), `Store` (locked read-modify-write), `Supervisor` (spawns the child, records pid/start time, optional ready probe, actual exit/signal, then owner settlement), and `Launcher` (`current` exec, `detached`, `herdr_tab`, `herdr_split`, `herdr_pane`; waits for an observed start, else a failed record and `LaunchError`). `CommandSpecification.shell` keeps authored shell text distinct from argv; `ProcessOutcome` separates signals from exit codes. `Hiiro::QueueClaim` (atomic pending->running rename, outcome-based settle) and `Hiiro::PaneReservations` (lock-held pane choice). See [owned runs](../../docs/owned-runs.md).
+- Migrated callers: queue window/current/split launch, `kill`, and `ls`; service start/stop/status/ls/clean/reset/attach (instances keyed by definition + directory + task + variations, per-instance scripts, init -> env -> exec start, `ready:`/`stop_timeout:`); `Background.run` and `h bg` (new `ls`); `h capture` through `Capture.stream`/`.record`; Herdr `new_tab`/`split_pane` now raise on an undelivered command; `Shell.stream` no longer prints chunks twice. Deleted: per-entry queue `.sh` launchers with the `HQ_EXIT` handoff, `Queue#strip_frontmatter`, `Entry#launcher_path`, the service `trap 'h service reset'` launcher, name-keyed service state, Background's `rescue nil`, and h-capture's popen2e copy loop. TaskSessions is unchanged (native tool runs directly so Herdr agent detection, resume flags, focus, ambiguity errors, and history stay native); TUIOS server lifecycle was not touched.
+- Reproduced before fixing (HEAD copies in scratch `repro-03/`): queue handoff read `ENV["HQ_EXIT"]` as nil and filed a failed agent as done; old `h capture` exited 1 for a child exiting 7; `Shell.stream` emitted each chunk twice; `Background.run` returned nil when Herdr raised; two concurrent old `Background.run` calls both typed into idle pane `wC:p1`; the same service definition in a second directory was refused as "already running".
+- Tests (Ruby 3.3.10, temp HOME, `LANG=en_US.UTF-8`, `BUNDLE_PATH` of the step 01 gem set): command_specification 5/26, shell 16/18, queue_herdr 14/85, service_manager_herdr 6/49, background 5/22, herdr_location 5/28, t_test 47/730 with only the excluded worktree case failing, new owned_run 8/32, new bin/capture 2/10, queue_entry 2/19, workflow_context 4/35. Race regressions synchronize on pipes, queues, and run-state polling rather than fixed sleeps.
+- Aggregate (all `test/**/*_test.rb` in one process) with the same exclusions as step 02: **708 runs, 3,223 assertions, zero failures or errors**.
+
+  ```text
+  /test_tree_commands_create_detach_and_resume_worktrees_without_herdr|test_all_lists_all_executables_on_path|test_glob_finds_executables_from_path/
+  ```
+
+  The per-file loop (710 runs) additionally shows 30 `NameError: uninitialized constant Pins` errors in commit/pane/plugin/session/sha/window tests; an exported HEAD copy gives the identical per-file errors, because only the aggregate preloads the Pins plugin. All 23 changed Ruby files passed `ruby -c`.
+- Smokes (temp HOME, file-backed `HIIRO_TEST_DB`, a fake `omp` script, PATH without real providers; isolated headless Herdr 0.8.2 session `rehiiro-s03` with its own XDG/config/socket): `h queue cadd` exited 0 and 7 with entries in `done/` and `failed/` and runs `completed exit 0` / `failed exit 7`; launch failures (no agent: exit 127; Herdr socket absent: `Herdr did not create workspace hq`; Herdr pane without the agent: `No such file or directory - omp`) all left `failed/` entries with run errors, and `retry` + `h queue run` in the sandbox moved both to `done/`; four concurrent launchers produced one `Launched`, one agent invocation, and one run record; two `web` instances (sandbox Herdr tab and detached) both reached `ready`, a bare `stop web` outside either directory failed as ambiguous, stopping beta left alpha's pid alive, each stop observed `completed exit 0` after the service's TERM handler ran, then cleanup ran in its own directory; a preparation failure in the Herdr pane surfaced as `failed exit 1`; detached `h bg` runs recorded `completed exit 0` and `failed exit 4`; sandbox `h bg` reused idle pane `w2:p1` sequentially, and three concurrent launches took `w2:p1`, `w2:p2`, `w2:p3` with distinct reservations released afterwards; 1,030 binary bytes piped through `h capture file` into a child exiting 7 matched in saved file and terminal output (same SHA-256), the CLI exited 7, and the row stored `exit_status` 7; 300 MB and 1.2 GB captures peaked at the same ~120 MB RSS. Evidence: session scratchpad `rehiiro/smoke-03/`.
+- Blockers: none for the acceptance criteria. Herdr evidence is from a headless isolated server, not an interactive client. `h bg run 'a; b'` (one quoted argument) is shell-escaped into a single word, as before this step; argv form works.
+- The original checkout, installed commands, remotes, and live user data were not modified. One unit-test run briefly spawned the installed `omp` binary (stdin and output `/dev/null`, exited 1) before test PATHs were restricted to the fixture directory and system paths. Next: [04](04-command-catalog-and-lazy-boot.md).
+
 ## Start here
 
 Read [the shared execution contract](00-start-here.md), then the relevant section of [the proposal](proposal.md), then one numbered prompt. Run the steps in numeric order. Each step lists required earlier contracts; verify those contracts in the code instead of trusting its checkbox.
@@ -72,7 +89,7 @@ For subsequent steps, replace the numbered filename. These prompts are instructi
 ### Phase 2: Context and execution
 
 - [x] [02. Consistent task, app, and directory context](02-command-context.md). Requires [01](01-data-ownership-and-migration.md).
-- [ ] [03. Owned process and terminal execution](03-owned-execution.md). Requires [01](01-data-ownership-and-migration.md), [02](02-command-context.md).
+- [x] [03. Owned process and terminal execution](03-owned-execution.md). Requires [01](01-data-ownership-and-migration.md), [02](02-command-context.md).
 
 ### Phase 3: Discovery and installation
 

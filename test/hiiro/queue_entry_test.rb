@@ -17,7 +17,6 @@ class QueueEntryTest < Minitest::Test
       assert_equal :running, entry.status
       assert entry.running?
       assert_equal File.join(dirs[:running], 'fix.md'), entry.prompt_path
-      assert_equal File.join(dirs[:running], 'fix.sh'), entry.launcher_path
       assert_equal 2, entry.companion_files.size
       assert_equal '| Fix the login redirect loop that happens on every single ...', entry.preview
       assert_equal({ name: 'fix', status: 'running' }, entry.to_h)

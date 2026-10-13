@@ -33,6 +33,18 @@ Illustrative resolved values:
 
 `t run build --app api all test`, `t queue build ls`, and `h app run --app api all test` pass an explicitly selected context into the nested workflow. Task mounts are `queue`, `service`, and `run`; app mounts are `service`, `run`, and `file`. Configured service `base_dir` and tracked files remain root-relative; tools run in the effective directory. Project `path`/`abspath`/`sh`/`cd`/`open` and home `path`/`abspath`/`sh`/`cd`/`open` use taskless directory contexts. Home search retains its `rg -S` and `rgall --no-ignore-vcs` profiles. See [task selection](docs/t.md), [apps](docs/h-app.md), [projects](docs/h-project.md), [queue frontmatter](docs/h-queue.md), [services](docs/h-service.md), [tools](docs/h-run.md), and [tracked files](docs/h-file.md).
 
+## Owned launches
+
+`h queue`, `h service`, and `h bg` launch through one contract, `Hiiro::OwnedRun`. A Herdr tab is an allocation, not proof that a command started; a supervisor in that tab records the started pid (with its start time), optional readiness, and the actual exit status or signal:
+
+```js
+{ id: "run-20261013120000-1a2b3c4d", owner: { kind: "queue", name: "fix-login" },
+  state: "failed", process: { pid: 4242, started: "Tue Oct 13 12:00:01 2026" },
+  outcome: { exit_code: 7, signal: null } }
+```
+
+Queue entries have one claimant and land in `done/` only on exit 0. The same service definition in two task directories runs as two instances that stop independently; stop signals only the recorded process and waits for its exit. Concurrent `h bg` launches never share a pane. `h capture` streams to disk, passes stdin and binary bytes through, and exits with the child's status. See [owned runs](docs/owned-runs.md).
+
 ## Installation
 
 ### Via RubyGems
@@ -462,7 +474,7 @@ The database, definitions, preferences, and some runtime files live in `~/.confi
 ~/.config/hiiro/
   plugins/          # Plugin files (auto-loaded)
   hiiro.db          # Canonical mutable records
-  services/         # Service runtime state
+  services/         # Service instance state and per-instance launch scripts
   bg-history.txt    # Background command history
   env_templates/    # Base .env templates for services
   services.yml      # Service and service group definitions
@@ -478,6 +490,9 @@ Runtime data lives separately:
 ```
 ~/.local/share/hiiro/
   queue/          # Prompt queue (wip, pending, running, done, failed)
+  runs/           # Owned run records (RUN_ID.json) for queue, service, and background launches
+  bg/             # Background pane reservations
+  captures/       # h capture output files
   notify_log.yml  # Herdr notification log
 ```
 
@@ -501,8 +516,9 @@ Each durable type has one current owner. Startup creates or upgrades database sc
 | Import verification and row mappings | SQLite `schema_migrations`, `migration_sources`, and `migration_rows`, `Hiiro::DB` |
 | Service, tool, sparse, and table action definitions | `services.yml` through `Hiiro::ServiceManager`, `tools.yml` through `Hiiro::RunnerTool`, `sparse_groups.yml` through `Hiiro::SparseGroups`, and `tables.yml` through `Hiiro::TableActions` |
 | Preferences and tracked app files | `config.yml` through `Hiiro::Config`, `app_files.yml` through `Hiiro::AppFiles` |
-| Runtime state, history, and notification logs | Service files through `Hiiro::ServiceManager`, background history through `h bg`, navigation history through `h jumplist`, and notification logs through `h notify` |
-| Queue prompts and companion files | Existing files through `Hiiro::Queue` |
+| Runtime state, history, and notification logs | Service instance files through `Hiiro::ServiceManager`, background history and pane reservations through `h bg`, navigation history through `h jumplist`, and notification logs through `h notify` |
+| Launch and process outcomes | Run files under `~/.local/share/hiiro/runs/` through `Hiiro::OwnedRun`; see [owned runs](docs/owned-runs.md) |
+| Queue prompts and companion files | Existing files through `Hiiro::Queue`; claims and done/failed moves through `Hiiro::QueueClaim` from the run's outcome |
 | Task notes, saved files, indexes, and generated SQL | Ordinary files through their existing commands |
 
 Domain commands update selected records rather than rewriting a loaded collection. Temporary editor documents are database projections, not a second store. Failed editors, invalid input, or conflicting edits do not apply a partial batch.

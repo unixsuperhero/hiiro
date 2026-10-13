@@ -17,20 +17,23 @@ class WorkflowContextTest < Minitest::Test
       File.write(config, YAML.dump('web' => {
         'base_dir' => 'api', 'env_file' => '.env',
         'env_vars' => { 'MODE' => { 'variations' => { 'local' => 'local', 'staging' => 'staging' } } },
-        'stop' => 'pwd > stopped', 'cleanup' => ['pwd > cleaned'],
+        'start' => 'exec sleep 30', 'stop' => 'kill $PID; pwd > stopped', 'cleanup' => ['pwd > cleaned'],
       }, 'plain' => { 'env_file' => '.env.plain', 'env_vars' => {} }))
       manager = Hiiro::ServiceManager.new(config_file: config, state_file: state, context: context_for(root, app))
+      manager.launcher = Hiiro::OwnedRun::Launcher.new(store: Hiiro::OwnedRun::Store.new(File.join(root, 'runs')))
       assert_equal app, manager.definition_for('web').base_directory
       assert_equal app, manager.definition_for('plain').base_directory
       manager.prepare_env('web')
       assert_equal "MODE=local\n", File.read(File.join(app, '.env'))
-      script = manager.send(:write_env_prep_script, 'web', { 'MODE' => 'staging' })
+      script = manager.send(:write_env_prep_script, 'web@test', 'web', { 'MODE' => 'staging' })
       assert system(RbConfig.ruby, '-rbundler/setup', '-I', File.expand_path('../../lib', __dir__), script, chdir: app)
       assert_equal "MODE=staging\n", File.read(File.join(app, '.env'))
       refute File.exist?(File.join(app, 'api', '.env'))
-      File.write(state, YAML.dump('web' => { 'directory' => app }))
+      capture_io { assert manager.start('web', skip_env: true) }
+      key = manager.instances.first.key
+      assert_equal app, manager.instances.first.directory
       manager.context = context_for(root)
-      assert manager.stop('web')
+      capture_io { assert manager.stop(key) }
       assert_equal app, File.read(File.join(app, 'stopped')).strip
       assert_equal app, File.read(File.join(app, 'cleaned')).strip
       assert_equal({}, YAML.safe_load_file(state))

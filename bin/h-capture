@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 require 'fileutils'
-require 'open3'
 require 'time'
 require 'hiiro'
 
@@ -35,72 +34,15 @@ def resolve_path(name_or_path)
   File.join(CAPTURES_DIR, name_or_path)
 end
 
-def ensure_dir(path)
-  FileUtils.mkdir_p(File.dirname(path))
-end
-
-# Run cmd, tee combined stdout+stderr to terminal AND to output_path.
-# If our own stdin is piped (not a tty), forward it into the subprocess.
-def run_and_capture(cmd_args, output_path)
-  ensure_dir(output_path)
-  exit_status = nil
-
-  File.open(output_path, 'w') do |f|
-    Open3.popen2e(*cmd_args) do |stdin, stdout_err, wait_thr|
-      pipe_thread = if !STDIN.tty?
-        Thread.new do
-          IO.copy_stream(STDIN, stdin)
-        rescue Errno::EPIPE, IOError
-          # subprocess closed stdin early — fine
-        ensure
-          stdin.close rescue nil
-        end
-      else
-        stdin.close
-        nil
-      end
-
-      loop do
-        chunk = stdout_err.readpartial(4096)
-        $stdout.write(chunk)
-        $stdout.flush
-        f.write(chunk)
-      rescue EOFError
-        break
-      end
-
-      pipe_thread&.join
-      exit_status = wait_thr.value.exitstatus
-    end
-  end
-
-  exit_status
-end
-
 def fetch_capture(num)
   Hiiro::Capture.at_offset(num.to_i)
 end
 
-def record_capture(name:, path:, command:, exit_status:)
-  Hiiro::Capture.create(
-    name: name,
-    path: path,
-    command: command,
-    exit_status: exit_status
-  )
-end
-
-# Run the command and record the capture even if interrupted (Ctrl-C, error).
-# `exit_status` is nil when the process didn't reach a clean exit — the `?`
-# glyph in Hiiro::Capture#status_glyph already handles that case.
+# Streams to the terminal and the file, records the capture, and exits with
+# the child's status (128 + signal number when it was killed).
 def capture_and_record(args, path:, name:)
-  code = nil
-  begin
-    code = run_and_capture(args, path)
-  ensure
-    record_capture(name: name, path: path, command: args.join(' '), exit_status: code)
-    warn "\n[capture saved: #{path} (exit #{code || 'interrupted'})]"
-  end
+  _capture, outcome = Hiiro::Capture.record(Hiiro::CommandSpecification.new(*args), path: path, name: name)
+  exit(outcome ? outcome.shell_code : 130)
 end
 
 Hiiro.run(*ARGV) do
@@ -112,7 +54,6 @@ Hiiro.run(*ARGV) do
 
     name = "#{Time.now.strftime('%Y%m%d%H%M%S')}.output"
     path = File.join(CAPTURES_DIR, name)
-    ensure_dir(path)
 
     capture_and_record(args, path: path, name: name)
   end

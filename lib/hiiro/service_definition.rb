@@ -31,6 +31,9 @@ class Hiiro
     def start_command    = config[:start]
     def stop_command     = config[:stop]
     def cleanup_commands = Array(config[:cleanup] || [])
+    # Shell text whose zero exit means the service is ready; nil means readiness is not observed.
+    def ready_command    = config[:ready]
+    def stop_timeout     = (config[:stop_timeout] || 10).to_f
 
     # Both the env_files: [] shape and the legacy env_file/base_env/env_vars trio.
     def environment_files

@@ -34,6 +34,8 @@ class Hiiro
       end
     end
 
+    def queue_root = File.dirname(queue_dirs[:pending])
+
     def entries_in(status)
       Entry.in(queue_dirs, status.to_sym)
     end
@@ -68,6 +70,8 @@ class Hiiro
             line += "  (#{run.elapsed_minutes}m)" if run.started_at
             line += "  [pane #{run.location.pane_id}]" if run.location.pane?
             line += "  [tab #{run.location.tab_id}]" if !run.location.pane? && run.location.tab?
+            owned = run.run_id && launcher.store.find(run.run_id)
+            line += "  {#{owned.summary}}" if owned
           end
           preview = task_preview(t[:name], status.to_sym)
           line += "  #{preview}" if preview
@@ -120,100 +124,74 @@ class Hiiro
       md_file = File.join(dirs[:pending], "#{name}.md")
       return unless File.exist?(md_file)
 
-      running_md = File.join(dirs[:running], "#{name}.md")
       prompt_obj = Prompt.from_file(md_file, hiiro: hiiro)
       location = resolve_prompt_context(prompt_obj)
       working_dir = location.start_directory
       target_workspace = workspace_for_prompt(prompt_obj, location)
       calling_pane = calling_pane!(location) if %i[hsplit vsplit].include?(mode)
 
-      FileUtils.mv(md_file, running_md)
+      claim = QueueClaim.claim(queue_root, name)
+      unless claim
+        puts "Already claimed by another launcher: #{name}"
+        return
+      end
 
-      # Write a clean prompt file (no frontmatter) for the agent
-      raw = File.read(running_md).strip
-      prompt_body = prompt_obj ? strip_frontmatter(prompt_obj.doc.content.strip) : strip_frontmatter(raw)
-      prompt_file = File.join(dirs[:running], "#{name}.prompt")
-      File.write(prompt_file, prompt_body + "\n")
-
-      # Write a launcher script
-      fire_mode   = prompt_obj&.ignore?
-      agent_cmd   = fire_mode ? 'omp -p' : 'omp'
-      shell_line  = fire_mode ? '' : "exec #{Shellwords.shellescape(ENV['SHELL'] || 'zsh')}"
-      script_path = File.join(dirs[:running], "#{name}.sh")
-      File.write(script_path, <<~SH)
-        #!/usr/bin/env bash
-
-        cd #{Shellwords.shellescape(working_dir)} || exit $?
-        #{agent_cmd} @#{Shellwords.shellescape(prompt_file)}
-        HQ_EXIT=$?
-
-        # Move task files to done/failed based on exit code
-        ruby -e '
-          require "fileutils"
-          name = #{name.inspect}
-          qdir = #{DIR.inspect}
-          exit_code = ENV["HQ_EXIT"].to_i
-          dst_dir = exit_code == 0 ? "done" : "failed"
-          %w[.md .meta .prompt .sh].each do |ext|
-            src = File.join(qdir, "running", name + ext)
-            if ext == ".prompt" || ext == ".sh"
-              FileUtils.rm_f(src)
-            elsif File.exist?(src)
-              FileUtils.mv(src, File.join(qdir, dst_dir, name + ext))
-            end
-          end
-        '
-
-        #{shell_line}
-      SH
-      FileUtils.chmod(0755, script_path)
-
-      # Build base metadata; Herdr IDs are added after the tab/pane is created.
+      prompt_file = claim.running_path('.prompt')
+      agent = prompt_obj.ignore? ? %w[omp -p] : %w[omp]
+      request = OwnedRun::LaunchRequest.new(
+        owner: claim.owner,
+        command: CommandSpecification.new(*agent, "@#{prompt_file}", cwd: working_dir),
+        placement: { 'kind' => mode.to_s },
+      )
       meta = {
+        'run_id' => request.id,
         'started_at' => Time.now.iso8601,
         'working_dir' => working_dir,
       }
-      if prompt_obj
-        meta['task_name']    = prompt_obj.task_name    if prompt_obj.task_name
-        meta['tree_name']    = prompt_obj.tree_name    if prompt_obj.tree_name
-        meta['session_name'] = prompt_obj.session_name if prompt_obj.session_name
+      meta['task_name']    = prompt_obj.task_name    if prompt_obj.task_name
+      meta['tree_name']    = prompt_obj.tree_name    if prompt_obj.tree_name
+      meta['session_name'] = prompt_obj.session_name if prompt_obj.session_name
+      write_meta = lambda do |run|
+        meta.merge!(run.terminal.to_meta) if run.terminal
+        File.write(claim.running_path('.meta'), meta.to_yaml)
       end
 
-      case mode
-      when :window
-        workspace = ensure_herdr_workspace(target_workspace, cwd: working_dir)
-        tab_name = short_window_name(name)
-        created = Hiiro::Herdr::TabCreation.create(
-          herdr,
-          name: tab_name,
-          workspace: workspace,
-          start_directory: working_dir,
-          command: script_path,
-          focus: false
-        )
-        meta.merge!(created.location(workspace_id: workspace.id).to_meta)
-        File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
-        puts "Launched: #{name} [#{meta['herdr_tab'] || workspace.id}]"
+      begin
+        File.write(prompt_file, prompt_obj.body + "\n")
+        run = case mode
+        when :window
+          workspace = ensure_herdr_workspace(target_workspace, cwd: working_dir)
+          raise Error, "Herdr did not create workspace #{target_workspace}" unless workspace
 
-      when :current
-        File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
-        exec(script_path)
-
-      when :hsplit, :vsplit
-        direction = mode == :hsplit ? :down : :right
-        pane = herdr.split_pane(
-          target: calling_pane,
-          direction: direction,
-          start_directory: working_dir,
-          command: script_path,
-          focus: true
-        )
-        meta['herdr_workspace'] = pane&.workspace_id
-        meta['herdr_tab'] = pane&.tab_id
-        meta['herdr_pane'] = pane&.id
-        File.write(File.join(dirs[:running], "#{name}.meta"), meta.to_yaml)
-        puts "Launched: #{name} [pane #{pane&.id}]"
+          launcher.herdr_tab(request, workspace: workspace, name: short_window_name(name), on_allocated: write_meta)
+        when :current
+          launcher.current(request, on_allocated: write_meta)
+        when :hsplit, :vsplit
+          launcher.herdr_split(request, target: calling_pane, direction: mode == :hsplit ? :down : :right,
+            on_allocated: write_meta)
+        end
+      rescue OwnedRun::LaunchError
+        failed_meta = File.join(queue_dirs[:failed], "#{name}.meta")
+        File.write(failed_meta, meta.to_yaml) unless File.exist?(failed_meta)
+        raise
+      rescue Exception => e
+        fail_claim(claim, request, meta, e)
+        raise
       end
+
+      where = run.terminal&.pane? ? "pane #{run.terminal.pane_id}" : run.terminal&.target
+      puts "Launched: #{name} [#{run.id} #{run.summary}#{where ? ", #{where}" : ''}]"
+      run
+    end
+
+    # A failure before any run was allocated still leaves a truthful failed entry.
+    def fail_claim(claim, request, meta, error)
+      run = launcher.store.find(request.id)
+      unless run
+        run = launcher.store.create(OwnedRun.failed(request, "#{error.class}: #{error.message}"))
+        File.write(claim.running_path('.meta'), meta.to_yaml)
+      end
+      claim.settle('failed') if run.finished?
     end
 
     public
@@ -264,14 +242,6 @@ class Hiiro
       { session_name: select_workspace(prefix).name }
     end
 
-    def strip_frontmatter(text)
-      lines = text.lines
-      return text unless lines.first&.strip == '---'
-      end_idx = lines[1..].index { |l| l.strip == '---' }
-      return text unless end_idx
-      lines[(end_idx + 2)..].join.strip
-    end
-
     def short_window_name(name)
       base = name[0, 8]
       return base unless existing_window_name?(base)
@@ -303,6 +273,36 @@ class Hiiro
 
     def herdr
       hiiro&.herdr_client || Hiiro::Herdr.client
+    end
+
+    def launcher
+      @launcher ||= OwnedRun::Launcher.new(herdr: herdr)
+    end
+    attr_writer :launcher
+
+    def run_for(name, status)
+      id = entry_for(name, status).meta&.[]('run_id')
+      id && launcher.store.find(id)
+    end
+
+    # Stops the entry's observed process and waits for its outcome. Never
+    # signals a pid whose identity no longer matches the recorded run.
+    def kill(name, timeout: 10)
+      run = run_for(name, :running)
+      if run&.active?
+        process = run.process
+        if process&.alive?
+          Process.kill('TERM', process.pid)
+          deadline = Time.now + timeout
+          sleep 0.05 while launcher.store.find(run.id).active? && process.alive? && Time.now < deadline
+          if process.alive?
+            raise Error, "#{name} (pid #{process.pid}) did not exit within #{timeout}s; left running"
+          end
+        end
+        run = launcher.store.update(run.id) { |record| record.fail('killed') if record.active? }
+      end
+      QueueClaim.new(queue_root, name).settle(run&.state == 'completed' ? 'done' : 'failed')
+      run
     end
 
     def calling_pane!(location = context)
@@ -822,17 +822,13 @@ class Hiiro
           next unless name
 
           meta = q.meta_for(name, :running)
+          run = q.kill(name)
           if meta&.[]('herdr_pane')
             h.herdr_client.close_pane(meta['herdr_pane'])
           elsif meta&.[]('herdr_tab')
             h.herdr_client.close_tab(meta['herdr_tab'])
           end
-
-          dirs = q.queue_dirs
-          md = File.join(dirs[:running], "#{name}.md")
-          meta_path = File.join(dirs[:running], "#{name}.meta")
-          FileUtils.mv(md, File.join(dirs[:failed], "#{name}.md")) if File.exist?(md)
-          FileUtils.mv(meta_path, File.join(dirs[:failed], "#{name}.meta")) if File.exist?(meta_path)
+          puts "Run #{run.id}: #{run.summary}" if run
           puts "Killed: #{name}"
         }
 
@@ -956,10 +952,9 @@ class Hiiro
       def dir           = dirs.fetch(status)
       def prompt_path   = File.join(dir, "#{name}.md")
       def meta_path     = File.join(dir, "#{name}.meta")
-      def launcher_path = File.join(dir, "#{name}.sh")
       def body_path     = File.join(dir, "#{name}.prompt")
 
-      def companion_files = [prompt_path, meta_path, launcher_path, body_path].select { |p| File.exist?(p) }
+      def companion_files = [prompt_path, meta_path, body_path].select { |p| File.exist?(p) }
 
       def exists?     = File.exist?(prompt_path)
       def modified_at = File.mtime(prompt_path)
@@ -1006,6 +1001,7 @@ class Hiiro
         @meta = meta
       end
 
+      def run_id            = meta['run_id']
       def started_at        = meta['started_at'] && Time.parse(meta['started_at'])
       def working_directory = meta['working_dir']
       def location          = Hiiro::Herdr::Location.from_meta(meta)

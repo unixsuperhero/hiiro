@@ -502,7 +502,7 @@ class Hiiro
       args << (focus ? '--focus' : '--no-focus')
       result = capture_result(*args)
       pane_id = result.dig('root_pane', 'pane_id')
-      run_in_pane(pane_id, command) if pane_id && command
+      run_command!(pane_id, command) if pane_id && command
       result
     end
 
@@ -578,7 +578,7 @@ class Hiiro
       args += ['--ratio', normalize_ratio(ratio).to_s] if ratio
       args << (focus ? '--focus' : '--no-focus')
       row = capture_result(*args)['pane']
-      run_in_pane(row['pane_id'], command) if row && command
+      run_command!(row['pane_id'], command) if row && command
       row && Pane.new(row, client: self)
     end
 
@@ -691,6 +691,10 @@ class Hiiro
     end
 
     private
+
+    def run_command!(pane_id, command)
+      raise Hiiro::Error, "Herdr did not run the command in pane #{pane_id}" unless run_in_pane(pane_id, command)
+    end
 
     def capture_result(*args)
       output = @executor.capture('herdr', *args).to_s.strip

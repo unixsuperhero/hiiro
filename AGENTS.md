@@ -482,7 +482,29 @@ content = Hiiro::Shell.read_input(*args)          # files named in args ('-' = s
 
 `read_input` keeps only args that are readable paths (regular files, `/dev/fd/N`, `<(cmd)`) or `-`, concatenates them, and falls back to stdin when none remain. A named file wins over piped stdin unless `-` places it. At a terminal with no input it aborts with `no input: pipe data in or pass a file`.
 
-`run`, `run_combined`, `run3`, `stream`, and `stream_combined` all build one `CommandSpecification` and attach it to the `Result`.
+`run`, `run_combined`, `run3`, `stream`, and `stream_combined` all build one `CommandSpecification` and attach it to the `Result`. `stream` writes each chunk to `tee` once.
+
+`CommandSpecification.shell(text, cwd:, env:)` keeps authored shell text (`kind` `:shell`, `preview` is the text, argv `/bin/bash -c text`) distinct from argv specs; `to_h` / `from_h` round-trip both, and `spawn_args(**opts)` feeds `Process.spawn`. `Hiiro::ProcessOutcome.from_status(status)` answers `exit_code`, `signal` (`'TERM'`), `success?` (exit 0 only), and `shell_code` (exit code or 128 + signal).
+
+### Hiiro::OwnedRun (lib/hiiro/owned_run.rb)
+
+The launch contract for queue, services, and background commands. See `docs/owned-runs.md`.
+
+```ruby
+request = Hiiro::OwnedRun::LaunchRequest.new(owner: { kind: 'service', instance: 'web@1a2b3c4d' },
+  command: Hiiro::CommandSpecification.new('/bin/bash', script, cwd: dir), process_group: true,
+  ready: Hiiro::CommandSpecification.shell('curl -sf localhost:3000', cwd: dir))   # id pre-generated
+launcher = Hiiro::OwnedRun::Launcher.new(store: Hiiro::OwnedRun::Store.default, herdr: client, start_timeout: 10)
+run = launcher.herdr_tab(request, workspace:, name:, on_allocated: ->(run) { ... })  # also current / detached / herdr_split / herdr_pane
+run.state        # allocated | started | ready | completed | failed (transitions only via #transition)
+run.process      # ProcessIdentity pid + ps lstart; #alive? rejects a reused pid
+run.outcome      # ProcessOutcome ; run.summary  # "failed exit 7"
+store.update(id) { |run| run.fail('...') if run.allocated? }   # locked read-modify-write
+```
+
+Launch failures (no tab, undelivered command, unspawnable child, start not observed) leave a `failed` record and raise `OwnedRun::LaunchError` (`#run`). `OwnedRun::Supervisor` runs in the allocated place without the rest of Hiiro; after the outcome it settles `queue` owners through `Hiiro::QueueClaim` and `background` owners through `Hiiro::PaneReservations`.
+
+`Hiiro::Capture.stream(spec, path:)` / `.record(spec, path:, name:)` run a command with the caller's stdin and stream combined output in bounded chunks to the terminal and the file; `h capture` exits with the outcome's `shell_code`.
 
 ### Hiiro::Options (lib/hiiro/options.rb)
 
@@ -522,7 +544,7 @@ Subcommands (`h queue <subcmd>`):
 - `run [name]` - Launch pending task(s) in Herdr tabs
 - `watch` - Continuously poll and launch pending tasks
 - `attach [name]` - Switch to a running task’s Herdr pane/tab (fuzzy select if no name)
-- `kill [name]` - Stop a running task and move it to failed
+- `kill [name]` - Signal the run's verified process, wait for its exit, and move it to failed
 - `retry [name]` - Move failed/done task back to pending
 - `clean` - Remove all done/failed task files
 - `dir` - Print queue directory path
@@ -530,19 +552,21 @@ Subcommands (`h queue <subcmd>`):
 Runtime files: `~/.local/share/hiiro/queue/{wip,pending,running,done,failed}/`.
 
 Key internals:
-- `Queue::Entry` - `Entry.find(dirs, name)` / `Entry.in(dirs, status)`; answers `prompt_path`, `meta_path`, `launcher_path`, `body_path`, `companion_files`, `modified_at`, `meta`, `preview`, `prompt`, `execution`, `moved_to(status)`, `to_h` ({ name:, status: }). `Queue#entry_for(name, status)` builds one; `tasks_in`, `all_tasks`, `meta_for`, `task_preview`, `find_task` are thin wrappers over it.
-- `Queue::Execution` - snapshot of a running entry's `.meta`: `started_at`, `elapsed` (Duration), `elapsed_minutes`, `working_directory`, `location` (Herdr::Location), `attach_target`
+- `Queue::Entry` - `Entry.find(dirs, name)` / `Entry.in(dirs, status)`; answers `prompt_path`, `meta_path`, `body_path`, `companion_files`, `modified_at`, `meta`, `preview`, `prompt`, `execution`, `moved_to(status)`, `to_h` ({ name:, status: }). `Queue#entry_for(name, status)` builds one; `tasks_in`, `all_tasks`, `meta_for`, `task_preview`, `find_task` are thin wrappers over it.
+- `Queue::Execution` - snapshot of a running entry's `.meta`: `run_id`, `started_at`, `elapsed` (Duration), `elapsed_minutes`, `working_directory`, `location` (Herdr::Location), `attach_target`
 - `Queue::Prompt` - Parses frontmatter to resolve task/tree/session for working directory; retains `path`; `body` strips frontmatter; `Prompt.frontmatter_lines(task_info:, ignore:, hints:)` is the editor template shared by add/wip
 - `resolve_prompt_context` handles normal launch and `pane-dir`: explicit task/tree/workspace/app/dir selectors are strict, provenance and calling terminal are retained, and invalid edited context stops before native `omp`.
-- Queue launch placement uses Herdr tabs or explicit calling-pane splits, not whichever pane is focused. Artifact/status outcome ownership is covered by the owned-execution redesign.
+- Queue launch placement uses Herdr tabs or explicit calling-pane splits, not whichever pane is focused.
+- `Hiiro::QueueClaim.claim(root, name)` atomically renames `pending/NAME.md` into `running/` (nil when another launcher won); `QueueClaim.settle(run)` moves `.md`/`.meta` to `done/` (exit 0) or `failed/`. `Queue#launch_task` returns the started `OwnedRun`; `Queue#kill(name)` signals only a verified process and waits. Queue completion never changes a task's status.
 
 ### Hiiro::ServiceManager (lib/hiiro/service_manager.rb)
 
 Manages background development services with Herdr integration, env file management, and service groups. Service definitions resolve `base_dir` against the selected context root; absent `base_dir` uses its effective directory. Environment preparation and launch share that resolution, and stop/cleanup retain the saved launch directory.
 
 Subcommands (`h service <subcmd>`):
-- `ls`/`list` - List all services with running status, port, and base_dir
-- `start <name> [--use VAR=variation ...]` - Start a service or group; prepares env file first
+- `ls`/`list` - List services with their instances (key, run state, directory, task)
+- `start <name> [--use VAR=variation ...]` - Start a service or group as an owned run (init -> env -> start)
+- `stop <name|instance>` - Signal the verified process (or run `stop` with `$PID`), wait for the observed exit, then clean up
 - `stop <name>` - Stop a running service (sends C-c to tmux pane or runs stop command)
 - `attach <name>` - Switch to service's tmux pane
 - `open <name>` - Open service URL in browser
@@ -590,7 +614,9 @@ Key internals:
 - `prepare_env(svc_name, variation_overrides:)` - Copies base_env template from `~/.config/hiiro/env_templates/` to `base_dir/env_file`, then injects variation values
 - `find_group(name)` / `start_group(name, ...)` - Detect and start service groups, applying per-member `use:` overrides
 - Default variation is `local` when not specified
-- State tracked in `~/.config/hiiro/services/running.yml`
+- `ServiceManager.instance_key(definition, directory, task, variations)` -> `web@1a2b3c4d`; `sm.instances` (`ServiceManager::Instance`: `key`, `definition`, `directory`, `task`, `run_id`), `resolve_instance(name)`, `run_for(instance)`, `active?(instance)`
+- `ServiceDefinition#ready_command` (`ready:` shell text) and `#stop_timeout` (`stop_timeout:`, default 10)
+- State tracked per instance in `~/.config/hiiro/services/running.yml`; per-instance scripts in `services/scripts/KEY/`
 
 ### Hiiro::RunnerTool (lib/hiiro/runner_tool.rb)
 

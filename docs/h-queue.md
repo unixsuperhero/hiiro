@@ -4,6 +4,14 @@ Manage a directory-based prompt queue that launches native `omp` in Herdr tabs, 
 
 Queue directories live in `~/.local/share/hiiro/queue/{wip,pending,running,done,failed}/`. Each task is a Markdown file with optional YAML frontmatter.
 
+## Launch ownership
+
+Launching resolves the prompt's context first, then claims the entry by renaming `pending/NAME.md` to `running/NAME.md`. The rename is atomic, so when several launchers (`run`, `watch`, `sadd`) race for one entry exactly one wins; the others print `Already claimed by another launcher: NAME`.
+
+Each launch is an owned run (see [owned runs](owned-runs.md)). `running/NAME.meta` records its `run_id` beside the working directory and Herdr IDs. A Herdr tab or split is only an allocation: `Launched:` is printed after the run's supervisor has actually started `omp`, and the entry moves to `done/` only when `omp` exits 0. A nonzero exit or a signal moves it to `failed/` with that outcome on the run. A tab or split Herdr did not create, a command Herdr did not run (the new tab or split is closed), an agent that cannot start, or a start not observed within 10 seconds fails the run and moves the entry to `failed/` with the error; nothing is left looking like it is running. `retry` returns it to `pending/`. The prompt file is never deleted.
+
+Queue completion is not task completion: finishing an agent never changes its task's status.
+
 ## Synopsis
 
 ```bash
@@ -58,7 +66,7 @@ h queue attach my-task
 
 ### cadd
 
-Shortcut for `h queue add` that runs native `omp` in the current process.
+Shortcut for `h queue add` that runs native `omp` in the current terminal. The `h` process is replaced by the run's supervisor, `omp` keeps the terminal's input and output, and the command exits with `omp`'s status (128 + signal number when it was killed) after the entry moves to `done/` or `failed/`.
 
 **Examples**
 
@@ -108,7 +116,7 @@ h queue hadd -t my-task
 
 ### kill
 
-Close a running task's recorded Herdr pane or tab and move it to `failed`. With no name and exactly one running task, closes it automatically.
+Stop a running task and move it to `failed`. When its run's process is still the one the supervisor started (same pid and start time), sends it SIGTERM and waits up to 10 seconds for the exit to be observed; a process that does not exit is left running and reported. A recorded pid that now belongs to another process is never signalled. The recorded Herdr pane or tab is closed afterwards. With no name and exactly one running task, stops it automatically.
 
 **Examples**
 
@@ -121,7 +129,7 @@ h queue kill my-task
 
 ### ls / list
 
-List all queue tasks across all statuses, showing status, timestamp, elapsed time (for running tasks), and a preview of the prompt content. Defaults to the 10 most recent tasks per status.
+List all queue tasks across all statuses, showing status, timestamp, elapsed time (for running tasks), the run's state in braces (`{started pid 4242}`, `{failed exit 7}`, `{failed: Herdr did not create a tab (no tab)}`), and a preview of the prompt content. Defaults to the 10 most recent tasks per status.
 
 **Options**
 
@@ -244,7 +252,7 @@ h queue vadd "Fix the login bug"
 
 ### watch
 
-Poll the pending queue every 2 seconds and launch pending tasks as new Herdr tabs. Automatically restarts itself if a new Hiiro version is detected.
+Poll the pending queue every 2 seconds and launch pending tasks as new Herdr tabs. Several watchers can run at once; each entry still has one claimant. Automatically restarts itself if a new Hiiro version is detected.
 
 **Examples**
 
@@ -286,7 +294,7 @@ tree_name: my-task/main      # worktree to use as working dir
 session_name: my-task        # compatibility field: Herdr workspace label
 app: api                     # app name to cd into (resolved via canonical AppRecord)
 dir: packages/api            # subdirectory within app or tree root
-ignore: true                 # use omp -p; do not start an extra shell
+ignore: true                 # use omp -p (print mode)
 ---
 Your prompt text here.
 ```
@@ -298,6 +306,6 @@ Normal launch and `h queue pane-dir PROMPT [BASE_DIR]` use the same strict conte
 3. `session_name` selects placement; without a task/tree, its directory becomes the root. A workspace without a checkout path can use only the explicit calling pane in that workspace, not its first or focused pane.
 4. `app` selects a canonical app beneath that root; `dir` selects an existing relative directory beneath the effective app/root.
 
-Exact names win over prefixes. Ambiguity uses mapped terminal selection or fails non-interactively. Missing task/tree/workspace/app/directory, blank explicit selectors, conflicting terminal IDs, and traversal/symlink escapes are errors rather than fallback choices. A directory-resolution failure leaves pending prompt bytes/status unchanged and creates no launcher/body. Emitted shells stop on editor, resolution, or `cd` failure before starting the agent. Cancellation launches nothing.
+Exact names win over prefixes. Ambiguity uses mapped terminal selection or fails non-interactively. Missing task/tree/workspace/app/directory, blank explicit selectors, conflicting terminal IDs, and traversal/symlink escapes are errors rather than fallback choices. A directory-resolution failure happens before the claim: it leaves pending prompt bytes/status unchanged and creates no run or prompt body. Emitted shells stop on editor, resolution, or `cd` failure before starting the agent. Cancellation launches nothing.
 
 `t queue TASK [--app APP] ...` injects the selected task/app context. `h queue` keeps resolution lazy so explicit frontmatter can override ambient task inference. `pane-ignore` reads the edited `ignore` value for the pane launcher; true runs `omp -p` without a following shell.

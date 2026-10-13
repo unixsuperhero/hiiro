@@ -16,7 +16,9 @@ def append_history(cmd)
 end
 
 def run_in_bg(cmd)
-  Hiiro::Background.run(ENV['SHELL'] || 'zsh', '-lc', cmd)
+  run = Hiiro::Background.run(ENV['SHELL'] || 'zsh', '-lc', cmd)
+  where = run.terminal&.pane? ? "pane #{run.terminal.pane_id}" : 'detached'
+  puts "#{run.id} #{run.summary} [#{where}]"
 end
 
 Hiiro.run(*ARGV) do
@@ -57,6 +59,15 @@ Hiiro.run(*ARGV) do
   add_subcmd(:attach, :a) do
     workspace = Hiiro::Background.ensure_workspace
     Hiiro::Herdr.client.focus_workspace(workspace.id)
+  end
+
+  add_subcmd(:ls) do
+    runs = Hiiro::OwnedRun::Store.default.all.select { |run| run.owner['kind'] == 'background' }
+    if runs.empty?
+      puts "No background runs."
+    else
+      runs.last(HISTORY_MAX).each { |run| puts "#{run.id}  #{run.summary}  #{run.command.preview}" }
+    end
   end
 
   add_subcmd(:history, :hist) do

@@ -59,4 +59,16 @@ class HerdrLocationTest < Minitest::Test
     assert_nil Hiiro::Herdr::Location.from_meta(nil).target
     assert_equal 'w2', Hiiro::Herdr::Location.new(workspace_id: 'w1').with(workspace_id: 'w2').workspace_id
   end
+
+  def test_new_tab_and_split_raise_when_the_command_is_not_run
+    executor = Hiiro::Effects::NullExecutor.new
+    executor.stub('tab create', JSON.generate('result' => RESPONSE))
+    executor.stub('pane split', JSON.generate('result' => { 'pane' => { 'pane_id' => 'w1:p5', 'workspace_id' => 'w1', 'tab_id' => 'w1:t2' } }))
+    executor.stub('pane run', false)
+    herdr = Hiiro::Herdr.new(executor: executor)
+    error = assert_raises(Hiiro::Error) { herdr.new_tab(name: 'x', command: 'make') }
+    assert_equal 'Herdr did not run the command in pane w1:p2', error.message
+    error = assert_raises(Hiiro::Error) { herdr.split_pane(direction: :down, target: 'w1:p2', command: 'make') }
+    assert_equal 'Herdr did not run the command in pane w1:p5', error.message
+  end
 end

@@ -3,6 +3,8 @@ require 'fileutils'
 require 'time'
 require 'ostruct'
 require 'shellwords'
+require 'digest'
+require 'json'
 
 class Hiiro
   class ServiceManager
@@ -12,7 +14,22 @@ class Hiiro
     ENV_TEMPLATES_DIR = File.join(Dir.home, '.config', 'hiiro', 'env_templates')
 
     attr_reader :config_file, :state_file
-    attr_writer :herdr, :context
+    attr_writer :herdr, :context, :launcher
+
+    # One running copy of a definition: the same definition in another
+    # directory, task, or variation is a different instance with its own run.
+    Instance = Struct.new(:key, :record, keyword_init: true) do
+      def definition = record['definition'] || key
+      def directory  = record['directory']
+      def task       = record['task']
+      def run_id     = record['run_id']
+      def owned?     = !run_id.nil?
+    end
+
+    def self.instance_key(definition, directory, task, variations)
+      identity = JSON.generate([directory, task, (variations || {}).to_h.transform_keys(&:to_s).sort])
+      "#{definition}@#{Digest::SHA1.hexdigest(identity)[0, 8]}"
+    end
 
     def self.add_resolvers(hiiro)
       sm = new
@@ -167,32 +184,52 @@ class Hiiro
       true
     end
 
-    def running?(name)
-      state = load_state
-      state.key?(name)
+    def instances
+      load_state.map { |key, record| Instance.new(key: key, record: record || {}) }
     end
 
-    def running_services
-      load_state
+    def instances_of(definition_name)
+      instances.select { |instance| instance.definition == definition_name }
+    end
+
+    def run_for(instance)
+      instance.owned? ? launcher.store.find(instance.run_id) : nil
+    end
+
+    def active?(instance)
+      !!run_for(instance)&.active?
+    end
+
+    # An exact instance key, or a definition whose single instance (or single
+    # instance in the current task/directory) is meant.
+    def resolve_instance(name)
+      state = load_state
+      return Instance.new(key: name, record: state[name] || {}) if state.key?(name)
+
+      svc = find_service(name)
+      return nil unless svc
+
+      candidates = instances_of(svc[:name])
+      return candidates.first if candidates.size <= 1
+
+      directory = File.realpath(definition_for(svc[:name]).base_directory) rescue nil
+      here = candidates.select { |instance| instance.directory == directory && instance.task == context.task&.name }
+      return here.first if here.one?
+
+      raise Hiiro::Error, "Several '#{svc[:name]}' instances; choose one: #{candidates.map(&:key).join(', ')}"
     end
 
     def reset(name)
-      svc = find_service(name)
-      unless svc
-        puts "Service '#{name}' not found"
+      instance = resolve_instance(name)
+      unless instance
+        puts "Service '#{name}' is not in running state"
         return false
       end
 
-      svc_name = svc[:name]
       state = load_state
-      unless state.key?(svc_name)
-        puts "Service '#{svc_name}' is not in running state"
-        return false
-      end
-
-      state.delete(svc_name)
+      state.delete(instance.key)
       save_state(state)
-      puts "Reset service '#{svc_name}' (cleared from running state)"
+      puts "Reset service '#{instance.key}' (cleared from running state)"
       true
     end
 
@@ -200,15 +237,17 @@ class Hiiro
       state = load_state
       return puts("No running services to clean") if state.empty?
 
-      stale = state.select { |_, info| stale_pane?(info['herdr_pane']) }
+      stale = instances.select do |instance|
+        instance.owned? ? !active?(instance) : stale_pane?(instance.record['herdr_pane'])
+      end
       if stale.empty?
-        puts "All running services have live panes"
+        puts "All recorded services are still running"
         return false
       end
 
-      stale.each do |svc_name, _|
-        state.delete(svc_name)
-        puts "Cleaned stale service '#{svc_name}'"
+      stale.each do |instance|
+        state.delete(instance.key)
+        puts "Cleaned service '#{instance.key}' (#{run_for(instance)&.summary || 'no live pane'})"
       end
       save_state(state)
       true
@@ -222,130 +261,130 @@ class Hiiro
       end
 
       svc_name = svc[:name]
-
-      if running?(svc_name)
-        info = running_services[svc_name]
-        puts "Service '#{svc_name}' is already running (pid: #{info['pid']}, pane: #{info['herdr_pane']})"
-        return false
-      end
-
       start_cmd = svc[:start]
       unless start_cmd
         puts "No start command configured for '#{svc_name}'"
         return false
       end
 
-      base_dir = validate_directory!(definition_for(svc_name).base_directory)
+      definition = definition_for(svc_name)
+      base_dir = validate_directory!(definition.base_directory)
+      key = self.class.instance_key(svc_name, base_dir, task_info[:task_name], variation_overrides)
+      existing = Instance.new(key: key, record: load_state[key] || {})
+      if active?(existing)
+        puts "Service '#{svc_name}' is already running as #{key} (#{run_for(existing).summary})"
+        return false
+      end
+
       calling_workspace = context_workspace
       workspace = resolve_herdr_workspace(herdr_info[:workspace] || calling_workspace)
 
-      # Build separate init/env/start scripts + a launcher that runs them in order
-      init_cmds = Array(svc[:init] || [])
-      start_cmds = Array(start_cmd)
       script = write_launcher_script(
+        key,
         svc_name,
-        init_cmds: init_cmds,
-        start_cmds: start_cmds,
+        init_cmds: Array(svc[:init] || []),
+        start_cmds: Array(start_cmd),
         env_prep: !skip_env,
         variation_overrides: variation_overrides,
       )
-
-      if workspace
-        created = Hiiro::Herdr::TabCreation.create(
-          herdr,
-          name: svc_name,
-          workspace: workspace,
-          start_directory: base_dir,
-          command: script,
-          focus: false
-        )
-        tab_id = created.tab_id
-        pane_id = created.pane_id
-      else
-        tab_id = nil
-        pane_id = nil
-        system("#{Shellwords.escape(script)} &", chdir: base_dir)
-      end
-
-      # Record state
-      state = load_state
-      state[svc_name] = {
-        'pid' => nil,
-        'herdr_workspace' => workspace&.id,
-        'workspace_name' => workspace&.name,
-        'herdr_tab' => tab_id,
-        'herdr_pane' => pane_id,
+      ready = definition.ready_command && CommandSpecification.shell(definition.ready_command, cwd: base_dir)
+      request = OwnedRun::LaunchRequest.new(
+        owner: { kind: 'service', definition: svc_name, instance: key, directory: base_dir, task: task_info[:task_name] },
+        command: CommandSpecification.new('/bin/bash', script, cwd: base_dir),
+        placement: { 'kind' => workspace ? 'herdr-tab' : 'detached' },
+        process_group: true,
+        ready: ready,
+      )
+      record = {
+        'definition' => svc_name,
+        'directory' => base_dir,
         'task' => task_info[:task_name],
         'tree' => task_info[:tree],
         'branch' => task_info[:branch],
-        'directory' => base_dir,
+        'variations' => variation_overrides.to_h,
+        'run_id' => request.id,
+        'herdr_workspace' => workspace&.id,
+        'workspace_name' => workspace&.name,
         'started_at' => Time.now.iso8601,
       }
-      save_state(state)
+      save_record = lambda do |run|
+        record.merge!(run.terminal.to_meta) if run.terminal
+        state = load_state
+        state[key] = record
+        save_state(state)
+      end
 
-      puts "Started service '#{svc_name}'"
+      run = if workspace
+        launcher.herdr_tab(request, workspace: workspace, name: svc_name, on_allocated: save_record)
+      else
+        launcher.detached(request, on_allocated: save_record)
+      end
+
+      puts "Started service '#{svc_name}' as #{key} (#{run.summary})"
       true
+    rescue OwnedRun::LaunchError => e
+      puts "Service '#{svc_name}' did not start: #{e.run.error}"
+      false
     end
 
+    # Stops one identified instance: signals only the recorded process when its
+    # identity still matches, waits for it to exit, then cleans up and forgets it.
     def stop(name)
-      svc = find_service(name)
-      unless svc
-        puts "Service '#{name}' not found"
+      instance = resolve_instance(name)
+      unless instance
+        puts "Service '#{name}' is not running"
         return false
       end
 
-      svc_name = svc[:name]
-
-      unless running?(svc_name)
-        puts "Service '#{svc_name}' is not running"
+      unless instance.owned?
+        puts "Service '#{instance.key}' has no owned run to stop; stop it yourself, then run `h service reset #{instance.key}`"
         return false
       end
 
-      info = running_services[svc_name]
-      pane_id = info['herdr_pane']
-      base_dir = info['directory'] || definition_for(svc_name).base_directory
-      validate_directory!(base_dir)
+      definition = definition_for(instance.definition)
+      raise Hiiro::Error, "Service '#{instance.definition}' is no longer configured" unless definition
+      base_dir = validate_directory!(instance.directory || definition.base_directory)
+      run = run_for(instance)
 
-      if svc[:stop] && !svc[:stop].to_s.strip.empty?
-        stop_cmd = svc[:stop]
-        if info['pid']
-          stop_cmd = stop_cmd.gsub('$PID', info['pid'].to_s)
+      if run&.allocated?
+        run = launcher.store.update(run.id) { |record| record.fail('stopped before start') if record.allocated? }
+      end
+
+      if run&.active?
+        process = run.process
+        if process.alive?
+          return false unless signal_stop(definition, run, base_dir)
+
+          unless wait_for_exit(run, process, definition.stop_timeout)
+            puts "Service '#{instance.key}' (pid #{process.pid}) did not exit within #{definition.stop_timeout}s; state retained"
+            return false
+          end
+        else
+          puts "Process #{process.pid} for '#{instance.key}' is gone or was reused; not signalling it"
         end
-        system(stop_cmd, chdir: base_dir)
-      elsif pane_id
-        herdr.send_keys(pane_id, 'ctrl+c')
+        run = launcher.store.update(run.id) { |record| record.fail('exited without a recorded status') if record.active? }
       end
 
-      # Run cleanup commands
-      if svc[:cleanup]
-        svc[:cleanup].each { |cmd| system(cmd, chdir: base_dir) }
-      end
+      cleanup_ok = definition.cleanup_commands.map { |cmd| system(cmd, chdir: base_dir) }.all?
+      puts "Cleanup for '#{instance.key}' failed" unless cleanup_ok
 
-      # Remove from state
       state = load_state
-      state.delete(svc_name)
+      state.delete(instance.key)
       save_state(state)
 
-      puts "Stopped service '#{svc_name}'"
-      true
+      puts "Stopped service '#{instance.key}' (#{run&.summary || 'no run record'})"
+      cleanup_ok
     end
 
     def attach(name)
-      svc = find_service(name)
-      unless svc
-        puts "Service '#{name}' not found"
+      instance = resolve_instance(name)
+      unless instance
+        puts "Service '#{name}' is not running"
         return false
       end
 
-      svc_name = svc[:name]
-      unless running?(svc_name)
-        puts "Service '#{svc_name}' is not running"
-        return false
-      end
-
-      info = running_services[svc_name]
-      workspace_id = info['herdr_workspace']
-      tab_id = info['herdr_tab']
+      workspace_id = instance.record['herdr_workspace']
+      tab_id = instance.record['herdr_tab']
 
       herdr.focus_workspace(workspace_id) if workspace_id
       herdr.focus_tab(tab_id) if tab_id
@@ -385,16 +424,20 @@ class Hiiro
       puts "Service: #{svc_name}"
       puts "Base dir: #{svc[:base_dir] || '(none)'}"
       puts "URL: #{url(svc_name) || '(none)'}"
+      puts "Readiness: #{svc[:ready] ? svc[:ready] : '(not configured)'}"
 
-      if running?(svc_name)
-        info = running_services[svc_name]
-        puts "Status: running"
-        puts "PID: #{info['pid'] || '(unknown)'}"
-        puts "Pane: #{info['herdr_pane'] || '(unknown)'}"
-        puts "Task: #{info['task'] || '(none)'}"
-        puts "Started: #{info['started_at']}"
-      else
-        puts "Status: stopped"
+      found = instances_of(svc_name)
+      puts "Status: stopped" if found.empty?
+      found.each do |instance|
+        run = run_for(instance)
+        puts
+        puts "Instance: #{instance.key}"
+        puts "Status: #{run ? run.summary : 'unowned (started by an older hiiro)'}"
+        puts "Directory: #{instance.directory || '(unknown)'}"
+        puts "Pane: #{instance.record['herdr_pane'] || '(none)'}"
+        puts "Task: #{instance.task || '(none)'}"
+        puts "Variations: #{instance.record['variations'].to_h.map { |k, v| "#{k}=#{v}" }.join(', ')}" unless instance.record['variations'].to_h.empty?
+        puts "Started: #{instance.record['started_at']}"
       end
     end
 
@@ -446,25 +489,23 @@ class Hiiro
             next
           end
 
-          running = sm.running_services
+          found = sm.instances.group_by(&:definition)
           puts "Services:"
           puts
           configs
-            .sort_by{ |name,_| running.key?(name) ? :running : :stopped }
+            .sort_by { |name, _| found.key?(name) ? 0 : 1 }
             .each do |name, cfg|
-              is_running = running.key?(name)
-              status_emoji = is_running ? "🟢" : "🔴"
               host = cfg['host'] || 'localhost'
               url_str = cfg['port'] ? " #{host}:#{cfg['port']}" : ""
-              extra = ""
-              if is_running
-                info = running[name]
-                task = task_manager&.task_by_service_info(info)
-                branch = task&.branch
-                parts = [info['task'], branch].compact.reject(&:empty?)
-                extra = "  (#{parts.join(' • ')})" unless parts.empty?
+              list = found.fetch(name, [])
+              active = list.any? { |instance| sm.active?(instance) }
+              puts format("  %-20s  %s%s", name, active ? "🟢" : "🔴", url_str)
+              list.each do |instance|
+                run = sm.run_for(instance)
+                parts = [instance.task, instance.record['branch']].compact.reject(&:empty?)
+                extra = parts.empty? ? '' : "  (#{parts.join(' • ')})"
+                puts format("    %-24s  %s  %s%s", instance.key, run ? run.summary : 'unowned', instance.directory, extra)
               end
-              puts format("  %-20s  %s%s%s", name, status_emoji, url_str, extra)
           end
         end
 
@@ -512,7 +553,7 @@ class Hiiro
 
         h.add_subcmd(:stop) do |svc_name=nil|
           unless svc_name
-            running = sm.running_services.keys
+            running = sm.instances.map(&:key)
             if running.empty?
               puts "No running services"
               next
@@ -532,7 +573,7 @@ class Hiiro
 
         h.add_subcmd(:reset) do |svc_name=nil|
           unless svc_name
-            running = sm.running_services.keys
+            running = sm.instances.map(&:key)
             if running.empty?
               puts "No running services"
               next
@@ -556,7 +597,7 @@ class Hiiro
 
         h.add_subcmd(:attach) do |svc_name=nil|
           unless svc_name
-            running = sm.running_services.keys
+            running = sm.instances.map(&:key)
             if running.empty?
               puts "No running services"
               next
@@ -612,7 +653,7 @@ class Hiiro
 
         h.add_subcmd(:status) do |svc_name=nil|
           unless svc_name
-            running = sm.running_services.keys
+            running = sm.instances.map(&:key)
             if running.empty?
               puts "No running services"
               next
@@ -762,8 +803,14 @@ class Hiiro
       path
     end
 
-    def write_env_prep_script(svc_name, variation_overrides)
-      path = File.join(scripts_dir, "#{svc_name}-env.rb")
+    def instance_scripts_dir(key)
+      dir = File.join(scripts_dir, key)
+      FileUtils.mkdir_p(dir)
+      dir
+    end
+
+    def write_env_prep_script(key, svc_name, variation_overrides)
+      path = File.join(instance_scripts_dir(key), "env.rb")
       overrides_literal = variation_overrides.map { |k, v| "#{k.inspect} => #{v.inspect}" }.join(", ")
 
       code = <<~RUBY
@@ -780,33 +827,51 @@ class Hiiro
       path
     end
 
-    def write_launcher_script(svc_name, init_cmds:, start_cmds:, env_prep: true, variation_overrides: {})
-      dir = scripts_dir
+    # init -> env -> start, each failure ending the run with its exit status.
+    # The start script replaces the launcher so the run's pid is the service.
+    def write_launcher_script(key, svc_name, init_cmds:, start_cmds:, env_prep: true, variation_overrides: {})
+      dir = instance_scripts_dir(key)
+      start_path = write_shell_script(File.join(dir, "start.sh"), start_cmds)
 
-      # Write init script (may be empty)
-      init_path = File.join(dir, "#{svc_name}-init.sh")
-      write_shell_script(init_path, init_cmds)
-
-      # Write start script
-      start_path = File.join(dir, "#{svc_name}-start.sh")
-      write_shell_script(start_path, start_cmds)
-
-      # Write env prep script
-      env_path = nil
+      steps = ["set -e"]
+      steps << "/bin/bash -e #{Shellwords.escape(write_shell_script(File.join(dir, 'init.sh'), init_cmds))}" unless init_cmds.empty?
       if env_prep
-        env_path = write_env_prep_script(svc_name, variation_overrides)
+        env_path = write_env_prep_script(key, svc_name, variation_overrides)
+        steps << Shellwords.join([RbConfig.ruby, '-I', File.expand_path('..', __dir__), env_path])
+      end
+      steps << "exec /bin/bash #{Shellwords.escape(start_path)}"
+
+      write_shell_script(File.join(dir, "launch.sh"), steps)
+    end
+
+    def signal_stop(definition, run, base_dir)
+      pid = run.process.pid
+      if definition.stop_command && !definition.stop_command.to_s.strip.empty?
+        return true if system(definition.stop_command.gsub('$PID', pid.to_s), chdir: base_dir)
+
+        puts "Stop command for '#{run.owner['instance']}' failed; state retained"
+        return false
       end
 
-      # Write launcher that orchestrates: init -> env -> start -> reset
-      # Use trap to ensure reset runs even on Ctrl+C
-      launcher_path = File.join(dir, "#{svc_name}.sh")
-      steps = []
-      steps << "trap 'h service reset #{svc_name}' EXIT"
-      steps << Shellwords.escape(init_path) unless init_cmds.empty?
-      steps << Shellwords.escape(env_path) if env_path
-      steps << Shellwords.escape(start_path)
+      Process.kill('TERM', run.process_group? ? -pid : pid)
+      true
+    rescue Errno::ESRCH
+      true
+    end
 
-      write_shell_script(launcher_path, steps)
+    # Exit is observed when the process is gone and its supervisor recorded an outcome.
+    def wait_for_exit(run, process, timeout)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+      until !process.alive? && launcher.store.find(run.id).finished?
+        return !process.alive? if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+
+        sleep 0.05
+      end
+      true
+    end
+
+    def launcher
+      @launcher ||= OwnedRun::Launcher.new(herdr: herdr)
     end
 
     def context_workspace

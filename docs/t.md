@@ -113,6 +113,8 @@ t run [TASK] [--app APP] ARGS...
 
 The optional app selector precedes the child command. These mounts pass the selected task/root/effective directory into the same queue, service, and runner implementations used by `h`. For example, `t run build --app api all test` runs tools in the build task’s api directory. Native task selection flags retain their leading-argument grammar.
 
+Queue and service launches from these mounts are owned runs ([owned runs](owned-runs.md)). Their completion is process completion only: a queue agent that exits 0 moves its entry to `done/`, never the task; `t done` remains the only way to complete a task.
+
 ## Herdr workspaces, tabs, and panes
 
 ```text
@@ -137,7 +139,7 @@ These require a running Herdr server. The workspace label is the task session or
 
 ## Native AI sessions
 
-`t omp [TASK] [ARGS...]`, `t codex` / `cdx`, and `t claude` / `cld` create a new focused tab in the task workspace, creating the workspace if needed, and run the native tool with ARGS forwarded verbatim. A leading argument that is a prefix of `resume` turns into the tool's native resume flag; bare `resume` with exactly one running pane of that tool focuses it instead.
+`t omp [TASK] [ARGS...]`, `t codex` / `cdx`, and `t claude` / `cld` create a new focused tab in the task workspace, creating the workspace if needed, and run the native tool with ARGS forwarded verbatim. A leading argument that is a prefix of `resume` turns into the tool's native resume flag; bare `resume` with exactly one running pane of that tool focuses it instead. These sessions are not owned runs: the native tool runs directly in the new tab so Herdr can detect the agent and the tool keeps its own conversation history. The command fails when Herdr does not create the tab, return its pane, or run the tool there.
 
 ## Help
 

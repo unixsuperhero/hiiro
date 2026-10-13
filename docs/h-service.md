@@ -2,7 +2,17 @@
 
 Manage background development services with Herdr integration, env file management, and service groups.
 
-Config lives in `~/.config/hiiro/services.yml`. Runtime state is tracked in `~/.config/hiiro/services/running.yml`.
+Config lives in `~/.config/hiiro/services.yml`. Runtime state is tracked in `~/.config/hiiro/services/running.yml`, one record per running instance.
+
+## Instances and runs
+
+A definition is what `services.yml` describes; an instance is that definition running for one resolved base directory, task, and set of `--use` variations. The same definition started from two task worktrees is two instances with separate keys (`web@1a2b3c4d`), run IDs, scripts (`~/.config/hiiro/services/scripts/KEY/`), and Herdr tabs. Starting an instance that is already running is refused; starting one whose previous run ended replaces its record.
+
+Each instance is an owned run (see [owned runs](owned-runs.md)) whose child runs in its own process group: `init` commands, then environment preparation, then `start` (which replaces the launcher, so the run's pid is the service). A failing `init` or preparation step ends the run with that exit status, shown as `failed exit N` by `ls` and `status`. `start` reports success only after the supervisor has started the process; a tab Herdr did not create or a command it did not run is reported as a failed start.
+
+A service is `ready` only when its configured `ready` command exits 0; without one, the instance stays `started` and readiness is not claimed.
+
+Commands that take a name accept an instance key, or a definition name when it has one instance (or exactly one in the current task and directory); otherwise they fail and list the keys.
 
 ## Synopsis
 
@@ -43,7 +53,7 @@ h service attach
 
 ### clean
 
-Remove stale services from the running state when their recorded Herdr pane no longer exists.
+Remove instances whose run has finished. Records from older Hiiro versions without a run are removed when their recorded Herdr pane no longer exists.
 
 **Examples**
 
@@ -91,7 +101,7 @@ h service groups
 
 ### ls / list
 
-List all configured services and service groups, showing running status, host:port, and the associated task/branch if running.
+List all configured services and service groups, showing host:port and, under each definition, its instances with key, run state (`started pid 4242`, `ready`, `failed exit 3`), directory, and task/branch.
 
 **Examples**
 
@@ -128,7 +138,7 @@ h service port my-rails
 
 ### reset
 
-Clear a service from the running state without stopping the process. Useful when the Herdr pane is already gone. With no name, opens a fuzzyfind selector.
+Clear an instance from the running state without stopping its process. Useful after stopping a process that Hiiro does not own (records from older versions). With no name, opens a fuzzyfind selector.
 
 **Examples**
 
@@ -153,7 +163,7 @@ h service remove my-rails
 
 ### start
 
-Start a service or service group in new Herdr tabs. Hiiro prepares env files first by copying the base template and injecting variation values. With no name, it opens a fuzzyfind selector.
+Start a service or service group in new unfocused Herdr tabs, or as a detached process outside Herdr. Env files are prepared after `init` and before `start`, by copying the base template and injecting variation values. With no name, it opens a fuzzyfind selector.
 
 **Options**
 
@@ -174,7 +184,7 @@ h service start                   # fuzzyfind selector
 
 ### status
 
-Show detailed status for a service: base dir, URL, running state, Herdr pane, associated task, and start time. With no name, opens a fuzzyfind selector over running services.
+Show detailed status for a service: base dir, URL, readiness command, and for each instance its key, run state, directory, Herdr pane, task, variations, and start time. With no name, opens a fuzzyfind selector over running services.
 
 **Examples**
 
@@ -187,7 +197,7 @@ h service status
 
 ### stop
 
-Stop a running service or group. Sends `Ctrl-C` to the Herdr pane, or runs the configured `stop` command. With no name, opens a fuzzyfind selector over running services.
+Stop a running instance or group. Hiiro signals only the process its supervisor started, and only while that pid still has the recorded start time: it runs the configured `stop` command (with `$PID` replaced by the service pid), or sends SIGTERM to the service's process group. It then waits up to `stop_timeout` seconds (default 10) for the exit to be observed. Only then are `cleanup` commands run and the instance removed. A process that does not exit, or a failing `stop` command, leaves the instance recorded. A recorded pid that now belongs to another process is not signalled. Records from older versions without a run are refused; stop the process yourself and `reset` it. With no name, opens a fuzzyfind selector over running instances.
 
 **Examples**
 
@@ -223,8 +233,10 @@ my-rails:
   init:                            # run once before start (e.g. bundle install)
     - bundle install
   start: bundle exec rails s -p 3000
-  stop: ""                         # optional stop command; empty = send C-c
-  cleanup: []                      # commands to run after stop
+  stop: ""                         # optional stop command ($PID = service pid); empty = SIGTERM to its process group
+  stop_timeout: 10                 # seconds to wait for the observed exit
+  ready: curl -sf localhost:3000   # optional; exit 0 marks the instance ready
+  cleanup: []                      # commands to run after the observed exit
   env_file: .env.development       # destination in base_dir
   base_env: my-rails.env           # template in ~/.config/hiiro/env_templates/
   env_vars:

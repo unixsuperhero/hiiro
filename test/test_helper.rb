@@ -268,3 +268,48 @@ class Hiiro
     def null_fs   = @fs
   end
 end
+
+# A Herdr executor whose panes really run what is typed into them: `pane run`
+# spawns the command line with bash, so owned-run supervisors start and finish
+# for real. deliver: false makes `pane run` fail without running anything.
+class FakeHerdrTerminal < Hiiro::Effects::NullExecutor
+  attr_accessor :deliver
+  attr_reader :pids
+
+  def initialize(log: File::NULL)
+    super()
+    @deliver = true
+    @pids = []
+    @log = log
+  end
+
+  def run(*args)
+    if args[0, 3] == %w[herdr pane run]
+      record(:run, args)
+      return false unless deliver
+
+      @pids << Process.spawn('/bin/bash', '-c', args[4], in: File::NULL, out: @log, err: @log)
+      return true
+    end
+    super
+  end
+
+  def wait_all
+    @pids.each { |pid| Process.wait(pid) rescue Errno::ECHILD }
+  end
+end
+
+module OwnedRunHelpers
+  def run_store(dir) = Hiiro::OwnedRun::Store.new(File.join(dir, 'runs'))
+
+  def wait_for_run(store, id, timeout: 10)
+    deadline = Time.now + timeout
+    loop do
+      run = store.find(id)
+      return run if run&.finished?
+      raise "run #{id} still #{run&.state} after #{timeout}s" if Time.now > deadline
+
+      sleep 0.02
+    end
+  end
+end
