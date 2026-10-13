@@ -38,7 +38,7 @@ Rows are `mark table name value #tags`, ordered by table then name. `*` marks a 
 | `j` `k` / arrows | Move |
 | `h` `l` | Scroll the list sideways |
 | `/` | Search name, value, description, short name, and tags |
-| `@` | Pick a table (type a prefix, Enter picks the first match; no match shows every table) |
+| `@` | Pick a table: a `table:` prompt that completes table names; Enter accepts the bracketed choice, a second Enter switches to it |
 | `g` | Toggle scope between global and the current task |
 | `a` | Add: prompts for name, value, then table (prefilled with the filter or the current row's table). In task scope the entry is attached to the task |
 | `r` | Rename the current entry |
@@ -52,6 +52,8 @@ Rows are `mark table name value #tags`, ordered by table then name. `*` marks a 
 | `q` / Esc / Ctrl-C | Quit |
 
 Prompts appear in the status line as `label: text_`. Enter submits, Esc cancels.
+
+**Editing in a prompt.** Left, Right, Home, End, Delete, and Ctrl-U (clear) edit the text; while choices show after `▸`, Up and Down move the `[ ]` selection, Tab accepts it, and Enter accepts it before a second Enter submits. The `table` prompts (`@`, the last `a` prompt, `m`) complete table names, and `T` completes each space-separated word from existing tags.
 
 ## Scope
 

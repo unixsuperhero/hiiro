@@ -15,6 +15,7 @@ class Hiiro
     key 'd', :delete_targets
     key 'T', :tag_targets
     key 'm', :move_targets
+    key '@', :pick_table
 
     attr_reader :scope, :table, :actions, :marked
 
@@ -81,13 +82,15 @@ class Hiiro
       fields.compact.join(' ').downcase.include?(query.downcase)
     end
 
-    def pick_candidates = Table.all.map(&:name)
+    def pick_table
+      prompt('table', complete: { '' => -> { Table.all.map(&:name) } }) do |name|
+        next if name.strip.empty?
 
-    def picked(name)
-      @table = name
-      reload!
-      state.cursor = 0
-      move(0)
+        @table = name.strip
+        reload!
+        state.cursor = 0
+        move(0)
+      end
     end
 
     def unhandled_key(key)
@@ -132,7 +135,7 @@ class Hiiro
         next if name.empty?
 
         prompt('value') do |value|
-          prompt('table', default: table || current_item&.resource_type) do |table_name|
+          prompt('table', default: table || current_item&.resource_type, complete: { '' => -> { Completions.tables } }) do |table_name|
             next if table_name.empty?
 
             create_entry(table_name, name, value)
@@ -203,7 +206,7 @@ class Hiiro
       chosen = targets
       return if chosen.empty?
 
-      prompt('tags') do |text|
+      prompt('tags', complete: { '' => -> { Completions.tags } }) do |text|
         removals, additions = text.split.partition { |token| token.start_with?('-') }
         mutate("tagged #{chosen.length}") do
           chosen.each do |entry|
@@ -218,7 +221,7 @@ class Hiiro
       chosen = targets
       return if chosen.empty?
 
-      prompt('move to table') do |table_name|
+      prompt('move to table', complete: { '' => -> { Completions.tables } }) do |table_name|
         next if table_name.empty?
 
         mutate("moved #{chosen.length} to #{table_name}") do

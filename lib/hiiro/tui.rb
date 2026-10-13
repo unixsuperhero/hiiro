@@ -3,6 +3,9 @@ require 'io/console'
 class Hiiro
   module Tui
     module Terminal
+      CSI_KEYS = { 'A' => :up, 'B' => :down, 'C' => :right, 'D' => :left, 'H' => :home, 'F' => :end }.freeze
+      TILDE_KEYS = { '1' => :home, '4' => :end, '3' => :delete }.freeze
+
       def with_screen
         input = $stdin
         $stdout.write("\e[?1049h\e[?25l")
@@ -20,22 +23,20 @@ class Hiiro
         char = input.getch
         return :ctrl_c if char == "\u0003"
         return :enter if char == "\r" || char == "\n"
+        return :tab if char == "\t"
+        return :ctrl_u if char == "\u0015"
+        return char unless char == "\e"
+        return :escape unless read_escape_char(input) == '['
 
-        if char == "\e"
-          first = read_escape_char(input)
-          return :escape if first.nil?
-          return :escape unless first == '['
+        csi_key(input)
+      end
 
-          case read_escape_char(input)
-          when 'A' then :up
-          when 'B' then :down
-          when 'C' then :right
-          when 'D' then :left
-          else :escape
-          end
-        else
-          char
-        end
+      def csi_key(input)
+        char = read_escape_char(input)
+        return CSI_KEYS[char] if CSI_KEYS.key?(char)
+        return :escape unless char&.match?(/\A\d\z/) && read_escape_char(input) == '~'
+
+        TILDE_KEYS.fetch(char, :escape)
       end
 
       def read_escape_char(input)
@@ -92,7 +93,144 @@ class Hiiro
       end
     end
 
-    State = Struct.new(:mode, :cursor, :top, :horizontal_offset, :query, :pick_query, :message, :prompt_label, :prompt_text, keyword_init: true)
+    State = Struct.new(:mode, :cursor, :top, :horizontal_offset, :query, :message, :prompt_label, :prompt_text, keyword_init: true)
+
+    module Fuzzy
+      WORD_BREAKS = "-_/. ".freeze
+
+      module_function
+
+      def rank(candidates, query)
+        return candidates if query.empty?
+
+        scored = candidates.each_with_index.filter_map do |candidate, idx|
+          score = score(candidate, query)
+          [score, candidate.length, candidate, idx] if score
+        end
+        scored.sort.map { |entry| entry[2] }
+      end
+
+      def score(candidate, query)
+        text = candidate.downcase
+        query = query.downcase
+        return 0 if text.start_with?(query)
+        return 1 if text.include?(query)
+        return 2 if word_starts(text, query[0]).any? { |idx| subsequence?(text[idx + 1..], query[1..]) }
+
+        gaps = subsequence_gaps(text, query)
+        gaps && 3 + gaps
+      end
+
+      def word_starts(text, char)
+        (0...text.length).select { |idx| text[idx] == char && (idx.zero? || WORD_BREAKS.include?(text[idx - 1])) }
+      end
+
+      def subsequence?(text, query)
+        !subsequence_gaps(text, query).nil?
+      end
+
+      def subsequence_gaps(text, query)
+        gaps = 0
+        last = nil
+        query.each_char do |char|
+          idx = text.index(char, last ? last + 1 : 0)
+          return nil unless idx
+
+          gaps += 1 if last && idx != last + 1
+          last = idx
+        end
+        gaps
+      end
+    end
+
+    # The text of one open prompt: a cursor, editing keys, and completion from a trigger table
+    # ({ '@' => source } completes a word starting with '@'; { '' => source } the word at the cursor).
+    class LineEditor
+      attr_reader :text, :cursor, :selected
+
+      def initialize(text: '', triggers: {})
+        @text = text.to_s
+        @cursor = @text.length
+        @selected = 0
+        @triggers = triggers
+        @pool = {}
+      end
+
+      def insert(char)
+        edit do
+          @text = @text[0, cursor] + char + @text[cursor..]
+          @cursor += char.length
+        end
+      end
+
+      def backspace
+        return if cursor.zero?
+
+        edit do
+          @text = @text[0, cursor - 1] + @text[cursor..]
+          @cursor -= 1
+        end
+      end
+
+      def delete = edit { @text = @text[0, cursor] + @text[cursor + 1..].to_s }
+      def left = edit { @cursor = [cursor - 1, 0].max }
+      def right = edit { @cursor = [cursor + 1, text.length].min }
+      def home = edit { @cursor = 0 }
+      def end_of_line = edit { @cursor = text.length }
+
+      def kill_line
+        edit do
+          @text = ''
+          @cursor = 0
+        end
+      end
+
+      def token
+        start = (text[0, cursor].rindex(' ') || -1) + 1
+        word = text[start...cursor]
+        return { start:, trigger: word[0], query: word[1..] } if !word.empty? && @triggers.key?(word[0])
+        return { start:, trigger: '', query: word } if @triggers.key?('')
+
+        nil
+      end
+
+      def choices(limit: 8)
+        found = token
+        return [] unless found
+
+        ranked = Fuzzy.rank(pool(found[:trigger]), found[:query]).first(limit)
+        ranked.first == found[:query] ? [] : ranked
+      end
+
+      def select(delta)
+        count = choices.length
+        @selected = (selected + delta) % count unless count.zero?
+      end
+
+      def accept
+        found = token
+        choice = choices[selected]
+        return false unless choice
+
+        replacement = found[:trigger] + choice + (found[:trigger].empty? ? '' : ' ')
+        edit do
+          @text = @text[0, found[:start]] + replacement + @text[cursor..]
+          @cursor = found[:start] + replacement.length
+        end
+        true
+      end
+
+      private
+
+      def edit
+        yield
+        @selected = 0
+      end
+
+      def pool(trigger)
+        @pool[trigger] ||= @triggers.fetch(trigger).call.to_a
+      end
+    end
 
     class Pane
       include Terminal
@@ -123,6 +261,13 @@ class Hiiro
 
       BACKSPACES = ["\u007F", "\b"].freeze
 
+      PROMPT_KEYS = {
+        :delete => [:delete], :left => [:left], :right => [:right],
+        :home => [:home], :end => [:end_of_line], :ctrl_u => [:kill_line],
+        :up => [:select, -1], :down => [:select, 1],
+        :tab => [:accept], :enter => [:accept],
+      }.freeze
+
       def self.key_map
         @key_map ||= KEY_MAP.dup
       end
@@ -141,7 +286,7 @@ class Hiiro
       def initialize(items:, empty_message: 'No items.')
         @items = items
         @empty_message = empty_message
-        @state = State.new(mode: :list, cursor: 0, top: 0, horizontal_offset: 0, query: '', pick_query: '', message: nil, prompt_label: '', prompt_text: '')
+        @state = State.new(mode: :list, cursor: 0, top: 0, horizontal_offset: 0, query: '', message: nil, prompt_label: '', prompt_text: '')
       end
 
       def cursor
@@ -223,26 +368,17 @@ class Hiiro
         item.to_s.downcase.include?(query.downcase)
       end
 
-      def pick_trigger
-        '@'
-      end
-
-      def pick_candidates
-        []
-      end
-
-      def picked(_candidate)
-      end
-
       # Called from list mode for a key the key map does not bind.
       def unhandled_key(_key)
       end
 
       # Reads one line in the status line; Enter calls the block with the text,
       # Escape drops it. The block runs after the prompt closes, so it may prompt again.
-      def prompt(label, default: '', &on_submit)
+      # `complete` is the LineEditor trigger table; Enter accepts an open choice before it submits.
+      def prompt(label, default: '', complete: {}, &on_submit)
         state.prompt_label = label
-        state.prompt_text = default.to_s
+        @editor = LineEditor.new(text: default, triggers: complete)
+        state.prompt_text = @editor.text
         @on_prompt_submit = on_submit
         state.mode = :prompt
       end
@@ -288,10 +424,19 @@ class Hiiro
       def status_line
         case state.mode
         when :search then "/#{state.query}_"
-        when :pick then pick_status
-        when :prompt then "#{state.prompt_label}: #{state.prompt_text}_"
+        when :prompt then prompt_status
         else list_status
         end
+      end
+
+      def prompt_status
+        line = "#{state.prompt_label}: #{@editor.text[0, @editor.cursor]}_#{@editor.text[@editor.cursor..]}"
+        choices = @editor.choices
+        return line if choices.empty?
+
+        found = @editor.token
+        listed = choices.each_with_index.map { |choice, idx| idx == @editor.selected ? "[#{choice}]" : choice }
+        "#{line}  #{["#{found[:trigger]}#{found[:query]}", '▸'].reject(&:empty?).join(' ')} #{listed.join(' ')}"
       end
 
       private
@@ -325,8 +470,6 @@ class Hiiro
       end
 
       def list_mode_key(key)
-        return state.mode = :pick if key == pick_trigger
-
         action = self.class.key_map[key]
         action ? send(action) : unhandled_key(key)
       end
@@ -339,45 +482,37 @@ class Hiiro
         move(0)
       end
 
-      def pick_mode_key(key)
+      def prompt_mode_key(key)
         return quit if key == :ctrl_c
+        return leave_prompt if key == :escape
+        return submit_prompt if key == :enter && @editor.choices.empty?
 
-        case key
-        when :enter
-          picked(pick_matches.first)
-          leave_pick
-        when :escape
-          leave_pick
-        else
-          state.pick_query = edit_text(state.pick_query, key)
+        edit_prompt(key)
+        state.prompt_text = @editor.text
+      end
+
+      def edit_prompt(key)
+        if BACKSPACES.include?(key)
+          @editor.backspace
+        elsif PROMPT_KEYS.key?(key)
+          @editor.public_send(*PROMPT_KEYS[key])
+        elsif key.is_a?(String) && key.length == 1 && key.ord >= 32
+          @editor.insert(key)
         end
       end
 
-      def prompt_mode_key(key)
-        return quit if key == :ctrl_c
-
-        case key
-        when :enter
-          on_submit = @on_prompt_submit
-          text = state.prompt_text
-          leave_prompt
-          on_submit&.call(text)
-        when :escape
-          leave_prompt
-        else
-          state.prompt_text = edit_text(state.prompt_text, key)
-        end
+      def submit_prompt
+        on_submit = @on_prompt_submit
+        text = @editor.text
+        leave_prompt
+        on_submit&.call(text)
       end
 
       def leave_prompt
         @on_prompt_submit = nil
+        @editor = nil
         state.prompt_label = ''
         state.prompt_text = ''
-        state.mode = :list
-      end
-
-      def leave_pick
-        state.pick_query = ''
         state.mode = :list
       end
 
@@ -386,16 +521,6 @@ class Hiiro
         return text + key if key.is_a?(String) && key.length == 1 && key.ord >= 32
 
         text
-      end
-
-      def pick_matches
-        prefix = state.pick_query.downcase
-        pick_candidates.select { |candidate| candidate.to_s.downcase.start_with?(prefix) }
-      end
-
-      def pick_status
-        labels = pick_matches.map { |candidate| "[#{candidate}]" }
-        ["@#{state.pick_query}_", labels.join(' ')].reject(&:empty?).join('  ')
       end
 
       def list_status

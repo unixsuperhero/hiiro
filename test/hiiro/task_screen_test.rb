@@ -417,7 +417,7 @@ class TaskScreenTest < Minitest::Test
     screen = screen_for
     press(screen, "N")
 
-    assert_equal "new task: _", frame(screen).last
+    assert_equal "new task: _  ▸ [alpha] beta beta/sub gamma", frame(screen).last
 
     type(screen, "delta")
 

@@ -65,6 +65,8 @@ Task names may be `parent/child` for subtasks. `t new NAME` creates exactly `NAM
 
 Scope: `global` lists every top-level task by name; `task(@NAME)` lists only the current task's subtree, with its root always expanded. Closed tasks (`done`, `archived`) and their subtasks are hidden until `A`. Search keeps rows that match plus the tasks above them, with every task shown expanded while the query is set; collapsing and expanding are remembered separately and come back when the query is cleared. Errors from an action (bad task name, Herdr not running) show in the status line.
 
+Editing in a prompt: Left, Right, Home, End, Delete, and Ctrl-U (clear) edit the text; while choices show after `▸`, Up and Down move the `[ ]` selection, Tab accepts it, and Enter accepts it before a second Enter submits. In `todo:`, `next action:`, and `waiting on:` a word starting with `@` completes project names and one starting with `#` completes tags; `new task:` completes existing task names (handy for `parent/child`).
+
 ## Todos and tt
 
 | Command | Behavior |

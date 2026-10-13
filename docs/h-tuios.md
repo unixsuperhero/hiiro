@@ -96,6 +96,8 @@ Every verb runs through the tuios binary; a failure becomes the status message a
 
 **Mail.** `m` needs the pane the screen runs in: `TUIOS_PANE_ID` is the `--from` sender. Outside a tuios pane it reports `no own pane`. Listing, jumping, capturing, and the other keys work from any terminal that can reach the daemon.
 
+**Editing in a prompt.** Left, Right, Home, End, Delete, and Ctrl-U (clear) edit the text; while choices show after `▸`, Up and Down move the `[ ]` selection, Tab accepts it, and Enter accepts it before a second Enter submits. In the `message` prompt a word starting with `@` completes project names; the `name` and `new window` prompts do not complete.
+
 **Examples**
 
 ```bash

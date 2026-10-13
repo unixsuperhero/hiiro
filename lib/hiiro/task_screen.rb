@@ -263,7 +263,7 @@ class Hiiro
       task = node_task
       return unless task
 
-      prompt('todo') do |text|
+      prompt('todo', complete: { '@' => -> { Completions.projects }, '#' => -> { Completions.tags } }) do |text|
         next if text.strip.empty?
 
         mutate do
@@ -278,14 +278,14 @@ class Hiiro
       task = node_task
       return unless task
 
-      prompt('next action', default: task.next_action) { |text| mutate { task.set_next!(text) } }
+      prompt('next action', default: task.next_action, complete: { '@' => -> { Completions.projects }, '#' => -> { Completions.tags } }) { |text| mutate { task.set_next!(text) } }
     end
 
     def edit_waiting
       task = node_task
       return unless task
 
-      prompt('waiting on', default: task.waiting_on) { |text| mutate { task.set_waiting!(text) } }
+      prompt('waiting on', default: task.waiting_on, complete: { '@' => -> { Completions.projects }, '#' => -> { Completions.tags } }) { |text| mutate { task.set_waiting!(text) } }
     end
 
     def mark_done
@@ -300,7 +300,7 @@ class Hiiro
     end
 
     def new_task
-      prompt('new task') do |name|
+      prompt('new task', complete: { '' => -> { Completions.tasks } }) do |name|
         next if name.strip.empty?
 
         select = nil

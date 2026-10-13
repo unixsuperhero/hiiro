@@ -290,17 +290,19 @@ class MyScreen < Hiiro::Tui::Screen
   key 'o', :open_item                 # key map is a table; subclasses add or override bindings
   def header_lines = ["title  #{state.query}"]
   def detail_lines(item) = ["name  #{item.name}"]   # nil (default) means no detail pane
-  def pick_candidates = %w[link sound]              # '@' opens a prefix-filtered picker in the status line
-  def picked(candidate) = (self.message = candidate)
   def open_item = (self.message = "open #{current_item}")
   def unhandled_key(key) = nil                       # list-mode keys the key map does not bind
   def ask = prompt('name', default: 'x') { |text| prompt('value') { |v| save(text, v) } }
+  def pick = prompt('table', complete: { '' => -> { Hiiro::Completions.tables } }) { |name| open(name) }
 end
-MyScreen.new(items: rows).run        # j/k/h/l move, '/' searches, '@' picks, q/Esc/Ctrl-C quit
+MyScreen.new(items: rows).run        # j/k/h/l move, '/' searches, q/Esc/Ctrl-C quit
 ```
 
-- `state` is one `Tui::State` (`mode` :list|:search|:pick|:prompt, `cursor`, `top`, `horizontal_offset`, `query`, `pick_query`, `message`, `prompt_label`, `prompt_text`). Read it; never keep a parallel boolean.
-- `prompt(label, default: '') { |text| ... }` reads one line in the status line (`label: text_`). Enter leaves the mode and calls the block, Esc leaves without calling it, Ctrl-C quits. The block runs after the prompt closes, so it may call `prompt` again to chain questions.
+- `state` is one `Tui::State` (`mode` :list|:search|:prompt, `cursor`, `top`, `horizontal_offset`, `query`, `message`, `prompt_label`, `prompt_text`). Read it; never keep a parallel boolean.
+- `prompt(label, default: '', complete: {}) { |text| ... }` reads one line in the status line (`label: head_tail`, then `  @hii ▸ [hiiro] hiiro-config` while choices are open). Left/Right/Home/End/Delete/Ctrl-U edit, Up/Down select, Tab accepts; Enter accepts an open choice, otherwise leaves the mode and calls the block. Esc leaves without calling it, Ctrl-C quits. The block runs after the prompt closes, so it may call `prompt` again to chain questions. `complete` maps a trigger (`'@'`, `'#'`, or `''` for the word at the cursor) to a lambda of candidates.
+- `Tui::LineEditor.new(text:, triggers:)` holds the prompt text (`insert`, `backspace`, `delete`, `left`, `right`, `home`, `end_of_line`, `kill_line`, `token`, `choices(limit: 8)`, `select(delta)`, `accept`); the screen copies its text into `state.prompt_text` after each key.
+- `Tui::Fuzzy.rank(candidates, query)` orders prefix (0), substring (1), word start (2), then subsequence (3 + gaps); ties by length, then name.
+- `Hiiro::Completions` (lib/hiiro/completions.rb) are the sources: `projects`, `tags`, `tables`, `tasks`, `branches(repo_path)`, each a sorted Array.
 - `unhandled_key(key)` is called from list mode for any key the key map does not bind (default no-op); `TableScreen` uses it for per-table action letters.
 - `frame(rows:, cols:)` returns plain strings with no ANSI, one per row, which is what tests assert against literally. `render` adds the highlight.
 - `Tui::Pane.new(width:, height:).lines(texts)` pads and truncates to an exact rectangle.

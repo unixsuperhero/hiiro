@@ -239,7 +239,7 @@ class Hiiro
         return
       end
 
-      prompt('message') do |text|
+      prompt('message', complete: { '@' => -> { Completions.projects } }) do |text|
         attempt('sent') { runner.call('send-agent-message', text, '-s', row.session, '-w', row.id, '--from', from) }
       end
     end

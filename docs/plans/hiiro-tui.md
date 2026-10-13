@@ -95,7 +95,7 @@ Built 2026-10-12 per `docs/plans/tuios-screen.md`: `h tuios ui`, one row per tui
 
 ## PR 8. Trigger-character autocomplete
 
-Planned 2026-10-12 in `docs/plans/line-editor.md`: `Tui::LineEditor` with a cursor, editing keys, and a trigger table per prompt, so `@` offers projects and `#` offers tags inside free text and a name prompt completes its whole field, ranked by an in-process fuzzy matcher and shown inline in the status line; pick mode is deleted in its favour.
+Built 2026-10-13 per `docs/plans/line-editor.md`: `Tui::LineEditor` with a cursor, editing keys, and a trigger table per prompt, so `@` offers projects and `#` offers tags inside free text and a name prompt completes the word at the cursor, ranked by `Tui::Fuzzy` and shown inline in the status line; pick mode is deleted in its favour and `Hiiro::Completions` holds the candidate sources.
 
 ## Alternatives rejected
 

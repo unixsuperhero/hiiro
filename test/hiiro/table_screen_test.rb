@@ -74,11 +74,16 @@ class TableScreenTest < Minitest::Test
     assert_equal "scope: global  1/3", frame(screen).last
   end
 
-  def test_pick_filters_to_one_table
+  def test_at_completes_a_table_name_and_switches_to_it
     screen = screen_for
     press(screen, '@', 's', 'o')
 
-    assert_equal "@so_  [sound]", frame(screen).last
+    assert_equal "table: so_  so ▸ [sound]", frame(screen).last
+
+    press(screen, :enter)
+
+    assert_equal :prompt, screen.state.mode
+    assert_equal "table: sound_", frame(screen).last
 
     press(screen, :enter)
 
@@ -246,7 +251,7 @@ class TableScreenTest < Minitest::Test
     screen = screen_for
     press(screen, 'T')
 
-    assert_equal "tags: _", frame(screen).last
+    assert_equal "tags: _  ▸ [old]", frame(screen).last
 
     type(screen, "x -old")
 
@@ -259,7 +264,7 @@ class TableScreenTest < Minitest::Test
     screen = screen_for
     press(screen, ' ', 'm')
 
-    assert_equal "move to table: _", frame(screen).last
+    assert_equal "move to table: _  ▸ [link] sound", frame(screen).last
 
     type(screen, "sfx")
 

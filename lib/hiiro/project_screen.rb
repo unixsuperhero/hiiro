@@ -264,7 +264,7 @@ class Hiiro
       return unless row
 
       repo = row.repo
-      prompt('branch') do |branch|
+      prompt('branch', complete: { '' => -> { Completions.branches(repo.path) } }) do |branch|
         branch = branch.strip
         next if branch.empty?
 

@@ -248,7 +248,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h session` | Compatibility commands for Herdr workspaces |
 | `h sha` | Extract short SHA from git log |
 | [`h strip ctrl`](docs/h-misc.md#h-strip-ctrl) | Strip terminal escapes and controls from files, stdin, or text |
-| [`h table`](docs/h-table.md) | TUI and scriptable CLI over registry tables (links, sounds, pins, ...) with task scope, tags, and per-table actions |
+| [`h table`](docs/h-table.md) | TUI and scriptable CLI over registry tables (links, sounds, pins, ...) with task scope, tags, per-table actions, and fuzzy completion in prompts |
 | `h todo` | Todo list management with tags and task association |
 | [`h tuios`](docs/h-tuios.md) | TUIOS inbox server, skills, and startup rules; `h tuios ui` is the windows screen over every session, with `--hosts` for remote sessions |
 | `h window` | Compatibility commands for Herdr tabs |

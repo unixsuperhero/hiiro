@@ -294,7 +294,7 @@ class ProjectScreenTest < Minitest::Test
     screen = screen_for
     press(screen, "a")
 
-    assert_equal "branch: _", frame(screen).last
+    assert_equal "branch: _  ▸ [feat] main", frame(screen).last
 
     type(screen, "new1")
 
@@ -340,9 +340,9 @@ class ProjectScreenTest < Minitest::Test
     refute_includes git(@alpha, "worktree", "list"), new1
   end
 
-  def test_a_with_an_empty_branch_cancels
+  def test_a_then_escape_cancels
     screen = screen_for
-    press(screen, "a", :enter)
+    press(screen, "a", :escape)
 
     assert_equal "1/5", frame(screen).last
     assert_equal 5, @catalog.rows.length
