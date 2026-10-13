@@ -18,7 +18,17 @@
 
 ## Unreleased
 
+### Added
+- `h save --bundle` / `--task TASK [--label LABEL]` and `h context save|tmp|img|tmpimage --task TASK` attach the file they just captured (no second clipboard read) to the current context bundle and/or a task's `file` resources. TASK is an exact name, unique prefix, or `.`; unknown or ambiguous tasks fail before the clipboard is read. Repeats keep one association per destination and never change task status. A failed attachment after a successful capture keeps the file, names it on stderr, and exits 2.
+- `h obsidian copy`, `h docs copy`, and `h docs url` (with `--all` for every match).
+
 ### Changed
+- One capture path (`Hiiro::Clipboard` adapters + `Hiiro::Artifact`) behind `h save`, `h img`, `h context`, `h note save`, and `h link paste`. Clipboard bytes are written unchanged and the path is printed only after the write. An empty clipboard, missing `pngpaste`, a failing clipboard tool, and an unwritable destination are distinct errors that write nothing; a failing `pngpaste` no longer falls back to saving text, and `h img save` never saves text.
+- `h img save PATH`, `h context save|img NAME`, and `h note save FILE` refuse to replace an existing file unless `--force` (they silently overwrote). `h save` keeps its `-2`, `-3` suffixes and now creates each name exclusively.
+- `h context open` (alias `edit`) edits a copy of the manifest: every line must name an existing path and the manifest must not have changed meanwhile, else it is left alone and the edited text is kept under `~/.local/share/hiiro/edits/`. A failing editor or emptied text cancels.
+- `h link select|copy|open`, `h obsidian select|url|open|copy`, and `h docs open|url|copy|rm` pick through `Hiiro::Selection`: rows go to the finder with a hidden position column, so the chosen original record (link id, vault-relative note, Portfolio id) is returned even when labels are equal. `h link open TERMS` offers several matches to the picker instead of reporting not found. Opening or copying exits 1 when the opener or `pbcopy` fails.
+- URL placeholder values and `h link edit` are edited through `InputFile`: invalid YAML or fields exit 1 with the edited text kept under `~/.local/share/hiiro/edits/`; an unchanged template cancels.
+
 - `tools.yml` commands are `argv: [...]` (with `[FILENAMES]` as one element, expanded to one argument per file) or authored `shell:` text that receives the files as `"$@"`. The old `command:` strings are refused until the new `h run migrate` converts them (plain commands become argv, shell commands keep their text with `[FILENAMES]` → `"$@"`, quoted or embedded uses are left for a manual edit) after copying tools.yml to a timestamped `.bak`. A file starting with `-` is passed as `./-name` unless `--` precedes `[FILENAMES]`.
 - `h run` reports every selected tool as succeeded, failed, interrupted, or skipped, keeps running after a failure, stops on Ctrl-C, and exits with the first failure's status (130 when interrupted) instead of always 0. No matching tools and an unknown variation are errors before anything runs; Git failures (not a repository, no merge base with `main`) are errors instead of "no matching files". Renames pass their new path; deleted files are not passed.
 - Failed and interrupted `h run` / `h js all` / `h ch make` logs are kept under `~/.local/share/hiiro/captures/validation/RUN_ID/` as `h capture` rows with the command, cwd, run id, times, exit status or signal, task, and context provenance; succeeded logs are deleted. New `h run queue [RUN_ID]` writes a pending queue prompt naming those logs with the run's task/app/dir; it never launches an agent.
@@ -37,6 +47,8 @@
 - The ISC code freeze is applied as a policy when checks are counted; GitHub's raw contexts are stored unchanged and `ls -C` shows both. When `isc` is unavailable GitHub's state stands (it was previously forced to success).
 
 ### Fixed
+- `h note save FILE TEXT...` saves TEXT (it always read the clipboard) and no longer leaves an empty temp file in the system temp directory.
+- `h context rm 0` no longer removes the last bundle entry.
 - `h pr attach` no longer stages everything, makes a `WIP` commit, or checks out the PR branch: it opens a tab in the task's directory and leaves HEAD, the index, files, and branches as they were. It also finds the task again (it named a top-level `Environment` that hiiro never defines, so it always reported no workspace).
 - `h pr to-draft`/`mto-draft` call `gh pr ready --undo` (the `--draft` flag they passed does not exist).
 - `h pr-monitor` no longer opens a browser when checks pass and no longer links every PR to one hard-coded repository.

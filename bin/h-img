@@ -2,7 +2,6 @@
 
 require 'hiiro'
 require 'base64'
-require 'tempfile'
 
 MIME_TYPES = {
   'jpg'  => 'image/jpeg',
@@ -16,31 +15,21 @@ def mime_for(path)
   MIME_TYPES.fetch(File.extname(path).downcase.delete('.'), 'image/png')
 end
 
-def clipboard_image_to_tempfile
-  tmp = Tempfile.new(['h-img-', '.png'])
-  tmp.close
-  unless system('pngpaste', tmp.path, out: File::NULL, err: File::NULL)
-    tmp.unlink
-    return nil
-  end
-  tmp
-end
-
 Hiiro.run(*ARGV) {
-  add_subcmd(:save) { |outpath=nil|
-    unless outpath
-      puts "Usage: h img save <outpath>"
+  add_subcmd(:save) { |*args|
+    opts = Hiiro::Options.parse(args) { flag(:force, short: :f, desc: 'Replace an existing file') }
+    outpath = opts.args.first
+    unless outpath && opts.args.one?
+      puts "Usage: h img save [--force] <outpath>"
       exit 1
     end
 
-    tmp = clipboard_image_to_tempfile
-    unless tmp
-      puts "No image in clipboard (pngpaste failed)"
+    outcome = Hiiro::Artifact.capture(:image, overwrite: opts.force) { outpath }
+    unless outcome.ok?
+      warn outcome.existing ? "#{outcome.detail} (use --force to replace it)" : outcome.detail
       exit 1
     end
-
-    FileUtils.mv(tmp.path, outpath)
-    puts "Saved to #{outpath}"
+    puts "Saved to #{outcome.artifact.path}"
   }
 
   add_subcmd(:b64) { |path=nil|
@@ -52,14 +41,13 @@ Hiiro.run(*ARGV) {
       data = File.binread(path)
       mime = mime_for(path)
     else
-      tmp = clipboard_image_to_tempfile
-      unless tmp
-        puts "No image in clipboard (pngpaste failed)"
+      image = Hiiro::Clipboard.image
+      unless image.ok?
+        warn image.detail
         exit 1
       end
-      data = File.binread(tmp.path)
-      mime = 'image/png'
-      tmp.unlink
+      data = image.bytes
+      mime = image.content_type
     end
 
     puts "data:#{mime};base64,#{Base64.strict_encode64(data)}"

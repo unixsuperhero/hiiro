@@ -103,18 +103,16 @@ def item_label(item)
   "#{item['title']} [#{item['type']} ##{item['id']}]"
 end
 
-def pick_one(items)
-  return items.first if items.length == 1
-
-  labels = items.map { |item| item_label(item) }
-  choice = fuzzyfind(labels)
-  return nil if choice.nil? || choice.strip.empty?
-
-  items.find { |item| item_label(item) == choice.strip }
+# Portfolio's own id is the identity; the label is only shown.
+def selection_items(items)
+  items.map do |item|
+    url = API.absolute_url(item['href'])
+    Hiiro::Selection::Item.new(id: "portfolio:#{item['id']}", title: item_label(item), open_target: url, copy_text: url, record: item)
+  end
 end
 
-def open_item(item)
-  system('open', API.absolute_url(item['href']))
+def pick_one(items)
+  Hiiro::Selection.pick(selection_items(items), tty: true)
 end
 
 def service_loaded?
@@ -212,7 +210,31 @@ Hiiro.run(*ARGV, plugins: [:Pins]) {
     items = matching_items(opts)
     next puts('No matching items.') if items.empty?
 
-    (opts.all ? items : [pick_one(items)].compact).each { |item| open_item(item) }
+    chosen = opts.all ? selection_items(items) : [pick_one(items)].compact
+    exit 1 if chosen.empty?
+    failed = chosen.reject { |item| Hiiro::Selection.open(item) }
+    exit 1 unless failed.empty?
+  }
+
+  # Absolute document URLs of the picked item (or every match with --all).
+  chosen_urls = lambda do |args|
+    opts = open_opts.parse(args)
+    items = matching_items(opts)
+    abort('No matching items.') if items.empty?
+
+    chosen = opts.all ? selection_items(items) : [pick_one(items)].compact
+    exit 1 if chosen.empty?
+    chosen.map(&:copy_text).join("\n")
+  end
+
+  add_subcmd(:url) { |*args|
+    puts chosen_urls.call(args)
+  }
+
+  add_subcmd(:copy) { |*args|
+    text = chosen_urls.call(args)
+    abort 'Could not copy to the clipboard' unless Hiiro::Selection.copy_text(text)
+    puts text
   }
 
   add_subcmd(:vim) { |*args|
@@ -236,7 +258,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) {
     items = matching_items(opts)
     next puts('No matching items.') if items.empty?
 
-    item = pick_one(items)
+    item = pick_one(items)&.record
     next unless item
 
     API.delete(item['id'], files: opts.files)

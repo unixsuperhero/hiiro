@@ -73,7 +73,7 @@ t file ls [TASK]
 t file open [TASK] [ID|PATH|LABEL]
 ```
 
-Directories and files must exist and are stored as real paths. `--primary` sets the task's code directory and applies only to directories. URLs must be absolute http or https. `file ls` also lists unregistered files in the task home. `open` accepts an ID, full target, or label, then a unique prefix of any of them; with no reference and several candidates it opens a fuzzy finder. Opening uses `open` on macOS and `xdg-open` elsewhere.
+Directories and files must exist and are stored as real paths. Adding the same target again keeps the one row (a new `--label` replaces the old one). `h save --task TASK` and `h context save|tmp|img|tmpimage --task TASK` attach the file they just captured through the same writer. `--primary` sets the task's code directory and applies only to directories. URLs must be absolute http or https. `file ls` also lists unregistered files in the task home. `open` accepts an ID, full target, or label, then a unique prefix of any of them; with no reference and several candidates it opens a fuzzy finder. Opening uses `open` on macOS and `xdg-open` elsewhere.
 
 ## Documents
 

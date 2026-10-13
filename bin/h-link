@@ -3,7 +3,6 @@
 require 'yaml'
 require 'time'
 require 'pry'
-require 'tempfile'
 require "hiiro"
 
 opts = Hiiro::Options.setup {
@@ -20,20 +19,8 @@ class LinkManager
     'created_at' => Time.now.iso8601,
   }
 
-  def hash_matches?(links_hash, *args)
-    links_hash.select { |line, link| link.matches?(*args) }
-  end
-
   def search_links(links, *args)
     links.select { |link| link.matches?(*args) }
-  end
-
-  def load_link_hash(links=nil)
-    links ||= load_links
-
-    links.each_with_index.each_with_object({}) do |(link, idx), h|
-      h[link.display_string(idx)] = link
-    end
   end
 
   def load_links
@@ -46,10 +33,15 @@ class LinkManager
     rows = links.nil? ? [LINK_TEMPLATE] : selected.map(&:to_h)
     input = Hiiro::InputFile.yaml_file(hiiro: hiiro, content: rows.to_yaml, prefix: 'link-edit-')
     document = input.edit.document
-    raise Hiiro::Error, document.error.message unless document.valid?
+    raise Hiiro::Error, document.error.message unless document.editor_succeeded?
     return nil if document.empty? || !document.changed?
-    parsed = document.data
-    apply_edit(parsed.is_a?(Hash) ? [parsed] : parsed, baseline: baseline)
+    begin
+      raise Hiiro::Error, document.error.message unless document.valid?
+      parsed = document.data
+      apply_edit(parsed.is_a?(Hash) ? [parsed] : parsed, baseline: baseline)
+    rescue Hiiro::Error => e
+      raise Hiiro::Error, "#{e.message}; links unchanged, edited text kept at #{input.keep}"
+    end
   ensure
     input&.cleanup
   end
@@ -111,36 +103,50 @@ class LinkManager
     Hiiro::URLTemplate.new(url).placeholders?
   end
 
-  def prompt_for_placeholder_values(url, link=nil)
+  # Values for the URL's {placeholders}, edited as YAML. nil when the editor
+  # failed or left the template unchanged; invalid YAML or fields raise with
+  # the edited text kept.
+  def prompt_for_placeholder_values(url, link = nil, hiiro:)
     placeholders = extract_placeholders(url)
     return {} if placeholders.empty?
 
-    # Create a YAML template with placeholder names as keys
-    template = placeholders.each_with_object({}) { |name, hash| hash[name] = '' }
+    header = link ? link.to_h.to_yaml.lines.map { |line| "# #{line}" }.join + "#\n# Fill in placeholder values below:\n#\n" : ''
+    template = header + placeholders.to_h { |name| [name, ''] }.to_yaml
+    input = Hiiro::InputFile.yaml_file(hiiro: hiiro, content: template, prefix: 'link-params-')
+    document = input.edit.document
+    return nil unless document.editor_succeeded? && document.changed?
 
-    tmpfile = Tempfile.new(['link-params-', '.yml'])
+    values = document.data
+    error = document.error&.message ||
+            ('Placeholder values must be a mapping' unless values.is_a?(Hash)) ||
+            ("Unknown placeholders: #{(values.keys.map(&:to_s) - placeholders).join(', ')}" unless (values.keys.map(&:to_s) - placeholders).empty?) ||
+            ('Placeholder values must be text or numbers' unless values.values.all? { |v| v.nil? || v.is_a?(String) || v.is_a?(Numeric) })
+    raise Hiiro::Error, "#{error}; edited text kept at #{input.keep}" if error
 
-    # Add the link as YAML comments if provided
-    if link
-      link_yaml = link.to_h.to_yaml
-      link_yaml.each_line do |line|
-        tmpfile.puts("# #{line.chomp}")
-      end
-      tmpfile.puts("#")
-      tmpfile.puts("# Fill in placeholder values below:")
-      tmpfile.puts("#")
+    values.to_h { |key, value| [key.to_s, value.to_s] }
+  ensure
+    input&.cleanup
+  end
+
+  # The link's URL with placeholders filled; nil when the prompt was cancelled.
+  def expand(link, hiiro:)
+    return link.url unless has_placeholders?(link.url)
+
+    values = prompt_for_placeholder_values(link.url, link, hiiro: hiiro)
+    values && substitute_placeholders(link.url, values)
+  end
+
+  def items(links)
+    links.each_with_index.map do |link, idx|
+      Hiiro::Selection::Item.new(id: "link:#{link.id}", title: link.display_string(idx), open_target: link.url, copy_text: link.url, record: link)
     end
+  end
 
-    tmpfile.write(template.to_yaml)
-    tmpfile.close
-
-    editor = ENV['EDITOR'] || 'safe_nvim' || 'nvim'
-    system(editor, tmpfile.path)
-
-    values = YAML.load_file(tmpfile.path) || {}
-    tmpfile.unlink
-
-    values
+  # Links matching every term, numbered as in `h link ls`, offered to the
+  # picker; the chosen original Link, or nil when none match or it was cancelled.
+  def pick(links, *terms)
+    offered = items(links).select { |item| item.record.matches?(*terms) }
+    Hiiro::Selection.pick(offered, tty: true)&.record
   end
 
   def substitute_placeholders(url, values)
@@ -234,67 +240,29 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
   end
 
-  add_subcmd(:select) do |*select_args|
+  # URL of the link picked from those matching terms, placeholders filled.
+  # Exits 1 when nothing is saved or matches, or the pick or prompt is cancelled.
+  picked_url = lambda do |terms|
     links = lm.load_links
+    abort 'No links saved.' if links.empty?
+    abort "Link not found: #{terms.join(' ')}" unless links.any? { |link| link.matches?(*terms) }
+    link = lm.pick(links, *terms)
+    abort 'No link selected.' unless link
+    url = lm.expand(link, hiiro: self)
+    abort 'Cancelled.' unless url
+    url
+  rescue Hiiro::Error => e
+    abort e.message
+  end
 
-    if links.empty?
-      STDERR.puts "No links saved."
-      exit 1
-    end
-
-    lines = lm.load_link_hash(links)
-
-    if select_args.any?
-      lines = lm.hash_matches?(lines, *select_args)
-    end
-
-    selected = fuzzyfind(lines.keys)
-
-    if !selected.strip.empty?
-      link = lines[selected.strip]
-      if link
-        url = link.url
-
-        if lm.has_placeholders?(url)
-          values = lm.prompt_for_placeholder_values(url, link)
-          url = lm.substitute_placeholders(url, values)
-        end
-
-        puts url
-      end
-    end
+  add_subcmd(:select) do |*select_args|
+    puts picked_url.call(select_args)
   end
 
   add_subcmd(:copy) do |*copy_args|
-    links = lm.load_links
-
-    if links.empty?
-      STDERR.puts "No links saved."
-      next
-    end
-
-    lines = lm.load_link_hash(links)
-
-    if copy_args.any?
-      lines = lm.hash_matches?(lines, *copy_args)
-    end
-
-    selected = fuzzyfind(lines.keys)
-
-    if !selected.strip.empty?
-      link = lines[selected.strip]
-      if link
-        url = link.url
-
-        if lm.has_placeholders?(url)
-          values = lm.prompt_for_placeholder_values(url, link)
-          url = lm.substitute_placeholders(url, values)
-        end
-
-        Hiiro::Shell.pipe(url, 'pbcopy')
-        puts "Copied URL '#{url}' to clipboard"
-      end
-    end
+    url = picked_url.call(copy_args)
+    abort "Could not copy '#{url}' to the clipboard" unless Hiiro::Selection.copy_text(url)
+    puts "Copied URL '#{url}' to clipboard"
   end
 
   add_subcmd(:editall) do |*editall_args|
@@ -336,10 +304,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
 
     if rm_args.empty?
-      lines = lm.load_link_hash(links)
-      selected = fuzzyfind(lines.keys)
-      next if selected.nil? || selected.strip.empty?
-      link = lines[selected.strip]
+      link = lm.pick(links)
       next unless link
       Hiiro::Link.remove(link.id)
       puts "Removed: #{link.url}"
@@ -370,61 +335,21 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     run_subcmd(:rm, *remove_args)
   end
 
+  # A number or shorthand opens that link; other terms open the single match
+  # or offer the matches to the picker.
   add_subcmd(:open) do |*open_args|
-    links = lm.load_links
-
-    if open_args.empty?
-      lines = lm.load_link_hash(links)
-
-      exit_code = 1
-
-      if open_args.any?
-        lines = lm.hash_matches?(lines, *open_args)
+    _, link = lm.find_link_by_ref(open_args.first, lm.load_links) if open_args.any?
+    url = if link
+      begin
+        lm.expand(link, hiiro: self) || abort('Cancelled.')
+      rescue Hiiro::Error => e
+        abort e.message
       end
-
-      selected = fuzzyfind(lines.keys)
-
-      if !selected.strip.empty?
-        link = lines[selected.strip]
-        if link
-          url = link.url
-
-          if lm.has_placeholders?(url)
-            values = lm.prompt_for_placeholder_values(url, link)
-            url = lm.substitute_placeholders(url, values)
-          end
-
-          system('open', url)
-          exit_code = 0
-        end
-      end
-
-      exit exit_code
+    else
+      picked_url.call(open_args)
     end
 
-    idx, link = lm.find_link_by_ref(open_args.first, links)
-
-    if link.nil?
-      matches = lm.search_links(links, *open_args)
-
-      if matches.count == 1
-        link = matches.first
-      end
-    end
-
-    if link.nil?
-      puts "Link not found: #{open_args.first}"
-      exit 1
-    end
-
-    url = link.url
-
-    if lm.has_placeholders?(url)
-      values = lm.prompt_for_placeholder_values(url, link)
-      url = lm.substitute_placeholders(url, values)
-    end
-
-    system('open', url)
+    exit 1 unless Hiiro::Selection.open_target(url)
   end
 
   add_subcmd(:tags) do |*tag_args|
@@ -437,10 +362,11 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
   end
 
   add_subcmd(:paste) do |*paste_args|
-    url = `pbpaste`.strip
+    clip = Hiiro::Clipboard.text
+    url = clip.ok? ? clip.bytes.force_encoding('UTF-8').strip : ''
 
     if url.empty?
-      puts "Clipboard is empty."
+      puts(clip.ok? || clip.status == :empty_clipboard ? "Clipboard is empty." : clip.detail)
       exit 1
     end
 

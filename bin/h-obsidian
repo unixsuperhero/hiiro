@@ -169,22 +169,24 @@ class ObsidianNotes
     end
   end
 
-  def pick(notes, hiiro:)
+  def items(notes)
+    notes.each_with_index.map do |note, idx|
+      Hiiro::Selection::Item.new(id: "obsidian:#{note.relative_path}", title: note.display_string(idx),
+                                 open_target: note.url, copy_text: note.url, record: note)
+    end
+  end
+
+  # One note passes through; several open the fuzzy finder only when both
+  # stdin and stdout are terminals, else AmbiguousSelectionError lists them.
+  def pick(notes)
     return nil if notes.empty?
-    return notes.first if notes.length == 1
 
-    unless $stdin.tty? && $stdout.tty?
-      raise AmbiguousSelectionError, format_matches(notes)
-    end
+    item = Hiiro::Selection.pick(items(notes), tty: $stdin.tty? && $stdout.tty?)
+    raise NoSelectionError if item.nil?
 
-    mapping = notes.each_with_index.each_with_object({}) do |(note, idx), acc|
-      acc[note.display_string(idx)] = note
-    end
-
-    selected = hiiro.fuzzyfind_from_map(mapping)
-    raise NoSelectionError if selected.nil?
-
-    selected
+    item.record
+  rescue Hiiro::Selection::Ambiguous
+    raise AmbiguousSelectionError, format_matches(notes)
   end
 
   def cld_dir
@@ -367,6 +369,7 @@ def general_help
       select [query]             Interactively choose a note and print its Obsidian URL
       url [query]                Print the Obsidian URL for a note
       open [query]               Open a note in Obsidian
+      copy [query]               Copy a note's Obsidian URL to the clipboard
       path                       Print the cld/ directory path
       vault                      Print the vault root path
       help                       Print this help
@@ -446,6 +449,13 @@ def command_help(command)
         Enter          Save changes
         q              Cancel without saving
     HELP
+  when :copy
+    <<~HELP
+      Usage: h obsidian copy [scope flags] [query]
+
+      Copy the Obsidian URL of a matching note to the clipboard.
+      If multiple notes match in a terminal, opens `sk` for selection.
+    HELP
   when :path
     "Usage: h obsidian path"
   when :vault
@@ -467,7 +477,7 @@ def resolve_note(manager, hiiro, args)
   matches = manager.filter(notes, *args)
   return nil if matches.empty?
 
-  manager.pick(matches, hiiro:)
+  manager.pick(matches)
 end
 
 manager = ObsidianNotes.new
@@ -853,26 +863,33 @@ rescue ObsidianNotes::NoSelectionError
   exit 1
 end
 
-hiiro.add_subcmd(:open) do |*args|
-  if help_requested?(args)
-    puts command_help(:open)
-    exit 0
-  end
+{ open: :open, copy: :copy }.each do |command, action|
+  hiiro.add_subcmd(command) do |*args|
+    if help_requested?(args)
+      puts command_help(command)
+      exit 0
+    end
 
-  note = resolve_note(manager, hiiro, args)
-  unless note
-    STDERR.puts "No note found."
+    note = resolve_note(manager, hiiro, args)
+    unless note
+      STDERR.puts "No note found."
+      exit 1
+    end
+
+    if action == :open
+      exit 1 unless Hiiro::Selection.open_target(note.url)
+    else
+      abort "Could not copy #{note.url} to the clipboard" unless Hiiro::Selection.copy_text(note.url)
+      puts "Copied #{note.url}"
+    end
+  rescue ObsidianNotes::AmbiguousSelectionError => e
+    STDERR.puts "Multiple notes matched:"
+    STDERR.puts e.message
+    exit 1
+  rescue ObsidianNotes::NoSelectionError
+    STDERR.puts 'No note selected.'
     exit 1
   end
-
-  system('open', note.url)
-rescue ObsidianNotes::AmbiguousSelectionError => e
-  STDERR.puts "Multiple notes matched:"
-  STDERR.puts e.message
-  exit 1
-rescue ObsidianNotes::NoSelectionError
-  STDERR.puts 'No note selected.'
-  exit 1
 end
 
 hiiro.add_subcmd(:path) do |*args|

@@ -139,6 +139,26 @@ Saved files can be listed, printed, copied back to the clipboard, opened,
 edited, or removed with `h save ls|show|copy|open|edit|rm`. See
 [docs/h-save.md](docs/h-save.md).
 
+`h save --bundle --task TASK` attaches the file it just wrote to the current
+`h context` bundle and to the task (one association each, however often it is
+repeated). `h img save`, `h context save|tmp|img|tmpimage`, and `h note save`
+capture through the same code and keep their own destinations: the `~/saved`
+inbox, `~/notes/ctx/YYYY-MM-DD/` plus the bundle manifest, and `$NOTES_DIR`
+named notes. Named destinations refuse to replace an existing file without
+`--force`. An empty clipboard, a missing `pngpaste`, a failing clipboard tool,
+and an unwritable destination are reported separately and write nothing; a
+failed attachment after a successful save exits 2 and keeps the file.
+`h context open` edits the manifest through a copy: a line naming a missing
+path leaves the bundle unchanged and keeps the edited text under
+`~/.local/share/hiiro/edits/`.
+
+Bookmarks (`h link select|copy|open`), Obsidian notes (`h obsidian
+select|url|open|copy`), and Portfolio documents (`h docs open|url|copy`, `--all`
+for every match) share one picker and open/copy actions while keeping their own
+stores: the link database and URL templates, vault-relative `obsidian://` URIs,
+and Portfolio's API ids. The picker returns the record at the chosen position,
+so equal titles cannot select the wrong item.
+
 ### Extract files, directories, and links
 
 `h extract files`, `h extract dirs`, and `h extract links` read text from stdin

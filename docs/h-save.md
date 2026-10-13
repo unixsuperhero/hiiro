@@ -5,7 +5,7 @@ Save clipboard text or images to `~/saved/` and manage what's there.
 ## Synopsis
 
 ```bash
-h save [text...]
+h save [--bundle] [--task TASK [--label LABEL]] [text...]
 h save <subcommand> [name]
 ```
 
@@ -13,11 +13,39 @@ h save <subcommand> [name]
 
 Saves the clipboard and prints the new file's path.
 
-- If the clipboard holds an image (detected with `pngpaste`), it is saved as `<timestamp>-image.png`.
-- Otherwise the text from `pbpaste` is saved as `<timestamp>-<slug>.txt`, where the slug is the first few words of the text, lowercased, with non-alphanumerics collapsed to `-`.
-- If arguments are given, they are joined with spaces and saved as text instead of reading the clipboard.
-- An empty clipboard prints `Clipboard is empty` and exits 1.
-- Name collisions get a `-2`, `-3`, ... suffix before the extension. Existing files are never overwritten.
+- If the clipboard holds an image (detected with `pngpaste`), its exact PNG bytes are saved as `<timestamp>-image.png`.
+- Otherwise the text from `pbpaste` is saved byte for byte as `<timestamp>-<slug>.txt`, where the slug is the first few words of the text, lowercased, with non-alphanumerics collapsed to `-`. Without `pngpaste` installed the clipboard text is saved.
+- If arguments are given, they are joined with spaces and saved as text instead of reading the clipboard (the clipboard is not read). Put `--` before text that starts with `-`.
+- Name collisions get a `-2`, `-3`, ... suffix before the extension. Existing files are never overwritten: each name is created exclusively.
+- The path is printed only after the file is written.
+
+Failures print one line on stderr, exit 1, and leave nothing behind:
+
+| Case | Message |
+|------|---------|
+| Empty clipboard | `Clipboard is empty` |
+| `pngpaste` fails for another reason | `pngpaste failed: ...` (the text is **not** saved instead) |
+| `pbpaste` fails | `pbpaste failed: ...` |
+| The file cannot be written | `Could not write PATH: ...` |
+
+### Attaching the saved file
+
+`--bundle` (`-b`) adds the saved file to the current `h context` bundle and
+`--task TASK` (`-t`) attaches it to a task as a `file` resource (the same row
+`t file add` writes; `--label` sets its label). TASK is an exact name or unique
+prefix, or `.` for the current task; an unknown or ambiguous task is an error
+before the clipboard is read, and no other task is chosen. Each destination
+gets one association however often the same file is attached, and the task's
+status and next action are not touched.
+
+The path is printed on stdout; each attachment is reported on stderr
+(`attached to task alpha`). If the file was saved but an attachment failed,
+stderr says `attach to bundle PATH failed: ...; artifact kept at FILE` and the
+exit status is 2.
+
+```bash
+h save --task . --bundle   # save the clipboard, attach to the current task and bundle
+```
 
 ```bash
 h save                  # save clipboard
@@ -29,6 +57,7 @@ h save some quick note  # saves "some quick note" as text
 Every subcommand that takes a `name` matches it as a substring of the saved
 filenames. An exact or single match is used directly, several matches open a
 fuzzy finder over them, and no `name` opens a fuzzy finder over everything.
+`copy` exits 1 when the clipboard tool fails.
 
 | Subcommand | Description |
 |------------|-------------|
@@ -49,4 +78,6 @@ h save rm               # fuzzy-select a file to delete
 
 Set `HIIRO_SAVED_DIR` to use a directory other than `~/saved`.
 
-Requires `pngpaste` for clipboard images.
+Requires `pngpaste` for clipboard images. `h img`, `h context`, and `h note
+save` capture through the same code (`Hiiro::Artifact` over `Hiiro::Clipboard`)
+and keep their own destinations.

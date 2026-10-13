@@ -93,5 +93,20 @@ class Hiiro
         unique [:task_id, :kind, :target]
       end
     end
+
+    # The one writer of a task association: [resource, created]. Repeating it
+    # keeps the single row (unique task/kind/target); a label replaces the old one.
+    def self.attach!(task, kind:, target:, label: nil)
+      created = false
+      resource = db.transaction do
+        find_or_create(task_id: task.id, kind: kind, target: target) do |row|
+          row.label = label
+          row.created_at = Time.now.iso8601
+          created = true
+        end
+      end
+      resource.update(label: label) if label && resource.label != label
+      [resource, created]
+    end
   end
 end

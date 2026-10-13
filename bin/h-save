@@ -2,7 +2,6 @@
 
 require 'hiiro'
 require 'fileutils'
-require 'tempfile'
 
 def saved_root
   ENV.fetch('HIIRO_SAVED_DIR') { File.join(Dir.home, 'saved') }
@@ -17,47 +16,22 @@ def saved_files
   Dir.children(saved_dir).reject { |f| f.start_with?('.') }.sort.reverse
 end
 
-def clipboard_text
-  `pbpaste`
-end
-
-def clipboard_image
-  tmp = Tempfile.new(['h-save-', '.png'])
-  tmp.close
-  return tmp.path if system('pngpaste', tmp.path, out: File::NULL, err: File::NULL)
-
-  tmp.unlink
-  nil
-end
-
 def slug_for(text)
   slug = text.strip.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/\A-|-\z/, '')[0, 32]
   slug = slug.sub(/-\z/, '')
   slug.empty? ? 'text' : slug
 end
 
-def unique_path(base, ext)
-  path = File.join(saved_dir, "#{base}.#{ext}")
-  n = 1
-  while File.exist?(path)
-    n += 1
-    path = File.join(saved_dir, "#{base}-#{n}.#{ext}")
-  end
-  path
+# Inbox policy: <timestamp>-<slug>.txt or <timestamp>-image.png, with -2, -3, ...
+# on collision; an existing file is never replaced.
+def inbox_candidates(payload)
+  stamp = Time.now.strftime('%Y%m%d%H%M%S')
+  base = payload.content_type == 'image/png' ? "#{stamp}-image" : "#{stamp}-#{slug_for(payload.bytes.dup.force_encoding('UTF-8').scrub)}"
+  Hiiro::Artifact.numbered(saved_root, base, payload.extension)
 end
 
 def save_text(text)
-  stamp = Time.now.strftime('%Y%m%d%H%M%S')
-  path = unique_path("#{stamp}-#{slug_for(text)}", 'txt')
-  File.write(path, text)
-  path
-end
-
-def save_image(tmp_path)
-  stamp = Time.now.strftime('%Y%m%d%H%M%S')
-  path = unique_path("#{stamp}-image", 'png')
-  FileUtils.mv(tmp_path, path)
-  path
+  Hiiro::Artifact.capture(:text_arg, text: text) { |payload| inbox_candidates(payload) }.artifact&.path
 end
 
 def resolve_saved(name)
@@ -69,38 +43,49 @@ def resolve_saved(name)
 
   if name
     result = Hiiro::Matcher.by_substring(files, name, key: :to_s)
-    if result.ambiguous?
-      match = fuzzyfind(result.matches.map(&:item))
-    else
-      match = result.first&.item
-      puts "No saved file matching '#{name}'" unless match
+    files = result.matches.map(&:item)
+    if files.empty?
+      puts "No saved file matching '#{name}'"
+      return nil
     end
-  else
-    match = fuzzyfind(files)
+    exact = files.find { |file| file == name }
+    files = [exact] if exact
   end
 
-  match && File.join(saved_root, match)
+  items = files.map { |file| Hiiro::Selection::Item.new(id: file, title: file, open_target: File.join(saved_root, file), record: file) }
+  Hiiro::Selection.pick(items, tty: true)&.open_target
 end
+
+save_opts = Hiiro::Options.setup {
+  flag(:bundle, short: :b, desc: 'Also add the saved file to the current h context bundle')
+  option(:task, short: :t, desc: "Also attach the saved file to this task ('.' for the current task)")
+  option(:label, short: :l, desc: 'Label for the task attachment')
+}
 
 Hiiro.run(*ARGV) do
   add_default { |*args|
-    if args.any?
-      puts save_text(args.join(' '))
+    opts = save_opts.parse(args)
+    if opts.help?
+      puts 'Usage: h save [--bundle] [--task TASK [--label LABEL]] [text...]'
+      puts save_opts.help_text
       next
     end
 
-    if (image = clipboard_image)
-      puts save_image(image)
-      next
-    end
-
-    text = clipboard_text
-    if text.empty?
-      puts 'Clipboard is empty'
+    begin
+      task = Hiiro::Artifact.task_for(opts.task) if opts.task
+    rescue Hiiro::Error => e
+      warn e.message
       exit 1
     end
+    handoff = Hiiro::Artifact::Handoff.new(bundle: (Hiiro::ContextBundle.new if opts.bundle), task: task, label: opts.label)
 
-    puts save_text(text)
+    outcome = if opts.args.any?
+      Hiiro::Artifact.capture(:text_arg, text: opts.args.join(' ')) { |payload| inbox_candidates(payload) }
+    else
+      Hiiro::Artifact.capture(:image_first) { |payload| inbox_candidates(payload) }
+    end
+    status = handoff.finish(outcome)
+    exit status unless status.zero?
   }
 
   add_subcmd(:ls, :list) {
@@ -126,10 +111,10 @@ Hiiro.run(*ARGV) do
     path = resolve_saved(name)
     next unless path
 
-    if path.end_with?('.png')
-      system('osascript', '-e', "set the clipboard to (read (POSIX file #{path.inspect}) as «class PNGf»)")
-    else
-      Hiiro::Shell.pipe(File.read(path), 'pbcopy')
+    copied = path.end_with?('.png') ? Hiiro::Clipboard.copy_image(path) : Hiiro::Clipboard.copy_text(File.binread(path))
+    unless copied
+      warn "Could not copy #{File.basename(path)} to the clipboard"
+      exit 1
     end
     puts "Copied #{File.basename(path)} to clipboard"
   }

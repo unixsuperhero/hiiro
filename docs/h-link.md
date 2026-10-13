@@ -32,7 +32,9 @@ h link <subcommand> [args]
 
 Add a URL. With no arguments, opens an editor with a YAML template. With a URL, creates the link directly.
 
-Links can contain `{placeholder}` syntax — when opened/selected/copied, you'll be prompted to fill in values.
+Links can contain `{placeholder}` syntax — when opened/selected/copied, you'll be prompted to fill in values in a YAML editor. Leaving the template unchanged or a failing editor cancels (exit 1, nothing opened or copied). Invalid YAML, unknown placeholder names, or non-scalar values exit 1 and keep the edited text under `~/.local/share/hiiro/edits/link-params-*.yml`; the message names the file.
+
+`select`, `copy`, and `open` share one picker: rows are numbered as in `h link ls`, and the chosen row is identified by its position in the list, never by parsing its label, so links whose labels look alike resolve to the record you picked. Cancelling the picker exits 1 with `No link selected.`
 
 **Options**
 
@@ -53,7 +55,7 @@ h link add "https://jira.example.com/browse/{ticket}" --tag jira
 
 ### copy
 
-Fuzzy-select a link and copy its URL to the clipboard. Supports placeholder substitution.
+Fuzzy-select a link and copy its URL to the clipboard. Supports placeholder substitution. Exits 1 when `pbcopy` fails.
 
 **Examples**
 
@@ -64,7 +66,7 @@ h link copy github
 
 ### edit
 
-Edit a specific link (by index number or shorthand) in a temporary YAML editor. Keep its `id` unchanged: changing the URL updates that same record and preserves its tags. Add records without an `id`; remove a selected record from the document to delete it and its tags.
+Edit a specific link (by index number or shorthand) in a temporary YAML editor. Invalid YAML or a rejected edit leaves the links unchanged and keeps the edited text under `~/.local/share/hiiro/edits/`. Keep its `id` unchanged: changing the URL updates that same record and preserves its tags. Add records without an `id`; remove a selected record from the document to delete it and its tags.
 
 **Examples**
 
@@ -96,7 +98,7 @@ h link list
 
 ### open
 
-Open a link in the browser. With no argument, fuzzy-selects. With a number or shorthand, opens directly. Supports placeholder substitution.
+Open a link in the browser. With a number or shorthand, opens directly. Otherwise the links matching every term (all links with no term) are offered: one match opens directly, several open the picker. No match prints `Link not found: TERMS` and exits 1. Exits 1 when `open` fails. Supports placeholder substitution.
 
 **Examples**
 
@@ -109,7 +111,7 @@ h link open github
 
 ### paste
 
-Add the URL currently in the clipboard as a new link.
+Add the URL currently in the clipboard (read through `pbpaste`) as a new link. An empty clipboard prints `Clipboard is empty.`; a failing `pbpaste` prints its error. Both exit 1.
 
 **Options**
 

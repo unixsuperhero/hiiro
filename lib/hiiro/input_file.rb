@@ -1,4 +1,6 @@
 require 'tempfile'
+require 'fileutils'
+require 'securerandom'
 require 'yaml'
 
 class Hiiro
@@ -27,7 +29,7 @@ class Hiiro
   end
 
   class InputFile
-    EXTENSIONS = { yaml: '.yml', md: '.md' }.freeze
+    EXTENSIONS = { yaml: '.yml', md: '.md', text: '.txt' }.freeze
 
     def self.yaml_file(hiiro:, content: nil, append: false, prefix: 'edit-')
       new(hiiro: hiiro, type: :yaml, content: content, append: append, prefix: prefix)
@@ -85,6 +87,7 @@ class Hiiro
     # Parses the file contents according to type:
     #   :yaml → Hash or Array (via YAML.safe_load)
     #   :md   → FrontMatterParser::Document (call .front_matter, .content)
+    #   :text → Array of lines without newlines
     def parsed_file(permitted_classes: [])
       return document.data if document
 
@@ -97,6 +100,15 @@ class Hiiro
 
     def empty?
       contents.empty?
+    end
+
+    # Copies the edited text to a durable file and returns its path, so a
+    # rejected edit survives the tempfile (which Ruby deletes at exit).
+    def keep(dir: File.join(Config::DATA_DIR, 'edits'))
+      FileUtils.mkdir_p(dir)
+      kept = File.join(dir, "#{prefix}#{Time.now.strftime('%Y%m%d%H%M%S')}-#{SecureRandom.hex(3)}#{EXTENSIONS.fetch(type)}")
+      File.write(kept, document ? document.result : File.read(tmpfile.path))
+      kept
     end
 
     # Deletes the tempfile. Call when done with the input.
@@ -114,6 +126,8 @@ class Hiiro
       when :md
         require 'front_matter_parser'
         FrontMatterParser::Parser.parse_file(tmpfile.path)
+      when :text
+        File.readlines(tmpfile.path, chomp: true)
       end
     end
 

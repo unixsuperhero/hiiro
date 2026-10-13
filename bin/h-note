@@ -5,6 +5,7 @@ require "open3"
 require "pathname"
 require "tmpdir"
 require "fileutils"
+require "securerandom"
 
 hiiro = Hiiro.init(*ARGV)
 
@@ -170,30 +171,26 @@ hiiro.add_subcmd(:move) { |outdir=nil, *files|
   FileUtils.mv(file_group, abs_outdir, secure: true, verbose: true, noop: ENV['NOOP'].to_s.length > 0)
 }
 
-hiiro.add_subcmd(:save) { |outfile=nil, *content|
-  unless Dir.exist?(notes_dir)
-    Dir.mkdir(notes_dir)
-  end
+# Named-note policy: OUTFILE is relative to the notes directory (absolute paths
+# are kept); without one the note goes to random/note.<hex>. Content is the
+# remaining arguments, else the clipboard text. An existing file is refused
+# unless --force.
+hiiro.add_subcmd(:save) { |*args|
+  opts = Hiiro::Options.parse(args) { flag(:force, short: :f, desc: 'Replace an existing note') }
+  outfile, *content = opts.args
+  outfile = File.join('random', "note.#{SecureRandom.hex(6)}") if outfile.nil? || outfile.empty?
+  outfile = File.expand_path(outfile, notes_dir)
 
-  Dir.chdir(notes_dir)
-
-  unless outfile
-    tempname = File.basename(Tempfile.new('note.'))
-    outfile = File.join(notes_dir, 'random', tempname)
+  outcome = if content.empty?
+    Hiiro::Artifact.capture(:text, overwrite: opts.force) { outfile }
+  else
+    Hiiro::Artifact.capture(:text_arg, text: content.join(' '), overwrite: opts.force) { outfile }
   end
-
-  outfile = File.absolute_path(outfile)
-  outdir = File.dirname(outfile)
-  unless Dir.exist?(outdir)
-    FileUtils.mkdir_p(outdir)
+  unless outcome.ok?
+    warn outcome.existing ? "#{outcome.detail} (use --force to replace it)" : outcome.detail
+    exit 1
   end
-  contents = contents&.join(' ') || `pbpaste`
-
-  if contents == ''
-    contents = `pbpaste`
-  end
-  File.write(outfile, contents)
-  print outfile
+  print outcome.artifact.path
 }
 
 hiiro.run

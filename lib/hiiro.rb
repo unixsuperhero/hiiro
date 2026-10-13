@@ -40,7 +40,8 @@ class Hiiro
   # Persistent models load together through hiiro/persistence, which starts the
   # runtime (see Hiiro::Runtime).
   DOMAIN = {
-    'alias_editor' => %i[AliasEditor], 'any_struct' => %i[AnyStruct], 'app_files' => %i[AppFiles],
+    'alias_editor' => %i[AliasEditor], 'any_struct' => %i[AnyStruct], 'app_files' => %i[AppFiles], 'artifact' => %i[Artifact],
+    'clipboard' => %i[Clipboard], 'context_bundle' => %i[ContextBundle], 'selection' => %i[Selection],
     'background' => %i[Background], 'check_summary' => %i[CheckContext CheckSummary],
     'current_task' => %i[CurrentTask], 'duration' => %i[Duration], 'effects' => %i[Effects],
     'extractor' => %i[Extractor], 'fuzzyfind' => %i[Fuzzyfind], 'git' => %i[Git], 'glob' => %i[Glob],

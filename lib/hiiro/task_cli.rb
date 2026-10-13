@@ -366,11 +366,7 @@ class Hiiro
         end
         raise Error, '--primary applies only to directories' if opts.fetch(:primary, false) && group != 'directory'
         Hiiro::DB.connection.transaction do
-          resource = Hiiro::TaskResource.find_or_create(task_id: task.id, kind: kind, target: target) do |row|
-            row.label = opts.label
-            row.created_at = Time.now.iso8601
-          end
-          resource.update(label: opts.label) if opts.label
+          resource, = Hiiro::TaskResource.attach!(task, kind: kind, target: target, label: opts.label)
           task.update(primary_directory: target, updated_at: Time.now.iso8601) if opts.fetch(:primary, false)
           print_resource(resource)
         end

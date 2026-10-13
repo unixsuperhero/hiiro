@@ -164,4 +164,22 @@ class InputFileTest < Minitest::Test
   ensure
     input&.cleanup
   end
+
+  def test_text_document_parses_lines_and_keep_survives_cleanup
+    @hiiro.next = "/a b\n\n/c\n"
+    input = Hiiro::InputFile.new(hiiro: @hiiro, type: :text, content: "/a b\n", prefix: 'bundle-')
+    doc = input.edit.document
+    assert_equal ['/a b', '', '/c'], doc.data
+    assert doc.valid?
+    assert input.path.end_with?('.txt')
+
+    Dir.mktmpdir do |dir|
+      kept = input.keep(dir: dir)
+      input.cleanup
+      assert_match(%r{\A#{Regexp.escape(dir)}/bundle-\d{14}-\h{6}\.txt\z}, kept)
+      assert_equal "/a b\n\n/c\n", File.read(kept)
+    end
+  ensure
+    input&.cleanup
+  end
 end
