@@ -81,12 +81,12 @@ h bin edit svc         # lib/hiiro/root_commands.rb (service)
 
 ### list
 
-List catalog entries: name and aliases, arguments, kind (`inline` or `external`), and source, followed by any shadowed claims. With prefixes, lists the entries whose name or alias starts with one of them.
+List catalog entries: name and aliases, arguments, kind (`inline` or `external`), and source (with the origin of an external file in brackets), followed by any shadowed claims. With prefixes, lists the entries whose name or alias starts with one of them.
 
 ```text
-  pr          (external)  $BIN/h-pr
-              shadows external /Users/me/proj/hiiro/bin/h-pr
-  pr-monitor  (external)  $BIN/h-pr-monitor
+  pr          (external)  $BIN/h-pr  [modified (managed hiiro 0.1.393)]
+              shadows external /Users/me/proj/hiiro/bin/h-pr  [user]
+  pr-monitor  (external)  $BIN/h-pr-monitor  [managed hiiro 0.1.393]
 ```
 
 **Examples**
@@ -106,9 +106,9 @@ h bin complete se      # service, session, setup, ...
 
 ### docs
 
-Print the catalog as a Markdown table (`Command | Aliases | Kind | Arguments | Source | Shadowed`). With `--json`, print an array of entries:
+Print the catalog as a Markdown table (`Command | Aliases | Kind | Arguments | Source | Origin | Shadowed`). With `--json`, print an array of entries:
 
 ```js
 [{ name: "service", kind: "inline", source: "/path/lib/hiiro/root_commands.rb:171",
-   aliases: ["svc"], arguments: "[*svc_args]", shadowed: [] }]
+   aliases: ["svc"], arguments: "[*svc_args]", shadowed: [], origin: "package hiiro 0.1.393" }]
 ```

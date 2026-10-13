@@ -25,8 +25,8 @@ mkdir -p ~/bin
 # Install hiiro gem
 gem install hiiro
 
-# Run setup (copies subcommand bins to ~/bin, plugins to ~/.config/hiiro/plugins)
-h setup
+# Install subcommand bins to ~/bin and plugins to ~/.config/hiiro/plugins
+h setup --apply
 
 # Add ~/bin to PATH (for the subcommand bins)
 export PATH="$HOME/bin:$PATH"

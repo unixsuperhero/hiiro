@@ -23,18 +23,18 @@ These subcommands are registered by `Hiiro::RootCommands` (`lib/hiiro/root_comma
 | Subcommand | Description | Source |
 |------------|-------------|--------|
 | `h alert` | Send a macOS notification | `lib/hiiro/root_commands.rb` |
-| `h check_version` | Verify installed hiiro version across rbenv versions | `lib/hiiro/root_commands.rb` |
-| `h delayed_update` | Poll RubyGems for a new version and install when available | `lib/hiiro/root_commands.rb` |
+| `h check_version [VERSION]` | Show the installed hiiro in the current Ruby (`-a` every rbenv Ruby); exits 1 when one differs from VERSION | `lib/hiiro/root_commands.rb` |
+| `h delayed_update VERSION` | In the background, run `h update -a --wait VERSION --notify` | `lib/hiiro/root_commands.rb` |
 | `h edit [NAME...]` | Open the `h` bin file, or the source each `NAME` dispatches to; ambiguous or unknown names open nothing | `lib/hiiro.rb` |
 | [`h file`](h-file.md) | Track frequently-used files per app and open them in your editor | `lib/hiiro/app_files.rb` |
-| `h install` / `h update` | Install or update the hiiro gem (`-a` compatible rbenv versions, `-p` pre-release) | `lib/hiiro/root_commands.rb` |
+| `h install` / `h update` | Install the gem per Ruby (`-a` every compatible rbenv Ruby, `-p` pre-release, `-w VERSION` wait for RubyGems first, `-n` notify), then apply shared assets once from the newest install; exits 1 if any Ruby failed | `lib/hiiro/root_commands.rb` |
 | `h ping` | Health check — prints `pong` | `lib/hiiro/root_commands.rb` |
 | `h pry` | Open a pry REPL in the hiiro context | `lib/hiiro.rb` |
 | [`h queue`](h-queue.md) | Native `omp` prompt queue with shared task/app/directory context and explicit Herdr placement | `lib/hiiro/queue.rb` |
 | `h rnext` | Run `git rnext` (rebase next) | `lib/hiiro/root_commands.rb` |
 | [`h run`](h-run.md) | Run dev tools (linters, formatters, tests) against changed files | `lib/hiiro/runner_tool.rb` |
 | [`h service`](h-service.md) / `h svc` | Dev service management with Herdr, env files, and service groups | `lib/hiiro/service_manager.rb` |
-| `h setup` | Install plugins and bin scripts to `~/bin` | `lib/hiiro/root_commands.rb` |
+| `h setup [NAME...]` | Read-only drift plan of shared commands, their `bin/lib` files, and plugins. `--apply` installs missing and updates unmodified managed assets, `--retire` removes unmodified obsolete ones, `--adopt NAME` takes ownership of existing files; user-modified and unowned files are never written. Same for `hiiro setup` (installs `hiiro-NAME`). See [managed installation](../README.md#managed-installation) | `lib/hiiro/root_commands.rb` |
 | [`h task`](h-task.md) | Symlink to `t`: task records, todos, worktrees, and Herdr workspaces | `lib/hiiro/task_cli.rb` |
 | [`h herdr`](h-herdr.md) | Herdr plugin exposing `t` as keybound popups: switch task, add/copy todos, task shell, nvim | `bin/h-herdr`, `herdr-plugin/` |
 | `h version` | Print installed hiiro version (`-a` for all rbenv versions) | `lib/hiiro/root_commands.rb` |

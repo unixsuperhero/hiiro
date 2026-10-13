@@ -1,19 +1,14 @@
 #!/bin/bash
-
+# Update hiiro in every compatible rbenv Ruby, then install the shared assets
+# once (`h update -a`). With VERSION, wait in the background until RubyGems
+# has it (`h delayed_update VERSION`).
 NEW_VERSION=$1
 
-if rbenv which h
-then
-  gem update hiiro
-  if [ -n "$NEW_VERSION" ]; then
-    h delayed_update "$NEW_VERSION"
-  else
-    h update -a
-  fi
-else
-  gem install hiiro
+if ! rbenv which h >/dev/null 2>&1; then
+  gem install hiiro && exec h setup --apply
 fi
 
-h setup
-
-
+if [ -n "$NEW_VERSION" ]; then
+  exec h delayed_update "$NEW_VERSION"
+fi
+exec h update -a

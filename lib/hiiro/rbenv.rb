@@ -84,17 +84,17 @@ class Hiiro
         !capture('gem', 'list', gem_name, version: version).strip.empty?
       end
 
+      # The newest installed version of the gem in the given Ruby, or nil.
+      def gem_version(gem_name, version: current_version)
+        capture('gem', 'list', gem_name, '--exact', version: version)[/^#{Regexp.escape(gem_name)} \(([^,)\s]+)/, 1]
+      end
+
       # Install or update a gem in the given version.
       # Always uses gem install (handles both fresh installs and updates to the latest
       # version) and pins to rubygems.org to bypass the local source cache.
       def install_gem(gem_name, version: current_version, pre: false)
         pre_flag = pre ? ['--pre'] : []
         run('gem', 'install', gem_name, '-u', *pre_flag, version: version)
-      end
-
-      # Install or update a gem across all installed versions.
-      def install_gem_in_all(gem_name, pre: false)
-        supported_versions.each { |ver| install_gem(gem_name, pre: pre, version: ver) }
       end
 
       # --- Path helpers ---

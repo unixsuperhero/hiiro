@@ -1,18 +1,10 @@
-require "fileutils"
-
 class Hiiro
   # The root `h` commands. exe/h runs them; `h bin` reads the same registrations
   # (without running any handler) so its listing, edit targets, completion, and
   # docs match what `h` dispatches.
   module RootCommands
-    def self.update_hiiro(version=nil, pre: false)
-      ver = version || Hiiro::Rbenv.current_version
-      puts
-      puts "INSTALLING hiiro for RUBY #{ver} #{pre.inspect}"
-
-      Hiiro::Rbenv.install_gem('hiiro', pre: pre, version: ver)
-      Hiiro::Rbenv.run('h', 'setup', version: ver)
-    end
+    # The prefix installed commands get: `h setup` installs h-NAME, `hiiro setup` hiiro-NAME.
+    def self.setup_prefix = File.basename($0).split('-').first
 
     def self.register(hiiro)
       hiiro.instance_eval do
@@ -35,129 +27,29 @@ class Hiiro
 
         add_subcmd(:install, :update) { |*args|
           opts = Hiiro::Options.setup {
-            flag(:all, short: :a)
-            flag(:pre, short: :p)
-          }.parse!(ARGV)
+            flag(:all, short: :a, desc: 'Every compatible rbenv Ruby')
+            flag(:pre, short: :p, desc: 'Allow a pre-release')
+            option(:wait, short: :w, desc: 'Wait until VERSION is on RubyGems first')
+            flag(:notify, short: :n, desc: 'Report the outcome with terminal-notifier')
+          }.parse!(args)
+          notify = ->(title, message) { system('terminal-notifier', '-title', title, '-message', message) if opts.notify }
 
-          if opts.all
-            versions = Hiiro::Rbenv.versions
-            supported_versions = Hiiro::Rbenv.supported_versions
-            skipped_versions = versions - supported_versions
-            puts "Updating hiiro across #{supported_versions.size} compatible Ruby version(s)...\n\n"
-            skipped_versions.each do |ver|
-              puts "  ruby #{ver}  skipped (requires Ruby #{Hiiro::SUPPORTED_RUBY_VERSION})"
+          if opts.wait
+            puts "Waiting for v#{opts.wait} on RubyGems..."
+            unless Hiiro::Rollout::RubyGems.new.wait_for(opts.wait)
+              notify.call('hiiro update failed', "Timed out waiting for v#{opts.wait} on RubyGems")
+              exit 1
             end
-            puts if skipped_versions.any?
-            mu = Mutex.new
-
-            threads = supported_versions.map do |ver|
-              Thread.new do
-                Hiiro::Rbenv.install_gem('hiiro', pre: opts.pre, version: ver)
-                Hiiro::Rbenv.run('h', 'setup', version: ver)
-                hiiro_ver = Hiiro::Rbenv.capture('gem', 'list', 'hiiro', '--exact', version: ver)
-                              .match(/hiiro \(([^)]+)\)/)&.[](1) || '?'
-                mu.synchronize { puts "  ruby #{ver}  →  hiiro #{hiiro_ver}" }
-              end
-            end
-
-            threads.each(&:join)
-            puts "\nDone."
-          else
-            RootCommands.update_hiiro(pre: opts.pre)
           end
+
+          pre = opts.pre || opts.wait.to_s.include?('.pre.')
+          ok = Hiiro::Rollout.new.update(all: opts.all, pre:, expected: opts.wait)
+          notify.call(ok ? 'hiiro updated' : 'hiiro update incomplete', ok ? "v#{opts.wait || 'latest'} installed" : 'See `h check_version -a`')
+          exit(ok ? 0 : 1)
         }
 
         add_subcmd(:setup) do |*args|
-          # Detect how the command was invoked to determine prefix
-          invoked_as = File.basename($0)
-          prefix = invoked_as.split("-").first  # handles "h", "hiiro", or custom names
-
-          gem_root = File.expand_path("../..", __dir__)
-          source_plugins = File.join(gem_root, "plugins")
-          source_bins = File.join(gem_root, "bin")
-          dest_plugins = File.expand_path("~/.config/hiiro/plugins")
-          dest_bin = File.expand_path("~/bin")
-
-          FileUtils.mkdir_p(dest_plugins)
-          FileUtils.mkdir_p(dest_bin)
-
-          # Copy plugins
-          plugin_files = Dir["#{source_plugins}/*.rb"]
-          if plugin_files.any?
-            FileUtils.cp(plugin_files, dest_plugins)
-            puts "Installed #{plugin_files.size} plugins to #{dest_plugins}"
-            plugin_files.each { |f| puts "  - #{File.basename(f)}" }
-          else
-            puts "No plugins found in #{source_plugins}"
-          end
-
-          puts
-
-          # Copy bin scripts, renaming from h-* to #{prefix}-*
-          bin_groups = {
-            'herdr'  => %w[pane session window],
-            'git'    => %w[branch commit sha wtree],
-            'github' => %w[pr],
-            'claude' => %w[claude],
-            'hiiro'  => %w[bin plugin],
-            'task'   => %w[task],
-            'other'  => %w[app bg config link misc project todo],
-          }
-
-          bin_files = Dir["#{source_bins}/h-*"]
-          if bin_files.any?
-            bin_files.each do |src|
-              old_name = File.basename(src)
-              new_name = old_name.sub(/^h-/, "#{prefix}-")
-              dest_path = File.join(dest_bin, new_name)
-              FileUtils.cp(src, dest_path)
-              FileUtils.chmod(0755, dest_path)
-            end
-
-            puts "Installed #{bin_files.size} subcommands to #{dest_bin}"
-            puts
-
-            bin_groups.each do |group, names|
-              matched = names.select { |n| bin_files.any? { |f| File.basename(f) == "h-#{n}" } }
-              next if matched.empty?
-
-              puts "  #{group}:"
-              matched.each { |n| puts "    #{prefix}-#{n}" }
-            end
-
-            # Any bins not in a group
-            grouped = bin_groups.values.flatten
-            ungrouped = bin_files
-              .map { |f| File.basename(f).sub(/^h-/, '') }
-              .reject { |n| grouped.include?(n) }
-            if ungrouped.any?
-              puts "  uncategorized:"
-              ungrouped.each { |n| puts "    #{prefix}-#{n}" }
-            end
-          else
-            puts "No subcmds found in #{source_bins}"
-          end
-
-          puts
-
-          # Check if ~/bin is in PATH
-          home_bin = File.expand_path("~/bin")
-          path_dirs = ENV["PATH"].to_s.split(File::PATH_SEPARATOR)
-          if path_dirs.any? { |dir| File.expand_path(dir) == home_bin }
-            puts "Setup complete! ~/bin is already in your PATH."
-          else
-            puts "Setup complete!"
-            puts
-            puts "\e[33mWarning:\e[0m ~/bin is not in your PATH."
-            puts
-            puts "Add this to your shell config (~/.bashrc, ~/.zshrc, etc.):"
-            puts
-            puts "  export PATH=\"$HOME/bin:$PATH\""
-            puts
-            puts "Then reload your shell or run:"
-            puts
-            puts "  source ~/.bashrc  # or ~/.zshrc"
-          end
+          exit Hiiro::Install.cli(args, prefix: RootCommands.setup_prefix)
         end
 
         add_subcmd(:alert) do |*args|
@@ -193,8 +85,7 @@ class Hiiro
 
           mismatched = 0
           versions.each do |ver|
-            output = Hiiro::Rbenv.capture('gem', 'list', 'hiiro', '--exact', version: ver)
-            actual = output.match(/hiiro \(([^)]+)\)/)&.captures&.first
+            actual = Hiiro::Rbenv.gem_version('hiiro', version: ver)
             ok = expected.nil? || actual == expected
             mismatched += 1 unless ok
             status = ok ? "\e[32m✓\e[0m" : "\e[31m✗\e[0m"
@@ -211,63 +102,7 @@ class Hiiro
             next
           end
 
-          script = <<~RUBY
-            #!/usr/bin/env ruby
-            require 'net/http'
-            require 'json'
-
-            expected = #{expected.inspect}
-            is_pre   = expected.include?('.pre.')
-
-            # Poll RubyGems until the expected version appears (up to ~10 min)
-            found    = false
-            attempts = 0
-            max      = 40
-
-            until found || attempts >= max
-              sleep(attempts == 0 ? 5 : 15)
-              attempts += 1
-              begin
-                uri      = URI('https://rubygems.org/api/v1/versions/hiiro.json')
-                versions = JSON.parse(Net::HTTP.get(uri)).map { |v| v['number'] }
-                if versions.include?(expected)
-                  found = true
-                  puts "v\#{expected} found on RubyGems after \#{attempts} poll(s). Installing..."
-                else
-                  puts "Waiting for v\#{expected} on RubyGems (attempt \#{attempts}/\#{max})..."
-                end
-              rescue => e
-                puts "RubyGems poll error: \#{e.message}"
-              end
-            end
-
-            unless found
-              system('terminal-notifier', '-title', 'hiiro publish', '-message', 'Timed out waiting for RubyGems')
-              exit 1
-            end
-
-            install_args = ['update', '-a']
-            install_args << '--pre' if is_pre
-            system('h', *install_args)
-
-            versions = `rbenv versions --bare`.lines(chomp: true)
-            mismatched = versions.reject do |ver|
-              output = `RBENV_VERSION=\#{ver} rbenv exec gem list hiiro --exact 2>/dev/null`
-              output.match?(/hiiro \\([^)]*#{Regexp.escape(expected)}/)
-            end
-            if mismatched.empty?
-              system('terminal-notifier', '-title', 'hiiro updated', '-message', "v\#{expected} installed across all rbenv versions")
-            elsif mismatched.size == versions.size
-              system('terminal-notifier', '-title', 'hiiro update failed', '-message', "v\#{expected} not installed in any rbenv version")
-            else
-              system('terminal-notifier', '-title', 'hiiro updated', '-message', "v\#{expected} installed — \#{mismatched.size} version\#{mismatched.size == 1 ? '' : 's'} skipped")
-            end
-          RUBY
-
-          path = "/tmp/h-delayed-update-#{$$}.rb"
-          File.write(path, script)
-          FileUtils.chmod(0755, path)
-          system('h', 'bg', 'run', path)
+          system('h', 'bg', 'run', 'h', 'update', '--all', '--notify', '--wait', expected)
         end
 
         add_subcmd(:rnext) do |*args|

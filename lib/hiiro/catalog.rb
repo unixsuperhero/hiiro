@@ -68,18 +68,31 @@ class Hiiro
       @tokens.keys.select { |token| token.start_with?(word.to_s) }.sort
     end
 
-    def to_a = entries.map(&:to_h)
+    # Package or user origin of a source path (see Install.origin); the install
+    # manifest is read once, on first use.
+    def origin(source)
+      @manifest ||= Install::Manifest.load
+      Install.origin(source, manifest: @manifest)
+    end
+
+    def to_a
+      entries.map do |entry|
+        entry.to_h.merge(origin: origin(entry.source),
+                         shadowed: entry.shadowed.map { |claim| claim.to_h.merge(origin: origin(claim.source)) })
+      end
+    end
+
     def to_json(*args) = JSON.pretty_generate(to_a, *args)
 
     def to_markdown
       rows = entries.map do |entry|
-        cells = [entry.name, entry.aliases.join(', '), entry.kind, entry.arguments, entry.source,
+        cells = [entry.name, entry.aliases.join(', '), entry.kind, entry.arguments, entry.source, origin(entry.source),
                  entry.shadowed.map { |claim| claim.alias_of ? "#{claim.name} (alias of #{claim.alias_of}) #{claim.source}" : claim.source }.join('<br>')]
         "| #{cells.map { |cell| cell.to_s.gsub('|', '\|') }.join(' | ')} |"
       end
       ["# #{bin_name} commands", '',
-       '| Command | Aliases | Kind | Arguments | Source | Shadowed |',
-       '|---------|---------|------|-----------|--------|----------|', *rows].join("\n") + "\n"
+       '| Command | Aliases | Kind | Arguments | Source | Origin | Shadowed |',
+       '|---------|---------|------|-----------|--------|--------|----------|', *rows].join("\n") + "\n"
     end
 
     private

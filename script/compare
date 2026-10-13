@@ -1,14 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env ruby
+# The drift plan for this checkout, then a diff of every installed asset whose
+# bytes differ from it (installed copy first). Writes nothing.
+$LOAD_PATH.unshift(File.expand_path('../lib', __dir__))
+require 'hiiro'
 
-diff_dirs() {
-  diff -qrs bin/ ~/bin/ | egrep '\bbin(: |\/)h(\b|-)' | egrep -v 'identical'
+plan = Hiiro::Install::Plan.build(prefix: 'h')
+Hiiro::Install.print_plan(plan, $stdout)
+plan.of('updatable', 'user-modified', 'collision').each do |entry|
+  next unless entry.current.type == 'file'
 
-  diff -qrs plugins/ ~/.config/hiiro/plugins/ | egrep -v 'identical'
-}
-
-# s@Only in \(bin|plugins\): \(.*\)@cp -v \1/\2 $HOME/\1/@;
-
-diff_dirs | sed -E "s@Only in @@;s@: @/@;s@^(/.*(bin|plugins).*)@cp -v \\1 \\2/@;s@^(bin.*)@cp -v \\1 $HOME/bin/@;s@^(plugins.*)@cp -v \\1 $HOME/.config/hiiro/plugins/@;s@Files (.*) and (.*) differ@safe_nvim -d \\1 \\2@" | egrep 'cp -'
-
-diff_dirs | sed -E "s@Only in @@;s@: @/@;s@^(/.*(bin|plugins).*)@cp -v \\1 \\2/@;s@^(bin.*)@cp -v \\1 $HOME/bin/@;s@^(plugins.*)@cp -v \\1 $HOME/.config/hiiro/plugins/@;s@Files (.*) and (.*) differ@safe_nvim -d \\1 \\2@" | egrep -v 'cp -'
-
+  puts
+  system('diff', '-u', entry.destination, entry.path)
+end

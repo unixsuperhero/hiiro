@@ -40,6 +40,8 @@
 - `Hiiro::Catalog`: one command table (name, kind, source, aliases, shadowed claims) used by dispatch, help, `edit`, and the new `h bin complete` / `h bin docs [--json]`. Aliases from `add_subcmd(:service, :svc)` resolve to one entry.
 - `Hiiro::Runtime` and `hiiro/persistence`: persistence, invocation history, and task auto-tagging start on first persistent use; frames pass to external commands through `HIIRO_INVOCATION_FRAMES` so one root invocation keeps ordered resolutions across processes.
 - `t --help`, `t todo --help`, and `t tree --help` print help before any task lookup.
+- Managed installation (`Hiiro::Install`): an install manifest (`~/.config/hiiro/install-manifest.json`) records each destination hiiro wrote with source, package version and root, SHA-256, mode, and source link. `h setup` prints a read-only plan (`missing`, `unchanged`, `updatable`, `user-modified`, `collision`, `obsolete`); `--apply`, `--retire`, and `--adopt NAME` act on selected entries. Commands load supporting files from `bin/lib/`, installed beside them.
+- Catalog entries carry an origin (`managed hiiro VERSION`, `modified (managed ...)`, `package hiiro VERSION`, `user`) in `h bin list`, `h bin docs [--json]`, and `h edit`.
 
 ### Changed
 - Mutable domain records use SQLite without live YAML mirrors. `t`, `tt`, and `h todo` share database-owned todo IDs and targeted mutations.
@@ -58,12 +60,16 @@
 - Plugins load only when a command names them (`plugins: [:Pins]`), from `~/.config/hiiro/plugins/` then the gem's `plugins/`. `Config.config_dir` and `plugin_dir` no longer create directories; the database directory is created when the database is first opened.
 - Root `h` commands live in `Hiiro::RootCommands` (`lib/hiiro/root_commands.rb`); `exe/h` runs them and `h bin` reads them. Root `service`/`run`/`file` mounts resolve task context on first use, so their help needs no task.
 - `h bin list` prints catalog entries (kind, source, shadowed claims) for prefixes rather than raw `h-NAME`/`NAME` PATH matches.
+- `h setup` / `hiiro setup` no longer copy over existing files: without `--apply` they only plan; apply writes missing files and unmodified managed ones, rechecks each destination first, replaces by rename (never through a link), records ownership only for writes that landed, and exits 1 on a failed write.
+- `h update` (and `script/publish`, `script/update`) installs the gem in each compatible Ruby independently, then applies shared assets once from the Ruby with the newest installed hiiro and names that source; it exits 1 when any Ruby failed. `h update` reads its own arguments (it parsed the process `ARGV`). `h delayed_update VERSION` runs `h update -a --wait VERSION --notify` in the background. RubyGems polling for publish, `script/available`, and `--wait` is one `Hiiro::Rollout::RubyGems`.
+- `script/install`, `script/compare`, and `script/sync` read the same plan instead of rsync, `diff -qrs` copy commands, and interactive copies in both directions.
 
 ### Removed
 - Automatic legacy domain YAML import and mutable-record dual writers. Legacy sources remain explicit retained recovery inputs.
 - Obsolete todo file-path, saved-link snapshot, and task YAML backup APIs; `h db remigrate`, broad YAML retirement, and YAML/tar restore.
 - Conflicting first-match Environment/task/app/project selectors and queue pane-directory fallback joins.
 - Per-entry queue `.sh` launchers and the service launcher's `trap 'h service reset'`; the run supervisor owns completion.
+- The two setup copy loops (`exe/h` root commands and `exe/hiiro`), the per-Ruby `h setup` inside every gem install, `RootCommands.update_hiiro`, the generated `/tmp/h-delayed-update-*.rb` poller, and the RubyGems pollers in `script/publish` and `script/available`.
 - `Hiiro.load_env`, eager plugin requiring at import, `Config.plugin_files`, `Invocation.record!`, the Runners PATH glob and its prefix/ambiguity helpers, and `Runners::Bin` / `Subcommand` `match?` / `exact_match?`.
 
 ## [0.1.384] - 2026-09-23

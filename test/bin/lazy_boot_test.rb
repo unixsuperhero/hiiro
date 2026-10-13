@@ -40,7 +40,7 @@ class LazyBootTest < Minitest::Test
     assert_equal 1, status.exitstatus
     assert_match(/^  ping\s+\(inline\)\s+\$\S+\/root_commands\.rb:\d+$/, out)
     assert_match(/^  service, svc\s+\[\*svc_args\]\s+\(inline\)/, out)
-    assert_match(/^  bin\s+\(external\)\s+\$\S+\/h-bin$/, out)
+    assert_match(/^  bin\s+\(external\)\s+\$\S+\/h-bin  \[package hiiro \S+\]$/, out)
 
     out, status = run_cmd('h', 'queue')
     assert_equal [1, "Current command: h-queue!\n"], [status.exitstatus, out.lines.first]
@@ -58,7 +58,8 @@ class LazyBootTest < Minitest::Test
     assert_includes docs, "| service | svc | inline | [*svc_args] | #{LIB}/hiiro/root_commands.rb:"
     entries = JSON.parse(run_ok('h', 'bin', 'docs', '--json').first)
     assert_equal({ 'name' => 'pr-monitor', 'kind' => 'external', 'source' => File.join(ROOT, 'bin/h-pr-monitor'),
-                   'aliases' => [], 'arguments' => nil, 'shadowed' => [] }, entries.find { |e| e['name'] == 'pr-monitor' })
+                   'aliases' => [], 'arguments' => nil, 'shadowed' => [], 'origin' => "package hiiro #{Hiiro::VERSION}" },
+                 entries.find { |e| e['name'] == 'pr-monitor' })
 
     assert_equal before, snapshot
     refute File.exist?(@db)
@@ -78,9 +79,9 @@ class LazyBootTest < Minitest::Test
     listing, = run_ok('h', 'bin', 'list', 'zq')
     rows = listing.lines.map(&:chomp).grep(/\A  \S/)
     assert_equal 2, rows.size, listing
-    assert_match(/\A  zqa\s+\(external\)\s+\S+first\/h-zqa\z/, rows[0])
-    assert_match(/\A  zqb\s+\(external\)\s+\S+second\/h-zqb\z/, rows[1])
-    assert_match(/\A\s+shadows external \S+second\/h-zqa\z/, listing.lines.grep(/shadows/).join.chomp)
+    assert_match(/\A  zqa\s+\(external\)\s+\S+first\/h-zqa  \[user\]\z/, rows[0])
+    assert_match(/\A  zqb\s+\(external\)\s+\S+second\/h-zqb  \[user\]\z/, rows[1])
+    assert_match(/\A\s+shadows external \S+second\/h-zqa  \[user\]\z/, listing.lines.grep(/shadows/).join.chomp)
     zqa = JSON.parse(run_ok('h', 'bin', 'docs', '--json').first).find { |e| e['name'] == 'zqa' }
     assert_equal [winner, [loser]], [zqa['source'], zqa['shadowed'].map { |c| c['source'] }]
     assert_equal "zqa\nzqb\n", run_ok('h', 'bin', 'complete', 'zq').first

@@ -85,6 +85,8 @@ class BackgroundTest < Minitest::Test
     assert_equal 3, runs.map(&:id).uniq.size
     File.write(gate, '')
     runs.each { |run| assert_equal 'completed exit 0', wait_for_run(@store, run.id).summary }
+    deadline = Time.now + 10
+    sleep 0.02 while Time.now < deadline && %w[wC:p1 wC:p2].any? { |pane| @reservations.holder(pane) }
     assert_equal [nil, nil], [@reservations.holder('wC:p1'), @reservations.holder('wC:p2')]
   end
 

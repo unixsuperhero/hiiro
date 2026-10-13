@@ -1,45 +1,13 @@
 #!/usr/bin/env ruby
 
-require "net/http"
-require "json"
-require "open3"
-require "shellwords"
 require "fileutils"
+$LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
 require "hiiro"
 
 HIIRO_SUPPORTED_RUBY_VERSION = ">= 3.2.0"
 
 unless Gem::Requirement.new(HIIRO_SUPPORTED_RUBY_VERSION).satisfied_by?(Gem::Version.new(RUBY_VERSION))
   abort("ERROR: publishing hiiro requires Ruby #{HIIRO_SUPPORTED_RUBY_VERSION}; current Ruby is #{RUBY_VERSION}")
-end
-
-# ─── RubyGems API ────────────────────────────────────────────────────────────
-
-class RubyGems
-  def self.published_versions(gem_name)
-    uri = URI("https://rubygems.org/api/v1/versions/#{gem_name}.json")
-    JSON.parse(Net::HTTP.get(uri)).map { |v| v["number"] }
-  rescue => e
-    puts "Warning: could not fetch versions from RubyGems (#{e.message}), falling back to local"
-    [Hiiro::VERSION]
-  end
-  def self.cli_version = `gem search -r hiiro`.lines.map(&:strip).select{|ln| ln.match?(/\d\.\d/) }.first&.[](/\d+\.\d+[^)]+/)
-
-  def self.wait_for(gem_name, version, max_attempts: 40)
-    attempts = 0
-    loop do
-      sleep(attempts == 0 ? 5 : 15)
-      attempts += 1
-      versions = published_versions(gem_name)
-      puts(latest_json_version: versions.first, cli_version: cli_version)
-      return true if versions.include?(version) && cli_version && cli_version == version
-      puts "Waiting for v#{version} on RubyGems (attempt #{attempts}/#{max_attempts})..."
-      return false if attempts >= max_attempts
-    end
-  rescue => e
-    puts "RubyGems poll error: #{e.message}"
-    false
-  end
 end
 
 # ─── Version bumping ─────────────────────────────────────────────────────────
@@ -214,7 +182,14 @@ pending_before = Git.pending_changes?
 
 Git.ensure_up_to_date!
 
-current_version = Version.latest(RubyGems.published_versions("hiiro"))
+rubygems = Hiiro::Rollout::RubyGems.new
+published = begin
+  rubygems.versions
+rescue StandardError => e
+  puts "Warning: could not fetch versions from RubyGems (#{e.message}), falling back to local"
+  [Hiiro::VERSION]
+end
+current_version = Version.latest(published)
 new_version     = Version.bump(current_version, pre_release: pre_release)
 puts "Latest: #{current_version}  →  New: #{new_version}"
 
@@ -261,46 +236,10 @@ Git.tag(new_version)
 Git.push(new_version)
 
 puts "\nWaiting for v#{new_version} to appear on RubyGems..."
-unless RubyGems.wait_for("hiiro", new_version)
+unless rubygems.wait_for(new_version)
   puts "WARNING: timed out waiting for v#{new_version} on RubyGems — run `h update -a` manually"
   exit 1
 end
 
 puts "v#{new_version} available — installing across compatible Ruby versions...\n\n"
-pre_flag = pre_release ? ["--pre"] : []
-mu       = Mutex.new
-
-rbenv_versions = `rbenv versions --bare`.lines(chomp: true)
-supported_versions, skipped_versions = rbenv_versions.partition do |ver|
-  ruby_version = `RBENV_VERSION=#{ver.shellescape} rbenv exec ruby -e 'print RUBY_VERSION' 2>/dev/null`.strip
-  Gem::Requirement.new(HIIRO_SUPPORTED_RUBY_VERSION).satisfied_by?(Gem::Version.new(ruby_version))
-rescue ArgumentError
-  false
-end
-
-skipped_versions.each do |ver|
-  puts "  ruby #{ver}  skipped (requires Ruby #{HIIRO_SUPPORTED_RUBY_VERSION})"
-end
-puts if skipped_versions.any?
-
-threads = supported_versions.map do |ver|
-  Thread.new do
-    env = { "RBENV_VERSION" => ver }
-
-    # Always use gem install — it picks up the latest version whether or not
-    # an older one is installed, and handles the source cache reliably.
-    system(env, "rbenv", "exec",
-           "gem", "install", "hiiro", "-u", *pre_flag,
-           out: File::NULL, err: File::NULL)
-
-    system(env, "rbenv", "exec", "h", "setup", out: File::NULL, err: File::NULL)
-
-    # gem list returns "hiiro (0.1.317, 0.1.316, ...)" — grab only the first (latest)
-    hiiro_ver = `RBENV_VERSION=#{ver.shellescape} rbenv exec gem list hiiro --exact 2>/dev/null`
-                  .match(/hiiro \(([^,)]+)/)&.[](1) || "?"
-    mu.synchronize { puts "  ruby #{ver}  →  hiiro #{hiiro_ver}" }
-  end
-end
-
-threads.each(&:join)
-puts "\nDone."
+exit(Hiiro::Rollout.new.update(all: true, pre: pre_release, expected: new_version) ? 0 : 1)

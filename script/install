@@ -1,16 +1,5 @@
 #!/bin/bash
-
-function install_hiiro() {
-  echo -n "This is destructive, are you sure you want to continue? [Y/n] "
-  read confirmation
-
-  test $confirmation = "n" || test $confirmation = "N" && return 1
-
-  rsync -avz bin/ $HOME/bin/
-
-  mkdir -pv $HOME/.config/hiiro/plugins
-  rsync -avz plugins/ $HOME/.config/hiiro/plugins/
-}
-
-install_hiiro
-
+# This checkout's shared assets (commands, their supporting files, plugins):
+# prints the drift plan; --apply writes missing and unmodified managed assets.
+# Same options as `h setup` (--retire, --adopt NAME, NAME...).
+cd "$(dirname "$0")/.." && exec ruby -Ilib exe/h setup "$@"

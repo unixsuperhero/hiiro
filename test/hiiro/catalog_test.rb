@@ -109,15 +109,16 @@ class CatalogTest < Minitest::Test
       assert_equal <<~MD, catalog.to_markdown
         # zz commands
 
-        | Command | Aliases | Kind | Arguments | Source | Shadowed |
-        |---------|---------|------|-----------|--------|----------|
-        | show | sh | inline | <name> | #{source} |  |
-        | tool |  | external |  | #{tool} | #{shadow} |
+        | Command | Aliases | Kind | Arguments | Source | Origin | Shadowed |
+        |---------|---------|------|-----------|--------|--------|----------|
+        | show | sh | inline | <name> | #{source} | package hiiro #{Hiiro::VERSION} |  |
+        | tool |  | external |  | #{tool} | user | #{shadow} |
       MD
       assert_equal [
-        { "name" => "show", "kind" => "inline", "source" => source, "aliases" => ["sh"], "arguments" => "<name>", "shadowed" => [] },
+        { "name" => "show", "kind" => "inline", "source" => source, "aliases" => ["sh"], "arguments" => "<name>", "shadowed" => [],
+          "origin" => "package hiiro #{Hiiro::VERSION}" },
         { "name" => "tool", "kind" => "external", "source" => tool, "aliases" => [], "arguments" => nil,
-          "shadowed" => [{ "name" => "tool", "kind" => "external", "source" => shadow }] }
+          "shadowed" => [{ "name" => "tool", "kind" => "external", "source" => shadow, "origin" => "user" }], "origin" => "user" }
       ], JSON.parse(catalog.to_json)
     end
   end

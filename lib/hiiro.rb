@@ -44,11 +44,11 @@ class Hiiro
     'background' => %i[Background], 'check_summary' => %i[CheckContext CheckSummary],
     'current_task' => %i[CurrentTask], 'duration' => %i[Duration], 'effects' => %i[Effects],
     'extractor' => %i[Extractor], 'fuzzyfind' => %i[Fuzzyfind], 'git' => %i[Git], 'glob' => %i[Glob],
-    'herdr' => %i[Herdr], 'input_file' => %i[EditedDocument InputFile], 'notification' => %i[Notification],
+    'herdr' => %i[Herdr], 'input_file' => %i[EditedDocument InputFile], 'install' => %i[Install], 'notification' => %i[Notification],
     'owned_run' => %i[OwnedRun], 'pane_reservations' => %i[PaneReservations], 'paths' => %i[Paths],
     'pinned_pr_manager' => %i[PinnedPRManager], 'projects' => %i[Projects], 'ps_process' => %i[PsProcess],
     'pull_request_reference' => %i[RepositoryIdentity PullRequestReference], 'queue' => %i[Queue],
-    'queue_claim' => %i[QueueClaim], 'rbenv' => %i[Rbenv], 'root_commands' => %i[RootCommands], 'runner_tool' => %i[RunnerTool],
+    'queue_claim' => %i[QueueClaim], 'rbenv' => %i[Rbenv], 'root_commands' => %i[RootCommands], 'rollout' => %i[Rollout], 'runner_tool' => %i[RunnerTool],
     'service_definition' => %i[ServiceDefinition ServiceGroup EnvironmentFile],
     'service_manager' => %i[ServiceManager], 'shell' => %i[CommandSpecification ProcessOutcome Shell Result],
     'table' => %i[Table], 'table_actions' => %i[TableActions], 'table_scope' => %i[TableScope],
@@ -292,6 +292,7 @@ class Hiiro
       end
       resolution.entry.source.sub(/:\d+\z/, '')
     end
+    sources.uniq.each { |source| warn "editing #{source} (#{catalog.origin(source)})" }
     edit_files(*sources.uniq)
   end
 
@@ -479,10 +480,12 @@ class Hiiro
     sorted.each_with_index do |e, i|
       type       = "(#{e.kind})".ljust(max_type + 2)
       location   = shorten_location(e.source, vars)
+      location  += "  [#{catalog.origin(e.source)}]" if e.kind == :external
       puts "  #{names[i].ljust(max_name)}  #{e.arguments.ljust(max_params)}  #{type}  #{location}"
       e.shadowed.each do |claim|
         label = claim.alias_of ? "alias #{claim.name} of #{claim.alias_of}" : claim.kind
-        puts "  #{' ' * max_name}  shadows #{label} #{shorten_location(claim.source, vars)}"
+        origin = claim.kind == 'external' ? "  [#{catalog.origin(claim.source)}]" : ''
+        puts "  #{' ' * max_name}  shadows #{label} #{shorten_location(claim.source, vars)}#{origin}"
       end
     end
   end

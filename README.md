@@ -54,15 +54,37 @@ Requires Ruby 3.2 or newer.
 ```sh
 gem install hiiro
 
-# Install plugins and subcommands
-h setup
+h setup            # read-only drift plan: what would change, and why
+h setup --apply    # install missing assets, update unmodified managed ones
 ```
 
-This installs:
-- Plugins to `~/.config/hiiro/plugins/`
-- Subcommands (`h-pane`, `h-todo`, etc.) to `~/bin/`
+The gem's shared assets are its commands (`bin/h-*`, installed to `~/bin` as `h-NAME`, or `hiiro-NAME` for `hiiro setup`), the files those commands load from `bin/lib/` (installed to `~/bin/lib/`), and its plugins (installed to `~/.config/hiiro/plugins/`). Ensure `~/bin` is in your `$PATH`.
 
-Ensure `~/bin` is in your `$PATH`.
+#### Managed installation
+
+Every file `h setup --apply` writes is recorded in `~/.config/hiiro/install-manifest.json` with its source, package version and root, SHA-256, and mode:
+
+```js
+{ "/Users/me/bin/h-task": { asset: "command", source: "bin/h-task", package: "hiiro", version: "0.1.393",
+    root: "/…/gems/hiiro-0.1.393", sha256: "9f2c…", mode: "0755", owner: "installed", link: "../exe/t" } }
+```
+
+`h setup` compares each packaged asset with its destination and the manifest. Planning writes nothing and creates no directories.
+
+| Plan | Meaning | `--apply` |
+|------|---------|-----------|
+| `missing` | No file at the destination | installs it |
+| `unchanged` | Hiiro wrote it and it matches the package | nothing |
+| `updatable` | Hiiro wrote it, nobody changed it, the package differs | replaces it |
+| `user-modified` | Hiiro wrote it and it was edited (bytes, mode, or replaced by a link) since | keeps it |
+| `collision` | A file hiiro never wrote, even with identical bytes | keeps it; `--adopt NAME` records it as managed without writing |
+| `obsolete` | Hiiro wrote it and the package no longer ships it | `--retire` removes it while it still holds the bytes hiiro wrote |
+
+`NAME` (a destination basename such as `h-pr`, a destination path, or a package path such as `bin/h-pr`) narrows any action. Apply rechecks each destination just before writing, so an edit made after planning survives (reported as `changed`). Writes go to a temporary file renamed over the destination, so a linked destination is replaced, never written through. Ownership is recorded only for writes that landed: a failed write, or a manifest that cannot be saved, reports `failed`, exits 1, and leaves the file unowned. To take the package's version of a user-modified file, delete it and apply again.
+
+`h update` installs the gem into the current Ruby (`-a`: every compatible rbenv Ruby, each independently), then runs `h setup --apply` once, from the Ruby with the newest installed hiiro, and names that source (`Shared assets: hiiro 0.1.393 from ruby 3.3.10`). It exits 1 if any Ruby failed. `h delayed_update VERSION` runs `h update -a --wait VERSION --notify` in the background: it waits until both the RubyGems API and the gem index list VERSION. `h bin list`, `h bin docs`, and `h edit NAME` show each command's origin: `managed hiiro VERSION`, `modified (managed hiiro VERSION)`, `package hiiro VERSION`, or `user`.
+
+From a checkout, `script/install` (`h setup` for the checkout), `script/compare` (plan plus a diff of each differing file), and `script/sync` (plan, `nvim -d` per differing file, then an optional apply) use the same plan.
 
 
 ### Dependencies
@@ -232,7 +254,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 |---------|-------------|
 | `h version` | Display the Hiiro version |
 | `h ping` | Simple test command (returns "pong") |
-| `h setup` | Install plugins and subcommands to system paths |
+| `h setup` | Show the drift plan for shared commands and plugins; `--apply` installs ([managed installation](#managed-installation)) |
 | `h edit [NAME...]` | Open the h script, or the source `h NAME` dispatches to (refuses ambiguous names) |
 | `h alert` | macOS desktop notifications via terminal-notifier |
 | `h herdr` | Herdr task popups plus Vim-style pane focus, movement, resize, swap, and zoom controls (`h herdr install`) |
@@ -313,6 +335,7 @@ If multiple commands match, nothing runs: Hiiro lists the candidates and exits 1
 - **Candidates:** inline registrations (`add_subcmd` / `add_cmd`; extra names are aliases) and `h-NAME` executables on `PATH`. An executable candidate is a regular file, or a symlink to one, with the executable bit; directories, non-executables, and broken links are ignored. Discovery never runs a candidate.
 - **PATH:** searched in order and read when the command runs. An empty entry means the current directory, a relative entry resolves against it, and a repeated directory counts once.
 - **Precedence for a name:** an external `h-NAME` (first in PATH) beats an inline `NAME`, which beats an inline alias `NAME`. Every loser stays listed as *shadowed* under the winner; same-name copies later in PATH never make a prefix ambiguous.
+- **Origin:** `h bin list`, `h bin docs`, and `h edit` name where the winner came from: `managed hiiro VERSION` (written by `h setup`, unchanged), `modified (managed …)`, `package hiiro VERSION` (inside the running package), or `user`.
 - **Prefixes:** an exact name or alias wins; otherwise a unique prefix. A child name yields to its parent (`h p` with only `pr` and `pr-monitor` runs `pr`). Unknown external grammar is not inspected.
 
 ```sh
