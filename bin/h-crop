@@ -1,0 +1,367 @@
+#!/usr/bin/env python3
+"""
+Detect an amber 16:9 border in a screen recording and crop inside it.
+
+Usage:
+    h-crop input.webm output.mp4
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import os
+import subprocess
+import sys
+from dataclasses import dataclass
+from fractions import Fraction
+from pathlib import Path
+
+
+TARGET_RGB = (245, 158, 11)
+DEFAULT_TOLERANCE = 60
+DEFAULT_INSET = 3
+ASPECT_16_9 = 16 / 9
+
+
+@dataclass(frozen=True)
+class Box:
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+    @property
+    def width(self) -> int:
+        return self.right - self.left + 1
+
+    @property
+    def height(self) -> int:
+        return self.bottom - self.top + 1
+
+
+def run(cmd: list[str], *, capture: bool = True, check: bool = True) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        cmd,
+        check=check,
+        text=False,
+        stdout=subprocess.PIPE if capture else None,
+        stderr=subprocess.PIPE if capture else None,
+    )
+
+
+def probe_stream(path: Path) -> dict:
+    proc = run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height,codec_name,pix_fmt,r_frame_rate,avg_frame_rate",
+            "-of",
+            "json",
+            str(path),
+        ]
+    )
+    data = json.loads(proc.stdout.decode("utf-8"))
+    streams = data.get("streams") or []
+    if not streams:
+        raise RuntimeError(f"No video stream found in {path}")
+    return streams[0]
+
+
+def extract_rgb_frame(path: Path, width: int, height: int, frame_index: int) -> bytes:
+    proc = run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            str(path),
+            "-vf",
+            f"select=eq(n\\,{frame_index})",
+            "-frames:v",
+            "1",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+        ]
+    )
+    expected = width * height * 3
+    if len(proc.stdout) != expected:
+        raise RuntimeError(
+            f"Could not extract frame {frame_index}: expected {expected} RGB bytes, got {len(proc.stdout)}"
+        )
+    return proc.stdout
+
+
+def channel_match(value: int, target: int, tolerance: int) -> bool:
+    return target - tolerance <= value <= target + tolerance
+
+
+def find_amber_box(frame: bytes, width: int, height: int, tolerance: int) -> Box | None:
+    target_r, target_g, target_b = TARGET_RGB
+    left = width
+    top = height
+    right = -1
+    bottom = -1
+    row_counts = [0] * height
+    col_counts = [0] * width
+
+    for y in range(height):
+        row = y * width * 3
+        for x in range(width):
+            offset = row + x * 3
+            r, g, b = frame[offset], frame[offset + 1], frame[offset + 2]
+            if (
+                channel_match(r, target_r, tolerance)
+                and channel_match(g, target_g, tolerance)
+                and channel_match(b, target_b, tolerance)
+            ):
+                row_counts[y] += 1
+                col_counts[x] += 1
+                if x < left:
+                    left = x
+                if x > right:
+                    right = x
+                if y < top:
+                    top = y
+                if y > bottom:
+                    bottom = y
+
+    if right < left or bottom < top:
+        return None
+
+    line_box = find_line_cluster_box(row_counts, col_counts, width, height)
+    if line_box is not None:
+        return line_box
+
+    return Box(left=left, top=top, right=right, bottom=bottom)
+
+
+def clusters_over_threshold(counts: list[int], threshold: int) -> list[tuple[int, int, int]]:
+    clusters: list[tuple[int, int, int]] = []
+    start: int | None = None
+    last = 0
+    total = 0
+
+    for idx, count in enumerate(counts):
+        if count >= threshold:
+            if start is None:
+                start = idx
+                total = count
+            elif idx != last + 1:
+                clusters.append((start, last, total))
+                start = idx
+                total = count
+            else:
+                total += count
+            last = idx
+
+    if start is not None:
+        clusters.append((start, last, total))
+
+    return clusters
+
+
+def find_line_cluster_box(
+    row_counts: list[int],
+    col_counts: list[int],
+    frame_width: int,
+    frame_height: int,
+) -> Box | None:
+    min_horizontal = max(80, int(frame_width * 0.08))
+    min_vertical = max(80, int(frame_height * 0.08))
+    row_clusters = clusters_over_threshold(row_counts, min_horizontal)
+    col_clusters = clusters_over_threshold(col_counts, min_vertical)
+
+    if len(row_clusters) < 2 or len(col_clusters) < 2:
+        return None
+
+    best: tuple[float, Box] | None = None
+    for top_cluster_idx, top_cluster in enumerate(row_clusters[:-1]):
+        for bottom_cluster in row_clusters[top_cluster_idx + 1 :]:
+            top = top_cluster[0]
+            bottom = bottom_cluster[1]
+            box_height = bottom - top + 1
+            if box_height < 100:
+                continue
+
+            for left_cluster_idx, left_cluster in enumerate(col_clusters[:-1]):
+                for right_cluster in col_clusters[left_cluster_idx + 1 :]:
+                    left = left_cluster[0]
+                    right = right_cluster[1]
+                    box_width = right - left + 1
+                    if box_width < 100:
+                        continue
+
+                    aspect = box_width / box_height
+                    aspect_error = abs(aspect - ASPECT_16_9) / ASPECT_16_9
+                    area = box_width * box_height
+                    top_coverage = top_cluster[2] / (top_cluster[1] - top_cluster[0] + 1)
+                    bottom_coverage = bottom_cluster[2] / (bottom_cluster[1] - bottom_cluster[0] + 1)
+                    left_coverage = left_cluster[2] / (left_cluster[1] - left_cluster[0] + 1)
+                    right_coverage = right_cluster[2] / (right_cluster[1] - right_cluster[0] + 1)
+                    # A toolbar button can share the amber color with the stage,
+                    # but it cannot form a border: each chosen side must cover
+                    # most of the candidate rectangle in the matching direction.
+                    if (
+                        min(top_coverage, bottom_coverage) < box_width * 0.60
+                        or min(left_coverage, right_coverage) < box_height * 0.60
+                    ):
+                        continue
+                    line_strength = top_cluster[2] + bottom_cluster[2] + left_cluster[2] + right_cluster[2]
+                    # Strong 16:9 fit is the main signal; line strength and area break ties.
+                    score = aspect_error * 1000 - (line_strength / max(area, 1)) - (area / (frame_width * frame_height))
+                    candidate = Box(left=left, top=top, right=right, bottom=bottom)
+                    if best is None or score < best[0]:
+                        best = (score, candidate)
+
+    return best[1] if best is not None else None
+
+
+def even(value: int) -> int:
+    return value - (value % 2)
+
+
+def parse_rate(rate: str | None) -> float | None:
+    if not rate or rate == "0/0":
+        return None
+    try:
+        return float(Fraction(rate))
+    except (ValueError, ZeroDivisionError):
+        return None
+
+
+def snap_to_16_9(width: int, height: int) -> tuple[int, int, bool]:
+    aspect = width / height
+    close = abs(aspect - ASPECT_16_9) / ASPECT_16_9 <= 0.01
+    if not close:
+        return even(width), even(height), False
+    # Keep the largest crop inside the detected border. Requiring an exact
+    # 16:9 multiple can throw away a 30px strip from each side of a valid
+    # viewport merely to satisfy encoder arithmetic; yuv420 only needs even
+    # dimensions, and this frame is already within the accepted aspect error.
+    return even(width), even(height), True
+
+
+def centered_crop_inside(box: Box, inset: int, frame_width: int, frame_height: int) -> tuple[int, int, int, int, bool]:
+    x = box.left + inset
+    y = box.top + inset
+    width = max(2, box.width - inset * 2)
+    height = max(2, box.height - inset * 2)
+
+    snapped_width, snapped_height, is_close = snap_to_16_9(width, height)
+    if is_close:
+        x += math.floor((width - snapped_width) / 2)
+        y += math.floor((height - snapped_height) / 2)
+        width = snapped_width
+        height = snapped_height
+    else:
+        width = even(width)
+        height = even(height)
+
+    x = max(0, min(x, frame_width - width))
+    y = max(0, min(y, frame_height - height))
+    x = even(x)
+    y = even(y)
+    return x, y, width, height, is_close
+
+
+def codecs_match_for_copy(input_path: Path, output_path: Path, codec_name: str | None) -> bool:
+    input_ext = input_path.suffix.lower()
+    output_ext = output_path.suffix.lower()
+    codec_name = codec_name or ""
+
+    if input_ext == output_ext and codec_name in {"h264", "hevc", "vp8", "vp9", "av1", "mpeg4"}:
+        return True
+    if output_ext in {".webm"} and codec_name in {"vp8", "vp9", "av1"}:
+        return True
+    if output_ext in {".mp4", ".m4v", ".mov"} and codec_name in {"h264", "hevc", "av1", "mpeg4"}:
+        return True
+    return False
+
+
+def build_encode_args(output_path: Path) -> list[str]:
+    if output_path.suffix.lower() == ".webm":
+        return ["-c:v", "libvpx-vp9", "-crf", "18", "-b:v", "0", "-c:a", "copy"]
+    return ["-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "copy"]
+
+
+def crop_video(
+    input_path: Path,
+    output_path: Path,
+    crop: tuple[int, int, int, int],
+    stream: dict,
+    force_encode: bool,
+) -> None:
+    x, y, width, height = crop
+    crop_filter = f"crop={width}:{height}:{x}:{y}"
+    codec_name = stream.get("codec_name")
+    can_copy = codecs_match_for_copy(input_path, output_path, codec_name)
+
+    if can_copy and not force_encode:
+        print("Note: exact crop coordinates require decoding and re-encoding; stream copy is not possible for filtered video.", file=sys.stderr)
+
+    cmd = ["ffmpeg", "-hide_banner", "-y", "-i", str(input_path), "-vf", crop_filter]
+    cmd.extend(build_encode_args(output_path))
+    cmd.append(str(output_path))
+    subprocess.run(cmd, check=True)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Crop a recording to the inside of an amber 16:9 border.")
+    parser.add_argument("input", type=Path)
+    parser.add_argument("output", type=Path)
+    parser.add_argument("--frame", type=int, default=1, help="Zero-based frame index to sample. Default: 1")
+    parser.add_argument("--tolerance", type=int, default=DEFAULT_TOLERANCE, help=f"RGB per-channel tolerance. Default: {DEFAULT_TOLERANCE}")
+    parser.add_argument("--inset", type=int, default=DEFAULT_INSET, help=f"Pixels to crop inside detected border. Default: {DEFAULT_INSET}")
+    parser.add_argument("--force-encode", action="store_true", help="Ignored for crop filtering; kept for CLI clarity.")
+    args = parser.parse_args()
+
+    if not args.input.exists():
+        raise SystemExit(f"Input does not exist: {args.input}")
+    if args.output.exists():
+        raise SystemExit(f"Refusing to overwrite existing output: {args.output}")
+
+    stream = probe_stream(args.input)
+    frame_width = int(stream["width"])
+    frame_height = int(stream["height"])
+    frame = extract_rgb_frame(args.input, frame_width, frame_height, args.frame)
+    box = find_amber_box(frame, frame_width, frame_height, args.tolerance)
+    if box is None:
+        raise SystemExit(
+            f"No amber border pixels found near RGB {TARGET_RGB} with tolerance +/-{args.tolerance}."
+        )
+
+    crop = centered_crop_inside(box, args.inset, frame_width, frame_height)
+    x, y, width, height, snapped = crop
+    detected_inner_width = max(2, box.width - args.inset * 2)
+    detected_inner_height = max(2, box.height - args.inset * 2)
+    aspect = detected_inner_width / detected_inner_height
+
+    print(f"Detected amber box: x={box.left}, y={box.top}, w={box.width}, h={box.height}")
+    print(f"Crop inside border: x={x}, y={y}, w={width}, h={height}")
+    if snapped:
+        print(f"16:9 validation: {aspect:.5f} is within 1% of 16:9; crop {width}x{height} (dimensions made even, not exact 16:9)")
+    else:
+        print(
+            f"Warning: detected crop aspect is {aspect:.5f}, not within 1% of 16:9; cropping anyway.",
+            file=sys.stderr,
+        )
+
+    crop_video(args.input, args.output, (x, y, width, height), stream, args.force_encode)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except subprocess.CalledProcessError as exc:
+        print(f"Command failed with exit code {exc.returncode}: {' '.join(exc.cmd)}", file=sys.stderr)
+        raise SystemExit(exc.returncode)

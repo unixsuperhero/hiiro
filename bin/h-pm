@@ -2,10 +2,6 @@
 
 require 'hiiro'
 
-def queue_prompt(prompt)
-  IO.popen(['h', 'queue', 'add'], 'w') { |io| io.write(prompt) }
-end
-
 PM_SUBCOMMANDS = {
   discover:  "Auto-discover projects/tasks from PRs, worktrees, olive runs",
   resume:    "Show 'where was I?' session briefing for a project",
@@ -21,10 +17,20 @@ PM_SUBCOMMANDS = {
 }.freeze
 
 Hiiro.run(*ARGV) {
+  # Queues `/project-manager SUBCMD ARGS...` in the pending queue as
+  # pm-SUBCMD[-ARGS] (slugged; -2, -3... while an earlier one is still
+  # there), with the current task in its frontmatter like `h queue add`.
+  queue_prompt = ->(subcmd, args) {
+    queue = Hiiro::Queue.current(self)
+    task = queue.context.task
+    prompt = (["/project-manager", subcmd.to_s] + args).join(' ')
+    result = queue.add_with_frontmatter(prompt, task_info: task && { task_name: task.name }, name: ['pm', subcmd, *args].join('-'))
+    puts "Created: #{result[:path]}"
+  }
+
   PM_SUBCOMMANDS.each_key do |subcmd|
     add_subcmd(subcmd) { |*args|
-      prompt = (["/project-manager", subcmd.to_s] + args).join(' ')
-      queue_prompt(prompt)
+      queue_prompt.call(subcmd, args)
     }
   end
 
@@ -51,10 +57,11 @@ Hiiro.run(*ARGV) {
   }
 
   add_default {
-    entries = PM_SUBCOMMANDS.map { |cmd, desc| "#{cmd.to_s.ljust(12)}  #{desc}" }
-    selected = fuzzyfind(entries)
-    next unless selected
-    cmd = selected.split.first
-    queue_prompt("/project-manager #{cmd}")
+    items = PM_SUBCOMMANDS.map do |cmd, desc|
+      Hiiro::Picker.saved_item(store: 'pm', id: cmd, name: cmd, target: "/project-manager #{cmd}",
+                               label: "#{cmd.to_s.ljust(12)}  #{desc}", record: cmd)
+    end
+    cmd = Hiiro::Picker.choose('pm-commands', items, family: :saved, hiiro: self)&.value
+    queue_prompt.call(cmd, []) if cmd
   }
 }

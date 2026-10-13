@@ -1,6 +1,6 @@
 # h-commit
 
-Fuzzy-select a git commit SHA from the recent log. `h git commit` (below) plans and makes logical commits.
+Choose a git commit from the recent log in the shared picker and print its SHA. `h git commit` (below) plans and makes logical commits.
 
 ## Synopsis
 
@@ -12,11 +12,15 @@ h commit <subcommand> [args]
 
 | Subcommand | Description |
 |------------|-------------|
-| `select` / `sk` | Fuzzy-select a commit and print its SHA |
+| `select` / `sk` | Choose a commit in the picker and print its SHA |
 
 ### select / sk
 
-Show the last 50 commits via `sk` and print the SHA of the selected commit. Extra arguments are forwarded to `git log`.
+List the last 50 commits (`git log -n 50 ARGS`, with ref names as `--decorate` shows them) in the `commits` picker ([picker](picker.md)) and print the abbreviated SHA of the chosen commit followed by a newline. Extra arguments go to `git log` as arguments (no shell). Cancelling prints nothing.
+
+- No commits (an empty repository, or git failing; git's own message goes to stderr): prints `No commits found` on stdout, exit 0.
+- Not on a terminal: `ERROR: Choosing from commits needs a terminal`, exit 1, like every picker.
+- Rows are `SHORT (REFS) SUBJECT`. Each commit is identified as `["commit", repository, full SHA]`, where the repository is the main checkout, so a rule saved here (Ctrl-E) also hides the commit in `h sha select`, `h sha show`, and `h sha copy`. Rules can match the fields `sha` (full), `subject`, `decorations` (ref names, e.g. `HEAD -> main, tag: v1`), and `repo`.
 
 **Examples**
 

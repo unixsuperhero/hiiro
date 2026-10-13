@@ -1,6 +1,6 @@
 # h-pm
 
-Queue `/project-manager` skill prompts via `h queue add`.
+Queue `/project-manager` skill prompts in the `h queue` pending queue.
 
 ## Synopsis
 
@@ -10,7 +10,11 @@ h pm [subcommand] [args]
 
 ## Description
 
-`h pm` is a launcher that builds `/project-manager` prompts and queues them via `h queue add`. With no subcommand, opens a fuzzy picker of all available commands.
+`h pm SUBCMD ARGS...` writes the prompt `/project-manager SUBCMD ARGS...` to the pending queue (`~/.local/share/hiiro/queue/pending/`) in process, through the same queue code as `h queue add` (no `h` on `PATH` is needed), and prints `Created: PATH`. As with piped `h queue add`, a current task is recorded in the prompt's frontmatter (`task_name`).
+
+Each prompt is named after its command: `pm-SUBCMD` plus the arguments, slugged (lowercase, runs of other characters become `-`, at most 60 characters). `h pm status proj` writes `pm-status-proj.md`; while that file is still pending, the next one is `pm-status-proj-2.md`, then `-3`, and so on.
+
+With no subcommand, `h pm` opens the `pm-commands` picker ([picker](picker.md)) of the subcommands with their descriptions and queues `/project-manager SUBCMD` for the chosen one (named `pm-SUBCMD`). Items are saved-family items `["saved", "pm", SUBCMD]`, so Ctrl-E can hide subcommands you never use. Off a terminal it fails with `ERROR: Choosing from pm-commands needs a terminal`.
 
 ## Subcommands
 

@@ -566,6 +566,24 @@ Hiiro::TimeInput.parse('now') ; Hiiro::TimeInput.parse('2026-09-22 10:00')   # '
 a.difference(b)                          # => Duration
 ```
 
+`h date` and `h time` register one table, `Hiiro::TimeCommands` (lib/hiiro/time_commands.rb): `Registration{ names, opts, usage, missing, run }` over a `Kind{ noun, point, now_opts, now }` (`date` prints points as ISO 8601 with ms and `now` without a fraction; `time` prints `HH:MM:SS.mmm` and `now` with optional `--ms`). `Hiiro.run(*ARGV) { Hiiro::TimeCommands.register(self, :time) }`.
+
+### Utility registrations and personal profiles (step 14)
+
+```ruby
+Hiiro::Profile.load.section('casts', 'dir' => '~/casts')   # ~/.config/hiiro/profile.yml; .path(k) expanded, .argv(k), [k], .fetch!(k)
+Hiiro::Codec.find('b64url'); Hiiro::Codec.register(hiiro, :decode)   # h encode / h decode: one format table + input reader
+Hiiro::EnvironmentAssignment.new('NAME', 'literal $value').append_to(Hiiro::EnvironmentAssignment.destination(home: Dir.home, file: nil))
+Hiiro::TextInspection.select(%w[att le]); Hiiro::TextInspection.register(hiiro, :iface, usage: '...')   # h ruby iface / h iface rb
+Hiiro::Media::PRESETS.fetch(:clip_to).command(['in.mp4', '1', '3'])   # h video preset verbs; Media.output_name, Media.duration(path)
+Hiiro::Cast.from_profile.path(:next)        # h asciinema dated names YYYYMMDDNNN.cast; record_command / resume_command
+Hiiro::ScreenCapture::Plan                  # h screencap filter graph / ffmpeg argv; ScreenCapture::Process.stop(pid, fifo)
+Hiiro::DirectoryProfile.named('vim').register(hiiro, source: __FILE__)   # h home / dotfiles / vim / plugin
+Hiiro::CommitLog.choose(Hiiro::CommitLog.read('-n', '50'), decorate: true)   # h commit / h sha; picker 'commits', family 'commit'
+```
+
+Screen capture, terminal casts, and the amber-border crop (`bin/h-crop`, a Python adapter) stay separate recipes; their personal paths and editor come from `profile.yml` (see docs/README.md#personal-profile).
+
 ### Hiiro::Shell (lib/hiiro/shell.rb)
 
 Utility for piping content to external commands:

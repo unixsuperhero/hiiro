@@ -4,19 +4,10 @@ require 'hiiro'
 
 o = Hiiro.init(*ARGV)
 
-# Helper for generating output filenames
-def output_name(infile, suffix, new_ext = nil)
-  ext = File.extname(infile)
-  basename = File.basename(infile, ext)
-  new_ext ||= ext
-  new_ext = '.' + new_ext unless new_ext.start_with?('.')
-  "#{basename}.#{suffix}#{new_ext}"
-end
-
 # === INFO / INSPECTION ===
 
 o.add_subcmd(:info) { |ifile|
-  raise 'Missing required argument: input_file' if ifile.nil? || ifile.strip == ''
+  Hiiro::Media.require_arg!(ifile, 'input_file')
   require 'json'
   require 'open3'
 
@@ -133,164 +124,39 @@ o.add_subcmd(:info) { |ifile|
 }
 
 o.add_subcmd(:streams) { |ifile|
-  raise 'Missing required argument: input_file' if ifile.nil? || ifile.strip == ''
+  Hiiro::Media.require_arg!(ifile, 'input_file')
   system('ffprobe', '-v', 'error', '-show_entries', 'stream=index,codec_type,codec_name,width,height,duration,bit_rate', '-of', 'default=noprint_wrappers=1', ifile)
 }
 
 o.add_subcmd(:duration) { |ifile|
-  raise 'Missing required argument: input_file' if ifile.nil? || ifile.strip == ''
+  Hiiro::Media.require_arg!(ifile, 'input_file')
   system('ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', ifile)
 }
 
-# === RESIZING ===
-
-o.add_subcmd(:resize) { |infile, scale, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  scale ||= '720'
-  outfile ||= output_name(infile, "#{scale}p")
-
-  dimensions = ['-2', scale].join(':')
-  scale_arg = [:scale, dimensions].join(?=)
-  system('ffmpeg', '-i', infile, '-vf', scale_arg, outfile)
-}
-
-o.add_subcmd(:resize720) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, '720p')
-  system('ffmpeg', '-i', infile, '-vf', 'scale=-2:720', outfile)
-}
-
-o.add_subcmd(:resize1080) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, '1080p')
-  system('ffmpeg', '-i', infile, '-vf', 'scale=-2:1080', outfile)
-}
-
-# === FORMAT CONVERSION ===
-
-o.add_subcmd(:convert) { |infile, format, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  raise 'Missing required argument: format (e.g., mp4, mkv, avi, webm)' if format.nil? || format.strip == ''
-  outfile ||= output_name(infile, 'converted', format)
-  system('ffmpeg', '-i', infile, outfile)
-}
-
-o.add_subcmd(:to_mp4) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'converted', 'mp4')
-  system('ffmpeg', '-i', infile, '-c:v', 'libx264', '-c:a', 'aac', outfile)
-}
-
-o.add_subcmd(:to_webm) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'converted', 'webm')
-  system('ffmpeg', '-i', infile, '-c:v', 'libvpx-vp9', '-c:a', 'libopus', outfile)
-}
-
-o.add_subcmd(:to_mkv) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'converted', 'mkv')
-  system('ffmpeg', '-i', infile, '-c', 'copy', outfile)
-}
-
-# === AUDIO EXTRACTION ===
-
-o.add_subcmd(:audio) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'audio', 'mp3')
-  system(
-    'ffmpeg',
-    '-i',
-    infile,
-    '-vn',
-    '-acodec',
-    'libmp3lame',
-    '-q:a',
-    '2',
-    outfile,
-  )
-}
-
-o.add_subcmd(:audio_wav) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'audio', 'wav')
-  system('ffmpeg', '-i', infile, '-vn', outfile)
-}
-
-o.add_subcmd(:audio_aac) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'audio', 'aac')
-  system('ffmpeg', '-i', infile, '-vn', '-c:a', 'aac', '-b:a', '192k', outfile)
-}
-
-o.add_subcmd(:audio_flac) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'audio', 'flac')
-  system('ffmpeg', '-i', infile, '-vn', '-c:a', 'flac', outfile)
-}
-
-# === CLIP EXTRACTION ===
-
-# Usage: h-video clip input.mp4 00:01:30 60 [output.mp4]
-# Extracts 60 seconds starting at 1:30
-o.add_subcmd(:clip) { |infile, start_time, duration, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  raise 'Missing required argument: start_time (e.g., 00:01:30 or 90)' if start_time.nil? || start_time.strip == ''
-  raise 'Missing required argument: duration (seconds or HH:MM:SS)' if duration.nil? || duration.strip == ''
-  outfile ||= output_name(infile, "clip_#{start_time.gsub(':', '-')}")
-  system('ffmpeg', '-i', infile, '-ss', start_time, '-t', duration, '-c', 'copy', outfile)
-}
-
-# Usage: h-video clip_to input.mp4 00:01:30 00:02:30 [output.mp4]
-# Extracts from 1:30 to 2:30
-o.add_subcmd(:clip_to) { |infile, start_time, end_time, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  raise 'Missing required argument: start_time (e.g., 00:01:30 or 90)' if start_time.nil? || start_time.strip == ''
-  raise 'Missing required argument: end_time (e.g., 00:02:30 or 150)' if end_time.nil? || end_time.strip == ''
-  outfile ||= output_name(infile, "clip_#{start_time.gsub(':', '-')}_to_#{end_time.gsub(':', '-')}")
-  system('ffmpeg', '-i', infile, '-ss', start_time, '-to', end_time, '-c', 'copy', outfile)
-}
-
-# Re-encode clip (slower but more accurate cuts)
-o.add_subcmd(:clip_precise) { |infile, start_time, duration, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  raise 'Missing required argument: start_time' if start_time.nil? || start_time.strip == ''
-  raise 'Missing required argument: duration' if duration.nil? || duration.strip == ''
-  outfile ||= output_name(infile, "clip_precise_#{start_time.gsub(':', '-')}")
-  system('ffmpeg', '-i', infile, '-ss', start_time, '-t', duration, outfile)
-}
+# === PRESETS ===
+# resize, convert, audio, clip, compress, and the other single-input recipes:
+# one table in Hiiro::Media, one output-naming function.
+Hiiro::Media::PRESETS.each_value do |preset|
+  o.add_subcmd(preset.name) { |*args| system(*preset.command(args)) }
+end
 
 # === SUBTITLE EXTRACTION ===
 
-o.add_subcmd(:subs) { |infile, stream_index, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  stream_index ||= '0'
-  outfile ||= output_name(infile, "subs_#{stream_index}", 'srt')
-  system('ffmpeg', '-i', infile, '-map', "0:s:#{stream_index}", outfile)
-}
-
 o.add_subcmd(:subs_all) { |infile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
+  Hiiro::Media.require_arg!(infile, 'input_file')
   basename = File.basename(infile, File.extname(infile))
   system('ffmpeg', '-i', infile, '-map', '0:s', "#{basename}.subs.%d.srt")
 }
 
 o.add_subcmd(:list_subs) { |infile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
+  Hiiro::Media.require_arg!(infile, 'input_file')
   system('ffprobe', '-v', 'error', '-select_streams', 's', '-show_entries', 'stream=index,codec_name:stream_tags=language,title', '-of', 'default=noprint_wrappers=1', infile)
 }
 
 # === IMAGE/THUMBNAIL EXTRACTION ===
 
-o.add_subcmd(:thumbnail) { |infile, timestamp, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  timestamp ||= '00:00:01'
-  outfile ||= output_name(infile, "thumb_#{timestamp.gsub(':', '-')}", 'jpg')
-  system('ffmpeg', '-i', infile, '-ss', timestamp, '-vframes', '1', outfile)
-}
-
 o.add_subcmd(:thumbnails) { |infile, interval, outfile_pattern|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
+  Hiiro::Media.require_arg!(infile, 'input_file')
   interval ||= '10'
   basename = File.basename(infile, File.extname(infile))
   outfile_pattern ||= "#{basename}.thumb.%04d.jpg"
@@ -300,8 +166,8 @@ o.add_subcmd(:thumbnails) { |infile, interval, outfile_pattern|
 # === GIF CREATION ===
 
 o.add_subcmd(:gif) { |infile, start_time, duration, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'animated', 'gif')
+  Hiiro::Media.require_arg!(infile, 'input_file')
+  outfile ||= Hiiro::Media.output_name(infile, 'animated', 'gif')
 
   args = ['ffmpeg', '-i', infile]
   args += ['-ss', start_time] if start_time && start_time.strip != ''
@@ -311,8 +177,8 @@ o.add_subcmd(:gif) { |infile, start_time, duration, outfile|
 }
 
 o.add_subcmd(:gif_hq) { |infile, start_time, duration, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'animated_hq', 'gif')
+  Hiiro::Media.require_arg!(infile, 'input_file')
+  outfile ||= Hiiro::Media.output_name(infile, 'animated_hq', 'gif')
   palette = "/tmp/palette_#{$$}.png"
 
   filters = 'fps=15,scale=640:-1:flags=lanczos'
@@ -329,56 +195,28 @@ o.add_subcmd(:gif_hq) { |infile, start_time, duration, outfile|
 
 # === AUDIO MANIPULATION ===
 
-o.add_subcmd(:mute) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'muted')
-  system('ffmpeg', '-i', infile, '-c:v', 'copy', '-an', outfile)
-}
-
 o.add_subcmd(:replace_audio) { |video_file, audio_file, outfile|
-  raise 'Missing required argument: video_file' if video_file.nil? || video_file.strip == ''
-  raise 'Missing required argument: audio_file' if audio_file.nil? || audio_file.strip == ''
-  outfile ||= output_name(video_file, 'new_audio')
+  Hiiro::Media.require_arg!(video_file, 'video_file')
+  Hiiro::Media.require_arg!(audio_file, 'audio_file')
+  outfile ||= Hiiro::Media.output_name(video_file, 'new_audio')
   system('ffmpeg', '-i', video_file, '-i', audio_file, '-c:v', 'copy', '-map', '0:v:0', '-map', '1:a:0', outfile)
-}
-
-o.add_subcmd(:volume) { |infile, level, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  raise 'Missing required argument: level (e.g., 2.0 for 2x, 0.5 for half)' if level.nil? || level.strip == ''
-  outfile ||= output_name(infile, "vol_#{level}")
-  system('ffmpeg', '-i', infile, '-filter:a', "volume=#{level}", '-c:v', 'copy', outfile)
 }
 
 # === SPEED / TEMPO ===
 
 o.add_subcmd(:speed) { |infile, factor, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  raise 'Missing required argument: factor (e.g., 2.0 for 2x speed, 0.5 for half speed)' if factor.nil? || factor.strip == ''
-  outfile ||= output_name(infile, "speed_#{factor}x")
+  Hiiro::Media.require_arg!(infile, 'input_file')
+  Hiiro::Media.require_arg!(factor, 'factor (e.g., 2.0 for 2x speed, 0.5 for half speed)')
+  outfile ||= Hiiro::Media.output_name(infile, "speed_#{factor}x")
   video_speed = 1.0 / factor.to_f
   audio_speed = factor.to_f
   system('ffmpeg', '-i', infile, '-filter_complex', "[0:v]setpts=#{video_speed}*PTS[v];[0:a]atempo=#{audio_speed}[a]", '-map', '[v]', '-map', '[a]', outfile)
 }
 
-# === COMPRESSION ===
-
-o.add_subcmd(:compress) { |infile, crf, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  crf ||= '28'  # Higher = more compression, lower quality. 18-28 is reasonable.
-  outfile ||= output_name(infile, "compressed_crf#{crf}")
-  system('ffmpeg', '-i', infile, '-c:v', 'libx264', '-crf', crf, '-preset', 'medium', '-c:a', 'aac', '-b:a', '128k', outfile)
-}
-
-o.add_subcmd(:compress_small) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'small')
-  system('ffmpeg', '-i', infile, '-c:v', 'libx264', '-crf', '32', '-preset', 'slower', '-c:a', 'aac', '-b:a', '96k', '-vf', 'scale=-2:480', outfile)
-}
-
 # === ROTATION / TRANSFORMATION ===
 
 o.add_subcmd(:rotate) { |infile, direction, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
+  Hiiro::Media.require_arg!(infile, 'input_file')
   direction ||= 'cw'  # cw, ccw, 180
 
   transpose = case direction
@@ -388,38 +226,15 @@ o.add_subcmd(:rotate) { |infile, direction, outfile|
   else '1'
   end
 
-  outfile ||= output_name(infile, "rotated_#{direction}")
+  outfile ||= Hiiro::Media.output_name(infile, "rotated_#{direction}")
   system('ffmpeg', '-i', infile, '-vf', "transpose=#{transpose}", outfile)
-}
-
-o.add_subcmd(:flip_h) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'flipped_h')
-  system('ffmpeg', '-i', infile, '-vf', 'hflip', '-c:a', 'copy', outfile)
-}
-
-o.add_subcmd(:flip_v) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'flipped_v')
-  system('ffmpeg', '-i', infile, '-vf', 'vflip', '-c:a', 'copy', outfile)
-}
-
-# === CROPPING ===
-
-# Usage: h-video crop input.mp4 640:480:100:50 [output.mp4]
-# Crops to 640x480 starting at x=100, y=50
-o.add_subcmd(:crop) { |infile, crop_params, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  raise 'Missing required argument: crop_params (w:h:x:y, e.g., 640:480:100:50)' if crop_params.nil? || crop_params.strip == ''
-  outfile ||= output_name(infile, 'cropped')
-  system('ffmpeg', '-i', infile, '-vf', "crop=#{crop_params}", outfile)
 }
 
 # === CONCATENATION ===
 
 # Usage: h-video concat file1.mp4 file2.mp4 file3.mp4 output.mp4
 o.add_subcmd(:concat) { |*args|
-  raise 'Need at least 2 input files and 1 output file' if args.length < 3
+  raise Hiiro::Error, 'Need at least 2 input files and 1 output file' if args.length < 3
   outfile = args.pop
   infiles = args
 
@@ -433,26 +248,11 @@ o.add_subcmd(:concat) { |*args|
   File.delete(concat_file) if File.exist?(concat_file)
 }
 
-# === FRAME RATE ===
-
-o.add_subcmd(:fps) { |infile, rate, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  raise 'Missing required argument: rate (e.g., 30, 24, 60)' if rate.nil? || rate.strip == ''
-  outfile ||= output_name(infile, "#{rate}fps")
-  system('ffmpeg', '-i', infile, '-filter:v', "fps=#{rate}", outfile)
-}
-
 # === METADATA ===
 
 o.add_subcmd(:metadata) { |infile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
+  Hiiro::Media.require_arg!(infile, 'input_file')
   system('ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', infile)
-}
-
-o.add_subcmd(:strip_metadata) { |infile, outfile|
-  raise 'Missing required argument: input_file' if infile.nil? || infile.strip == ''
-  outfile ||= output_name(infile, 'clean')
-  system('ffmpeg', '-i', infile, '-map_metadata', '-1', '-c', 'copy', outfile)
 }
 
 # === HELP ===

@@ -8,21 +8,12 @@ Hiiro.run do
     system('npm i -g @mermaid-js/mermaid-cli')
   end
 
-  add_cmd :png do
-    files = opts.args
-    files.each do |f|
-      next unless File.file?(f)
-
-      system('mmdc', '-i', f, '-o', format('%s.png', f))
-    end
-  end
-
-  add_cmd :svg do
-    files = opts.args
-    files.each do |f|
-      next unless File.file?(f)
-
-      system('mmdc', '-i', f, '-o', format('%s.svg', f))
+  # FILE => FILE.png / FILE.svg next to it; arguments that are not files are skipped.
+  %w[png svg].each do |ext|
+    add_cmd ext.to_sym do
+      opts.args.select { |f| File.file?(f) }.map do |f|
+        system('mmdc', '-i', f, '-o', format('%s.%s', f, ext))
+      end.all?
     end
   end
 end

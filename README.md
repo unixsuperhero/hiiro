@@ -113,6 +113,10 @@ brew install terminal-notifier
 # For the remaining simple fuzzy-finder selectors (the shared picker needs neither)
 brew install sk # (or fzf)
 
+# For h video, h audio, h screencap, h crop (h crop also needs python3), h asciinema, h mermaid
+brew install ffmpeg asciinema python
+npm i -g @mermaid-js/mermaid-cli   # mmdc, or: h mermaid install
+
 # For GitHub PR management
 brew install gh
 ```
@@ -323,9 +327,15 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h bin` | Create, list, and edit Hiiro executables |
 | `h branch` | Git branch management with fuzzy selection and copy |
 | `h claude` | Claude CLI wrapper with Herdr split support |
-| `h commit` | Select commits using fuzzy finder |
-| `h config` | Open config files (vim, git, Herdr, zsh, starship, claude) |
-| `h env` | Append safely quoted environment variables |
+| [`h commit`](docs/h-commit.md) | Choose a commit SHA in the shared `commits` picker |
+| [`h config`](docs/h-config.md) | Open config files (vim, git, Herdr, zsh, starship, claude, ssh, profile) |
+| [`h date` / `h time`](docs/h-time.md) | Unix timestamps, strftime shortcuts, durations, and differences over one set of registrations |
+| [`h encode` / `h decode`](docs/h-encode.md) | Binary-safe Base64/Base64url/hex/percent/form/HTML/JSON-string/ROT13 filters over one codec table |
+| [`h env` / `h export`](docs/h-env.md) | Append literal `export NAME="VALUE"` lines (`--file`, else `~/.zshenv.d/vars.zsh`, else `~/.zshenv`) |
+| [`h home` / `h dotfiles` / `h vim`](docs/h-home.md) | Directory profiles: path, search, edit, and each profile's own actions |
+| [`h video` / `h audio`](docs/h-video.md) | FFmpeg presets (one table), clips, durations, transcription adapter |
+| [`h screencap` / `h crop` / `h asciinema`](docs/h-media-capture.md) | Window recording, amber-border crop, dated terminal casts; personal paths from `profile.yml` |
+| [`h ruby iface` / `h iface rb`](docs/h-ruby.md) | Ruby declaration lines by pattern group |
 | [`h git commit`](docs/h-commit.md#h-git-commit) | Plan logical commits for all pending changes with `claude`; `-n` previews without touching the index, and invalid plans or failures stop before or at the failing commit |
 | [`h extract`](#extract-files-directories-and-links) | Extract file paths, directories, and HTTP(S) links from text |
 | `h link` | Manage saved links with URL, description, and shorthand |
@@ -344,7 +354,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h file` | Track and open frequently-used files per app |
 | `h run` | Run dev tools (lint/test/format) against changed files; keep failed logs and queue them on request |
 | `h session` | Compatibility commands for Herdr workspaces |
-| `h sha` | Extract short SHA from git log |
+| [`h sha`](docs/h-sha.md) | Choose, show, and copy commit SHAs in the shared `commits` picker |
 | `h todo` | Todo list management with tags and task association |
 | `h window` | Compatibility commands for Herdr tabs |
 | `h wtree` | Git worktree management |
@@ -586,6 +596,7 @@ The database, definitions, preferences, and some runtime files live in `~/.confi
   sparse_groups.yml # Sparse checkout definitions
   tables.yml        # Per-table action definitions
   config.yml        # Preferences
+  profile.yml       # Personal recipe policy: casts, screencap, transcribe (docs/README.md#personal-profile)
   app_files.yml     # Per-app tracked file lists
 ```
 

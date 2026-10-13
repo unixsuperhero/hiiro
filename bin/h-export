@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run { Hiiro::EnvironmentAssignment.register(self, usage: 'Usage: h export add [--file PATH] NAME WORDS...', words: true) }

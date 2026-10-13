@@ -5,7 +5,7 @@ require 'fileutils'
 require 'time'
 require 'hiiro'
 
-o = Hiiro.init(*ARGV, plugins: [:Tmux, :Pins, :Project])
+o = Hiiro.init(*ARGV)
 
 def parse_jsonl(file_path)
   records = []

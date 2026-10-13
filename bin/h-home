@@ -3,42 +3,5 @@
 require 'hiiro'
 
 Hiiro.run(*ARGV) do
-  home_context = -> { Hiiro::TaskLocation.for(nil, root: Dir.home, root_source: :home, terminal: Hiiro::Herdr::Location.from_env) }
-
-  add_subcmd(:edit) { system(ENV.fetch('EDITOR', 'nvim'), __FILE__) }
-
-  add_subcmd(:path, :abspath) { print home_context.call.start_directory }
-
-  add_subcmd(:open) { system('open', home_context.call.validate!.start_directory) }
-
-  add_subcmd(:cd) {
-    selected = home_context.call.validate!
-    terminal = selected.terminal
-    raise Hiiro::Error, 'Not running inside a Herdr pane' unless terminal.pane_id
-    client = Hiiro::Herdr.client
-    terminal.validate!(client)
-    client.run_in_pane(terminal.pane_id, "cd #{selected.start_directory.shellescape}")
-  }
-
-  add_subcmd(:sh) { |*native_args|
-    selected = home_context.call.validate!
-    Dir.chdir(selected.start_directory)
-    native_args.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*native_args)
-  }
-
-  {skf: ['skf'], rg: ['rg', '-S'], rgall: ['rg', '-S', '--no-ignore-vcs']}.each do |name, command|
-    add_subcmd(name) { |*native_args|
-      selected = home_context.call.validate!
-      Dir.chdir(selected.start_directory)
-      system(*command, *native_args)
-    }
-  end
-
-  add_subcmd(:ebin) { |*patterns|
-    selected = home_context.call
-    selected = selected.with_directory(File.join(selected.start_directory, 'bin'), source: :override).validate!
-    Dir.chdir(selected.start_directory)
-    files = patterns.flat_map { |pattern| Dir.glob(pattern.end_with?('*') ? pattern : "*#{pattern}*") }
-    system(ENV.fetch('EDITOR', 'nvim'), *files)
-  }
+  Hiiro::DirectoryProfile.named('home').register(self, source: __FILE__)
 end

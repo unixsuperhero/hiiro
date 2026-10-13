@@ -57,6 +57,10 @@ class Hiiro
     'task_cli' => %i[TaskCli], 'task_location' => %i[TaskLocation], 'task_sessions' => %i[TaskSessions],
     'tasks' => %i[TaskManager SparseGroups Tasks Tree Task FallbackTarget App Environment],
     'time_input' => %i[TimeInput], 'tui' => %i[Tui], 'tuios' => %i[Tuios],
+    'profile' => %i[Profile], 'time_commands' => %i[TimeCommands], 'codec' => %i[Codec],
+    'environment_assignment' => %i[EnvironmentAssignment], 'text_inspection' => %i[TextInspection],
+    'media' => %i[Media], 'cast' => %i[Cast], 'screen_capture' => %i[ScreenCapture],
+    'directory_profile' => %i[DirectoryProfile], 'commit_log' => %i[CommitLog],
     'persistence' => %i[DB AppRecord Assignment Branch Capture CheckRun Invocation InvocationResolution Link
                         URLTemplate PaneHome PinRecord PinnedPr PrMonitorCheckpoint Project RegistryEntry Reminder Tag Tags
                         TaskRecord TaskResource TodoItem TodoManager Job JobClaim JobOutcome Schedule ScheduleCheckpoint

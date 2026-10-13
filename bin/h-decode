@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run(*ARGV) { Hiiro::Codec.register(self, :decode) }

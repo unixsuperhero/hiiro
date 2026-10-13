@@ -23,6 +23,7 @@ class Hiiro
       'branch' => %w[name repo],
       'pr' => %w[number repo branch name],
       'saved' => %w[store id name target],
+      'commit' => %w[sha subject decorations repo],
     }.freeze
     MODES = %w[exact literal substring regex glob extglob].freeze
     SCOPES = %w[picker task project global].freeze
@@ -105,6 +106,13 @@ class Hiiro
     def self.pr_record_item(pr, label: nil, value: pr)
       repo = pr.reference&.repo&.path || pr.repo.to_s
       pr_item(number: pr.number, repo: repo, branch: pr.head_branch, title: pr.title, label: label, value: value)
+    end
+
+    # A commit by its full SHA in its repository (the main checkout, as for
+    # branches); the label is the one-line log text.
+    def self.commit_item(sha, repo:, subject:, decorations: '', label: nil, value: sha)
+      item(:commit, repo, sha, label: label || "#{sha[0, 7]} #{subject}", value: value,
+                               sha: sha, subject: subject, decorations: decorations, repo: repo)
     end
 
     def self.saved_item(store:, id:, name:, target: nil, label: nil, record: nil)

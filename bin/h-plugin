@@ -1,46 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'json'
-
 require 'hiiro'
 
-BASE_DIR = File.join(Dir.home, '.config/hiiro/plugins')
-
-def plugin_files
-  Dir.glob(File.join(BASE_DIR, '**/*'))
-end
-
-Hiiro.run(*ARGV, plugins: [:Pins], dir: BASE_DIR) do
-  add_subcmd(:path) { |*args|
-    print get_value(:dir)
-  }
-
-  add_subcmd(:ls) { |*args|
-    puts plugin_files
-  }
-
-  add_subcmd(:edit) { |*edit_args|
-    if edit_args.none?
-      edit_files(__FILE__)
-    else
-      pm = Hiiro::Matcher.new(plugin_files) { |f| File.basename(f) }
-      plugins = edit_args.flat_map { |arg| pm.by_prefix(arg).matches.map(&:item) }.uniq
-
-      if plugins.none?
-        puts "No matching plugins found for: #{edit_args.map(&:inspect).join(' ')}"
-      else
-        edit_files(*plugins)
-      end
-    end
-  }
-
-  add_subcmd(:rg) { |*rg_args|
-    Dir.chdir(get_value(:dir))
-    system('rg', '-S', *rg_args)
-  }
-
-  add_subcmd(:rgall) { |*rg_args|
-    Dir.chdir(get_value(:dir))
-    system('rg', '-S', '--no-ignore-vcs', *rg_args)
-  }
+Hiiro.run(*ARGV) do
+  Hiiro::DirectoryProfile.named('plugin').register(self, source: __FILE__)
 end

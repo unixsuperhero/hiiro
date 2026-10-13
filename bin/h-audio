@@ -1,0 +1,63 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+# Transcription is a personal adapter: its command and model come from the
+# profile and are resolved only when transcribe runs.
+def transcriber
+  section = Hiiro::Profile.load.section('transcribe', 'command' => 'mlx_whisper', 'model' => ENV['WHISPER_MODEL'])
+  command = section.argv('command')
+  program = command.first.to_s
+  found = program.include?('/') ? File.executable?(program) : ENV['PATH'].to_s.split(':').any? { |dir| File.executable?(File.join(dir, program)) }
+  raise Hiiro::Error, "transcribe command not found: #{program} (set transcribe.command in #{Hiiro::Profile.path})" unless found
+
+  model = section['model'].to_s
+  raise Hiiro::Error, "transcribe model is not set (set transcribe.model in #{Hiiro::Profile.path} or WHISPER_MODEL)" if model.empty?
+
+  [command, model]
+end
+
+Hiiro.run(*ARGV) do
+  add_flag :txt, short: :t
+  add_flag :srt, short: :s
+  add_flag :json, short: :j
+
+  add_cmd :transcribe, :xscribe, opts: %i[txt srt json] do
+    infile = opts.files.first
+    raise Hiiro::Error, 'usage: h audio transcribe [-t] [-s] [-j] FILE' unless infile
+
+    command, model = transcriber
+    formats = %i[txt srt json].select { |m| opts.send(m) }.map(&:to_s)
+    fmts = formats.any? ? formats.join(',') : 'all'
+
+    system(*command, infile, '--model', model, '-f', fmts)
+  end
+
+  # FILE T0 T1 T2 ... => clip_000.wav (T0..T1), clip_001.wav (T1..T2), ...
+  add_cmd :clips do
+    file, *times = opts.args
+    raise Hiiro::Error, 'usage: h audio clips FILE T0 T1 [T2 ...]' if file.nil? || times.length < 2
+
+    clip_to = Hiiro::Media::PRESETS.fetch(:clip_to)
+    times.each_cons(2).with_index.map do |(a, b), i|
+      system(*clip_to.command([file, a, b, format('clip_%03d.wav', i)]))
+    end.all?
+  end
+
+  # The installed experiments encapsulated_length, cls_proc_length, and
+  # inl_proc_length all printed this; they stay as aliases of one handler.
+  add_cmd :length, :encapsulated_length, :cls_proc_length, :inl_proc_length do
+    files = opts.files
+    raise Hiiro::Error, 'usage: h audio length FILE...' if files.empty?
+
+    lengths = files.filter_map do |file|
+      length = Hiiro::Media.duration(file)
+      next warn("#{file}: no duration") unless length
+
+      puts format('File: %s => %0.2f', file, length)
+      length
+    end
+
+    pp sum: lengths.sum
+  end
+end

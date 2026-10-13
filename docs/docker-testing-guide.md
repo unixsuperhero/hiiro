@@ -467,7 +467,7 @@ h app show
 |---------|--------|
 | `h alert` | Requires terminal-notifier |
 | `h claude *` | Requires Herdr + Claude CLI |
-| `h commit select` | Requires sk/fzf interactive |
+| `h commit select` | Requires a terminal for the interactive picker |
 | `h config *` | Opens editor |
 | `h pane *` | Requires an active Herdr terminal |
 | `h session *` | Requires a Herdr server |

@@ -2,26 +2,19 @@
 
 require 'hiiro'
 
-Hiiro.run(*ARGV, plugins: [:Pins]) do
+Hiiro.run(*ARGV) do
+  # The abbreviated SHA of the chosen commit; nil when there are none or the
+  # pick was cancelled.
+  choose_sha = ->(log_args) {
+    commits = Hiiro::CommitLog.read('-100', *log_args)
+    next warn('No commits found') if commits.empty?
+
+    Hiiro::CommitLog.choose(commits, hiiro: self)&.short
+  }
+
   add_subcmd(:select) do |*select_args|
-    # Get git log with format: sha - subject
-    log_output = `git log --oneline -100 #{select_args.join(' ')}`.strip
-
-    if log_output.empty?
-      STDERR.puts "No commits found"
-      next
-    end
-
-    lines = log_output.split("\n").each_with_object({}) do |line, h|
-      sha = line.split.first
-      h[line] = sha
-    end
-
-    selected = fuzzyfind_from_map(lines)
-
-    if selected
-      print selected
-    end
+    sha = choose_sha.call(select_args)
+    print sha if sha
   end
 
   add_subcmd(:ls) do |*ls_args|
@@ -29,19 +22,15 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
   end
 
   add_subcmd(:show) do |sha = nil, *show_args|
-    if sha.nil?
-      sha = `h sha select`.strip
-      next if sha.empty?
-    end
+    sha ||= choose_sha.call([])
+    next unless sha
 
     system('git', 'show', sha, *show_args)
   end
 
   add_subcmd(:copy) do |sha = nil, *copy_args|
-    if sha.nil?
-      sha = `h sha select`.strip
-      next if sha.empty?
-    end
+    sha ||= choose_sha.call([])
+    next unless sha
 
     Hiiro::Shell.pipe(sha, 'pbcopy')
     puts "Copied #{sha} to clipboard"

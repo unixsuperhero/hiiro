@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require "hiiro"
+require "digest"
 
 o = Hiiro.init(*ARGV)
 o.add_subcmd(:vids) { |outfile, *args|

@@ -1,6 +1,6 @@
 # h-config
 
-Open common configuration files in your editor.
+Open common configuration files in `$EDITOR` (default `vim`), from the file's directory. The directory must exist.
 
 ## Synopsis
 
@@ -15,6 +15,7 @@ h config <subcommand>
 | `vim` | Open Neovim/Vim config (`init.lua` or `init.vim`) |
 | `git` | Git config subcommands |
 | `herdr` | Open `~/.config/herdr/config.toml` |
+| `ssh` | Open `~/.ssh/config` |
 | `zsh` | Open `~/.zshrc` |
 | `profile` | Open `~/.zprofile` |
 | `starship` | Open `~/.config/starship/starship.toml` |
@@ -37,7 +38,7 @@ Open git config files. Nested subcommands:
 |------------|-------------|
 | `global` | Open `~/.gitconfig` |
 | `ignore` | Open `~/.config/git/ignore` |
-| `local` | Open `.git/config` in the current repo |
+| `local` | Open `.git/config` at the top of the current repository |
 
 **Examples**
 
@@ -46,6 +47,8 @@ h config git global
 h config git ignore
 h config git local
 ```
+
+Arguments after the nested subcommand are ignored (`h config git local extra` opens the local config).
 
 ### profile
 

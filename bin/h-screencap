@@ -1,0 +1,175 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'fileutils'
+require 'json'
+require 'time'
+
+SC = Hiiro::ScreenCapture
+
+def parse_options(args)
+  options = {}
+  positionals = []
+  args.each do |arg|
+    if (m = arg.match(/\A--([^=]+)=(.*)\z/))
+      options[m[1].tr('-', '_').to_sym] = m[2]
+    else
+      positionals << arg
+    end
+  end
+  [positionals, options]
+end
+
+def usage!
+  warn <<~USAGE
+    usage:
+      h-screencap app APP_NAME
+      h-screencap start APP_NAME... [--screen=1] [--audio=0] [--audio-mode=separate] [--audio-bitrate=320k] [--video-format=mov] [--scale=1] [--framerate=30] [--startup-wait=3] [--out-dir=#{SC.out_dir}] [--name=session-name]
+      h-screencap stop
+      h-screencap status
+
+    start records visible app window regions into separate video files using one ffmpeg process.
+    video-format defaults to mov for Finder Quick Look previews; mp4 and mkv are also supported.
+    audio defaults to device 0.
+    audio-mode choices: separate, first, all, none.
+    pass --audio=none or --audio-mode=none to disable audio.
+    out-dir defaults to screencap.out_dir in #{Hiiro::Profile.path}.
+    app NAME runs the screencap.apps NAME recipe (open, then read process bounds) when one is configured.
+    stop sends q to ffmpeg, then SIGINT/TERM/KILL to its process group, so files finalize cleanly.
+  USAGE
+  exit 1
+end
+
+def get_bounds(app)
+  script = <<~EOF
+  tell application "System Events"
+    tell process %s
+      set win to front window
+      set pos to position of win
+      set bnds to size of win
+      return pos & bnds
+    end tell
+  end tell
+  EOF
+
+  result = Hiiro::Shell.run('osascript', '-e', format(script, app.inspect))
+  bounds = result.plain_text.scan(/-?\d+/).map(&:to_i)
+  return bounds if bounds.length == 4
+
+  abort "could not read bounds for #{app.inspect}; grant your terminal Accessibility access in System Settings > Privacy & Security > Accessibility"
+end
+
+def tail_file(path, lines = 40)
+  return '' unless File.exist?(path)
+
+  File.readlines(path).last(lines).join
+end
+
+def read_state = JSON.parse(File.read(SC.state_file))
+
+def ensure_not_recording!
+  return unless File.exist?(SC.state_file)
+
+  pid = read_state['pid']
+  abort "already recording with pid #{pid}; run `h-screencap stop` first" if pid && SC::Process.alive?(pid)
+
+  FileUtils.rm_f(SC.state_file)
+end
+
+def start_recording(args)
+  apps, options = parse_options(args)
+  usage! if apps.empty?
+  abort 'ffmpeg not found in PATH' unless system('which', 'ffmpeg', out: File::NULL)
+  ensure_not_recording!
+
+  audio = options.fetch(:audio, '0')
+  scale = Float(options.fetch(:scale, '1'))
+  startup_wait = Float(options.fetch(:startup_wait, '3'))
+  audio_mode = SC.audio_mode(audio, options.fetch(:audio_mode, 'separate'))
+  video_format = SC.video_format(options.fetch(:video_format, 'mov'))
+  plan = SC::Plan.new(
+    apps:,
+    rects: apps.map { |app| SC.normalize_rect(get_bounds(app), scale) },
+    out_dir: options[:out_dir] ? File.expand_path(options[:out_dir]) : SC.out_dir,
+    session_name: [options.fetch(:name, 'yt'), Time.now.strftime('%Y%m%d-%H%M%S')].join('.'),
+    screen: options.fetch(:screen, '1'),
+    audio:,
+    audio_mode:,
+    audio_bitrate: options.fetch(:audio_bitrate, '320k'),
+    video_format:,
+    framerate: options.fetch(:framerate, '30'),
+  )
+  FileUtils.mkdir_p(plan.out_dir)
+  FileUtils.mkdir_p(SC.state_dir)
+
+  control_file = File.join(SC.state_dir, "#{plan.session_name}.ffmpeg.stdin")
+  pid = SC::Process.spawn(plan.command, control_file:, log_file: plan.log_file)
+  Process.detach(pid)
+
+  sleep startup_wait
+  unless SC::Process.alive?(pid)
+    FileUtils.rm_f(SC.state_file)
+    abort "ffmpeg exited before recording started; log:\n#{tail_file(plan.log_file)}"
+  end
+
+  File.write(SC.state_file, JSON.pretty_generate(
+    pid:, command: plan.command, started_at: Time.now.iso8601, outputs: plan.outputs, log_file: plan.log_file,
+    apps:, rects: plan.rects, audio:, audio_mode: plan.audio_mode, control_file:,
+    video_format: plan.video_format, scale:
+  ))
+
+  puts "started ffmpeg pid #{pid}"
+  plan.outputs.each { |file| puts file }
+end
+
+def stop_recording
+  abort 'no active recording state found' unless File.exist?(SC.state_file)
+
+  state = read_state
+  pid = state.fetch('pid')
+
+  if SC::Process.alive?(pid)
+    how = SC::Process.stop(pid, state['control_file'])
+    puts how == :quit ? "sent q to ffmpeg pid #{pid}" : "sent SIGINT to ffmpeg pid #{pid}"
+  else
+    puts "ffmpeg pid #{pid} is not running"
+    log_tail = state['log_file'] ? tail_file(state['log_file']) : ''
+    puts "ffmpeg log:\n#{log_tail}" unless log_tail.empty?
+  end
+
+  FileUtils.rm_f(SC.state_file)
+  FileUtils.rm_f(state['control_file']) if state['control_file']
+  Array(state['outputs']).each do |path|
+    size = File.exist?(path) ? File.size(path) : 0
+    puts "#{path} #{size} bytes"
+  end
+end
+
+def recording_status
+  unless File.exist?(SC.state_file)
+    puts 'not recording'
+    return
+  end
+
+  state = read_state
+  output_sizes = Array(state['outputs']).to_h { |path| [path, File.exist?(path) ? File.size(path) : 0] }
+  puts pid: state['pid'], alive: SC::Process.alive?(state['pid']), started_at: state['started_at'], outputs: output_sizes
+end
+
+Hiiro.run(*ARGV) do
+  add_subcmd(:app) do |name, *_args|
+    usage! unless name
+    process = name
+    if (recipe = SC.app_recipe(name))
+      system('open', *Array(recipe['open'])) if recipe['open']
+      sleep recipe.fetch('wait', 1).to_f
+      process = recipe.fetch('process', name)
+    end
+    x, y, w, h = get_bounds(process)
+    puts x: x, y: y, w: w, h: h
+  end
+
+  add_subcmd(:start) { |*args| start_recording(args) }
+  add_subcmd(:stop) { stop_recording }
+  add_subcmd(:status) { recording_status }
+end

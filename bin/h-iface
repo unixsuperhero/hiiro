@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run(*ARGV) { Hiiro::TextInspection.register(self, :rb, usage: 'Usage: h iface rb [GROUP...] FILE...') }

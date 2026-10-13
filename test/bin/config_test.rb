@@ -1,71 +1,58 @@
-require "test_helper"
+require 'test_helper'
+require_relative '../support/cli_sandbox'
 
+# h config opens each configuration file in $EDITOR from its directory.
 class ConfigTest < Minitest::Test
+  include CliSandbox
+
   def setup
-    @harness = Hiiro::TestHarness.load_bin("bin/h-config") do
-      # Stub open_config to capture calls instead of actually opening editor
-      @open_config_calls = []
-      define_singleton_method(:open_config) do |file, dir: nil|
-        @open_config_calls << { file: file, dir: dir }
-      end
-
-      # Stub make_child for nested subcommands
-      define_singleton_method(:make_child) do |subcmd, *args, &block|
-        # Just return self for testing - nested subcommands tested separately
-        self
-      end
-    end
+    setup_sandbox
+    recorder('editor')
+    %w[.config/herdr .config/nvim .config/starship .config/git .claude .ssh].each { |rel| FileUtils.mkdir_p(File.join(@home, rel)) }
   end
 
-  def test_registers_expected_subcommands
-    expected = %i[vim git herdr zsh profile starship claude]
-    expected.each do |subcmd|
-      assert @harness.has_subcmd?(subcmd), "Expected subcmd :#{subcmd} to be registered"
-    end
+  def teardown = teardown_sandbox
+
+  def test_each_config_opens_its_file_from_its_directory
+    %w[herdr ssh vim zsh profile starship claude].each { |name| assert_equal ['', '', 0], run_bin('h-config', name), name }
+    File.write(File.join(@home, '.config/nvim/init.lua'), '')
+    run_bin('h-config', 'vim')
+
+    assert_equal [
+      "#{@home}/.config/herdr/config.toml | cwd=#{@home}/.config/herdr",
+      "#{@home}/.ssh/config | cwd=#{@home}/.ssh",
+      "#{@home}/.config/nvim/init.vim | cwd=#{@home}/.config/nvim",
+      "#{@home}/.zshrc | cwd=#{@home}",
+      "#{@home}/.zprofile | cwd=#{@home}",
+      "#{@home}/.config/starship/starship.toml | cwd=#{@home}/.config/starship",
+      "#{@home}/.claude/settings.json | cwd=#{@home}/.claude",
+      "#{@home}/.config/nvim/init.lua | cwd=#{@home}/.config/nvim",
+    ], log('editor').lines(chomp: true)
   end
 
-  def test_herdr_opens_herdr_config
-    @harness.run_subcmd(:herdr)
-
-    calls = @harness.instance_variable_get(:@open_config_calls)
-    assert_equal 1, calls.size
-    assert_equal '~/.config/herdr', calls.first[:dir]
-    assert_equal 'config.toml', calls.first[:file]
+  def test_herdr_is_registered_once
+    out, _, status = run_bin('h-config')
+    assert_equal 1, status
+    assert_equal 1, out.lines.count { |line| line.match?(/^\s+herdr\s/) }
   end
 
-  def test_zsh_opens_zshrc
-    @harness.run_subcmd(:zsh)
+  def test_git_child_commands_open_global_ignore_and_local_configs
+    repo = File.join(@root, 'repo')
+    FileUtils.mkdir_p(File.join(repo, 'lib'))
+    system('git', 'init', '-q', repo)
 
-    calls = @harness.instance_variable_get(:@open_config_calls)
-    assert_equal 1, calls.size
-    assert_equal '~', calls.first[:dir]
-    assert_equal '.zshrc', calls.first[:file]
-  end
+    %w[global ignore local].each { |name| assert_equal ['', '', 0], run_bin('h-config', 'git', name, chdir: File.join(repo, 'lib')), name }
+    assert_equal ['', '', 0], run_bin('h-config', 'git', 'local', 'extra', chdir: repo)
 
-  def test_profile_opens_zprofile
-    @harness.run_subcmd(:profile)
+    assert_equal [
+      "#{@home}/.gitconfig | cwd=#{@home}",
+      "#{@home}/.config/git/ignore | cwd=#{@home}/.config/git",
+      "#{repo}/.git/config | cwd=#{repo}",
+      "#{repo}/.git/config | cwd=#{repo}",
+    ], log('editor').lines(chomp: true)
 
-    calls = @harness.instance_variable_get(:@open_config_calls)
-    assert_equal 1, calls.size
-    assert_equal '~', calls.first[:dir]
-    assert_equal '.zprofile', calls.first[:file]
-  end
-
-  def test_starship_opens_starship_toml
-    @harness.run_subcmd(:starship)
-
-    calls = @harness.instance_variable_get(:@open_config_calls)
-    assert_equal 1, calls.size
-    assert_equal '~/.config/starship', calls.first[:dir]
-    assert_equal 'starship.toml', calls.first[:file]
-  end
-
-  def test_claude_opens_settings_json
-    @harness.run_subcmd(:claude)
-
-    calls = @harness.instance_variable_get(:@open_config_calls)
-    assert_equal 1, calls.size
-    assert_equal '~/.claude', calls.first[:dir]
-    assert_equal 'settings.json', calls.first[:file]
+    out, _, status = run_bin('h-config', 'git', chdir: repo)
+    assert_equal 1, status
+    assert_includes out, 'Subcommand required for h-config-git'
   end
 end

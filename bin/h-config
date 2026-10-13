@@ -18,8 +18,8 @@ Hiiro.run(*ARGV) {
     open_config(file, dir: dir)
   }
 
-  add_subcmd(:git) {
-    make_child(subcmd, *args) {
+  add_subcmd(:git) { |*git_args|
+    run_child(:git, git_args) {
       add_subcmd(:global) {
         open_config('.gitconfig', dir: '~')
       }
@@ -32,11 +32,7 @@ Hiiro.run(*ARGV) {
         root = `git rev-parse --show-toplevel`.chomp
         open_config('.git/config', dir: root)
       }
-    }.run
-  }
-
-  add_subcmd(:herdr) {
-    open_config('config.toml', dir: '~/.config/herdr')
+    }
   }
 
   add_subcmd(:zsh) {

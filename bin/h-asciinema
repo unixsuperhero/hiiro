@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+require 'fileutils'
+
+def casts = @casts ||= Hiiro::Cast.from_profile
+
+# Restore the caller's terminal after asciinema. Off a terminal there is
+# nothing to restore, and reset would print escapes or ask for a type.
+def reset_terminal
+  system('reset') if $stdin.tty? && $stdout.tty?
+end
+
+def record_cast(command)
+  path = casts.path(:next)
+  FileUtils.mkdir_p(File.dirname(path))
+  ok = system('asciinema', 'rec', path, '-c', command)
+  reset_terminal
+  ok
+end
+
+Hiiro.run(*ARGV) do
+  { nname: :next, cname: :current, pname: :previous, fname: :first, lname: :last }.each do |subcmd, kind|
+    add_subcmd(subcmd) { puts casts.path(kind) }
+  end
+
+  add_subcmd(:name) do |*args|
+    raise Hiiro::Error, 'usage: h asciinema name DAY [INDEX [LAST_INDEX]]' unless (1..3).cover?(args.length)
+
+    day = Hiiro::Cast.day(args[0])
+    first = args[1] ? Hiiro::Cast.index(args[1]) : casts.indices(day).max || 0
+    last = args[2] ? Hiiro::Cast.index(args[2]) : first
+    raise Hiiro::Error, 'LAST_INDEX must be greater than or equal to INDEX' if last < first
+
+    (first..last).each { |index| puts casts.path(index, day:) }
+  end
+
+  # record and resume both write a new cast; resume reopens the files at the
+  # editor's last position (casts.resume_args).
+  add_subcmd(:record) { |*files| record_cast(casts.record_command(files)) }
+  add_subcmd(:resume) { |*files| record_cast(casts.resume_command(files)) }
+
+  add_subcmd(:play) do |name = nil, *others|
+    name ||= casts.path(:current)
+    ok = system('asciinema', 'play', name, *others)
+    reset_terminal
+    ok
+  end
+end

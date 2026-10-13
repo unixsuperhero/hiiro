@@ -1,7 +1,7 @@
 # The shared picker and persistent pruning
 
 Every interactive choice among commands, files, tasks, projects, branches, PRs,
-and saved information opens one picker (`Hiiro::PickerScreen`, built on
+commits, and saved information opens one picker (`Hiiro::PickerScreen`, built on
 `Hiiro::Tui::Screen`). Each picker has a stable name, and each choice has a stable
 identity. Exclusion rules hide choices from a picker across searches and later
 invocations. A rule never deletes, closes, or changes the resource behind a
@@ -126,7 +126,8 @@ treatment.
 | project | `projects` (`h project`, the project resolver, legacy `~/proj` fallback) | `["project", name]` | `name`, `path` |
 | branch | `branches` (`h branch select|copy|co|rm`), `merged-branches` (`h branch clean`) | `["branch", repository, name]`; the repository is the main checkout, so every worktree shares it | `name`, `repo` |
 | pr | `my-prs` (`h pr select|copy|track`), `tracked-prs` (`h pr` actions and the `pr` resolver), `pinned-prs` (`h branch`) | `["pr", "owner/name", number]` | `number`, `repo`, `branch`, `name` (title) |
-| saved | `links`, `obsidian-notes`, `portfolio-docs`, `saved-files`, `registry` / `registry-TYPE`, `task-link`, `task-pr` | `["saved", store, key]`: link ID, vault-relative note, Portfolio ID, saved file, registry row ID, task resource ID | `store`, `id`, `name`, `target` |
+| commit | `commits` (`h commit select|sk`, `h sha select|show|copy`) | `["commit", repository, full SHA]`; the repository is the main checkout | `sha` (full), `subject`, `decorations` (ref names), `repo` |
+| saved | `links`, `obsidian-notes`, `portfolio-docs`, `saved-files`, `registry` / `registry-TYPE`, `task-link`, `task-pr`, `pm-commands` (`h pm`) | `["saved", store, key]`: link ID, vault-relative note, Portfolio ID, saved file, registry row ID, task resource ID, `pm` subcommand | `store`, `id`, `name`, `target` |
 
 Labels (the text in a row) are only for display. Two rows with the same label
 remain separate choices. A rule written for an identity still matches after
