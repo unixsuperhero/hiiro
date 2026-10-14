@@ -1,7 +1,0 @@
-#!/usr/bin/env ruby
-
-require 'hiiro'
-
-Hiiro.run do
-
-end

@@ -318,6 +318,8 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h herdr` | Herdr task popups plus Vim-style pane focus, movement, resize, swap, and zoom controls (`h herdr install`) |
 | `h task` | Same program as `t`: task records, todos, worktrees (`t NAME tree new`), and Herdr workspaces |
 
+`hiiro` is the long name of `h`: `exe/hiiro` registers the same root commands, and `hiiro setup` installs commands as `hiiro-NAME`.
+
 ### External Subcommands
 
 | Command | Description |
@@ -331,6 +333,8 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | [`h config`](docs/h-config.md) | Open config files (vim, git, Herdr, zsh, starship, claude, ssh, profile) |
 | [`h date` / `h time`](docs/h-time.md) | Unix timestamps, strftime shortcuts, durations, and differences over one set of registrations |
 | [`h encode` / `h decode`](docs/h-encode.md) | Binary-safe Base64/Base64url/hex/percent/form/HTML/JSON-string/ROT13 filters over one codec table |
+| [`h dotenv`](docs/h-dotenv.md) | Compare `.env` files; read-only (`copy_to` reports differences, it copies nothing) |
+| [`h sign`](docs/h-sign.md) | Inspect and verify an app bundle's code signature with `codesign` (it never signs) |
 | [`h env` / `h export`](docs/h-env.md) | Append literal `export NAME="VALUE"` lines (`--file`, else `~/.zshenv.d/vars.zsh`, else `~/.zshenv`) |
 | [`h home` / `h dotfiles` / `h vim`](docs/h-home.md) | Directory profiles: path, search, edit, and each profile's own actions |
 | [`h video` / `h audio`](docs/h-video.md) | FFmpeg presets (one table), clips, durations, transcription adapter |
@@ -358,6 +362,9 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h todo` | Todo list management with tags and task association |
 | `h window` | Compatibility commands for Herdr tabs |
 | `h wtree` | Git worktree management |
+| `h jumplist` | Optional tmux back/forward pane history; needs a running tmux server |
+
+These are the maintained commands. Demonstrations live in [`examples/`](examples/), which `h` does not dispatch and `h setup` does not install. `h otask`, `h osubtask`, `h zosubtask`, `h .config`, `h dsstore`, `h uri`, `h tags`, and `h buffer` were removed; [docs/README.md](docs/README.md#examples-not-commands) names each replacement.
 
 `h claude agents|commands|skills -a` prints the absolute file path for each matching `.claude` tool, including `SKILL.md` for skills.
 

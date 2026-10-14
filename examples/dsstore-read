@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+# Diagnostic example: print the records of ./.DS_Store. Needs the `ds_store`
+# Python package; not a hiiro command (the former bin/h-dsstore-read named a
+# personal virtualenv as its interpreter).
+
+from ds_store import DSStore
+
+with DSStore.open(".DS_Store", "r") as store:
+    for record in store:
+        print(record.filename, record.code, record.value)

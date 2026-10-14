@@ -253,7 +253,7 @@ You can attach an existing repository or worktree afterward. If that directory a
 
 This matters for small investigations and noncoding tasks. You can track an invoice review or a design decision without pretending it needs a branch and a terminal workspace.
 
-The separate `h task` commands still own their coding-worktree operations. The [reference explains that boundary](t.md#worktrees-branches-and-sparse-checkout), including the different behavior of `h task start` and `h task switch`.
+When a task does need a coding worktree, `t tree new` creates one. The [reference covers worktrees, paths, and shells](t.md#worktrees-paths-and-shells).
 
 ## Completing work preserves its context
 

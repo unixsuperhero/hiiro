@@ -61,7 +61,6 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 | [h-plugin](h-plugin.md) | List, edit, and search hiiro plugin files |
 | [h-home](h-home.md) | `h home`, `h dotfiles`, `h vim`: directory profiles (path, search, edit, specialised actions) |
 | [h-registry](h-registry.md) | Store and look up named resources by type with short aliases |
-| [h-tags](h-tags.md) | Query tags grouped by taggable type |
 | [h-todo](h-todo.md) | Manage a personal todo list with statuses, tags, and task associations |
 
 ## Utilities
@@ -81,7 +80,21 @@ Quick-reference index of all `h-*` executables and the main `h` entry point.
 | [h-video](h-video.md) | `h video` FFmpeg presets and `h audio` clips, length, transcription adapter |
 | [h-media-capture](h-media-capture.md) | `h screencap` window recording, `h crop` amber-border crop, `h asciinema` dated casts |
 | [h-mermaid](h-mermaid.md) | Render Mermaid files to PNG or SVG with `mmdc` |
+| [h-dotenv](h-dotenv.md) | Compare `.env` files; `copy_to` reports values that differ from or are missing in the last file and writes nothing |
+| [h-sign](h-sign.md) | Inspect and verify an app bundle's code signature with `codesign`; it never signs |
 | [profile.yml](#personal-profile) | Personal recipe policy for casts, screen capture, and transcription |
+
+## Optional tmux integration
+
+| Command | Description |
+|---------|-------------|
+| `h jumplist` | Vim-style back/forward history of tmux panes (`setup`, `record`, `back`, `forward`, `to N`, `ls`, `clear`, `path`). Needs a running tmux server; Herdr does not use it |
+
+## Examples, not commands
+
+Files in [`examples/`](../examples/) are not dispatched by `h` and not installed by `h setup`. `examples/h-demo` is a minimal inline-subcommand bin (formerly `bin/h-demo`), `examples/dsstore-read` a Python `.DS_Store` reader (formerly `bin/h-dsstore-read`; needs the `ds_store` package), `examples/bin-with-proposed-options` an option-declaration sketch, and the YAML files sample configuration.
+
+Removed in this release (see the [changelog](../CHANGELOG.md)): `h otask`, `h osubtask`, `h zosubtask` (use [`t`](t.md)), `h .config` (use [`h config herdr`](h-config.md)), `h dsstore` (empty), `h uri decode` (printed a Python recipe; use [`h decode uri`](h-encode.md)), `h tags` (stopped in a debugger; use the owning command's `tags`, or `h db q`), `h buffer` (its tmux library was removed; use `tmux list-buffers` / `show-buffer` directly).
 
 ## Personal profile
 

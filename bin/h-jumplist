@@ -6,8 +6,13 @@ require "fileutils"
 JUMPLIST_DIR = File.join(Dir.home, '.config', 'hiiro', 'jumplist')
 MAX_SIZE = 50
 
+# Without a tmux client every file name would collapse to "-entries".
 def client_name
-  @client_name ||= `tmux display-message -p '\#{client_name}'`.strip.tr('/', '_')
+  @client_name ||= begin
+    name = `tmux display-message -p '\#{client_name}' 2>/dev/null`.strip
+    raise Hiiro::Error, 'h jumplist needs a running tmux client; none was found' if name.empty?
+    name.tr('/', '_')
+  end
 end
 
 def jumplist_file

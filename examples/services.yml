@@ -224,7 +224,7 @@ full-stack:
 
 # Usage:
 #   h service start full-stack
-#     -> creates ONE tmux window with 4 split panes (redis, api-rails, graphql, frontend)
+#     -> one Herdr tab per service (redis, api-rails, graphql, frontend); detached without a Herdr workspace
 #     -> all services use "local" variations
 
 # Frontend + GraphQL against staging API (no local rails needed)
@@ -241,7 +241,7 @@ staging-fe:
 
 # Usage:
 #   h service start staging-fe
-#     -> ONE tmux window, 2 split panes
+#     -> one Herdr tab each for graphql and frontend
 #     -> graphql points at staging API/auth
 #     -> frontend points at local graphql (which proxies to staging)
 
@@ -281,11 +281,11 @@ backend-docker:
 #   h service start
 #
 # Other commands:
-#   h service stop [name]       # C-c (or custom stop cmd), fuzzy select if no name
-#   h service attach [name]     # switch to service's tmux pane
+#   h service stop [name]       # signal the recorded process (or custom stop cmd), wait for its exit
+#   h service attach [name]     # focus the service's Herdr workspace and tab
 #   h service status [name]     # show service details
 #   h service reset [name]      # clear stale running state
-#   h service clean             # auto-prune dead panes from state
+#   h service clean             # prune instances whose process or pane is gone
 #   h service ls                # list all services + status
 #   h service env <name>        # show env file config and variations
 #   h service groups            # list all groups and members

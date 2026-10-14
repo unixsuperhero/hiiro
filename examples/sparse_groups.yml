@@ -8,10 +8,10 @@
 # Each key is a group name. Each value is a list of directory paths (relative
 # to the repo root) that will be included in the sparse checkout.
 #
-# Usage with h task start:
-#   h task start my-task --sparse ruby
-#   h task start my-task --sparse ruby --sparse frontend
-#   h task start my-task -s ruby -s shared
+# Usage with t tree new:
+#   t tree new my-task --sparse ruby
+#   t tree new my-task --sparse ruby --sparse frontend
+#   t tree new my-task -s ruby -s shared
 
 # =============================================================================
 # Single-service groups - check out only what one service needs
@@ -83,12 +83,12 @@ backend:
 # =============================================================================
 #
 # Create a new task with a sparse checkout:
-#   h task start my-feature --sparse ruby
-#   h task start my-feature -s ruby -s shared
-#   h task start my-feature --sparse fullstack
+#   t tree new my-feature --sparse ruby
+#   t tree new my-feature -s ruby -s shared
+#   t tree new my-feature --sparse fullstack
 #
 # --sparse can be repeated to combine multiple groups:
-#   h task start my-feature --sparse ruby --sparse infra
+#   t tree new my-feature --sparse ruby --sparse infra
 #   -> checks out: apps/api + lib + config + db + terraform + k8s + scripts/deploy
 #
 # Without --sparse, a full checkout is performed (default git behavior).

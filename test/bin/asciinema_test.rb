@@ -4,10 +4,12 @@ require "pty"
 require "rbconfig"
 require "tmpdir"
 require "json"
+require "io/console"
 
 class AsciinemaTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  ASCIINEMA_DIR = %w[/opt/homebrew/bin /usr/local/bin].find { |d| File.executable?(File.join(d, "asciinema")) }
+  DEADLINE = 30
+  ASCIINEMA_DIR =%w[/opt/homebrew/bin /usr/local/bin].find { |d| File.executable?(File.join(d, "asciinema")) }
 
   def setup
     @home = Dir.mktmpdir("cast-home")
@@ -26,11 +28,20 @@ class AsciinemaTest < Minitest::Test
 
   def env
     { "HOME" => @home, "RUBYLIB" => File.join(ROOT, "lib"), "HIIRO_TEST_DB" => "sqlite::memory:",
-      "PATH" => [ASCIINEMA_DIR, "/usr/bin", "/bin"].compact.join(":"), "TERM" => "xterm-256color" }
+      "PATH" => [ASCIINEMA_DIR, "/usr/bin", "/bin"].compact.join(":"), "TERM" => "xterm-256color",
+      "EDITOR" => "/usr/bin/true", "VISUAL" => "/usr/bin/true" }
   end
 
   def h(*args)
-    Open3.capture3(env, RbConfig.ruby, File.join(ROOT, "bin/h-asciinema"), *args, stdin_data: "")
+    Open3.popen3(env, RbConfig.ruby, File.join(ROOT, "bin/h-asciinema"), *args, unsetenv_others: true, pgroup: true) do |stdin, out, err, thread|
+      stdin.close
+      readers = [Thread.new { out.read }, Thread.new { err.read }]
+      unless thread.join(DEADLINE)
+        Process.kill("KILL", -thread.pid) rescue nil
+        flunk "h asciinema #{args.join(' ')} still running after #{DEADLINE}s"
+      end
+      [readers[0].value, readers[1].value, thread.value]
+    end
   end
 
   def cast(index) = File.join(@casts, format("%s%03d.cast", @today, index))
@@ -56,18 +67,35 @@ class AsciinemaTest < Minitest::Test
 
   # asciinema rec needs a terminal; run the CLI on a PTY. The fixture editor
   # waits before printing because asciinema 3.2.1 play can drop output
-  # recorded in the first ~15ms.
+  # recorded in the first ~15ms. asciinema queries the terminal and ends
+  # with Primary Device Attributes (ESC [ c); with no emulator to answer,
+  # it can wait forever, so answer that one query like a VT220 would.
   def on_pty(*args)
     output = +""
-    PTY.spawn(env, RbConfig.ruby, File.join(ROOT, "bin/h-asciinema"), *args) do |reader, _writer, pid|
+    status = nil
+    PTY.spawn(env, RbConfig.ruby, File.join(ROOT, "bin/h-asciinema"), *args, unsetenv_others: true) do |reader, writer, pid|
+      reader.winsize = [24, 80]
+      answered = 0
+      deadline = Time.now + DEADLINE
       begin
-        reader.each_char { |c| output << c }
-      rescue Errno::EIO
+        loop do
+          if Time.now > deadline
+            Process.kill("KILL", -pid) rescue nil
+            Process.wait(pid) rescue nil
+            flunk "h asciinema #{args.join(' ')} still running after #{DEADLINE}s:\n#{output}"
+          end
+          output << reader.readpartial(4096) if IO.select([reader], nil, nil, 0.2)
+          while output.scan("\e[c").size > answered
+            writer.write("\e[?62;22c")
+            answered += 1
+          end
+        end
+      rescue Errno::EIO, EOFError
         nil
       end
-      Process.wait(pid)
+      status = Process.wait2(pid).last
     end
-    [output, $?]
+    [output, status]
   end
 
   def events(path)
@@ -92,8 +120,17 @@ class AsciinemaTest < Minitest::Test
     assert_equal "hello-from-cast resumed-mark notes.md\r\n", evs.find { |e| e[1] == "o" }[2]
     assert_equal first, File.binread(cast(0))
 
-    output, status = on_pty("play")
-    assert status.success?
-    assert_includes output, "hello-from-cast resumed-mark notes.md"
+    # asciinema 3.2.1 play on a PTY sometimes prints its banners but not the
+    # recorded event (about half the runs here, before and after step 15, with
+    # an intact cast), so up to three plays may show it.
+    outputs = []
+    3.times do
+      output, status = on_pty("play")
+      assert status.success?
+      assert_includes output, "::: Replaying session from #{cast(1)}"
+      outputs << output
+      break if output.include?("hello-from-cast resumed-mark notes.md")
+    end
+    assert_includes outputs.last, "hello-from-cast resumed-mark notes.md", File.read(cast(1))
   end
 end

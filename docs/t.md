@@ -99,7 +99,7 @@ t doc open [TASK] [NAME]
 | `t sh [TASK] [CMD...]` | Changes to the start directory and execs a shell or CMD |
 | `t cd [TASK] [APP] [--directory PATH]` | Send `cd` to the captured calling Herdr pane after validating its IDs |
 
-Worktree creation is `Hiiro::TaskManager#create_tree`, shared with the legacy `h task start` code path.
+Worktree creation is `Hiiro::TaskManager#create_tree`: it reuses a worktree no task is assigned to (renaming it) before adding a new detached one.
 
 APP resolves by exact case-sensitive name or unique prefix, with mapped terminal disambiguation and non-interactive ambiguity errors. Its relative path must exist beneath the task root and cannot escape through traversal or symlinks. Explicit directory overrides must exist and resolve relative to the captured invocation directory. Positional APP and `--app APP` are alternative spellings.
 

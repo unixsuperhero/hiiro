@@ -2,20 +2,5 @@
 
 require "hiiro"
 
-Hiiro.run(*ARGV, cwd: Dir.pwd, plugins: [:Tasks]) do
-  add_subcmd(:version) { |*args|
-    puts Hiiro::VERSION
-  }
-
-  add_subcmd(:ping) { |*args|
-    puts "pong"
-  }
-
-  add_subcmd(:setup) do |*args|
-    exit Hiiro::Install.cli(args, prefix: Hiiro::RootCommands.setup_prefix)
-  end
-
-  add_subcmd(:alert) do |*args|
-    Hiiro::Notification.show(self)
-  end
-end
+# `hiiro` is the long name of `h`: the same root commands; `hiiro setup` installs hiiro-NAME.
+Hiiro.run(*ARGV, cwd: Dir.pwd, tasks: true) { Hiiro::RootCommands.register(self) }

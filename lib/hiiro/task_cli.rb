@@ -662,7 +662,7 @@ class Hiiro
         puts tab_line(tab)
       end
 
-      # --- Worktrees (shared with h task via Hiiro::TaskManager) ---
+      # --- Worktrees (Hiiro::TaskManager creates them; its Config detaches them) ---
 
       def tree_manager
         @tree_manager ||= Hiiro::TaskManager.new(self)

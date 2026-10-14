@@ -302,62 +302,10 @@ class EnvironmentTest < Minitest::Test
     selected = Hiiro::CurrentTask.select(records, 'shared', kind: 'task workspace', key: :session, tty: true,
                                          chooser: ->(map) { map.fetch('shared [2]') })
     assert_equal second.id, selected.id
-    assert_raises(Hiiro::Error) { Hiiro::TaskManager.new(Hiiro.new('h'), environment: Environment.new).task_by_session('shared') }
   end
 end
 
 TaskManager = Hiiro::TaskManager
-
-class TaskManagerFromWorktreeTest < Minitest::Test
-  include TestHelpers
-
-  def setup
-    Hiiro::TaskRecord.dataset.delete
-    Hiiro::AppRecord.dataset.delete
-  end
-
-  def teardown
-    Hiiro::TaskRecord.dataset.delete
-    Hiiro::AppRecord.dataset.delete
-  end
-
-  def test_task_from_worktree_registers_existing_git_worktree
-    with_temp_dir do |dir|
-      repo = File.join(dir, "repo")
-      FileUtils.mkdir_p(repo)
-      assert system('git', 'init', '-q', repo)
-
-      env = Hiiro::Environment.new
-      tm = TaskManager.new(MockHiiro.new, environment: env)
-
-      task = nil
-      out, = capture_io do
-        task = tm.task_from_worktree(repo, "external")
-      end
-
-      expected_root = `git -C #{repo.shellescape} rev-parse --show-toplevel`.strip
-      assert_equal "external", task.name
-      assert_equal expected_root, task.tree_name
-      assert_equal expected_root, tm.resolve_path(task)
-      assert_match "Added task 'external' from worktree '#{expected_root}'", out
-    end
-  end
-
-  def test_task_from_worktree_rejects_non_git_directory
-    with_temp_dir do |dir|
-      env = Hiiro::Environment.new
-      tm = TaskManager.new(MockHiiro.new, environment: env)
-
-      task = nil
-      out, = capture_io do
-        task = tm.task_from_worktree(dir, "external")
-      end
-
-      assert_nil task
-      assert_match "is not inside a git worktree", out
-    end
-  end
-end
 
 class TaskManagerConfigTest < Minitest::Test
   include TestHelpers
@@ -369,43 +317,6 @@ class TaskManagerConfigTest < Minitest::Test
 
   def teardown
     setup
-  end
-
-  def test_create_uses_database_identity_and_preserves_existing_tasks
-    existing = Hiiro::TaskRecord.create(name: 'existing', next_action: 'Keep')
-    task = TaskManager::Config.new.create_task(name: 'new-task', tree: 'new-task/main', session: 'new-task')
-    assert_equal ['new-task', 'new-task/main', 'new-task'], Hiiro::TaskRecord[task.id].values.values_at(:name, :tree, :session)
-    assert_equal 'Keep', existing.refresh.next_action
-    assert_raises(Sequel::UniqueConstraintViolation) { TaskManager::Config.new.create_task(name: 'existing') }
-    assert_equal 'Keep', existing.refresh.next_action
-  end
-
-  def test_attach_from_stale_task_preserves_new_metadata_and_resources
-    config = TaskManager::Config.new
-    task = config.create_task(name: 'stale')
-    record = Hiiro::TaskRecord[task.id]
-    record.update(status: 'waiting', next_action: 'New', app: 'api', color_index: 4)
-    record.metadata = { 'windows' => [{ 'index' => '0', 'name' => 'vim', 'path' => '/tmp/code' }], 'saved_at' => 'yesterday' }
-    record.save_changes
-    resource = Hiiro::TaskResource.create(task_id: task.id, kind: 'issue', target: 'https://example.com/42')
-    another = config.create_task(name: 'concurrent')
-    loaded = config.attach_tree(task.id, tree: 'stale/main', session: 'stale')
-    assert_equal task.id, loaded.id
-    assert_equal ['waiting', 'New', 'api', 4], record.refresh.values.values_at(:status, :next_action, :app, :color_index)
-    assert_equal 'yesterday', record.metadata['saved_at']
-    assert_equal resource.id, record.resources.first.id
-    assert_equal 'concurrent', Hiiro::TaskRecord[another.id].name
-    config.attach_tree(task.id, tree: 'stale/main', session: 'stale', app: nil)
-    assert_nil record.refresh.app
-    assert_equal 'New', record.next_action
-  end
-
-  def test_attach_does_not_resurrect_a_removed_task
-    task = TaskManager::Config.new.create_task(name: 'removed')
-    Hiiro::TaskRecord[task.id].destroy
-    error = assert_raises(Hiiro::Error) { TaskManager::Config.new.attach_tree(task.id, tree: 'removed/main', session: 'removed') }
-    assert_equal "Task not found: #{task.id}", error.message
-    assert_nil Hiiro::TaskRecord.find_by_name('removed')
   end
 
   def test_detaching_retains_current_directory_metadata_and_references
@@ -423,7 +334,7 @@ class TaskManagerConfigTest < Minitest::Test
   end
 end
 
-class TaskManagerFilterTasksTest < Minitest::Test
+class TaskManagerTasksTest < Minitest::Test
   include TestHelpers
 
   def setup
@@ -438,18 +349,6 @@ class TaskManagerFilterTasksTest < Minitest::Test
     yield TaskManager.new(MockHiiro.new, environment: Hiiro::Environment.new)
   end
 
-  def test_filter_tasks_returns_all_when_no_prefixes
-    yaml = <<~YAML
-      tasks:
-        - { name: alpha, tree: alpha/main }
-        - { name: beta,  tree: beta/main }
-        - { name: gamma, tree: gamma/main }
-    YAML
-    build_tm(yaml) do |tm|
-      assert_equal %w[alpha beta gamma], tm.filter_tasks.map(&:name)
-    end
-  end
-
   def test_tasks_includes_external_slash_named_tasks
     yaml = <<~YAML
       tasks:
@@ -458,37 +357,6 @@ class TaskManagerFilterTasksTest < Minitest::Test
     YAML
     build_tm(yaml) do |tm|
       assert_equal ["menu/ids"], tm.tasks.map(&:name)
-    end
-  end
-
-  def test_filter_tasks_filters_by_prefix
-    yaml = <<~YAML
-      tasks:
-        - { name: feature-auth, tree: feature-auth/main }
-        - { name: feature-api,  tree: feature-api/main }
-        - { name: bugfix,       tree: bugfix/main }
-    YAML
-    build_tm(yaml) do |tm|
-      assert_equal %w[feature-api feature-auth], tm.filter_tasks(["feat"]).map(&:name)
-    end
-  end
-
-  def test_filter_tasks_ors_multiple_prefixes
-    yaml = <<~YAML
-      tasks:
-        - { name: feature-auth, tree: feature-auth/main }
-        - { name: bugfix,       tree: bugfix/main }
-        - { name: chore,        tree: chore/main }
-    YAML
-    build_tm(yaml) do |tm|
-      assert_equal %w[bugfix feature-auth], tm.filter_tasks(["feat", "bug"]).map(&:name)
-    end
-  end
-
-  def test_filter_tasks_returns_empty_for_no_match
-    yaml = "tasks:\n  - { name: alpha, tree: alpha/main }\n"
-    build_tm(yaml) do |tm|
-      assert_empty tm.filter_tasks(["zzz"])
     end
   end
 end

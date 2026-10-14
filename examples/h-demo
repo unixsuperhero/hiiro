@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# Example of an inline subcommand (formerly bin/h-demo): ruby -Ilib examples/h-demo josh a b
 
 require 'hiiro'
 

@@ -18,7 +18,7 @@ Workflow/directory commands share a resolved `TaskLocation` context rather than 
 
 ## Inline subcommands
 
-These subcommands are registered by `Hiiro::RootCommands` (`lib/hiiro/root_commands.rb`, run by `exe/h`) or loaded from `lib/`:
+These subcommands are registered by `Hiiro::RootCommands` (`lib/hiiro/root_commands.rb`, run by `exe/h` and by `exe/hiiro`, the long name of `h`) or loaded from `lib/`:
 
 | Subcommand | Description | Source |
 |------------|-------------|--------|
@@ -54,6 +54,7 @@ These are separate `bin/h-*` executables dispatched by `h`:
 | [`h config`](h-config.md) | Open config files in editor |
 | [`h cpr`](h-cpr.md) | Shortcut to current branch's PR |
 | [`h db`](h-db.md) | SQLite database inspection and management |
+| [`h dotenv`](h-dotenv.md) | Compare `.env` files (read-only; `copy_to` only reports) |
 | [`h extract`](../README.md#extract-files-directories-and-links) | Extract file paths, directories, and HTTP(S) links from text |
 | [`h img`](h-img.md) | Image clipboard utilities |
 | [`h link`](h-link.md) | URL bookmark management |
@@ -67,9 +68,9 @@ These are separate `bin/h-*` executables dispatched by `h`:
 | [`h project`](h-project.md) | Project directory and Herdr workspace manager |
 | [`h registry`](h-registry.md) | Generic resource registry |
 | [`h session`](h-session.md) | Compatibility commands for Herdr workspaces |
+| [`h sign`](h-sign.md) | Inspect and verify an app bundle's code signature (never signs) |
 | [`h sha`](h-sha.md) | Interactive git SHA selection |
 | [`h sparse`](h-sparse.md) | Git sparse checkout group management |
-| [`h tags`](h-tags.md) | Tag management |
 | [`h title`](h-title.md) | Terminal tab title management |
 | [`h todo`](h-todo.md) | Todo item management |
 | [`h window`](h-window.md) | Compatibility commands for Herdr tabs |

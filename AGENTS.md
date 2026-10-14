@@ -110,7 +110,7 @@ Create a new executable `bin/h-<name>` that uses `Hiiro.run`:
 #!/usr/bin/env ruby
 require 'hiiro'
 
-Hiiro.run(*ARGV, plugins: [:Tasks]) {
+Hiiro.run(*ARGV, plugins: [:Pins]) {
   add_subcmd(:list) {
     puts "Listing items..."
   }
@@ -136,31 +136,26 @@ This creates commands like `h mycommand list`, `h mycommand add foo /path`.
 For complex command hierarchies with shared state, create a nested Hiiro instance:
 
 ```ruby
-def self.add_subcommands(hiiro)
-  hiiro.add_subcmd(:task) do |*args|
-    tm = TaskManager.new(hiiro, scope: :task)
-    build_hiiro(hiiro, tm).run
-  end
+# lib/hiiro/root_commands.rb
+hiiro.add_subcmd(:service, :svc) do |*svc_args|
+  sm = Hiiro::ServiceManager.new(context: -> { context })
+  Hiiro::ServiceManager.build_hiiro(this, sm, context: -> { context }, args: svc_args).run
 end
 
-def self.build_hiiro(parent_hiiro, tm)
-  bin_name = [parent_hiiro.bin, parent_hiiro.subcmd || ''].join('-')
-
-  Hiiro.run(bin_name:, args: parent_hiiro.args) do
-    add_subcmd(:list) { tm.list }
-    add_subcmd(:start) { |name| tm.start_task(name) }
-    add_subcmd(:switch) { |name=nil|
-      name ||= tm.select_task_interactive
-      tm.switch_to_task(tm.task_by_name(name))
-    }
+# lib/hiiro/service_manager.rb
+def self.build_hiiro(parent_hiiro, sm, context: parent_hiiro.context, args: parent_hiiro.args)
+  sm.context = context
+  parent_hiiro.make_child(:service, args, context: -> { sm.context }) do |h|
+    h.add_subcmd(:ls) { sm.list }
+    h.add_subcmd(:start) { |name| sm.start(name) }
   end
 end
 ```
 
 This pattern:
 - Passes remaining args from parent to child via `args: parent_hiiro.args`
-- Allows shared state (like `tm`) across all nested subcommands
-- Creates commands like `h task list`, `h task start foo`
+- Allows shared state (like `sm`) across all nested subcommands
+- Creates commands like `h service ls`, `h service start NAME`
 
 ## Library Components (lib/)
 
@@ -684,8 +679,7 @@ Subcommands (`h service <subcmd>`):
 - `ls`/`list` - List services with their instances (key, run state, directory, task)
 - `start <name> [--use VAR=variation ...]` - Start a service or group as an owned run (init -> env -> start)
 - `stop <name|instance>` - Signal the verified process (or run `stop` with `$PID`), wait for the observed exit, then clean up
-- `stop <name>` - Stop a running service (sends C-c to tmux pane or runs stop command)
-- `attach <name>` - Switch to service's tmux pane
+- `attach <name>` - Focus the service's Herdr workspace and tab
 - `open <name>` - Open service URL in browser
 - `url <name>` / `port <name>` - Print service URL or port
 - `status <name>` - Show detailed service info (pid, pane, task, started_at)
@@ -854,18 +848,20 @@ ALWAYS update `README.md` and any files in `docs/` or other markdown files that 
 ## Key Files
 
 - `exe/h` - Entry point: `Hiiro.run` over `Hiiro::RootCommands.register` (lib/hiiro/root_commands.rb)
+- `exe/hiiro` - The long name of `h`: the same `RootCommands`; `hiiro setup` installs `hiiro-NAME`
 - `exe/t`, `exe/tt` - Task CLI launchers over `Hiiro::TaskCli` (`lib/hiiro/task_cli.rb`)
-- `bin/h-*` - External subcommands (tmux wrappers, git helpers, jumplist, etc.)
+- `bin/h-*` - External subcommands (Herdr wrappers, git helpers, media recipes, optional tmux jumplist, etc.); `examples/` holds demonstrations that are neither dispatched nor installed
 - `lib/hiiro.rb` - Main Hiiro class and Runners
-- `lib/hiiro/*.rb` - Supporting classes (Git, Matcher, Fuzzyfind, Todo, Shell, Options, Notification, Tmux, Queue, ServiceManager, RunnerTool, AppFiles)
+- `lib/hiiro/*.rb` - Supporting classes (Git, Matcher, Fuzzyfind, Todo, Shell, Options, Notification, Herdr, Queue, ServiceManager, RunnerTool, AppFiles)
 
-### not used anymore
-- `plugins/*.rb` - Reusable plugin modules (Pins, Project, Tasks, Notify)
+### Plugins
+- `plugins/*.rb` - `Pins` (named by several bins), `Project` and `Notify` (installed for user commands that name them)
 
 ## External Dependencies
 
 - Ruby with `pry` gem
-- `tmux` for session/window/pane management
+- `herdr` for workspaces, tabs, and panes
+- `tmux`, optional, only for `h jumplist` and `h vim session`
 - `sk` (skim) or `fzf` for fuzzy finding
 - `gh` CLI for GitHub operations (h-pr)
 - `terminal-notifier` for macOS notifications (notify plugin)
@@ -893,12 +889,13 @@ Legacy domain YAML, task metadata directories, and command-pin files are retaine
 
 # Groups of files
 
-## tmux-related files
+## Terminal integration files
 
-- bin/h-buffer
 - bin/h-pane
 - bin/h-window
 - bin/h-session
-- lib/hiiro/tmux.rb
-- lib/hiiro/tmux/*
+- bin/h-title
+- bin/hh
+- lib/hiiro/herdr.rb
+- bin/h-jumplist (optional tmux)
 

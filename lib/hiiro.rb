@@ -55,7 +55,7 @@ class Hiiro
     'service_manager' => %i[ServiceManager], 'shell' => %i[CommandSpecification ProcessOutcome Shell Result],
     'table' => %i[Table], 'table_actions' => %i[TableActions], 'table_scope' => %i[TableScope],
     'task_cli' => %i[TaskCli], 'task_location' => %i[TaskLocation], 'task_sessions' => %i[TaskSessions],
-    'tasks' => %i[TaskManager SparseGroups Tasks Tree Task FallbackTarget App Environment],
+    'tasks' => %i[TaskManager SparseGroups Tree Task App Environment],
     'time_input' => %i[TimeInput], 'tui' => %i[Tui], 'tuios' => %i[Tuios],
     'profile' => %i[Profile], 'time_commands' => %i[TimeCommands], 'codec' => %i[Codec],
     'environment_assignment' => %i[EnvironmentAssignment], 'text_inspection' => %i[TextInspection],

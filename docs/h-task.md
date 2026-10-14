@@ -18,7 +18,7 @@ Worktree operations that used to live only under `h task` are now task commands:
 
 | Old | Now |
 |---|---|
-| `h task start NAME [APP] [-s GROUP]` | `t start NAME [APP] [--sparse GROUP]` or `t tree new NAME [APP] [--sparse GROUP]` |
+| `h task start NAME [APP] [-s GROUP]` | `t tree new NAME [APP] [--sparse GROUP]` |
 | `h task switch NAME [APP]` | `t switch NAME [APP] [--directory DIR]` |
 | `h task stop NAME` | `t tree rm NAME` (detaches the worktree, keeps the directory, registers it as a directory resource) |
 | `h task resume [TREE]` | `t tree resume NAME [TREE]` |
@@ -33,10 +33,21 @@ Worktree operations that used to live only under `h task` are now task commands:
 
 `h task tag`, `untag`, `tags`, `sparse`, `from`, `prune`, `apps`, `save`, `status`, and `prs` were not carried over. Tag branches with `h branch tag`, inspect worktrees with `h wtree`, and register an existing directory with `t directory add [TASK] PATH --primary`.
 
-`Hiiro::TaskManager` retains useful worktree/domain operations. `Hiiro::CurrentTask#context` resolves the canonical task once into `TaskLocation`, and `Environment` delegates that value rather than choosing the first matching task/app/tree. Root, task, and app queue/service/runner mounts share the selected root and effective directory. Root workflows disable the saved task pin; `t` permits it as the final fallback.
+`Hiiro::TaskManager` keeps the worktree operations `t` uses: `create_tree` (create or reuse an unassigned worktree, optional sparse groups), and `Config#detach_tree`. `Hiiro::CurrentTask#context` resolves the canonical task once into `TaskLocation`, and `Environment` delegates that value rather than choosing the first matching task/app/tree. Root, task, and app queue/service/runner mounts share the selected root and effective directory. Root workflows disable the saved task pin; `t` permits it as the final fallback.
 
-## Legacy task persistence
+## Removed legacy task commands
 
-The in-repo `h-otask` manager uses the same `TaskRecord`, `TaskResource`, and `Assignment` owners. Assignments change one worktree row at a time. Task detail saves merge supplied fields into the current row; saved window arrays, `saved_at`, and additional detail keys live in `tasks.metadata_json`. Changing a tree or session does not erase those details. Apps come from `AppRecord`; add or edit aliases with `h app`.
+`h otask`, `h osubtask`, and `h zosubtask` were removed. They needed the `Tmux`, `OldTask`, and `Task` plugins, which the package stopped shipping (`plugins/old_task.rb`, `plugins/tmux.rb`, and `plugins/tasks.rb` were deleted in February 2026); without them `h osubtask` and `h zosubtask` raised `NoMethodError` and `h otask ls` printed only a worktree list that pointed at the removed `h task start`. The old inline `h task`/`h subtask` grammar (`Hiiro::Tasks`) has had no caller since `h task` became a symlink to `t`, and was removed with them.
 
-`h-otask` requires the external `Tmux` plugin. `h-osubtask` and `h-zosubtask` delegate to external task plugins whose implementations are not included here. Their external persistence behavior is not implemented or verified by this repository.
+| Old | Now |
+|---|---|
+| `h otask ls`, `h osubtask ls` | `t ls`, `h wtree ls` |
+| `h otask start NAME [APP]`, `h osubtask new NAME` | `t tree new NAME [APP]`, `t tree new PARENT/NAME` |
+| `h otask switch`, `app`, `cd`, `path` | `t switch`, `t cd [TASK] [APP]`, `t path [TASK] [APP]` |
+| `h otask stop` | `t tree rm [TASK]` |
+| `h otask apps` | `h app ls` |
+| `h otask current` | `t current` |
+| `h otask save`, `status` | not carried over: Herdr owns tabs and panes (`t tab ls`, `t pane ls`) |
+| `h otask migrate` | not carried over: a one-time tmux-era worktree layout move |
+
+Nothing was deleted from the database. Window arrays, `saved_at`, and other keys that `h otask save` wrote stay in `tasks.metadata_json`; assignments stay in `assignments`. `t` reads tasks, resources, and worktree references from the same rows.
