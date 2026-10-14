@@ -146,7 +146,12 @@ class Hiiro
 
 
       def save_current(task)
-        Hiiro::PinRecord.set('t', 'current_task', task.id)
+        table = Hiiro::Table.named('t')
+        if (entry = table.find('current_task'))
+          entry.update(value: task.id.to_s)
+        else
+          table.add('current_task', value: task.id.to_s)
+        end
       end
 
       def inside?(path, directory)
@@ -174,10 +179,8 @@ class Hiiro
           puts "Task already exists: #{name}\n#{record.home}"
           return record
         end
-        now = Time.now.iso8601
-        record = Hiiro::TaskRecord.new(name: name, session: name, status: 'active', created_at: now, updated_at: now)
-        ensure_home(record)
-        record.save
+        ensure_home(Hiiro::TaskRecord.new(name: name))
+        record = Hiiro::TaskRecord.create_task(name)
         puts "Created #{name}\n#{record.home}"
         record
       end
@@ -315,31 +318,12 @@ class Hiiro
           return
         end
         text = opts.clear ? nil : args.join(' ')
-        changes = { field => text, updated_at: Time.now.iso8601 }
-        if field == :waiting_on
-          if text
-            changes.merge!(status: 'waiting', completed_at: nil, archived_at: nil)
-          elsif task.task_status == 'waiting'
-            changes[:status] = 'active'
-          end
-        end
-        task.update(changes)
+        field == :waiting_on ? task.set_waiting!(text) : task.set_next!(text)
         show(task)
       end
 
       def set_status(task, state)
-        raise Error, "Status must be #{Hiiro::TaskRecord::STATUSES.join(', ')}" unless Hiiro::TaskRecord::STATUSES.include?(state)
-        now = Time.now.iso8601
-        changes = { status: state, updated_at: now }
-        case state
-        when 'done'
-          changes.merge!(completed_at: task.completed_at || now, archived_at: nil)
-        when 'archived'
-          changes[:archived_at] = task.archived_at || now
-        else
-          changes.merge!(completed_at: nil, archived_at: nil)
-        end
-        task.update(changes)
+        task.set_status!(state)
         puts "#{task.name}\t#{task.task_status}"
       end
 
@@ -814,11 +798,16 @@ class Hiiro
           puts task.name
         end
         add_cmd(:new, args: %i[name]) { create(single(opts.args)) }
-        add_cmd(:next, args: ['task?', 'text...'], opts: [*TASK_OPTIONS, :clear]) do
+        add_cmd(:ui, args: [], opts: []) do
+          current = Hiiro::CurrentTask.new(herdr: -> { herdr_client }, pin: true).resolve
+          Hiiro::TaskScreen.new(current:).run
+          nil # the screen's false return would become a non-zero exit status
+        end
+        add_cmd(:next, args: ['task?', 'text...'], opts: TASK_OPTIONS, flags: [:clear]) do
           task, rest = take_task(opts.args)
           metadata(task, :next_action, rest)
         end
-        add_cmd(:waiting, args: ['task?', 'text...'], opts: [*TASK_OPTIONS, :clear]) do
+        add_cmd(:waiting, args: ['task?', 'text...'], opts: TASK_OPTIONS, flags: [:clear]) do
           task, rest = take_task(opts.args)
           metadata(task, :waiting_on, rest)
         end
@@ -862,7 +851,7 @@ class Hiiro
             add_option :sparse, short: :s, desc: 'Sparse checkout group (repeatable)', multi: true
             add_default { |*rest| HELP.include?(rest.first) ? help : show_tree(take_task_only(rest, options: nil)) }
             add_cmd(:help) { help }
-            add_cmd(:new, args: ['name?', 'app?'], opts: [*TASK_OPTIONS, :app, :sparse]) do
+            add_cmd(:new, args: ['name?', 'app?'], opts: [*TASK_OPTIONS, :app], mopts: [:sparse]) do
               if opts.task
                 new_tree([lookup_task!(opts.task).name, *opts.args], opts.app, opts.sparse)
               elsif opts.find
@@ -881,7 +870,7 @@ class Hiiro
 
         add_option :directory, desc: 'Existing start directory'
         add_option :app, desc: 'Registry app directory under the task worktree'
-        add_cmd(:switch, :workspace, args: ['task-or-workspace?', 'app?'], opts: [*TASK_OPTIONS, :directory, :app, :show]) do
+        add_cmd(:switch, :workspace, args: ['task-or-workspace?', 'app?'], opts: [*TASK_OPTIONS, :directory, :app], flags: [:show]) do
           target, explicit, rest = switch_target(opts.args)
           app = opts.app || rest.first
           if target.is_a?(Hiiro::Herdr::Pane)
@@ -1012,7 +1001,7 @@ class Hiiro
           list_todos(task)
         end
         add_cmd(:help) { help }
-        add_cmd(:list, :ls, args: ['task?'], opts: [*TASK_OPTIONS, :plain]) do
+        add_cmd(:list, :ls, args: ['task?'], opts: TASK_OPTIONS, flags: [:plain]) do
           task, rest = take_task(opts.args, orphan: true)
           no_args!(rest)
           list_todos(task, plain: opts.plain)
@@ -1040,11 +1029,10 @@ class Hiiro
         add_option :label, desc: 'Resource label'
         add_option :kind, desc: 'Link kind: general, issue, or thread' if group == 'link'
         add_options = [*TASK_OPTIONS, :label]
-        add_options << :primary if group == 'directory'
         add_options << :kind if group == 'link'
         read_options = group == 'link' ? [*TASK_OPTIONS, :kind] : TASK_OPTIONS
         add_cmd(:help) { help }
-        add_cmd(:add, args: ['task?', 'target'], opts: add_options) do
+        add_cmd(:add, args: ['task?', 'target'], opts: add_options, flags: group == 'directory' ? [:primary] : []) do
           task, rest = take_task(opts.args)
           add_resource(task, group, single(rest))
         end

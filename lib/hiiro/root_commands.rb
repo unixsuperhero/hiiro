@@ -10,7 +10,7 @@ class Hiiro
       hiiro.instance_eval do
         add_flag(:all, short: :a, desc: 'Show the version of hiiro for all versions of ruby installed')
 
-        add_cmd(:version, opts: %i[all]) { |*args|
+        add_cmd(:version, flags: %i[all]) { |*args|
           if @opts.all
             Hiiro::Rbenv.versions.each do |ver|
               output = Hiiro::Rbenv.capture('h', 'version', version: ver).strip

@@ -153,7 +153,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
   end
 
-  add_cmd(:commit, opts: %i[dry_run yes whole_files model]) do
+  add_cmd(:commit, opts: %i[model], flags: %i[dry_run yes whole_files]) do
     git = Hiiro::Git::IndexGit.at(Dir.pwd)
     unless git
       puts 'Not inside a git work tree.'

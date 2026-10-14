@@ -69,7 +69,7 @@ contents() {
 }
 state "the package ships every bin/h-* command, exe/{h,hiiro,t,tt}, the MCP library and doc, and no tests or bin/lib" "$(cat <<EOF
 data entries: $PKG_FILES
-bin/h-*: 77
+bin/h-*: 79
 exe: exe/h exe/hiiro exe/t exe/tt
 lib/hiiro/mcp: lib/hiiro/mcp.rb lib/hiiro/mcp/catalog.rb lib/hiiro/mcp/registry.rb lib/hiiro/mcp/sync.rb
 docs/h-mcp.md: 1
@@ -153,14 +153,14 @@ printf '#!/bin/sh\necho user notify\n' > "$H/bin/h-notify"; /bin/chmod 755 "$H/b
 NOTIFY_SHA=$(sha "$H/bin/h-notify")
 
 plan_summary() { ix h setup | /usr/bin/grep -Ev '^  (missing|unchanged) '; }
-check "h setup plans 79 missing assets, keeps the user's h-notify as a collision, and writes nothing" "$(cat <<'EOF'
+check "h setup plans 81 missing assets, keeps the user's h-notify as a collision, and writes nothing" "$(cat <<'EOF'
 Source: hiiro VERSION (gem $SB/gem-home/gems/hiiro-VERSION)
 Commands: ~/bin  Plugins: ~/.config/hiiro/plugins  Manifest: ~/.config/hiiro/install-manifest.json
 
   collision      ~/bin/h-notify                      bin/h-notify        kept (not written by hiiro; --adopt NAME to manage it)
 
-79 missing, 1 collision
-Run `h setup --apply` to write 79 assets.
+81 missing, 1 collision
+Run `h setup --apply` to write 81 assets.
 [exit 0]
 EOF
 )" plan_summary
@@ -171,8 +171,8 @@ EOF
 )" /bin/sh -c "ls '$H/bin'; [ -e '$H/.config/hiiro/install-manifest.json' ] && echo 'manifest: present' || echo 'manifest: absent'"
 
 apply() { ix h setup --apply | /usr/bin/tail -1; }
-check "h setup --apply installs the 79 assets" "$(cat <<'EOF'
-Applied: 79 installed
+check "h setup --apply installs the 81 assets" "$(cat <<'EOF'
+Applied: 81 installed
 [exit 0]
 EOF
 )" apply
@@ -192,7 +192,7 @@ installed() {
   echo "user h-notify unchanged: $([ "$(sha "$H/bin/h-notify")" = "$NOTIFY_SHA" ] && echo yes || echo no)"
 }
 state "installed files are the package's bytes; the user's h-notify is untouched" "$(cat <<'EOF'
-~/bin h-* byte- and mode-identical to the package: 76
+~/bin h-* byte- and mode-identical to the package: 78
 plugin notify.rb identical, mode 644
 plugin pins.rb identical, mode 644
 plugin project.rb identical, mode 644
@@ -212,8 +212,8 @@ manifest() {
     puts "h-notify recorded: #{assets.key?(File.join(ENV["HOME"], "bin/h-notify"))}"' -rdigest "$H/.config/hiiro/install-manifest.json"
 }
 check "the manifest records each written asset with package identity, root, digest, and owner" "$(cat <<'EOF'
-records: 79
-owners: {"installed"=>79}
+records: 81
+owners: {"installed"=>81}
 packages: ["hiiro VERSION"]
 roots: ["$SB/gem-home/gems/hiiro-VERSION"]
 h-sha: {"asset"=>"command", "source"=>"bin/h-sha", "mode"=>"0755", "owner"=>"installed"} sha matches file: true
@@ -224,7 +224,7 @@ EOF
 
 # Safe repeat installation.
 check "a second plan is all unchanged apart from the user's collision" "$(cat <<'EOF'
-1 collision, 79 unchanged
+1 collision, 81 unchanged
 [exit 0]
 EOF
 )" /bin/sh -c "$(declare -f ix); IXE=(); GH='$GH' SB='$SB' H='$H'; ix h setup | tail -1"
@@ -243,7 +243,7 @@ PR_SHA=$(sha "$H/bin/h-pr")
 check "after a user edit, the plan reports h-pr user-modified and --apply keeps it" "$(cat <<'EOF'
   user-modified  ~/bin/h-pr      bin/h-pr      kept (changed since hiiro wrote it)
   collision      ~/bin/h-notify  bin/h-notify  kept (not written by hiiro; --adopt NAME to manage it)
-1 user-modified, 1 collision, 78 unchanged
+1 user-modified, 1 collision, 80 unchanged
 Applied: nothing selected
 [exit 0]
 EOF

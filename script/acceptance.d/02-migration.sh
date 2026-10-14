@@ -119,12 +119,12 @@ BEFORE=$(hashes)
 # The canonical records every later check compares against (IDs, relations, typed values).
 records() {
   q "select 'todo', id, text, status, coalesce(tags,'') from todos order by id"
-  q "select 'link', id, url, description, shorthand from links order by id"
+  q "select 'link', case when id = 22 then id else 'n' end, value, description, coalesce(short_name,'') from registry where resource_type = 'link' and name not in ('flag','list','number','number-string') order by id"
   q "select 'task', id, name, status, tree, metadata_json from tasks order by id"
   q "select 'resource', id, task_id, kind, target, label from task_resources order by id"
   q "select 'pr', id, repo, number, title from prs order by id"
   q "select 'tag', taggable_type, taggable_id, name from tags order by id"
-  q "select 'pin', command, key, value_json, value_format from pins order by command, key"
+  q "select 'pin', resource_type, name, value from registry where resource_type = 'link' and name in ('flag','list','number','number-string') order by name"
   q "select 'reminder', id, message, interval, sound, enabled, once, last_triggered from reminders order by id"
 }
 RECORDS='todo|7|legacy seven|started|urgent
@@ -135,12 +135,12 @@ resource|40|12|url|https://example.test/spec|spec
 pr|30|one/repo|1|first
 pr|31|two/repo|1|second
 tag|Task|alpha|work
-tag|Link|22|doc
+tag|RegistryEntry|22|doc
 tag|PinnedPr|31|review
-pin|h-link|flag|false|json
-pin|h-link|list|[1,"2"]|json
-pin|h-link|number|42|json
-pin|h-link|number-string|"42"|json
+pin|link|flag|false
+pin|link|list|[1,"2"]
+pin|link|number|42
+pin|link|number-string|42
 reminder|1|stretch|30m|Glass|1|0|2026-10-01T09:00:00Z
 reminder|2|stretch|30m|Glass|1|0|2026-10-01T09:00:00Z'
 
@@ -176,7 +176,7 @@ E
 
 migration_line() { hb db status 2>&1 | /usr/bin/grep '^Migration:'; }
 counts() {
-  q "select (select count(*) from todos), (select count(*) from links), (select count(*) from tasks), (select count(*) from prs), (select count(*) from tags), (select count(*) from pins), (select count(*) from reminders)"
+  q "select (select count(*) from todos), (select count(*) from registry where resource_type = 'link' and id = 22), (select count(*) from tasks), (select count(*) from prs), (select count(*) from tags), (select count(*) from registry where resource_type = 'link' and name in ('flag','list','number','number-string')), (select count(*) from reminders)"
   migration_line
 }
 state "startup and plan created the database but imported nothing" "0|0|0|0|0|0|0
@@ -219,7 +219,7 @@ Selected import verified. All source files retained unchanged.
 [exit 0]
 E
 )" summ hb db migrate
-state "imported records keep IDs, relations, typed pins, recurrence, and duplicate reminders" "$RECORDS" records
+state "imported records keep IDs, relations, text pins in the command table, recurrence, and duplicate reminders" "$RECORDS" records
 state "status reports the verified import" "Migration: selected imports verified" migration_line
 state "legacy sources, definitions, and the unknown file are byte-identical; no .bak was written" "$BEFORE" hashes
 
@@ -303,7 +303,7 @@ after_writers() {
   q "select id, text, status from todos where id < 50 order by id"
   q "select group_concat(id) from (select id from todos where id >= 50 order by id)"
   q "select text, status from todos where id >= 50 order by text"
-  q "select id, url, description from links order by id"
+  q "select case when id = 22 then id else 'n' end, value, description from registry where resource_type = 'link' and name not in ('flag','list','number','number-string') order by id"
   q "select r.name, group_concat(t.name) from registry r join tags t on t.taggable_type = 'RegistryEntry' and t.taggable_id = cast(r.id as text) group by r.name"
 }
 AFTER_WANT="conc1|/srv/c1||bookmark
@@ -317,7 +317,8 @@ wiki|/srv/wiki docs|12|bookmark
 concurrent one|not_started
 concurrent two|not_started
 22|https://example.test/doc|the doc
-23|https://example.test/new|new link
+n|https://example.test/new|new link
+d|doc
 wiki|keep,ops"
 state "every concurrent write landed and no earlier row was replaced" "$AFTER_WANT" after_writers
 # Full view; the two concurrent todos are shown by text since their ids race.
@@ -334,7 +335,7 @@ check "tables.yml is still byte-identical after every writer" "$(printf '%s' "$B
 hb db status > /dev/null 2>&1
 FINAL="$(printf '%s\n' "$AFTER_WANT")
 $(printf '%s\n' "$RECORDS" | /usr/bin/sed -e 's/^todo|7|legacy seven|started|urgent$/todo|7|legacy seven|skip|urgent/' -e 's/^todo|8|legacy eight|not_started|$/todo|8|legacy eight|done|/' \
-  -e 's#^link|22|.*#&\nlink|23|https://example.test/new|new link|#' -e 's/^todo|8|.*/&\ntodo|5x|concurrent one|not_started|\ntodo|5x|concurrent two|not_started|/' -e 's/^tag|PinnedPr|31|review$/&\ntag|RegistryEntry|1|keep\ntag|RegistryEntry|1|ops/')"
+  -e 's#^link|22|.*#&\nlink|n|https://example.test/new|new link|#' -e 's/^todo|8|.*/&\ntodo|5x|concurrent one|not_started|\ntodo|5x|concurrent two|not_started|/' -e 's/^tag|PinnedPr|31|review$/&\ntag|RegistryEntry|27|keep\ntag|RegistryEntry|27|ops/')"
 state "a fresh process after all writers reloads the same rows" "$FINAL" final_view
 check "the table view after reload keeps the task scope, tags, and action (now 5 rows globally)" "${TABLE_VIEW/global 2/global 5}" table_view
 
@@ -358,10 +359,8 @@ RESTORED="(52 rows)
 Recovery verified. Later canonical writes retained; no sources overwritten.
 tasks restored 1
 prs restored 2
-registry restored 5
+registry restored 11
 todos restored 4
-links restored 2
-pins restored 4
 reminders restored 2
 tags restored 5
 task_resources restored 1

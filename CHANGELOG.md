@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.393] - 2026-10-12
+
+### Added
+- `h json` subcommand (`bin/h-json`)
+
+## [0.1.392] - 2026-10-12
+
+### Changed
+- `add_cmd` accepts `opts`, `flags`, and `mopts` arrays for value options, boolean flags, and repeated value options. Existing definitions are reused, and new short names use the first available alphanumeric character in the full name.
+- Automatic command definitions are registered for reuse by later commands. Existing boolean callers now use `flags`.
+
 ## [0.1.390] - 2026-10-07
 
 ### Added
@@ -17,6 +28,10 @@
 - Support for Integer return values as exit codes from subcommand handlers
 
 ## Unreleased
+
+### Changed
+- Merged main (0.1.393): saved links, project aliases, command pins, and sounds are registry tables (`link`, `project`, the table named after the command, `sound`), the rows `h table` shows. `Hiiro::Link`, `Hiiro::Project`, and `Hiiro::PinRecord` are gone; `bin/h-link` wraps `RegistryEntry` rows in `LinkPresenter`, `Hiiro::Projects` reads table `project`, and the Pins plugin stores text (collections as JSON). `h db migrate` imports `links.yml`, `projects.yml`, `pins/*`, and `sounds.yml` into those tables with the same plan, ledger, and conflict rules; the retired `pins`, `links`, and `projects` SQLite tables are copied into the registry once at setup (`Hiiro::DB.import_legacy_tables!`) and left in place. `t use` stores the current task in table `t`. Boolean command options declared through `add_cmd` are now `flags:` (upstream `add_cmd` semantics: undeclared `opts:` are value options).
+- From main: `h table`, `t ui`, `h project ui`, `h tuios ui`, the line editor with completing prompts, `h json`, `h strip ctrl`, `h registry` over the same rows as `h table`.
 
 ### Added
 - `script/acceptance [-o OUT] [NN ...]`: rerunnable isolated end-to-end acceptance (scenarios in `script/acceptance.d/`): each scenario gets a disposable HOME with the default file database, data roots, gem home, a recording-fixture PATH, and `env -i`; every check prints its literal expected value before the command and records `pass`/`FAIL`/`incomplete` in `OUT/results.tsv`. Covers migration and reload, task context, owned launches, artifacts and recurring jobs, commit planning and PR snapshots, the picker in real terminal windows, the installed gem, and an unchanged live home. See README "End-to-end acceptance".
@@ -37,6 +52,7 @@
 - `h obsidian copy`, `h docs copy`, and `h docs url` (with `--all` for every match).
 
 ### Changed
+- `h strip ctrl` replaces bare `h strip` for stripping ASCII terminal escapes and C0/DEL controls from files, stdin, or text. Tabs, line feeds, UTF-8 text, and raw invalid bytes are preserved.
 - `hiiro` is the long name of `h`: `exe/hiiro` registers the same `RootCommands` (all root commands, not a four-command copy) and no longer asks for the missing `Tasks` plugin, so it prints no `unable to load plugin` line. `hiiro setup` still installs `hiiro-NAME`.
 - Product scope is stated in the docs: `h dotenv copy_to` reports differences and missing names against the last file and copies nothing; `h sign` inspects and verifies code signatures and never signs (new `docs/h-dotenv.md`, `docs/h-sign.md`). `h jumplist` is documented as optional tmux integration. `examples/` is neither dispatched nor installed.
 - `h date` and `h time` are one set of registrations (`Hiiro::TimeCommands`) over `TimeInput`/`Duration`; outputs, aliases, and usage errors are unchanged (`h date from_unix 0 -u` → `1970-01-01T00:00:00.000Z`, `h time from_unix 0 -u` → `00:00:00.000`, `diff 120 0` → `-2m`).

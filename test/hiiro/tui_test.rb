@@ -10,21 +10,36 @@ class TuiTest < Minitest::Test
     end
   end
 
-  class PickScreen < FruitScreen
-    attr_reader :picks
+  class CompleteScreen < FruitScreen
+    key 't', :ask_todo
+    key 'f', :ask_table
+
+    attr_reader :answers
 
     def initialize(**kwargs)
       super
-      @picks = []
+      @answers = []
     end
 
-    def pick_candidates
-      %w[sonnet opus haiku solo]
+    def ask_todo
+      prompt('todo', complete: { '@' => -> { %w[hiiro hiiro-config rehiiro] } }) { |text| @answers << text }
     end
 
-    def picked(candidate)
-      @picks << candidate
+    def ask_table
+      prompt('table', complete: { '' => -> { %w[link project sha sound t] } }) { |text| @answers << text }
     end
+  end
+
+  class FakeInput
+    def initialize(text) = @chars = text.chars
+
+    def getch = @chars.shift
+  end
+
+  class KeyReader
+    include Hiiro::Tui::Terminal
+
+    def read_escape_char(input) = input.getch
   end
 
   class CustomKeyScreen < FruitScreen
@@ -38,6 +53,33 @@ class TuiTest < Minitest::Test
   class DetailScreen < FruitScreen
     def detail_lines(item)
       ["name: #{item}", "length: #{item.length}"]
+    end
+  end
+
+  class PromptScreen < FruitScreen
+    key 'n', :ask_name
+    key 'c', :ask_chain
+
+    attr_reader :answers, :unhandled
+
+    def initialize(**kwargs)
+      super
+      @answers = []
+      @unhandled = []
+    end
+
+    def ask_name
+      prompt('name') { |text| @answers << text }
+    end
+
+    def ask_chain
+      prompt('first', default: 'x') do |first|
+        prompt('second') { |second| @answers << [first, second] }
+      end
+    end
+
+    def unhandled_key(key)
+      @unhandled << key
     end
   end
 
@@ -154,40 +196,84 @@ class TuiTest < Minitest::Test
     assert_equal %w[banana jellybean lemon], screen.visible_items
   end
 
-  def test_pick_filters_candidates_by_prefix_and_enter_picks_first
-    screen = PickScreen.new(items: FRUITS)
-    press(screen, '@', 's', 'o')
-
-    assert_equal :pick, screen.state.mode
-    assert_equal [
-      "Fruits",
-      "> apple",
-      "  banana",
-      "  cherry",
-      "  jellybean",
-      "  kiwi",
-      "  lemon",
-      "@so_  [sonnet] [solo]",
-    ], frame(screen)
-
-    press(screen, 'l', :enter)
-
-    assert_equal ["solo"], screen.picks
-    assert_equal :list, screen.state.mode
-    assert_equal "", screen.state.pick_query
-    assert_equal "1/6", frame(screen).last
+  def status(screen)
+    screen.status_line
   end
 
-  def test_escape_in_pick_mode_cancels_without_picking
-    screen = PickScreen.new(items: FRUITS)
-    press(screen, '@', 'o')
+  def test_completing_prompt_shows_choices_moves_accepts_and_submits
+    screen = CompleteScreen.new(items: FRUITS)
+    press(screen, 't', *"fix @hi".chars)
 
-    assert_equal "@o_  [opus]", frame(screen).last
+    assert_equal "todo: fix @hi_  @hi ▸ [hiiro] hiiro-config rehiiro", status(screen)
 
-    assert_equal [:continue], press(screen, :escape)
-    assert_equal [], screen.picks
+    press(screen, :down)
+
+    assert_equal "todo: fix @hi_  @hi ▸ hiiro [hiiro-config] rehiiro", status(screen)
+
+    press(screen, :tab)
+
+    assert_equal "fix @hiiro-config ", screen.state.prompt_text
+    assert_equal "todo: fix @hiiro-config _", status(screen)
+
+    press(screen, '@', 'r', 'e', :enter)
+
+    assert_equal :prompt, screen.state.mode
+    assert_equal "fix @hiiro-config @rehiiro ", screen.state.prompt_text
+    assert_equal [], screen.answers
+
+    press(screen, :enter)
+
+    assert_equal ["fix @hiiro-config @rehiiro "], screen.answers
     assert_equal :list, screen.state.mode
-    assert_equal "1/6", frame(screen).last
+    assert_equal "1/6", status(screen)
+  end
+
+  def test_field_prompt_lists_every_choice_and_narrows
+    screen = CompleteScreen.new(items: FRUITS)
+    press(screen, 'f')
+
+    assert_equal "table: _  ▸ [link] project sha sound t", status(screen)
+
+    press(screen, 'p', 'r')
+
+    assert_equal "table: pr_  pr ▸ [project]", status(screen)
+
+    press(screen, :enter)
+
+    assert_equal "table: project_", status(screen)
+
+    press(screen, :enter)
+
+    assert_equal ["project"], screen.answers
+  end
+
+  def test_prompt_edits_mid_text_with_left_home_end_and_ctrl_u
+    screen = PromptScreen.new(items: FRUITS)
+    press(screen, 'n', 'a', 'b', 'c', :left, :left, 'x')
+
+    assert_equal "axbc", screen.state.prompt_text
+    assert_equal "name: ax_bc", status(screen)
+
+    press(screen, :home, 'y')
+
+    assert_equal "name: y_axbc", status(screen)
+
+    press(screen, :delete, :end, 'z')
+
+    assert_equal "name: yxbcz_", status(screen)
+
+    press(screen, :ctrl_u)
+
+    assert_equal "", screen.state.prompt_text
+    assert_equal "name: _", status(screen)
+  end
+
+  def test_read_key_maps_tab_ctrl_u_and_escape_sequences
+    reader = KeyReader.new
+    keys = ["\t", "\u0015", "\e[H", "\e[F", "\e[1~", "\e[4~", "\e[3~", "\e[A", "\e[2~", "\e[3", "\e[Z", "\e"]
+
+    assert_equal [:tab, :ctrl_u, :home, :end, :home, :end, :delete, :up, :escape, :escape, :escape, :escape],
+      keys.map { |text| reader.read_key(FakeInput.new(text)) }
   end
 
   def test_subclass_key_binding_dispatches_to_its_method
@@ -250,5 +336,72 @@ class TuiTest < Minitest::Test
     assert_equal "  one", frame(screen)[0]
     assert_equal "> two", frame(screen)[1]
     assert_equal false, screen.handle_key('q')
+  end
+
+  def test_prompt_shows_label_and_buffer_in_the_status_line
+    screen = PromptScreen.new(items: FRUITS)
+    press(screen, 'n', 'a', 'b')
+
+    assert_equal :prompt, screen.state.mode
+    assert_equal [
+      "Fruits",
+      "> apple",
+      "  banana",
+      "  cherry",
+      "  jellybean",
+      "  kiwi",
+      "  lemon",
+      "name: ab_",
+    ], frame(screen)
+  end
+
+  def test_prompt_enter_passes_text_to_block_and_returns_to_list
+    screen = PromptScreen.new(items: FRUITS)
+    press(screen, 'n', 'a', 'x', "\u007F", 'b', :enter)
+
+    assert_equal ["ab"], screen.answers
+    assert_equal :list, screen.state.mode
+    assert_equal "1/6", frame(screen).last
+  end
+
+  def test_prompt_escape_does_not_call_block
+    screen = PromptScreen.new(items: FRUITS)
+
+    assert_equal [:continue] * 3, press(screen, 'n', 'a', :escape)
+    assert_equal [], screen.answers
+    assert_equal :list, screen.state.mode
+    assert_equal "1/6", frame(screen).last
+  end
+
+  def test_prompt_ctrl_c_quits
+    screen = PromptScreen.new(items: FRUITS)
+
+    assert_equal [:continue, :continue, false], press(screen, 'n', 'a', :ctrl_c)
+    assert_equal [], screen.answers
+  end
+
+  def test_prompt_block_can_chain_another_prompt
+    screen = PromptScreen.new(items: FRUITS)
+    press(screen, 'c')
+
+    assert_equal "first: x_", frame(screen).last
+
+    press(screen, 'y', :enter)
+
+    assert_equal :prompt, screen.state.mode
+    assert_equal "second: _", frame(screen).last
+
+    press(screen, 'z', :enter)
+
+    assert_equal [["xy", "z"]], screen.answers
+    assert_equal "1/6", frame(screen).last
+  end
+
+  def test_unbound_list_key_reaches_unhandled_key
+    screen = PromptScreen.new(items: FRUITS)
+    press(screen, 'z', 'j', :enter)
+
+    assert_equal ['z', :enter], screen.unhandled
+    assert_equal "> banana", frame(screen)[2]
   end
 end

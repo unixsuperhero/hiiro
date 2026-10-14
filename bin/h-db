@@ -140,12 +140,10 @@ Hiiro.run(*ARGV) do
       prs:         %w[repo number],
       branches:    %w[name worktree],
       tags:        %w[name taggable_type taggable_id],
-      links:       %w[url],
       tasks:       %w[name],
       apps:        %w[name],
-      projects:    %w[name],
+      registry:    %w[resource_type name],
       assignments: %w[worktree],
-      pins:        %w[command key],
       pane_homes:  %w[name],
     }
 

@@ -113,17 +113,17 @@ class DataOwnershipCommandTest < Minitest::Test
     { 'number_text' => '42', 'bool_text' => 'false', 'object_text' => '{"x":1}', 'array_text' => '[1,2]' }.each do |name, value|
       command('h-link', 'pin', 'set', name, value)
     end
-    assert_equal 42, JSON.parse(@db[:pins].where(command: 't', key: 'current_task').get(:value_json))
+    assert_equal '42', @db[:registry].where(resource_type: 't', name: 'current_task').get(:value)
     assert_equal({
       'array_text' => '[1,2]', 'bool_text' => 'false', 'number_text' => '42', 'object_text' => '{"x":1}'
-    }, @db[:pins].where(command: 'h-link').order(:key).to_h { |row| [row[:key], JSON.parse(row[:value_json])] })
+    }, @db[:registry].where(resource_type: 'link').exclude(value: nil).order(:name).to_h { |row| [row[:name], row[:value]] })
     assert_equal "42\n", command('h-link', 'pin', 'get', 'number_text')
     assert_equal "prez\n", command('t', 'current')
     command('h-link', 'pin', 'rm', 'bool_text')
     assert_equal "42\n", command('h-link', 'pin', 'get', 'number_text')
     assert_equal "other\n", command('t', 'use', 'other')
-    assert_equal 43, JSON.parse(@db[:pins].where(command: 't', key: 'current_task').get(:value_json))
-    assert_equal '[1,2]', JSON.parse(@db[:pins].where(command: 'h-link', key: 'array_text').get(:value_json))
+    assert_equal '43', @db[:registry].where(resource_type: 't', name: 'current_task').get(:value)
+    assert_equal '[1,2]', @db[:registry].where(resource_type: 'link', name: 'array_text').get(:value)
     assert_definitions_unchanged
     refute Dir.exist?(File.join(@config, 'pins'))
   end
@@ -147,8 +147,8 @@ class DataOwnershipCommandTest < Minitest::Test
     assert_equal [
       [1, 'https://example.test/revised', 'Revised description', 'slides'],
       [2, 'https://example.test/other', 'Unrelated', 'other']
-    ], @db[:links].order(:id).select_map([:id, :url, :description, :shorthand])
-    assert_equal [['keep', 'Link', '2'], ['research', 'Link', '1']],
+    ], @db[:registry].where(resource_type: 'link').order(:id).select_map([:id, :value, :description, :short_name])
+    assert_equal [['keep', 'RegistryEntry', '2'], ['research', 'RegistryEntry', '1']],
       @db[:tags].order(:name).select_map([:name, :taggable_type, :taggable_id])
     output = command('h-link', 'ls').gsub(/\e\[[\d;]*m/, '')
     assert_equal "1. [slides] https://example.test/revised - Revised description research\n2. [other] https://example.test/other - Unrelated keep\n", output

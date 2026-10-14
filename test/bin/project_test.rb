@@ -2,88 +2,66 @@ require 'test_helper'
 
 class ProjectTest < Minitest::Test
   def setup
-    Hiiro::Project.dataset.delete
+    Hiiro::RegistryEntry.where(resource_type: 'project').delete
     @harness = Hiiro::TestHarness.load_bin('bin/h-project')
   end
 
   def teardown
-    Hiiro::Project.dataset.delete
+    Hiiro::RegistryEntry.where(resource_type: 'project').delete
+  end
+
+  def aliases = Hiiro::RegistryEntry.where(resource_type: 'project').order(:id).all.map { |row| row.values.values_at(:id, :name, :value) }
+  def find(name) = Hiiro::RegistryEntry.where(resource_type: 'project', name: name).first
+  def add(name, path) = Hiiro::Table.named('project').add(name, value: path)
+
+  def test_registers_expected_subcommands
+    expected = %i[open list ls add rm config edit select copy sh ui help]
+    expected.each do |subcmd|
+      assert @harness.has_subcmd?(subcmd), "Expected subcmd :#{subcmd} to be registered"
+    end
   end
 
   def test_add_update_remove_preserve_other_aliases_and_ids
     capture_io { @harness.run_subcmd(:add, 'alpha', '/alpha') }
-    alpha = Hiiro::Project.find_by_name('alpha')
+    alpha = find('alpha')
     capture_io { @harness.run_subcmd(:add, 'beta', '/beta') }
-    beta = Hiiro::Project.find_by_name('beta')
+    beta = find('beta')
     capture_io { @harness.run_subcmd(:add, 'alpha', '/renamed') }
-    assert_equal [alpha.id, '/renamed'], Hiiro::Project.find_by_name('alpha').values.values_at(:id, :path)
+    assert_equal [alpha.id, '/renamed'], find('alpha').values.values_at(:id, :value)
     capture_io { @harness.run_subcmd(:rm, 'alpha') }
-    assert_equal [[beta.id, 'beta', '/beta']], Hiiro::Project.all.map { |row| row.values.values_at(:id, :name, :path) }
+    assert_equal [[beta.id, 'beta', '/beta']], aliases
   end
 
-  def test_config_shows_canonical_aliases_not_recovery_yaml
-    record = Hiiro::Project.create(name: 'alpha', path: '/alpha')
+  def test_config_shows_saved_aliases_as_yaml
     output, = capture_io { @harness.run_subcmd(:config) }
-    assert_equal [{'id' => record.id, 'name' => 'alpha', 'path' => '/alpha'}], YAML.safe_load(output)
+    assert_includes output, 'No project aliases saved.'
+    add('beta', '/beta')
+    add('alpha', '/alpha')
+    output, = capture_io { @harness.run_subcmd(:config) }
+    assert_equal "alpha: /alpha\nbeta: /beta\n", output
   end
 
-  def test_edit_preserves_concurrent_fields_new_rows_and_omitted_rows
-    alpha = Hiiro::Project.create(name: 'alpha', path: '/alpha')
-    beta = Hiiro::Project.create(name: 'beta', path: '/beta')
+  def test_edit_updates_adds_and_removes_aliases_by_name
+    alpha = add('alpha', '/alpha')
+    add('beta', '/beta')
     @harness.stub_method(:edit_files) do |path|
-      rows = YAML.safe_load_file(path)
-      Hiiro::Project[alpha.id].update(path: '/concurrent')
-      Hiiro::Project.create(name: 'new', path: '/new')
-      rows.first['name'] = 'renamed'
-      File.write(path, [rows.first].to_yaml)
+      File.write(path, "alpha: /edited\nnew: /new\n")
       true
     end
     capture_io { @harness.run_subcmd(:edit) }
-    assert_equal ['renamed', '/concurrent'], Hiiro::Project[alpha.id].values.values_at(:name, :path)
-    assert_equal ['beta', '/beta'], Hiiro::Project[beta.id].values.values_at(:name, :path)
-    assert_equal '/new', Hiiro::Project.find_by_name('new').path
+    assert_equal [[alpha.id, 'alpha', '/edited'], [find('new').id, 'new', '/new']], aliases
   end
 
-  def test_explicit_delete_only_removes_baseline_selection
-    alpha = Hiiro::Project.create(name: 'alpha', path: '/alpha')
-    beta = Hiiro::Project.create(name: 'beta', path: '/beta')
-    @harness.stub_method(:edit_files) do |path|
-      rows = YAML.safe_load_file(path)
-      Hiiro::Project.create(name: 'new', path: '/new')
-      rows.first['delete'] = true
-      File.write(path, [rows.first].to_yaml)
-      true
-    end
-    capture_io { @harness.run_subcmd(:edit) }
-    assert_nil Hiiro::Project[alpha.id]
-    assert_equal [[beta.id, 'beta', '/beta'], [Hiiro::Project.find_by_name('new').id, 'new', '/new']], Hiiro::Project.order(:id).all.map { |row| row.values.values_at(:id, :name, :path) }
-  end
-
-  def test_conflicting_edit_rolls_back_prior_changes
-    alpha = Hiiro::Project.create(name: 'alpha', path: '/alpha')
-    beta = Hiiro::Project.create(name: 'beta', path: '/beta')
-    @harness.stub_method(:edit_files) do |path|
-      rows = YAML.safe_load_file(path)
-      Hiiro::Project[beta.id].update(path: '/concurrent')
-      rows.each { |row| row['path'] = '/edited' }
-      File.write(path, rows.to_yaml)
-      true
-    end
-    _, error = capture_io { @harness.run_subcmd(:edit) }
-    assert_includes error, 'changed while editing'
-    assert_equal '/alpha', Hiiro::Project[alpha.id].path
-    assert_equal '/concurrent', Hiiro::Project[beta.id].path
-  end
-
-  def test_invalid_and_failed_edit_leave_aliases_unchanged
-    record = Hiiro::Project.create(name: 'alpha', path: '/alpha')
-    [[:invalid, true], [:failed, false], [:cancelled, nil]].each do |kind, status|
+  def test_invalid_empty_and_failed_edit_leave_aliases_unchanged
+    record = add('alpha', '/alpha')
+    [[:invalid, true], [:empty, true], [:failed, false]].each do |kind, status|
       @harness.stub_method(:edit_files) do |path|
-        File.write(path, kind == :invalid ? "- name: [\n" : [{'id' => record.id, 'name' => 'changed', 'path' => '/changed'}].to_yaml)
+        File.write(path, kind == :invalid ? "- name: [\n" : kind == :empty ? "" : "alpha: /changed\n")
         status
       end
-      capture_io { @harness.run_subcmd(:edit) }
-      assert_equal ['alpha', '/alpha'], Hiiro::Project[record.id].values.values_at(:name, :path)
+      output, = capture_io { @harness.run_subcmd(:edit) }
+      assert_includes output, 'No changes applied.'
+      assert_equal [[record.id, 'alpha', '/alpha']], aliases
     end
   end
 
@@ -92,8 +70,8 @@ class ProjectTest < Minitest::Test
       root = File.realpath(directory)
       FileUtils.mkdir_p(File.join(root, 'alpha'))
       FileUtils.mkdir_p(File.join(root, 'alphabet'))
-      Hiiro::Project.create(name: 'alphabet', path: File.join(root, 'alphabet'))
-      Hiiro::Project.create(name: 'alpha', path: File.join(root, 'alpha'))
+      add('alphabet', File.join(root, 'alphabet'))
+      add('alpha', File.join(root, 'alpha'))
       @harness.stub_method(:fuzzyfind_from_map) { |_| raise 'Unexpected picker' }
       output, = capture_io { @harness.run_subcmd(:path, 'alpha') }
       assert_equal "#{root}/alpha", output
@@ -104,8 +82,8 @@ class ProjectTest < Minitest::Test
   end
 
   def test_unknown_and_ambiguous_project_never_fall_back_to_project_root
-    Hiiro::Project.create(name: 'alpha', path: '/missing-alpha')
-    Hiiro::Project.create(name: 'alpine', path: '/missing-alpine')
+    add('alpha', '/missing-alpha')
+    add('alpine', '/missing-alpine')
     manager = Hiiro::Projects.new
     assert_raises(Hiiro::Error) { manager.context('al', tty: false) }
     assert_raises(Hiiro::Error) { manager.context('unknown', tty: false) }
@@ -113,8 +91,8 @@ class ProjectTest < Minitest::Test
   end
 
   def test_ambiguous_project_picker_returns_mapped_identity_and_cancellation_fails
-    Hiiro::Project.create(name: 'alpha', path: '/alpha')
-    Hiiro::Project.create(name: 'alpine', path: '/alpine')
+    add('alpha', '/alpha')
+    add('alpine', '/alpine')
     manager = Hiiro::Projects.new
     chosen = manager.resolve('al', tty: true, chooser: ->(mapping) { mapping.values.find { |item| item.first == 'alpine' } })
     assert_equal ['alpine', '/alpine'], chosen

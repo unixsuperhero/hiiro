@@ -79,14 +79,14 @@ class DBMigrationTest < Minitest::Test
     assert File.file?(todo)
   end
 
-  def test_extensionless_and_yml_pins_preserve_types_and_explicit_backup_selection
+  def test_extensionless_and_yml_pins_land_as_text_in_the_command_table_and_explicit_backup_selection
     source('pins/h-link', {'number-string' => '42', 'boolean-string' => 'false', 'json-string' => '{"x":1}', 'number' => 42, 'false' => false, 'array' => [1, '2'], 'null' => nil})
     backup = source('pins/t.yml.bak', {'current_task' => 11})
     source('tasks/tasks.yml', {'tasks' => [{'id' => 11, 'name' => 'alpha'}]})
-    result = child("Hiiro::DB.migrate!; puts JSON.generate(Hiiro::PinRecord.for_command('h-link').to_h{|pin| [pin.key,pin.value]})")
-    assert_equal({'number-string' => '42', 'boolean-string' => 'false', 'json-string' => '{"x":1}', 'number' => 42, 'false' => false, 'array' => [1, '2'], 'null' => nil}, result)
-    result = child("before=Hiiro::PinRecord.find_key('t','current_task'); Hiiro::DB.migrate!(sources:[#{backup.inspect}]); puts JSON.generate(before:before&.value,after:Hiiro::PinRecord.find_key('t','current_task').value)")
-    assert_equal({'before' => nil, 'after' => 11}, result)
+    result = child("Hiiro::DB.migrate!; puts JSON.generate(Hiiro::Table.named('link').entries.to_h{|e| [e.name,e.value]})")
+    assert_equal({'number-string' => '42', 'boolean-string' => 'false', 'json-string' => '{"x":1}', 'number' => '42', 'false' => 'false', 'array' => '[1,"2"]', 'null' => ''}, result)
+    result = child("before=Hiiro::Table.named('t').find('current_task'); Hiiro::DB.migrate!(sources:[#{backup.inspect}]); puts JSON.generate(before:before&.value,after:Hiiro::Table.named('t').find('current_task').value)")
+    assert_equal({'before' => nil, 'after' => '11'}, result)
   end
 
   def test_pin_source_variant_and_legacy_raw_ambiguity_conflicts_are_truthful
@@ -95,8 +95,8 @@ class DBMigrationTest < Minitest::Test
     result = child("puts JSON.generate(Hiiro::DB.migration_plan[:errors])")
     assert_equal ['Conflicting source variants: pins/h-link'], result
     File.delete(variant)
-    result = child("Hiiro::DB.connection[:pins].insert(command:'h-link',key:'key',value_json:'42',value_format:'legacy'); Hiiro::DB.migrate!; puts JSON.generate(value:Hiiro::PinRecord.find_key('h-link','key').value,format:Hiiro::PinRecord.find_key('h-link','key').value_format)")
-    assert_equal({'value' => '42', 'format' => 'json'}, result)
+    result = child("Hiiro::DB.migrate!; puts JSON.generate(value:Hiiro::Table.named('link').find('key').value)")
+    assert_equal({'value' => '42'}, result)
   end
 
   def test_duplicate_no_id_reminders_remain_distinct_and_reordering_is_not_new_generation
@@ -121,7 +121,7 @@ class DBMigrationTest < Minitest::Test
     assert_equal({'windows' => []}, result['standalone'])
     assert_equal 12, result['resources'][0]['task_id']
     assert_equal 40, result['resources'][0]['id']
-    assert_equal [['Task', 'alpha/sub', 'work'], ['Branch', 'feature', 'ready'], ['Link', '22', 'doc'], ['PinnedPr', '31', 'review']], result['tags']
+    assert_equal [['Task', 'alpha/sub', 'work'], ['Branch', 'feature', 'ready'], ['RegistryEntry', '22', 'doc'], ['PinnedPr', '31', 'review']], result['tags']
     assert_equal [[30, 'one/repo', 1], [31, 'two/repo', 1]], result['prs']
   end
 
@@ -176,7 +176,7 @@ class DBMigrationTest < Minitest::Test
     source('reminders.yml', [{'id' => 17, 'message' => 'repeat', 'interval' => '1m', 'enabled' => false, 'once' => false, 'sound' => 'Glass', 'last_triggered' => '2020-01-01T00:00:00Z'}])
     export = File.join(@home, 'export.json')
     result = child("Hiiro::DB.migrate!; task=Hiiro::TaskRecord.create(name:'project'); resource=Hiiro::TaskResource.create(task_id:task.id,kind:'file',target:'/tmp/ref'); entry=Hiiro::RegistryEntry.create(resource_type:'service',name:'build',short_name:'b',task_id:task.id,meta_json:JSON.generate({'x'=>false})); entry.tag('keep'); Hiiro::DB.connection[:captures].insert(id:14,name:'failure',path:'captures/output.txt',command:'false',exit_status:1); Hiiro::DB.export!(#{export.inspect}); puts JSON.generate(task:task.id,resource:resource.id,entry:entry.id)")
-    assert_equal({'task' => 1, 'resource' => 1, 'entry' => 1}, result)
+    assert_equal({'task' => 1, 'resource' => 1, 'entry' => 6}, result) # the five h-link pins are registry rows 1-5
     original = File.binread(export)
     result = child("begin; Hiiro::DB.export!(#{export.inspect}); rescue Errno::EEXIST; puts JSON.generate(error:'exists'); end")
     assert_equal({'error' => 'exists'}, result)
@@ -254,7 +254,7 @@ class DBMigrationTest < Minitest::Test
     reexport = export + '.recovered'
     run_cli.call('export', reexport, env: recovery_env)
     assert_equal JSON.parse(File.binread(export))['payload'], JSON.parse(File.binread(reexport))['payload']
-    observed = child("puts JSON.generate(todo:Hiiro::TodoItem[8].values.slice(:id,:text,:task_name,:subtask_name),pin:Hiiro::PinRecord.find_key('h-link','literal').value,apps:Hiiro::AppRecord.all.map{|r| [r.name,r.path]},projects:Hiiro::Project.all.map{|r| [r.name,r.path]},assignment:Hiiro::Assignment.all.map{|r| [r.worktree,r.branch]},capture:Hiiro::DB.connection[:invocations].count)", env: recovery_env)
+    observed = child("puts JSON.generate(todo:Hiiro::TodoItem[8].values.slice(:id,:text,:task_name,:subtask_name),pin:Hiiro::Table.named('link').find('literal').value,apps:Hiiro::AppRecord.all.map{|r| [r.name,r.path]},projects:Hiiro::Table.named('project').entries.map{|r| [r.name,r.value]},assignment:Hiiro::Assignment.all.map{|r| [r.worktree,r.branch]},capture:Hiiro::DB.connection[:invocations].count)", env: recovery_env)
     assert_equal({'id' => 8, 'text' => 'later CLI', 'task_name' => 'alpha', 'subtask_name' => 'child'}, observed['todo'])
     assert_equal 'false', observed['pin']
     assert_equal [['editor', '/tmp/editor']], observed['apps']
@@ -268,7 +268,7 @@ class DBMigrationTest < Minitest::Test
     path = source('pins/cmd', {})
     File.write(path, "key: first\nkey: second\n")
     original = File.binread(path)
-    result = child("plan=Hiiro::DB.migration_plan(only:[:pins]); puts JSON.generate(errors:plan[:errors],pins:Hiiro::PinRecord.count,complete:Hiiro::DB.migrated?)")
+    result = child("plan=Hiiro::DB.migration_plan(only:[:pins]); puts JSON.generate(errors:plan[:errors],pins:Hiiro::RegistryEntry.count,complete:Hiiro::DB.migrated?)")
     assert_match(/Duplicate YAML mapping key: key/, result['errors'].join)
     assert_equal 0, result['pins']
     assert_equal false, result['complete']
@@ -309,15 +309,34 @@ class DBMigrationTest < Minitest::Test
     assert_equal 'previously-applied', result['status']
   end
 
-  def test_unresolved_legacy_pin_is_rejected_and_reliable_null_source_preserves_type
-    source('pins/cmd', {'safe' => true})
-    result = child("Hiiro::PinRecord.create(command:'cmd',key:'ambiguous',value_json:'42',value_format:'legacy'); plan=Hiiro::DB.migration_plan(only:[:pins]); puts JSON.generate(errors:plan[:errors],rows:Hiiro::PinRecord.all.map(&:values),complete:Hiiro::DB.migrated?)")
-    assert_match(/Ambiguous legacy pins lack reliable typed source/, result['errors'].join)
-    assert_equal ['ambiguous'], result['rows'].map { |row| row['key'] }
-    assert_equal false, result['complete']
-    source('pins/cmd', {'ambiguous' => '42', 'nothing' => nil})
-    result = child("Hiiro::PinRecord.create(command:'cmd',key:'nothing',value_json:nil,value_format:'legacy'); Hiiro::DB.migrate!(only:[:pins]); puts JSON.generate(pins:Hiiro::PinRecord.order(:key).all.map{|row|[row.key,row.value,row.value_format]})")
-    assert_equal [['ambiguous', '42', 'json'], ['nothing', nil, 'json']], result['pins']
+  def test_pins_sounds_and_retired_tables_land_in_registry_tables
+    source('pins/cmd', {'safe' => true, 'nothing' => nil, 'list' => [1, 'a']})
+    source('pins/h-sha', {'102' => '4fb3cff'})
+    source('sounds.yml', {'basso' => '/S/Basso.aiff'})
+    result = child("Hiiro::DB.migrate!(only:[:pins,:sounds]); t=->(n){Hiiro::Table.named(n).entries.map{|e|[e.name,e.value]}}; puts JSON.generate(cmd:t['cmd'],sha:t['sha'],sound:t['sound'],tables:Hiiro::Table.all.map(&:name))")
+    assert_equal [['list', '[1,"a"]'], ['nothing', ''], ['safe', 'true']], result['cmd']
+    assert_equal [['102', '4fb3cff']], result['sha']
+    assert_equal [['basso', '/S/Basso.aiff']], result['sound']
+    assert_equal %w[cmd sha sound], result['tables']
+    legacy = <<~RUBY
+      db=Hiiro::DB.connection
+      db.create_table(:pins) { primary_key :id; String :command; String :key; String :value_json }
+      db[:pins].insert(command:'h-sha',key:'old',value_json:'abc'); db[:pins].insert(command:'h-sha',key:'102',value_json:'ignored')
+      db.create_table(:links) { primary_key :id; String :url; String :description; String :shorthand; String :created_at }
+      jp=db[:links].insert(url:'https://jisho.org/{q}',description:'jisho',shorthand:'jp',created_at:'2026-02-02T18:03:14-05:00')
+      db[:tags].insert(name:'nas',taggable_type:'Link',taggable_id:jp.to_s)
+      db.create_table(:projects) { primary_key :id; String :name; String :path }
+      db[:projects].insert(name:'hiiro',path:'/p/hiiro')
+      db[:schema_migrations].where(name:'registry_tables_v1').delete
+    RUBY
+    result = child("#{legacy}; puts JSON.generate(before:Hiiro::Table.all.map(&:name))")
+    assert_equal %w[cmd sha sound], result['before']
+    result = child("t=->(n){Hiiro::Table.named(n).entries.map{|e|[e.name,e.value]}}; puts JSON.generate(sha:t['sha'],link:t['link'],project:t['project'],tags:Hiiro::Table.named('link').find('jp').tags,kept:[:pins,:links,:projects].map{|x|Hiiro::DB.connection.table_exists?(x)})")
+    assert_equal [['102', '4fb3cff'], ['old', 'abc']], result['sha']
+    assert_equal [['jp', 'https://jisho.org/{q}']], result['link']
+    assert_equal [['hiiro', '/p/hiiro']], result['project']
+    assert_equal ['nas'], result['tags']
+    assert_equal [true, true, true], result['kept']
   end
 
   def test_semantic_json_repository_aliases_inline_link_tags_and_workspace_clears_are_preserved
@@ -329,11 +348,11 @@ class DBMigrationTest < Minitest::Test
     result = child(<<~RUBY)
       Hiiro::DB.connection[:prs].insert(id:30,repo:'one/repo',number:1,title:'kept',pinned:true,tmux_session:'legacy',herdr_workspace:'legacy',tags_json:'[ "work" ]',state:'OPEN')
       Hiiro::DB.migrate!
-      puts JSON.generate(prs:Hiiro::PinnedPr.order(:id).all.map{|row|[row.id,row.repo,row.herdr_workspace,row.tmux_session,row.tags_json,row.state]},tags:Hiiro::Link[22].tags)
+      puts JSON.generate(prs:Hiiro::PinnedPr.order(:id).all.map{|row|[row.id,row.repo,row.herdr_workspace,row.tmux_session,row.tags_json,row.state]},tags:Hiiro::RegistryEntry[22].tags)
     RUBY
     assert_equal [[30, 'one/repo', 'legacy', 'legacy', '[ "work" ]', 'OPEN'], [31, 'two/repo', nil, 'legacy-two', nil, nil]], result['prs']
     assert_equal ['doc', 'review'], result['tags']
-    result = child("Hiiro::DB.migrate!; puts JSON.generate(workspace:Hiiro::PinnedPr[31].herdr_workspace,tags:Hiiro::Link[22].tags)")
+    result = child("Hiiro::DB.migrate!; puts JSON.generate(workspace:Hiiro::PinnedPr[31].herdr_workspace,tags:Hiiro::RegistryEntry[22].tags)")
     assert_nil result['workspace']
     assert_equal ['doc', 'review'], result['tags']
   end

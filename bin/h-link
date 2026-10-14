@@ -11,25 +11,99 @@ opts = Hiiro::Options.setup {
   option(:tags, multi: true, desc: 'Tag for the link (alias for --tag, repeatable)')
 }
 
+# One saved link: a RegistryEntry of table `link` (url → value, shorthand →
+# short_name, description, created_at) read through the link vocabulary.
+class LinkPresenter
+  attr_reader :entry
+
+  def initialize(entry)
+    @entry = entry
+  end
+
+  def id          = entry.id
+  def url         = entry.value
+  def shorthand   = entry.short_name
+  def description = entry.description
+  def created_at  = entry.created_at
+  def tags        = entry.tags
+
+  def matches?(*terms)
+    searchable = [url, description, shorthand].compact.join(' ').downcase
+    terms.all? { |term| searchable.include?(term.downcase) }
+  end
+
+  def display_string(index = nil, exclude_tags: [])
+    num = index ? "#{(index + 1).to_s.rjust(3)}." : ""
+    shorthand_str = shorthand ? " [#{shorthand}]" : ""
+    desc_str = description.to_s.empty? ? "" : " - #{description}"
+    link_tags = tags - Array(exclude_tags)
+    tags_str = link_tags.any? ? " " + link_tags.map { |t| "\e[30;104m#{t}\e[0m" }.join(' ') : ""
+    "#{num}#{shorthand_str} #{url}#{desc_str}#{tags_str}".strip
+  end
+
+  # The edit row shape: the stable entry id plus the links.yml fields.
+  def to_h
+    {
+      'id'          => id,
+      'url'         => url,
+      'description' => description,
+      'shorthand'   => shorthand,
+      'created_at'  => created_at
+    }
+  end
+
+  def to_yaml(*) = to_h.to_yaml
+end
+
 class LinkManager
+  TABLE = 'link'
   LINK_TEMPLATE = {
     'url' => '',
     'description' => '',
     'shorthand' => nil,
     'created_at' => Time.now.iso8601,
   }
+  # Edit-row field → registry column.
+  COLUMNS = { 'url' => :value, 'description' => :description, 'shorthand' => :short_name, 'created_at' => :created_at }.freeze
+
+  def dataset = Hiiro::RegistryEntry.where(resource_type: TABLE)
+  def count   = dataset.count
 
   def search_links(links, *args)
     links.select { |link| link.matches?(*args) }
   end
 
   def load_links
-    Hiiro::Link.ordered
+    dataset.order(:created_at, :id).all.map { |entry| LinkPresenter.new(entry) }
+  end
+
+  def find(id) = dataset.where(id: id).first
+
+  # Creates the registry row for a link; the entry name is derived like the
+  # legacy import (shorthand, else description, else the url).
+  def create(url:, description: '', shorthand: nil, created_at: nil, tags: [])
+    shorthand = nil if shorthand.to_s.empty?
+    entry = Hiiro::RegistryEntry.create(
+      resource_type: TABLE,
+      name:          Hiiro::DB.link_name(url, shorthand, description),
+      value:         url,
+      short_name:    shorthand,
+      description:   description.to_s,
+      created_at:    created_at || Time.now.iso8601
+    )
+    entry.tag(*tags) if tags.any?
+    LinkPresenter.new(entry)
+  end
+
+  def delete(link)
+    entry = link.respond_to?(:entry) ? link.entry : link
+    Hiiro::Tag.where(taggable_type: 'RegistryEntry', taggable_id: entry.id.to_s).delete
+    entry.destroy
   end
 
   def edit_links(links = nil, hiiro:)
     selected = links.nil? ? [] : Array(links)
-    baseline = selected.to_h { |link| [link.id, { values: link.values.dup, tags: Hiiro::Tag.for(link).order(:id).map { |tag| tag.values.dup } }] }
+    baseline = selected.to_h { |link| [link.id, { values: link.entry.values.dup, tags: Hiiro::Tag.for(link.entry).order(:id).map { |tag| tag.values.dup } }] }
     rows = links.nil? ? [LINK_TEMPLATE] : selected.map(&:to_h)
     input = Hiiro::InputFile.yaml_file(hiiro: hiiro, content: rows.to_yaml, prefix: 'link-edit-')
     document = input.edit.document
@@ -48,7 +122,7 @@ class LinkManager
 
   def apply_edit(rows, baseline:)
     raise Hiiro::Error, 'Links must be an array of records' unless rows.is_a?(Array)
-    fields = %w[url description shorthand created_at]
+    fields = COLUMNS.keys
     ids = []
     rows.each do |row|
       raise Hiiro::Error, 'Each link must be a record' unless row.is_a?(Hash)
@@ -65,32 +139,32 @@ class LinkManager
       raise Hiiro::Error, 'Unknown or duplicate link ID' unless id.is_a?(Integer) && baseline.key?(id) && !ids.include?(id)
       ids << id
     end
-    Hiiro::Link.db.transaction(mode: :immediate) do
+    Hiiro::RegistryEntry.db.transaction(mode: :immediate) do
       (baseline.keys - ids).each do |id|
-        current = Hiiro::Link[id]
+        current = find(id)
         next unless current
         before = baseline.fetch(id)
         tags = Hiiro::Tag.for(current).order(:id).map(&:values)
         raise Hiiro::Error, "Link ##{id} changed before deletion" unless current.values == before[:values] && tags == before[:tags]
-        Hiiro::Link.remove(id)
+        delete(current)
       end
       rows.map do |row|
-        attrs = row.reject { |key, _| key == 'id' }.transform_keys(&:to_sym)
+        attrs = row.reject { |key, _| key == 'id' }.to_h { |key, value| [COLUMNS.fetch(key), value] }
         unless row.key?('id')
-          next Hiiro::Link.create({ description: '', created_at: Time.now.iso8601 }.merge(attrs))
+          next create(url: attrs[:value], description: attrs[:description] || '', shorthand: attrs[:short_name], created_at: attrs[:created_at])
         end
         id = row.fetch('id')
         before = baseline.fetch(id)[:values]
         changes = attrs.reject { |key, value| value == before[key] }
-        current = Hiiro::Link[id]
-        next current if changes.empty?
+        current = find(id)
+        next LinkPresenter.new(current) if changes.empty?
         raise Hiiro::Error, "Link ##{id} was removed" unless current
         changes.each do |key, value|
-          raise Hiiro::Error, "Link ##{id} #{key} changed concurrently" unless current[key] == before[key] || current[key] == value
+          raise Hiiro::Error, "Link ##{id} #{COLUMNS.key(key)} changed concurrently" unless current[key] == before[key] || current[key] == value
           current[key] = value
         end
         current.save_changes
-        current
+        LinkPresenter.new(current)
       end
     end
   end
@@ -143,7 +217,7 @@ class LinkManager
   end
 
   # Links matching every term, numbered as in `h link ls`, offered to the
-  # picker; the chosen original Link, or nil when none match or it was cancelled.
+  # picker; the chosen original link, or nil when none match or it was cancelled.
   def pick(links, *terms)
     offered = items(links).select { |item| item.record.matches?(*terms) }
     Hiiro::Selection.pick(offered, picker: 'links', tty: true)&.record
@@ -183,7 +257,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
       new_links = lm.edit_links(hiiro: self)
       next unless new_links
 
-      count = Hiiro::Link.count
+      count = lm.count
       if new_links.length == 1
         puts "Saved link ##{count}: #{new_links.first.url}"
       else
@@ -196,15 +270,9 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     description = vals.args.join(' ')
     tags = (Array(vals.tag) + Array(vals.tags)).uniq.reject(&:empty?)
 
-    new_link = Hiiro::Link.create(
-      url: url,
-      description: description,
-      shorthand: vals.shorthand,
-      created_at: Time.now.iso8601
-    )
-    Hiiro::Tag.tag!(new_link, *tags) if tags.any?
+    lm.create(url: url, description: description, shorthand: vals.shorthand, tags: tags)
 
-    puts "Saved link ##{Hiiro::Link.count}: #{url}"
+    puts "Saved link ##{lm.count}: #{url}"
   end
 
   add_subcmd(:ls) do |*ls_args|
@@ -306,7 +374,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     if rm_args.empty?
       link = lm.pick(links)
       next unless link
-      Hiiro::Link.remove(link.id)
+      lm.delete(link)
       puts "Removed: #{link.url}"
     else
       rm_args.each do |ref|
@@ -325,7 +393,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
             next
           end
         end
-        Hiiro::Link.remove(link.id)
+        lm.delete(link)
         puts "Removed: #{link.url}"
       end
     end
@@ -353,10 +421,16 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
   end
 
   add_subcmd(:tags) do |*tag_args|
-    Hiiro::Tag.search(tag_args, type: 'Link').each do |tag|
-      links = Hiiro::Tag.tagged_by_type(tag, 'Link')
+    by_id = lm.load_links.to_h { |link| [link.id.to_s, link] }
+    link_tags = Hiiro::Tag.where(taggable_type: 'RegistryEntry', taggable_id: by_id.keys)
+    names = link_tags.select_map(:name).uniq.sort
+    names = names.select { |name| tag_args.any? { |term| name.include?(term) } } unless tag_args.empty?
+
+    names.each do |tag|
       puts "#{tag}:"
-      links.each { |link| puts "  #{link.display_string(exclude_tags: [tag])}" }
+      link_tags.where(name: tag).select_map(:taggable_id).uniq.each do |id|
+        puts "  #{by_id[id].display_string(exclude_tags: [tag])}"
+      end
     end.empty? && puts("No tags found!")
     true
   end
@@ -374,18 +448,12 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     description = vals.args.join(' ')
     tags = (Array(vals.tag) + Array(vals.tags)).uniq.reject(&:empty?)
 
-    new_link = Hiiro::Link.create(
-      url: url,
-      description: description,
-      shorthand: vals.shorthand,
-      created_at: Time.now.iso8601
-    )
-    Hiiro::Tag.tag!(new_link, *tags) if tags.any?
+    lm.create(url: url, description: description, shorthand: vals.shorthand, tags: tags)
 
-    puts "Saved link ##{Hiiro::Link.count}: #{url}"
+    puts "Saved link ##{lm.count}: #{url}"
   end
 
   add_subcmd(:path) do |*path_args|
-    print Hiiro::DB::DB_FILE
+    print "#{Hiiro::DB::DB_FILE} (table link)"
   end
 end

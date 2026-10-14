@@ -24,8 +24,10 @@ trap cleanup EXIT
 # id owner-name state outcome placement, one line per run record of an owner kind
 runs() {
   sx ruby -rjson -e '
-    Dir[File.join(ARGV[0], "*.json")].map { |f| JSON.parse(File.read(f)) }.select { |r| r["owner"]["kind"] == ARGV[1] }
-      .sort_by { |r| [r["times"]["allocated"].to_s[0, 19], r["owner"]["name"].to_s] }
+    # Allocation order: the record file is created at allocation and its birth time has
+    # sub-second precision, unlike times.allocated (whole seconds, so two launches tie).
+    Dir[File.join(ARGV[0], "*.json")].map { |f| [File.birthtime(f), JSON.parse(File.read(f))] }.select { |_, r| r["owner"]["kind"] == ARGV[1] }
+      .sort_by { |born, r| [born, r["owner"]["name"].to_s] }.map(&:last)
       .each { |r| o = r["outcome"]; puts [r["owner"]["name"] || r["owner"]["instance"] || "-", r["state"], o ? (o["signal"] ? "signal #{o["signal"]}" : "exit #{o["exit_code"]}") : "running", r["placement"]["kind"], r["error"] ? "error: #{r["error"]}" : nil].compact.join("  ") }' "$RUNS" "$1"
 }
 # A detached launch must not keep the caller's stdout: report whether a pipe on

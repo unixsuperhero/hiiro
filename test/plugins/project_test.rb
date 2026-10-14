@@ -5,11 +5,11 @@ class ProjectPluginTest < Minitest::Test
   include TestHelpers
 
   def setup
-    Hiiro::Project.dataset.delete
+    Hiiro::RegistryEntry.where(resource_type: 'project').delete
   end
 
   def teardown
-    Hiiro::Project.dataset.delete
+    Hiiro::RegistryEntry.where(resource_type: 'project').delete
   end
 
   def test_project_dirs_only_include_directories
@@ -37,11 +37,11 @@ class ProjectPluginTest < Minitest::Test
         assert_equal({}, mock.projects_from_config)
         manager = Hiiro::Projects.new
         manager.save_project('canonical', '/canonical/path')
-        record = Hiiro::Project.find_by_name('canonical')
+        record = manager.alias_entry('canonical')
         manager.save_project('canonical', '/updated/path')
         assert_equal({'canonical' => '/updated/path'}, mock.projects_from_config)
         assert_equal '/updated/path', manager.find('canonical')
-        assert_equal record.id, Hiiro::Project.find_by_name('canonical').id
+        assert_equal record.id, manager.alias_entry('canonical').id
         assert_equal recovery, File.read(file)
       end
     end
@@ -49,7 +49,7 @@ class ProjectPluginTest < Minitest::Test
 
   def test_database_read_failure_does_not_restore_recovery_aliases
     manager = Hiiro::Projects.new
-    Hiiro::Project.stub(:all_as_hash, -> { raise Sequel::DatabaseError, 'unavailable' }) do
+    Hiiro::Table.stub(:named, ->(*) { raise Sequel::DatabaseError, 'unavailable' }) do
       assert_raises(Sequel::DatabaseError) { manager.from_config }
     end
     manager.save_project('canonical', '/canonical/path')

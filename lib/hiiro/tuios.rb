@@ -56,22 +56,25 @@ class Hiiro::Tuios
 
     Manage the inbox server
 
-      start
+      start [--foreground]
         Starts ~/proj/tuios-inbox/server.mjs with Bun in the background, from any
         working directory. Waits for HTTP readiness. Repeated starts reuse the
         existing server, including one started with bun start in that project.
         Inherits the current environment, including TUIOS identity and grants,
         TUIOS_BIN, TUIOS_INBOX_DATA, and TUIOS_INBOX_SPOOL. Does not change grants.
         Appends output to ~/.local/state/h-tuios/server-PORT.log.
+        --foreground instead runs bun start attached to this terminal, retaining
+        the foreground behavior of older h-tuios copies.
 
       stop
         Sends SIGTERM to the inbox server and waits for it to exit. Safe to repeat.
         Never stops the TUIOS daemon, its panes, or an unrelated port listener.
 
-      status
+      status [HARNESS...]
         Prints the server URL and PID, and checks its HTTP response.
         Exits 0 when ready, 1 when stopped, unresponsive, or the port is occupied
-        by a different process. Does not check harness setup; use setup-status.
+        by a different process. With HARNESS arguments, checks their setup instead
+        (the older status behavior). Use setup-status for automatic harness selection.
 
       These commands use PORT, default 4399. Use the same PORT for all commands.
       They verify the Bun executable, server script, and project working directory
@@ -240,6 +243,21 @@ class Hiiro::Tuios
         execution counts, and last-run errors. These are separate from harness
         integrations. Requires a running daemon and does not reload or restart it.
         Example: h tuios hooks
+
+    Navigate windows
+
+      ui [--hosts]
+        Opens a screen with one row per tuios window on this machine: session,
+        workspace, agent state mark, title, and harness, with a detail pane.
+        Enter jumps to the window; c captures its last 20 lines into the pane;
+        n renames it, M minimizes or restores it, N opens a new window in its
+        session and directory, m sends agent mail from your own pane, y copies
+        its id, g scopes the list to the current task by each window's directory,
+        R reloads, and H adds the configured hosts. Does not read any mailbox.
+        --hosts lists each session on the configured hosts as one summary row;
+        its window keys show the `tuios attach --host` command instead.
+        Examples: h tuios ui
+                  h tuios ui --hosts
 
     Read skills and use the current pane
 
@@ -557,7 +575,7 @@ class Hiiro::Tuios
       path = change[:path]
       puts "#{dry_run ? '[dry-run] ' : ''}#{change[:action]} #{path}"
       next if dry_run
-      FileUtils.mkdir_p(File.dirname(path))
+      FileUtils.mkdir_p(File.dirname(path)) unless File.symlink?(File.dirname(path))
       case change[:action]
       when :write
         backup = "#{path}.h-tuios.bak"

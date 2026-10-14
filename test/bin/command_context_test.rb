@@ -48,8 +48,8 @@ class CommandContextTest < Minitest::Test
     %w[alpha alpine notes].each { |name| FileUtils.mkdir_p(File.join(@home, 'notes/work', name)) }
     @db[:apps].insert(name: 'api', path: 'apps/api')
     @db[:apps].insert(name: 'api-admin', path: 'apps/admin')
-    @db[:projects].insert(name: 'demo', path: @git_root)
-    @db[:projects].insert(name: 'demo-extra', path: @task_root)
+    @db[:registry].insert(resource_type: 'project', name: 'demo', value: @git_root)
+    @db[:registry].insert(resource_type: 'project', name: 'demo-extra', value: @task_root)
     File.write(File.join(@config, 'tools.yml'), {'observe' => {'argv' => [RbConfig.ruby, @program], 'tool_type' => 'test'}}.to_yaml)
     File.write(File.join(@config, 'app_files.yml'), {'api' => ['apps/api/entry.rb']}.to_yaml)
   end
@@ -121,7 +121,7 @@ class CommandContextTest < Minitest::Test
     failure('h-project', 'path', 'dem', /Ambiguous project/i)
     assert_equal before, domain_rows
     refute File.exist?(@marker)
-    @db[:pins].insert(command: 't', key: 'current_task', value_json: '999', value_format: 'json')
+    @db[:registry].insert(resource_type: 't', name: 'current_task', value: '999')
     stale = domain_rows
     failure('t', 'current', /Saved task no longer exists/)
     assert_equal stale, domain_rows
@@ -170,7 +170,7 @@ class CommandContextTest < Minitest::Test
   def test_explicit_directory_override_and_missing_directory_fail_strictly
     assert_equal "#{@git_root}\n", command('t', 'path', '-t', 'alpha', '--directory', @git_root)
     missing = File.join(@sandbox, 'missing')
-    @db[:projects].insert(name: 'gone', path: missing)
+    @db[:registry].insert(resource_type: 'project', name: 'gone', value: missing)
     before = domain_rows
     failure('t', 'path', '-t', 'alpha', '--directory', missing, /Directory does not exist/)
     failure('h-project', 'sh', 'gone', RbConfig.ruby, @program, /Directory does not exist/)
@@ -296,7 +296,7 @@ class CommandContextTest < Minitest::Test
   def marker = JSON.parse(File.read(@marker))
 
   def domain_rows
-    %i[tasks task_resources apps projects pins todos].to_h { |table| [table, @db[table].order(:id).all] }
+    %i[tasks task_resources apps registry todos].to_h { |table| [table, @db[table].order(:id).all] }
   end
 
   def prompt_file(frontmatter)

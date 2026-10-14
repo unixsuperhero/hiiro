@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'digest'
+
+mode = ARGV.shift || '--check'
+abort 'Usage: ruby script/sync-tuios [--check|--write]' unless %w[--check --write].include?(mode) && ARGV.empty?
+source = File.expand_path('../bin/h-tuios', __dir__)
+paths = [source, *%w[
+  bin/h-tuios
+  proj/dotfiles-research/repos/phome/bin/h-tuios
+  proj/phome/bin/h-tuios
+  proj/rehiiro/bin/h-tuios
+].map { |path| File.join(Dir.home, path) }]
+content = File.binread(source)
+expected = Digest::SHA256.hexdigest(content)
+
+# Read every destination before changing any copy.
+current = paths.to_h { |path| [path, File.binread(path)] }
+current.each do |path, bytes|
+  if bytes != content && mode == '--write'
+    File.binwrite(path, content)
+    puts "updated #{path}"
+  end
+end
+matched = paths.all? { |path| File.binread(path) == content }
+paths.each { |path| puts "#{Digest::SHA256.file(path).hexdigest}  #{path}" }
+puts(matched ? "All five copies match #{expected}." : 'Copies differ. Merge functionality into bin/h-tuios before using --write.')
+exit(matched ? 0 : 1)

@@ -236,6 +236,23 @@ printf '%s\n' '"src/my file.rb:12:3"' | h extract files --no-check
 printf '%s\n' 'missing/output/' | h extract dirs --no-check
 ```
 
+### Strip terminal escapes and controls
+
+`h strip ctrl` removes terminal escape sequences and control characters from
+files, piped stdin, or literal text. Tabs, newlines, and UTF-8 text are preserved.
+
+```sh
+h strip ctrl terminal.log > clean.log
+printf '\033[31mhello\033[0m\n' | h strip ctrl
+h strip ctrl hello world
+h strip ctrl --help
+```
+
+The command writes to stdout without adding a newline and reads the whole input
+into memory. Redirect to a different file, not the input file. The command does
+not reconstruct a terminal screen. See [the strip reference](docs/h-misc.md#h-strip-ctrl)
+for input selection and supported escape sequences.
+
 ### Task CLI
 
 `t` and `tt` are gem executables in `exe/`, installed alongside `h`. They are thin
@@ -316,7 +333,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h edit [NAME...]` | Open the h script, or the source `h NAME` dispatches to (refuses ambiguous names) |
 | `h alert` | macOS desktop notifications via terminal-notifier |
 | `h herdr` | Herdr task popups plus Vim-style pane focus, movement, resize, swap, and zoom controls (`h herdr install`) |
-| `h task` | Same program as `t`: task records, todos, worktrees (`t NAME tree new`), and Herdr workspaces |
+| `h task` | Same program as `t`: task records, todos, worktrees (`t NAME tree new`), and Herdr workspaces; `t ui` is a tree TUI over tasks, subtasks, and todos |
 
 `hiiro` is the long name of `h`: `exe/hiiro` registers the same root commands, and `hiiro setup` installs commands as `hiiro-NAME`.
 
@@ -350,7 +367,8 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h pr` | GitHub PR management via gh CLI; PRs are `owner/name#N` with fresh/stale/unknown snapshots; single and YAML-selected bulk actions share one implementation |
 | `h pr-monitor` | Notify tracked PR check, review, and dependency changes once (checkpointed); opt-in fix queueing |
 | `h cpr` | Run an `h pr` subcommand on the current branch's PR |
-| `h project` | Project navigation with Herdr workspace management |
+| [`h project`](docs/h-project.md) | Project navigation with Herdr workspace management; `h project ui` is the projects screen over every worktree, directory, and alias |
+| `h registry` | Named resources by type with short aliases; the same rows as `h table` |
 | `h queue` | Prompt queue with Herdr-based task execution; `tick` is the bounded one-shot pass a schedule runs |
 | [`h remind`](docs/h-remind.md) | Reminders delivered once per occurrence by `h remind check`; failed deliveries stay due |
 | [`h schedule`](docs/h-schedule.md) | Explicitly enabled launchd schedules for existing one-shot workers, with recorded outcomes and an outcome screen |
@@ -359,7 +377,10 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | `h run` | Run dev tools (lint/test/format) against changed files; keep failed logs and queue them on request |
 | `h session` | Compatibility commands for Herdr workspaces |
 | [`h sha`](docs/h-sha.md) | Choose, show, and copy commit SHAs in the shared `commits` picker |
+| [`h strip ctrl`](docs/h-misc.md#h-strip-ctrl) | Strip terminal escapes and controls from files, stdin, or text |
+| [`h table`](docs/h-table.md) | TUI and scriptable CLI over registry tables (links, sounds, pins, ...) with task scope, tags, per-table actions, and fuzzy completion in prompts |
 | `h todo` | Todo list management with tags and task association |
+| [`h tuios`](docs/h-tuios.md) | TUIOS inbox server, skills, and startup rules; `h tuios ui` is the windows screen over every session, with `--hosts` for remote sessions |
 | `h window` | Compatibility commands for Herdr tabs |
 | `h wtree` | Git worktree management |
 | `h jumplist` | Optional tmux back/forward pane history; needs a running tmux server |
@@ -500,15 +521,18 @@ end
 
 ### Commands with declared options
 
-Use `add_cmd` to expose a command's options in help. Undeclared names in `opts:`
-become boolean flags with a default of `false`. A flag does not consume the next
-positional argument.
+Use `add_cmd` to expose a command's options in help. Choose a declaration bucket
+for each undeclared name:
+
+- `opts:` creates a string-valued option with a default of `nil`.
+- `flags:` creates a boolean flag with a default of `false`. Flags do not consume the next positional argument.
+- `mopts:` creates a repeatable string-valued option with a default of `[]`.
 
 ```ruby
 Hiiro.run do
   add_option :task, short: :t, desc: 'Task name'
 
-  add_cmd :test, opts: %i[a b c d task] do
+  add_cmd :test, opts: %i[task], flags: %i[a b c d], mopts: %i[tag] do
     puts 'a was set' if opts.a
     puts opts.task if opts.task
     puts opts.args
@@ -516,15 +540,20 @@ Hiiro.run do
 end
 ```
 
-Here, `test -a payload -t investigation` sets `opts.a` to `true`, leaves
-`payload` in `opts.args`, and sets `opts.task` to `investigation`.
+Here, `test -a payload -t investigation --tag ruby --tag cli` sets `opts.a`
+to `true`, leaves `payload` in `opts.args`, sets `opts.task` to
+`investigation`, and sets `opts.tag` to `['ruby', 'cli']`.
 `test -h` and `test --help` display the selected options without running the
 command block.
 
-Automatic flags use their first letter as a short alias only when it is unique
-among the command's automatic flags and does not conflict with a selected
-explicit option or `-h`. Every automatic flag has a long form. Explicit flags
-and value options keep their definitions.
+Names accept strings or symbols and are deduplicated across the buckets.
+Existing definitions keep their type, default, short alias, and description,
+regardless of the bucket used to select them. New definitions are
+registered on the parent option set so later commands reuse them.
+
+Automatic short aliases use the first unused alphanumeric character in the full
+name, scanning left to right. All existing short aliases and `-h` are reserved;
+aliases are never reassigned. A name with no available character has only its long form.
 
 For a command that delegates to `run_child`, use `add_cmd(..., passthrough: true)`.
 It forwards control without parsing the parent's arguments or intercepting the
@@ -594,7 +623,10 @@ The database, definitions, preferences, and some runtime files live in `~/.confi
 ```
 ~/.config/hiiro/
   plugins/          # Plugin files (loaded when a command names them)
-  hiiro.db          # Canonical mutable records
+  hiiro.db          # Canonical mutable records (registry tables hold links, project aliases, pins, sounds)
+  pins/             # Legacy pin files; explicit h db migrate inputs into tables named after the command (h-sha -> sha)
+  sounds.yml        # Legacy; explicit h db migrate input into registry table sound
+  projects.yml      # Legacy project aliases; explicit h db migrate input into registry table project
   services/         # Service instance state and per-instance launch scripts
   bg-history.txt    # Background command history
   env_templates/    # Base .env templates for services
@@ -627,11 +659,14 @@ Each durable type has one current owner. The first operation that uses persisten
 | Todos | SQLite `todos`, `Hiiro::TodoItem`, shared by `t`, `tt`, and `h todo` |
 | Tasks and task resources | SQLite `tasks` and `task_resources`, `Hiiro::TaskRecord` and `Hiiro::TaskResource` |
 | Worktree assignments | SQLite `assignments`, `Hiiro::Assignment` |
-| Saved links and branches | SQLite `links` and `branches`, `Hiiro::Link` and `Hiiro::Branch` |
+| Saved links | SQLite `registry` table `link`, `Hiiro::RegistryEntry` through `bin/h-link`'s `LinkPresenter` and `h table link` |
+| Branches | SQLite `branches`, `Hiiro::Branch` |
 | Pinned PRs and check snapshots | SQLite `prs` and `check_runs`, `Hiiro::PinnedPr` and `Hiiro::CheckRun`; remote snapshots (head, fetch time, completeness, freshness) are written only by `PinnedPRManager#refresh`, local tags/task/dependencies only by tracking commands; see [h-pr](docs/h-pr.md) |
 | PR monitor checkpoints | SQLite `pr_monitor_checkpoints`, `Hiiro::PrMonitorCheckpoint`; written only by `Hiiro::PrMonitor` after an effect succeeded; see [h-pr-monitor](docs/h-pr-monitor.md) |
-| Project aliases and app mappings | SQLite `projects` and `apps`, `Hiiro::Project` and `Hiiro::AppRecord` |
-| Command pins and named pane homes | SQLite `pins` and `pane_homes`, `Hiiro::PinRecord` and `Hiiro::PaneHome` |
+| Project aliases | SQLite `registry` table `project`, `Hiiro::RegistryEntry` through `Hiiro::Projects` |
+| App mappings | SQLite `apps`, `Hiiro::AppRecord` |
+| Command pins and sounds | SQLite `registry` tables named after the command (`sha`, `t`, ...) and `sound`, `Hiiro::RegistryEntry` through the Pins plugin and `h table` |
+| Named pane homes | SQLite `pane_homes`, `Hiiro::PaneHome` |
 | Reminders and scheduling checkpoints | SQLite `reminders`, `Hiiro::Reminder` |
 | Recurring work: occurrence claims, outcomes, and schedule checkpoints | SQLite `job_claims`, `job_outcomes`, and `schedule_checkpoints`, `Hiiro::Job`, `Hiiro::JobOutcome`, and `Hiiro::Schedule`; see [h schedule](docs/h-schedule.md) |
 | Generic named entries | SQLite `registry`, `Hiiro::RegistryEntry` through `Hiiro::Table` |

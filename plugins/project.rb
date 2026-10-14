@@ -12,7 +12,7 @@ module Project
     end
 
     hiiro.define_singleton_method(:projects_from_config) do
-      Hiiro::Project.all_as_hash
+      Hiiro::Projects.new.from_config
     end
   end
 

@@ -253,9 +253,9 @@ Domain operations mutate selected rows rather than saving a stale collection. Te
 
 `TaskRecord` owns task identity, tree/session/app/color fields, `status`, `next_action`, `waiting_on`, `primary_directory`, and created/updated/completed/archived timestamps. Its `metadata_json` retains additional task detail keys, including window metadata. `TaskResource` owns task-linked directory, issue, PR, and note references; note bodies remain ordinary files.
 
-Pins use explicit JSON encoding with a format marker. New string pins remain strings even when their text resembles JSON. Preexisting unmarked pins retain their historical decoder until an explicit typed source resolves ambiguity. Reminders store `interval`, `once`, `trigger_at`, `last_triggered`, `enabled`, and `sound` in SQLite.
+Pins are registry entries in the table named after the command (`h-sha` → `sha`): values are text, and the Pins plugin stores a non-string value as JSON. Reminders store `interval`, `once`, `trigger_at`, `last_triggered`, `enabled`, and `sound` in SQLite.
 
-Tag identities remain namespace-specific. `Branch` and `Task` tags use names; `Link`, `TaskRecord`, `RegistryEntry`, and `PinnedPr` tags use model IDs.
+Tag identities remain namespace-specific. `Branch` and `Task` tags use names; `TaskRecord`, `RegistryEntry` (including saved links), and `PinnedPr` tags use model IDs.
 
 **Test isolation:** Set `ENV['HIIRO_TEST_DB'] = 'sqlite::memory:'` before requiring `hiiro` for an in-memory DB. Call `Hiiro::DB.setup!` after require. Migration smoke fixtures use a disposable file-backed database and temporary HOME.
 
@@ -283,6 +283,14 @@ acts.command('o', entry)               # {value} {name} {table} shell-escaped; n
 acts.run('o', entry)                   # system('/bin/sh', '-c', cmd); returns cmd
 ```
 
+`bin/h-table` is the TUI (`Hiiro::TableScreen` in lib/hiiro/table_screen.rb: `TableScreen.new(scope:, table:, actions:)`, `reload!`, `marked`) and the scriptable CLI (`tables`, `ls`, `add`, `rm`, `mv`, `set`, `get`, `tag`, `untag`) over these tables; `h registry` is the same rows. See `docs/h-table.md`.
+
+`t ui` is the second screen on the toolkit: `Hiiro::TaskScreen` (lib/hiiro/task_screen.rb, `TaskScreen.new(scope: :global, current:, show_closed: false, ops:)`, `reload!`, `expanded`) is a tree of task/subtask/todo nodes; edits go through `TaskRecord#set_next!` / `#set_waiting!` / `#set_status!`, `TodoItem#update_status`, and `TaskScreen::Ops` (create, save_current, open_workspace over `TaskCli::Commands`, stdout captured). See `docs/t.md`.
+
+`h project ui` is the third screen on the toolkit: `Hiiro::ProjectCatalog.load(roots:, aliases:)` (lib/hiiro/project_catalog.rb; `default_roots` is `~/proj` and `WORK_DIR`, `rows` / `repos` / `reload` / `repo_for(row)`; a `Row` is `{ name, path, kind: :tree | :dir | :alias, repo, branch, head }`, `key` is the path, `main?` is the repo's first worktree) lists one row per git worktree under the roots plus plain dirs and `project` aliases, grouping a repo's worktrees by `Git::Worktrees.fetch` so an extra tree reads `repo ▸ tree`. `Hiiro::ProjectScreen.new(catalog:, scope:, current:, facts:, opener:, fetcher:)` (lib/hiiro/project_screen.rb, `reload!`, `rebuild!`) draws it; `Facts` caches `status[tree_path]` / `branches[repo_path]` / `prs[repo_path]` fetched on `s` / `b` / `p` through `Fetcher` (git and `gh pr list`), `Opener#open(row)` runs `tuios new-window` under `TUIOS_ENV=1` (`command(row)` is the argv) and `Herdr.open_workspace` otherwise, and `a` / `d` add and remove worktrees through git. See `docs/h-project.md`.
+
+`h tuios ui` is the fourth screen on the toolkit: `Hiiro::TuiosListing.load(runner:, hosts: false)` (lib/hiiro/tuios_listing.rb; `runner` is a callable `(*argv) -> stdout`, default `Hiiro::Tuios.new.method(:capture)`; `windows` / `sessions` / `attention` / `reload`, `hosts=` then `reload`) reads `tuios ls --json` for sessions and windows, merges `list-windows -s S --json` per local session by id for `cwd` / `index` / `focused` / `minimized` (a failing `list-windows` or `list-attention` is swallowed; a failing `ls` raises), and sorts by host, session, workspace, index. A `Window` is `{ id, title, session, workspace, index, state, harness, message, cwd, cmd, focused, minimized, host }` (`kind` `:window`, `key` is the id); with `hosts: true` each session from `ls --all-hosts --json` on another host is one `Remote` row `{ host, session, windows, state }` (`kind` `:session`, `key` `host:session`) after the local windows, since no verb lists a remote host's windows. `Hiiro::TuiosScreen.new(listing:, scope:, current:, runner:, own:, clipboard:)` (lib/hiiro/tuios_screen.rb, `rebuild!(select:)`, `captures`) draws one row per window as `SESSION  wsN  MARK TITLE  HARNESS` (`*` before the session in `own['TUIOS_SESSION']`, `(min)` after a minimized title, marks `●` working `?` needs_input `✓` done `○` idle `!` errored), a detail pane with the pane's last 20 lines after `c`, and runs every verb through `runner` (`Enter` jump-window, `n` / `M` set-window, `N` new-window, `m` send-agent-message from `own['TUIOS_PANE_ID']`, `R` reload, `H` hosts, `g` task scope by `cwd` under `TaskLocation.for(current)` code directory / worktree / home, `y` copies the id); a `Hiiro::Error` becomes the status message and a window verb on a `Remote` row shows `tuios attach --host HOST NAME` instead. See `docs/h-tuios.md`.
+
 ### Hiiro::Tui (lib/hiiro/tui.rb)
 
 Screen toolkit for in-process TUIs. One engine for every hiiro TUI; do not add curses or shell out to a fuzzy finder for a screen (see `docs/plans/hiiro-tui.md`).
@@ -292,14 +300,20 @@ class MyScreen < Hiiro::Tui::Screen
   key 'o', :open_item                 # key map is a table; subclasses add or override bindings
   def header_lines = ["title  #{state.query}"]
   def detail_lines(item) = ["name  #{item.name}"]   # nil (default) means no detail pane
-  def pick_candidates = %w[link sound]              # '@' opens a prefix-filtered picker in the status line
-  def picked(candidate) = (self.message = candidate)
   def open_item = (self.message = "open #{current_item}")
+  def unhandled_key(key) = nil                       # list-mode keys the key map does not bind
+  def ask = prompt('name', default: 'x') { |text| prompt('value') { |v| save(text, v) } }
+  def pick = prompt('table', complete: { '' => -> { Hiiro::Completions.tables } }) { |name| open(name) }
 end
-MyScreen.new(items: rows).run        # j/k/h/l move, '/' searches, '@' picks, q/Esc/Ctrl-C quit
+MyScreen.new(items: rows).run        # j/k/h/l move, '/' searches, q/Esc/Ctrl-C quit
 ```
 
-- `state` is one `Tui::State` (`mode` :list|:search|:pick, `cursor`, `top`, `horizontal_offset`, `query`, `pick_query`, `message`). Read it; never keep a parallel boolean.
+- `state` is one `Tui::State` (`mode` :list|:search|:prompt, `cursor`, `top`, `horizontal_offset`, `query`, `message`, `prompt_label`, `prompt_text`). Read it; never keep a parallel boolean.
+- `prompt(label, default: '', complete: {}) { |text| ... }` reads one line in the status line (`label: head_tail`, then `  @hii ▸ [hiiro] hiiro-config` while choices are open). Left/Right/Home/End/Delete/Ctrl-U edit, Up/Down select, Tab accepts; Enter accepts an open choice, otherwise leaves the mode and calls the block. Esc leaves without calling it, Ctrl-C quits. The block runs after the prompt closes, so it may call `prompt` again to chain questions. `complete` maps a trigger (`'@'`, `'#'`, or `''` for the word at the cursor) to a lambda of candidates.
+- `Tui::LineEditor.new(text:, triggers:)` holds the prompt text (`insert`, `backspace`, `delete`, `left`, `right`, `home`, `end_of_line`, `kill_line`, `token`, `choices(limit: 8)`, `select(delta)`, `accept`); the screen copies its text into `state.prompt_text` after each key.
+- `Tui::Fuzzy.rank(candidates, query)` orders prefix (0), substring (1), word start (2), then subsequence (3 + gaps); ties by length, then name.
+- `Hiiro::Completions` (lib/hiiro/completions.rb) are the sources: `projects`, `tags`, `tables`, `tasks`, `branches(repo_path)`, each a sorted Array.
+- `unhandled_key(key)` is called from list mode for any key the key map does not bind (default no-op); `TableScreen` uses it for per-table action letters.
 - `frame(rows:, cols:)` returns plain strings with no ANSI, one per row, which is what tests assert against literally. `render` adds the highlight.
 - `Tui::Pane.new(width:, height:).lines(texts)` pads and truncates to an exact rectangle.
 - `ListScreen` is `Screen` without a detail pane and keeps the `Showing a-b of n` footer.
@@ -528,9 +542,9 @@ loc.target                                    # pane_id || tab_id || workspace_i
 loc.to_meta                                   # inverse of from_meta (queue/service metadata)
 ```
 
-### Hiiro::Link / Hiiro::URLTemplate (lib/hiiro/link.rb)
+### Hiiro::URLTemplate (lib/hiiro/link.rb)
 
-`bin/h-link` reads and mutates canonical `Hiiro::Link` rows. Editing uses a temporary database projection with the selected stable ID; `links.yml` is only an explicit legacy import input.
+`bin/h-link` reads and mutates saved links in registry table `link` (url → value, shorthand → short_name, description, created_at for the numbered order) through `Hiiro::RegistryEntry`, wrapping each row in its own `LinkPresenter`; editing uses a temporary projection keyed by the stable entry ID. `Hiiro::DB.link_name(url, shorthand, description)` picks an entry name. The retired `links` table is copied into the registry once at setup (`DB.import_legacy_tables!`); `links.yml` is only an explicit `h db migrate` input.
 
 ```ruby
 t = Hiiro::URLTemplate.new('https://x/{org}/{repo}', values: { 'org' => 'a b' })
@@ -876,6 +890,7 @@ ALWAYS update `README.md` and any files in `docs/` or other markdown files that 
 Current config-root stores under `~/.config/hiiro/`:
 - `hiiro.db` - Canonical mutable records through the owners listed in README
 - `plugins/` - Plugin files, loaded when a command names them
+- `pins/` - Legacy per-command pin files, explicit `h db migrate` inputs. Pins live in registry tables named after the command (table `t`, entry `current_task`; `h-sha` pins in table `sha`); `sounds.yml` imports into table `sound`
 - `services/` - Service runtime state
 - `bg-history.txt` - Background command history
 - `jumplist/` - Per-client tmux navigation history

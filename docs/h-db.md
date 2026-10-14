@@ -24,7 +24,7 @@ h db <subcommand> [args]
 
 ### manifest
 
-The manifest identifies the database owner and identity for each durable domain type. Legacy import stores are `todos`, `links`, `branches`, `prs`, `pinned_prs`, `tasks`, `assignments`, `apps`, `projects`, `pane_homes`, `pins`, `reminders`, and `tags`.
+The manifest identifies the database owner and identity for each durable domain type. Legacy import stores are `todos`, `links`, `branches`, `prs`, `pinned_prs`, `tasks`, `assignments`, `apps`, `projects`, `pane_homes`, `pins`, `sounds`, `reminders`, and `tags`. `links`, `projects`, `pins`, and `sounds` land in registry tables (`link`, `project`, the table named after the pin's command, and `sound`), the rows `h table` shows.
 
 Task resources, generic registry entries, check snapshots, capture metadata, and MCP registrations (`mcps`, identified by name; see [h-mcp](h-mcp.md)) are canonical database records included in export/recovery, not separate legacy YAML import stores. `h mcp` imports its legacy JSON catalogs once by itself; they are not `plan`/`migrate` stores. Registry entries keep stable IDs, aliases, values, metadata, nullable `task_id`, and tags. Their `Table` and `TableScope` behavior is unchanged.
 
@@ -57,7 +57,7 @@ After commit, migration checks persisted rows and accepted-source mappings throu
 
 Accepted imports record source checksums and row mappings. Repeating an unchanged accepted source reports `previously-applied`, including the number of later canonical changes or deletions. It does not replay the snapshot over those changes or recreate deleted rows. A changed previously accepted source is rejected rather than overwriting newer records.
 
-Import preserves explicit IDs, task metadata and resources, tag identities, qualified PR records, typed pin values, and reminder scheduling fields. Legacy unmarked pins retain their historical decoder until an explicit typed source resolves their ambiguity; migration does not guess types from JSON-looking strings. Selecting `pins`, including the default all-store selection, rejects ambiguous legacy values without a reliable typed source and reports their command/key. Selecting another store does not rewrite unrelated legacy pins.
+Import preserves explicit IDs, task metadata and resources, tag identities, qualified PR records, and reminder scheduling fields. Pin values are stored as text in the command's registry table: scalars as their text (`42`, `false`, an empty string for null) and collections as JSON. A links.yml row whose URL is already saved with different fields is a canonical conflict, like any other store. The retired `pins`, `links`, and `projects` SQLite tables are copied into the registry once at setup (`Hiiro::DB.import_legacy_tables!`), not by `h db migrate`.
 
 Verification and completion describe the selected import, not every discoverable legacy store. Definitions such as `services.yml`, `tools.yml`, `sparse_groups.yml`, `tables.yml`, `config.yml`, and `app_files.yml` remain untouched. Migration neither archives nor deletes YAML and does not prompt to retire files.
 

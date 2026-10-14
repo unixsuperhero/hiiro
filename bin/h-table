@@ -1,0 +1,118 @@
+#!/usr/bin/env ruby
+
+require 'hiiro'
+
+Hiiro.run(*ARGV) do
+  lookup = ->(table, name) { Hiiro::RegistryEntry.first(resource_type: table.to_s, name: name.to_s) }
+
+  find_or_exit = lambda do |table, name|
+    entry = table && name && lookup.call(table, name)
+    return entry if entry
+
+    warn "not found: #{table}/#{name}"
+    exit 1
+  end
+
+  # Screen#run returns false on quit; returning nil keeps the exit status 0.
+  open_screen = lambda do |table|
+    Hiiro::TableScreen.new(table:).run
+    nil
+  end
+
+  add_default { |table = nil| open_screen.call(table) }
+  add_subcmd(:ui) { |table = nil| open_screen.call(table) }
+
+  add_subcmd(:tables) do
+    Hiiro::Table.all.each { |table| puts "#{table.name}  #{table.count}" }
+  end
+
+  add_subcmd(:ls, :list) do |*args|
+    opts = Hiiro::Options.setup {
+      flag(:global, short: :g, desc: 'Ignore the current task scope')
+    }.parse(args)
+
+    table = opts.args.first
+    scope = opts.global ? Hiiro::TableScope.global : Hiiro::TableScope.current
+    dataset = table ? Hiiro::RegistryEntry.where(resource_type: table) : Hiiro::RegistryEntry.dataset
+    entries = scope.apply(dataset).order(:resource_type, :name).all
+
+    puts 'No entries.' if entries.empty?
+    entries.each { |e| puts "#{e.resource_type}\t#{e.name}\t#{e.value}" }
+  end
+
+  add_subcmd(:add) do |*args|
+    opts = Hiiro::Options.setup {
+      option(:short, short: :s, desc: 'Short alias')
+      option(:desc, short: :d, desc: 'Description')
+      flag(:task, desc: 'Attach the entry to the current task')
+    }.parse(args)
+
+    table, name, value = opts.args
+    unless table && name && value
+      warn 'Usage: h table add <table> <name> <value> [-s short] [-d desc] [--task]'
+      exit 1
+    end
+
+    if lookup.call(table, name)
+      warn "exists: #{table}/#{name}"
+      exit 1
+    end
+
+    task_id = nil
+    if opts.task
+      scope = Hiiro::TableScope.current
+      unless scope.task?
+        warn 'No current task.'
+        exit 1
+      end
+      task_id = scope.task.id
+    end
+
+    Hiiro::Table.named(table).add(name, value:, short: opts.short, desc: opts.desc, task_id:)
+    puts "added #{table}/#{name}"
+  end
+
+  add_subcmd(:rm, :remove) do |table = nil, name = nil|
+    entry = find_or_exit.call(table, name)
+    Hiiro::Tag.where(taggable_type: 'RegistryEntry', taggable_id: entry.id.to_s).delete
+    entry.destroy
+    puts "removed #{table}/#{name}"
+  end
+
+  add_subcmd(:mv) do |table = nil, new_table = nil|
+    unless table && new_table
+      warn 'Usage: h table mv <table> <new_table>'
+      exit 1
+    end
+
+    begin
+      Hiiro::Table.named(table).rename(new_table)
+    rescue Hiiro::Error => e
+      warn e.message
+      exit 1
+    end
+    puts "renamed #{table} to #{new_table}"
+  end
+
+  add_subcmd(:set) do |table = nil, name = nil, value = nil|
+    entry = find_or_exit.call(table, name)
+    entry.update(value:)
+    puts "set #{table}/#{name}"
+  end
+
+  add_subcmd(:get) do |table = nil, name = nil|
+    puts find_or_exit.call(table, name).value
+  end
+
+  add_subcmd(:tag) do |table = nil, name = nil, *tags|
+    entry = find_or_exit.call(table, name)
+    entry.tag(*tags) unless tags.empty?
+    puts "tags #{table}/#{name}: #{entry.tags.join(' ')}"
+  end
+
+  add_subcmd(:untag) do |table = nil, name = nil, *tags|
+    entry = find_or_exit.call(table, name)
+    entry.untag(*tags) unless tags.empty?
+    puts "tags #{table}/#{name}: #{entry.tags.join(' ')}"
+  end
+end

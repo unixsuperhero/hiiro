@@ -2,7 +2,7 @@
 
 Store, search, tag, and open saved URLs.
 
-Links and their tags are stored only in SQLite. Legacy `links.yml` is an explicit `h db migrate` input, not a live store or backup.
+Links live in the `link` registry table of the hiiro database (`~/.config/hiiro/hiiro.db`), one entry per URL: the URL is the entry's value, the shorthand its short name, and `created_at` sets the numbering in `ls`. Tags attach to the entry. The retired `links` table is copied into it once at setup; legacy `links.yml` is an explicit `h db migrate` input, not a live store or backup.
 
 ## Synopsis
 
@@ -22,11 +22,11 @@ h link <subcommand> [args]
 | `copy [terms]` | Pick a link and copy URL to clipboard |
 | `open [ref]` | Open a link in the browser |
 | `edit <ref>` | Edit a specific link in editor |
-| `editall` | Edit saved database links in a temporary YAML document |
+| `editall` | Edit every saved link in a temporary YAML document |
 | `rm [ref]` | Remove a link |
 | `remove [ref]` | Alias for `rm` |
 | `tags [tag]` | List links grouped by tag |
-| `path` | Print path to the links storage file |
+| `path` | Print the database path that holds the `link` table |
 
 ### add
 
@@ -126,7 +126,7 @@ h link paste "PR template" --tag github
 
 ### path
 
-Print the path to the SQLite database containing links.
+Print the hiiro database path followed by ` (table link)`, e.g. `/Users/me/.config/hiiro/hiiro.db (table link)`.
 
 **Examples**
 

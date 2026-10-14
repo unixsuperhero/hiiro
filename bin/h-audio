@@ -22,7 +22,7 @@ Hiiro.run(*ARGV) do
   add_flag :srt, short: :s
   add_flag :json, short: :j
 
-  add_cmd :transcribe, :xscribe, opts: %i[txt srt json] do
+  add_cmd :transcribe, :xscribe, flags: %i[txt srt json] do
     infile = opts.files.first
     raise Hiiro::Error, 'usage: h audio transcribe [-t] [-s] [-j] FILE' unless infile
 

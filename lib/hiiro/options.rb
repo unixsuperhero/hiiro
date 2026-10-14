@@ -128,19 +128,21 @@ class Hiiro
 
     public
 
-    def select(names)
-      names = names.map(&:to_sym).uniq
+    def select(names, flags: [], mopts: [])
       subset = self.class.setup {}
-      reserved_shorts = ['h'] + names.filter_map { |name| @definitions[name]&.short }
-      auto_shorts = names.reject { |name| @definitions.key?(name) }.map { |name| name.to_s[0] }.tally
-      names.each do |name|
-        defn = @definitions[name]
-        if defn
-          subset.definitions[name] = defn
-        else
-          short = name.to_s[0]
-          short = nil if reserved_shorts.include?(short) || auto_shorts[short] > 1
-          subset.flag(name, short: short, desc: "auto-created flag: #{name}")
+      reserved_shorts = ['h'] + @definitions.values.filter_map(&:short)
+      [[names, :option], [flags, :flag], [mopts, :multi]].each do |bucket, kind|
+        bucket.map(&:to_sym).uniq.each do |name|
+          unless @definitions.key?(name)
+            short = name.to_s.each_char.find { |char| char.match?(/[[:alnum:]]/) && !reserved_shorts.include?(char) }
+            if kind == :flag
+              flag(name, short: short)
+            else
+              option(name, short: short, multi: kind == :multi)
+            end
+            reserved_shorts << short if short
+          end
+          subset.definitions[name] = @definitions[name]
         end
       end
       subset

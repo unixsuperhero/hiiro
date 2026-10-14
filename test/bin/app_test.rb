@@ -131,7 +131,7 @@ class AppTest < Minitest::Test
       environment = {'HOME' => home, 'HIIRO_TEST_DB' => "sqlite://#{sandbox}/proof.db",
                      'HERDR_WORKSPACE_ID' => nil, 'HERDR_TAB_ID' => nil, 'HERDR_PANE_ID' => nil}
       ruby = [RbConfig.ruby, '-rbundler/setup', '-I', File.join(repo, 'lib')]
-      seed = "require 'hiiro'; Hiiro::DB.setup!; Hiiro::AppRecord.create(name: 'api', path: 'api'); Hiiro::Project.create(name: 'alpha', path: #{api.inspect})"
+      seed = "require 'hiiro'; Hiiro::DB.setup!; Hiiro::AppRecord.create(name: 'api', path: 'api'); Hiiro::Table.named('project').add('alpha', value: #{api.inspect})"
       output, error, status = Open3.capture3(environment, *ruby, '-e', seed, chdir: root)
       assert status.success?, "#{output} #{error}"
       payload = 'File.write(ARGV.shift, JSON.generate(ARGV))'

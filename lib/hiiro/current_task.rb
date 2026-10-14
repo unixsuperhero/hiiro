@@ -100,9 +100,9 @@ class Hiiro
 
     def pinned_task
       return nil unless @pin
-      saved = PinRecord.find_key('t', 'current_task')
+      saved = Table.named('t').find('current_task')
       return nil unless saved
-      TaskRecord[saved.value] || raise(Error, 'Saved task no longer exists; run t use NAME')
+      TaskRecord[saved.value.to_i] || raise(Error, 'Saved task no longer exists; run t use NAME')
     end
   end
 end

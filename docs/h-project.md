@@ -16,25 +16,26 @@ h project <subcommand> [args]
 | `list` / `ls` | List all known projects |
 | `add <name> <path>` | Save or update a project alias |
 | `rm <name>` / `remove <name>` | Remove a saved project alias |
-| `config` | Print saved project aliases as YAML |
-| `edit` | Edit a temporary projection of saved project aliases |
+| `config` | Print saved project aliases as YAML (`name: path`) |
+| `edit` | Edit the saved project aliases as a YAML buffer |
 | `select` | Choose a project with the shared picker and print its path |
 | `copy` | Choose a project with the shared picker and copy its path to the clipboard |
 | `sh <name> [cmd]` | Open a shell or run unchanged native arguments in a project directory |
 | `path [name]` / `abspath [name]` | Print the absolute project path without a newline |
 | `cd [name]` | Send `cd` to the explicit calling Herdr pane |
+| `ui [--root DIR ...]` | TUI over every git worktree, plain directory, and alias, with a detail pane and worktree add/remove |
 | `help` | Show usage |
 
 Projects are discovered from two sources:
 
 1. Directories in `~/proj/`
-2. Saved aliases in SQLite, which take precedence over directories with the same name
+2. Aliases saved in registry table `project`, which take precedence over directories with the same name
 
 The default subcommand runs `help`. Project operations construct a taskless context and never create or require a task. Resolved paths are absolute real paths; stored alias values remain unchanged. Missing directories are errors. `cd` validates captured workspace/tab/pane IDs and does not act on whichever pane has focus.
 
 ### config
 
-Print a YAML projection of saved SQLite project aliases, with `id`, `name`, and `path` for each row. Directory discovery is not included. With no saved aliases, prints `--- []`.
+Print the saved project aliases as YAML (`name: path` per line, sorted by name), or `No project aliases saved.` when there are none.
 
 **Examples**
 
@@ -54,9 +55,7 @@ h project copy
 
 ### edit
 
-Open a temporary YAML projection of saved SQLite project aliases through `InputFile`, not `projects.yml`.
-
-Keep an existing row's `id` unchanged. Omit `id` on a new row. Add `delete: true` to an existing row to delete it; omitting a row leaves it unchanged. Only changed fields are written. Unrelated rows and concurrent changes to other fields survive. A conflicting concurrent change, invalid document, or failed editor leaves the database unchanged.
+Open the saved project aliases as a YAML buffer in your editor. On save, changed paths are updated, new names are added, and removed names are deleted from table `project`. An invalid or empty buffer changes nothing and prints `No changes applied.`.
 
 **Examples**
 
@@ -124,9 +123,42 @@ Delete only the saved alias with the exact name. This does not delete its direct
 h project rm my-app
 ```
 
+### ui
+
+Open the projects screen: one flat list with a row per git worktree found under the roots, a row per plain directory with no `.git` of its own, and a row per alias from table `project`. A repo's extra worktrees read `repo ▸ tree` under the repo's main row, so `~/proj/h2` checked out from `~/proj/hiiro` is `hiiro ▸ h2`. Each row shows `NAME  BRANCH  HEAD`; plain directories and aliases show `-` for the branch. The detail pane lists the row's path, repo, branch, head, and the repo's worktrees, then `status`, `branches`, and `prs` lines that read `-` until fetched.
+
+**Roots.** `~/proj` and `~/work` (`Hiiro::WORK_DIR`) by default. `--root DIR` replaces them and may repeat. A root that is itself a repo (`~/work`, whose `.git` points at `~/work/.bare`) is one repo named after the root; its bare entry is dropped. Git runs once per repo directory at open; status, branches, and PRs load per row on request.
+
+| Key | Action |
+|-----|--------|
+| `enter` / `o` | Open the row (see below) and quit |
+| `/` | Search name, branch, and path |
+| `g` | Toggle scope between `global` (every row) and `task(@NAME)` (the current task's repo, cursor on its tree) |
+| `s` | Fetch `git status --porcelain -b` for the tree; the row gains ` *N ↑A ↓B` after the branch (zero parts omitted) |
+| `b` | Fetch the repo's local branches into the pane |
+| `p` | Fetch the repo's open PRs (`gh pr list`) into the pane |
+| `a` | Prompt `branch` then `path` (prefilled `<repo parent>/<branch basename>`) and run `git worktree add`, with `-b` when the branch is new; the new tree is selected |
+| `d` | On an extra worktree, prompt `remove PATH? (y/n)` and run `git worktree remove`; the main tree, plain dirs, and aliases answer `not a removable worktree` |
+| `y` | Copy the row path with `pbcopy` |
+| `q` / `Esc` | Quit |
+
+**Editing in a prompt.** Left, Right, Home, End, Delete, and Ctrl-U (clear) edit the text; while choices show after `▸`, Up and Down move the `[ ]` selection, Tab accepts it, and Enter accepts it before a second Enter submits. The `branch` prompt of `a` completes the row repo's local branches; `path` and the `y/n` confirmation do not complete.
+
+**Scope.** The current task is resolved like `t` does (Herdr workspace, working directory, then the `t use` pin). `g` scopes to it only when its tree (`TaskLocation#worktree_path`) is a row in the catalog; otherwise the status line says `no current task to scope to`.
+
+**Open backend.** With `TUIOS_ENV=1` the row opens as `tuios new-window NAME -s $TUIOS_SESSION --cwd PATH`; otherwise it opens the Herdr workspace `NAME` rooted at the path, the same call `h project open` makes. NAME is the row name with `.` and spaces replaced by `_` and the `▸` marker dropped. A failed open shows in the status line and the screen stays open. Fetch errors (`gh` not logged in, a directory that is not a repo) show the same way.
+
+**Examples**
+
+```bash
+h project ui
+h project ui --root ~/proj --root ~/work
+h project ui --root /tmp/scratch
+```
+
 ## Configuration
 
-Project aliases live in the `projects` table of `~/.config/hiiro/hiiro.db`, owned by `Hiiro::Project`. `h project config` prints this projection:
+Project aliases live in registry table `project` of `~/.config/hiiro/hiiro.db` (name = alias, value = path), the same rows `h table project` shows. `h project config` and `h project edit` show them in this YAML shape:
 
 ```yaml
 - id: 1
@@ -137,4 +169,4 @@ Project aliases live in the `projects` table of `~/.config/hiiro/hiiro.db`, owne
   path: /Users/me/proj/hiiro
 ```
 
-Legacy `projects.yml` is an explicit import input for `h db plan --only projects` and `h db migrate --only projects`. Project commands do not read or rewrite it. See [h-db](h-db.md) for source selection and recovery. Directory discovery in `~/proj/` remains file-based.
+The retired `projects` SQLite table is copied into table `project` once at setup. Legacy `projects.yml` is an explicit import input for `h db plan --only projects` and `h db migrate --only projects`; project commands do not read or rewrite it. See [h-db](h-db.md) for source selection and recovery. Directory discovery in `~/proj/` remains file-based.

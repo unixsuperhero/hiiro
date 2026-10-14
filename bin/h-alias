@@ -5,7 +5,7 @@ require 'hiiro'
 Hiiro.run do
   add_flag :global, short: :g, desc: 'Create a global zsh alias'
 
-  add_cmd :add, args: ['NAME', 'COMMAND...'], opts: [:global] do
+  add_cmd :add, args: ['NAME', 'COMMAND...'], flags: [:global] do
     abort 'Usage: h alias add [--global|-g] NAME COMMAND...' unless opts.args.length >= 2
     name, *command_args = opts.args
     abort 'Invalid alias name' unless /\A[A-Za-z0-9_.][A-Za-z0-9_.-]*\z/.match?(name)

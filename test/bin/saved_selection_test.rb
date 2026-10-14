@@ -111,9 +111,9 @@ class SavedSelectionTest < Minitest::Test
   end
 
   def test_bookmarks_open_copy_and_select_the_picked_link_with_its_template_filled
-    @db[:links].insert(id: 10, url: 'https://example.com/a', description: 'Docs', created_at: '2026-01-01T00:00:00Z')
-    @db[:links].insert(id: 11, url: 'https://example.com/{org}/{repo}', description: 'Docs', created_at: '2026-01-02T00:00:00Z')
-    @db[:links].insert(id: 12, url: 'https://other.test', description: 'Other', created_at: '2026-01-03T00:00:00Z')
+    @db[:registry].insert(id: 10, resource_type: 'link', name: 'Docs', value: 'https://example.com/a', description: 'Docs', created_at: '2026-01-01T00:00:00Z')
+    @db[:registry].insert(id: 11, resource_type: 'link', name: 'https://example.com/{org}/{repo}', value: 'https://example.com/{org}/{repo}', description: 'Docs', created_at: '2026-01-02T00:00:00Z')
+    @db[:registry].insert(id: 12, resource_type: 'link', name: 'Other', value: 'https://other.test', description: 'Other', created_at: '2026-01-03T00:00:00Z')
     values = File.join(@root, 'values.yml')
     File.write(values, "org: a b\nrepo: r\n")
 
@@ -144,7 +144,7 @@ class SavedSelectionTest < Minitest::Test
     assert_match(%r{\A\(\S+link-params-\S+\.yml\): did not find expected ',' or '\]' while parsing a flow sequence at line 1 column 6; edited text kept at #{Regexp.escape(@home)}/\.local/share/hiiro/edits/link-params-\d{14}-\h{6}\.yml\n\z}, err)
     assert_equal "org: [unclosed\n", File.read(kept)
     assert_empty lines('open')
-    assert_equal [10, 11, 12], @db[:links].order(:id).select_map(:id)
+    assert_equal [10, 11, 12], @db[:registry].where(resource_type: 'link').order(:id).select_map(:id)
   end
 
   def obsidian_vault

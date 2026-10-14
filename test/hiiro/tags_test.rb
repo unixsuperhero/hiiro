@@ -18,7 +18,7 @@ class TagsTest < Minitest::Test
   def test_name_namespaces_and_model_ids_resolve_the_exact_relations
     branch = persist(Hiiro::Branch, name: "0042")
     task = persist(Hiiro::TaskRecord, name: "0042")
-    link = persist(Hiiro::Link, url: "https://tag-test.example")
+    link = persist(Hiiro::RegistryEntry, resource_type: "link", name: "https://tag-test.example", value: "https://tag-test.example")
     entry = persist(Hiiro::RegistryEntry, resource_type: "tag-test", name: "saved", task_id: task.id)
 
     Hiiro::Tags.new(:branch).add("0042", "branch-name")
@@ -28,7 +28,7 @@ class TagsTest < Minitest::Test
     entry.tag("entry-record")
 
     assert_equal [["Branch", "0042"], ["Task", "0042"], ["TaskRecord", task.id.to_s],
-      ["Link", link.id.to_s], ["RegistryEntry", entry.id.to_s]],
+      ["RegistryEntry", link.id.to_s], ["RegistryEntry", entry.id.to_s]],
       Hiiro::Tag.order(:id).select_map([:taggable_type, :taggable_id])
     assert_equal [branch, task, task, link, entry], Hiiro::Tag.order(:id).map(&:taggable)
     assert_equal ["task-name"], Hiiro::Tags.new(:task).get("0042")
@@ -61,9 +61,9 @@ class TagsTest < Minitest::Test
   end
 
   def test_stale_object_mutation_preserves_other_objects_and_tag_ids
-    link = persist(Hiiro::Link, url: "https://tag-test.example/first")
-    other = persist(Hiiro::Link, url: "https://tag-test.example/second")
-    stale = Hiiro::Link[link.id]
+    link = persist(Hiiro::RegistryEntry, resource_type: "link", name: "https://tag-test.example/first", value: "https://tag-test.example/first")
+    other = persist(Hiiro::RegistryEntry, resource_type: "link", name: "https://tag-test.example/second", value: "https://tag-test.example/second")
+    stale = Hiiro::RegistryEntry[link.id]
     Hiiro::Tag.tag!(stale, "work", "review")
     retained_id = Hiiro::Tag.for(link).where(name: "work").get(:id)
     Hiiro::Tag.tag!(link, "urgent")
@@ -72,14 +72,14 @@ class TagsTest < Minitest::Test
     Hiiro::Tag.untag!(stale, "review")
     Hiiro::Tag.tag!(stale, "work")
 
-    assert_equal %w[urgent work], Hiiro::Link[link.id].tags.sort
-    assert_equal ["review"], Hiiro::Link[other.id].tags
+    assert_equal %w[urgent work], Hiiro::RegistryEntry[link.id].tags.sort
+    assert_equal ["review"], Hiiro::RegistryEntry[other.id].tags
     assert_equal retained_id, Hiiro::Tag.for(link).where(name: "work").get(:id)
   end
 
   def test_multi_tag_assignment_rolls_back_on_a_database_rejection
     store = Hiiro::Tags.new(:branch)
-    link = persist(Hiiro::Link, url: "https://tag-test.example/atomic")
+    link = persist(Hiiro::RegistryEntry, resource_type: "link", name: "https://tag-test.example/atomic", value: "https://tag-test.example/atomic")
     store.add("alpha", "kept")
     Hiiro::Tag.tag!(link, "kept")
     Hiiro::Tag.db.run("CREATE TEMP TRIGGER reject_tag BEFORE INSERT ON tags WHEN NEW.name = 'rejected' BEGIN SELECT RAISE(ABORT, 'rejected tag'); END")
@@ -87,21 +87,21 @@ class TagsTest < Minitest::Test
     assert_raises(Sequel::DatabaseError) { store.add("alpha", "partial", "rejected") }
     assert_raises(Sequel::DatabaseError) { Hiiro::Tag.tag!(link, "partial", "rejected") }
     assert_equal ["kept"], store.get("alpha")
-    assert_equal ["kept"], Hiiro::Link[link.id].tags
+    assert_equal ["kept"], Hiiro::RegistryEntry[link.id].tags
   ensure
     Hiiro::Tag.db.run("DROP TRIGGER IF EXISTS reject_tag")
   end
 
   def test_search_returns_distinct_names_and_resolves_only_the_requested_type
-    first = persist(Hiiro::Link, url: "https://tag-test.example/search-one")
-    second = persist(Hiiro::Link, url: "https://tag-test.example/search-two")
+    first = persist(Hiiro::RegistryEntry, resource_type: "link", name: "https://tag-test.example/search-one", value: "https://tag-test.example/search-one")
+    second = persist(Hiiro::RegistryEntry, resource_type: "link", name: "https://tag-test.example/search-two", value: "https://tag-test.example/search-two")
     Hiiro::Tag.tag!(first, "work", "urgent")
     Hiiro::Tag.tag!(second, "work")
     Hiiro::Tags.new(:branch).add("alpha", "branch-only")
 
-    assert_equal %w[urgent work], Hiiro::Tag.search(type: "Link")
-    assert_equal ["work"], Hiiro::Tag.search(["wor"], type: "Link")
-    assert_equal [first, second], Hiiro::Tag.tagged_by_type("work", "Link")
+    assert_equal %w[urgent work], Hiiro::Tag.search(type: "RegistryEntry")
+    assert_equal ["work"], Hiiro::Tag.search(["wor"], type: "RegistryEntry")
+    assert_equal [first, second], Hiiro::Tag.tagged_by_type("work", "RegistryEntry")
     assert_equal %w[branch-only urgent work], Hiiro::Tag.tags_by_type
     assert_equal ["branch-only"], Hiiro::Tags.new(:branch).known_tags
   end

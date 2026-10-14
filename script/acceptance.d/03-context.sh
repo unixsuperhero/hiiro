@@ -146,7 +146,7 @@ $SB/repo-b
 EOF
 )" run_cwds
 
-final_rows() { qi 'select name, tree, primary_directory from tasks order by name'; qi 'select task_id, kind, target from task_resources'; qi 'select task_name, text, status from todos'; qi 'select command, key, value_json, value_format from pins'; }
+final_rows() { qi 'select name, tree, primary_directory from tasks order by name'; qi 'select task_id, kind, target from task_resources'; qi 'select task_name, text, status from todos'; qi "select resource_type, name, value from registry where resource_type = 't'"; }
 # --- nothing created a worktree or changed refs; one invocation per command was recorded
 state "both repositories still list exactly one worktree" "$(cat <<'EOF'
 $SB/repo-a
@@ -154,12 +154,12 @@ $SB/repo-b
 EOF
 )" /bin/bash -c "for r in repo-a repo-b; do /usr/bin/git -C $SB/\$r worktree list --porcelain | /usr/bin/sed -n 's/^worktree //p'; done"
 state "refs and branch config unchanged by every command above" "$before_refs" refs
-state "task rows unchanged; alpha's resource, the todo, and the t use pin (beta = task id 3, typed json) are stored" "$(cat <<'EOF'
+state "task rows unchanged; alpha's resource, the todo, and the t use pin (beta = task id 3, in table t) are stored" "$(cat <<'EOF'
 alpha||$SB/repo-a
 alpine||
 beta|$SB/repo-b|
 1|directory|$SB/repo-a
 alpha|write tests|not_started
-t|current_task|3|json
+t|current_task|3
 EOF
 )" final_rows

@@ -13,28 +13,29 @@ class Hiiro
     PARSER_VERSION = 1
     OWNED_STORES = {
       todos: ['todo.yml', :todos, 'TodoItem', 'id'],
-      links: ['links.yml', :links, 'Link', 'url'],
+      links: ['links.yml', :registry, 'RegistryEntry', 'link/url'],
       branches: ['branches.yml', :branches, 'Branch', 'name/worktree'],
       prs: ['prs.yml', :prs, 'PinnedPr', 'repo/number'],
       pinned_prs: ['pinned_prs.yml or sqlite:pinned_prs (retained legacy table)', :prs, 'PinnedPr', 'repo/number'],
       tasks: ['tasks/tasks.yml + tasks/task_*.yml', :tasks, 'TaskRecord', 'name'],
       assignments: ['tasks/assignments.yml', :assignments, 'Assignment', 'worktree'],
       apps: ['apps.yml', :apps, 'AppRecord', 'name'],
-      projects: ['projects.yml', :projects, 'Project', 'name'],
+      projects: ['projects.yml', :registry, 'RegistryEntry', 'project/name'],
       pane_homes: ['pane_homes.yml', :pane_homes, 'PaneHome', 'name'],
-      pins: ['pins/<command>[.yml]', :pins, 'PinRecord', 'command/key'],
+      pins: ['pins/<command>[.yml]', :registry, 'RegistryEntry', '<command>/key'],
+      sounds: ['sounds.yml', :registry, 'RegistryEntry', 'sound/name'],
       reminders: ['reminders.yml', :reminders, 'Reminder', 'id or source ordinal'],
       tags: ['tags.yml', :tags, 'Tag', 'name/type/record ID']
     }.freeze
     NATURAL_KEYS = {
-      links: %i[url], branches: %i[name worktree], prs: %i[repo number], tasks: %i[name],
-      assignments: %i[worktree], apps: %i[name], projects: %i[name], pane_homes: %i[name],
-      pins: %i[command key], tags: %i[name taggable_type taggable_id],
+      branches: %i[name worktree], prs: %i[repo number], tasks: %i[name],
+      assignments: %i[worktree], apps: %i[name], pane_homes: %i[name],
+      tags: %i[name taggable_type taggable_id],
       task_resources: %i[task_id kind target], registry: %i[resource_type name]
     }.freeze
     TAG_OWNERS = {'branch' => [:branches, 'Branch', :name], 'task' => [:tasks, 'Task', :name],
                   'pr' => [:prs, 'PinnedPr', :id], 'pinned_pr' => [:prs, 'PinnedPr', :id],
-                  'link' => [:links, 'Link', :id], 'task_record' => [:tasks, 'TaskRecord', :id],
+                  'link' => [:registry, 'RegistryEntry', :id, {resource_type: 'link'}], 'task_record' => [:tasks, 'TaskRecord', :id],
                   'registry_entry' => [:registry, 'RegistryEntry', :id]}.freeze
     class ImportError < StandardError; end
 
@@ -67,6 +68,10 @@ class Hiiro
           end
           MODELS.each { |cls| install(conn, cls) }
           ensure_todo_allocator!
+          unless conn[:schema_migrations].where(name: 'registry_tables_v1').count.positive?
+            import_legacy_tables!
+            conn[:schema_migrations].insert(name: 'registry_tables_v1', ran_at: Time.now.iso8601)
+          end
           # MCPRegistry (lib/hiiro/mcp/registry.rb) owns these rows; the schema is
           # here so export and restore know the table before h mcp first runs.
           conn.create_table?(:mcps) do
@@ -111,6 +116,24 @@ class Hiiro
       def migrated?
         setup!
         connection[:schema_migrations].where(name: 'owned_yaml_import_v1').count.positive?
+      end
+
+      # Registry name for a link: shorthand, else description, else the url.
+      # Falls back to the url when another link already holds that name.
+      def link_name(url, shorthand, description)
+        preferred = [shorthand, description, url].map(&:to_s).find { |s| !s.empty? }
+        holder = connection[:registry].where(resource_type: 'link', name: preferred).get(:value)
+        holder.nil? || holder == url ? preferred : url
+      end
+
+      # Rows of the retired `pins`, `links`, and `projects` tables (written by
+      # hiiro before 0.1.392) become registry entries. The tables are left in
+      # place; every row is skipped when its entry already exists, so this is
+      # safe to repeat. Legacy YAML files are explicit `h db migrate` inputs.
+      def import_legacy_tables!
+        import_legacy_pins_table
+        import_legacy_links_table
+        import_legacy_projects_table
       end
 
       def owned_store_manifest
@@ -197,6 +220,7 @@ class Hiiro
         setup!
         payload = connection.transaction do
           tables = export_tables.to_h { |table| [table.to_s, connection[table].order(*connection.schema(table).map(&:first)).all] }
+          tables['schema_migrations']&.reject! { |row| row[:name] == 'registry_tables_v1' }
           pr_columns = %i[prs pinned_prs].select { |table| connection.table_exists?(table) }.to_h do |table|
             [table.to_s, connection.schema(table).map { |name, info| {name: name.to_s, type: info[:type].to_s, null: info[:allow_null]} }]
           end
@@ -308,7 +332,7 @@ class Hiiro
       end
 
       def export_tables
-        %i[tasks prs registry todos links branches assignments apps projects pane_homes pins reminders tags task_resources check_runs captures
+        %i[tasks prs registry todos branches assignments apps pane_homes reminders tags task_resources check_runs captures
            pr_monitor_checkpoints job_claims job_outcomes schedule_checkpoints picker_exclusions mcps schema_migrations migration_sources migration_rows pinned_prs].select { |table| connection.table_exists?(table) }
       end
 
@@ -393,7 +417,7 @@ class Hiiro
 
       def row_digest(table, row)
         typed = row.to_h do |key, value|
-          if key.to_s.end_with?('_json') && value && !(table == :pins && row[:value_format] == 'legacy')
+          if key.to_s.end_with?('_json') && value
             [key, ::JSON.parse(value)]
           else
             [key, value]
@@ -477,19 +501,27 @@ class Hiiro
         location = entry[:path]
         rows = case store
         when :pins
-          command = File.basename(entry[:logical])
+          # pins/h-sha becomes table `sha`; scalars are stored as text, collections as JSON.
+          type = File.basename(entry[:logical]).delete_prefix('h-')
           require_hash(data, location).map do |key, value|
             valid_pin_value!(value)
-            {command: command, key: key, value_json: ::JSON.generate(value), value_format: 'json'}
+            {resource_type: type, name: key, value: value.is_a?(Hash) || value.is_a?(Array) ? ::JSON.generate(value) : value.to_s}
           end
+        when :links
+          return parse_links(data, location)
         when :pane_homes
           require_hash(data, location).map { |name, info| {name: name, data_json: ::JSON.generate(require_hash(info, location))} }
-        when :apps, :projects, :assignments
+        when :apps, :projects, :sounds, :assignments
           mapping = require_hash(data, location)
           mapping = require_hash(mapping['apps'], location) if store == :apps && mapping.keys == ['apps']
           mapping.map do |key, value|
             raise ImportError, "#{location}: #{key} must be a string" unless value.is_a?(String)
-            store == :assignments ? {worktree: key, branch: value} : {name: key, path: value}
+            case store
+            when :assignments then {worktree: key, branch: value}
+            when :projects then {resource_type: 'project', name: key, value: value}
+            when :sounds then {resource_type: 'sound', name: key, value: value}
+            else {name: key, path: value}
+            end
           end
         when :tags
           return require_hash(data, location).flat_map do |namespace, mapping|
@@ -567,18 +599,45 @@ class Hiiro
                          task_name: row[:name], locator: "row:#{index}/resource:#{ordinal}"}
             end
           end
-          if table == :links && row[:tags_json]
-            tags = ::JSON.parse(row[:tags_json])
-            require_array(tags, location).each_with_index do |tag, ordinal|
-              result << {table: :tags, attributes: {name: tag, taggable_type: 'Link'},
-                         tag_owner: [:links, 'Link', :url], tag_identity: row[:url], tag_by_natural: true,
+          result
+        end
+      rescue KeyError => error
+        raise ImportError, "#{location}: missing #{error.key}"
+      end
+
+      # links.yml rows become `link` registry entries: url → value, shorthand →
+      # short_name, description, created_at. Names follow link_name; a name
+      # taken earlier in the same file falls back to the url. Inline tags
+      # attach to the entry by its url.
+      def parse_links(data, location)
+        taken = []
+        require_array(data, location).each_with_index.flat_map do |raw, index|
+          row = require_hash(raw, "#{location}/#{index}")
+          url = row['url']
+          raise ImportError, "#{location}/#{index}: a link needs a url" unless url.is_a?(String) && !url.strip.empty?
+          unknown = row.keys - %w[id url description shorthand created_at tags]
+          raise ImportError, "#{location}/#{index}: unsupported fields #{unknown.join(', ')}" unless unknown.empty?
+          shorthand = row['shorthand'].to_s.empty? ? nil : row['shorthand'].to_s
+          description = row['description'].to_s
+          name = link_name(url, shorthand, description)
+          name = url if taken.include?(name)
+          taken << name
+          created = row['created_at']
+          created = created.iso8601 if created.is_a?(Time) || created.is_a?(Date)
+          attributes = {resource_type: 'link', name: name, value: url, short_name: shorthand, description: description,
+                        created_at: created&.to_s || Time.now.iso8601}
+          attributes[:id] = row['id'] if row.key?('id')
+          result = [{table: :registry, attributes: attributes, natural_by: :value, locator: row.key?('id') ? "id:#{row['id']}" : "row:#{index}"}]
+          if row['tags']
+            require_array(row['tags'], location).each_with_index do |tag, ordinal|
+              raise ImportError, "#{location}/#{index}: tags must be strings" unless tag.is_a?(String)
+              result << {table: :tags, attributes: {name: tag, taggable_type: 'RegistryEntry'},
+                         tag_owner: [:registry, 'RegistryEntry', :value, {resource_type: 'link'}], tag_identity: url, tag_by_natural: true,
                          locator: "row:#{index}/tag:#{ordinal}"}
             end
           end
           result
         end
-      rescue KeyError => error
-        raise ImportError, "#{location}: missing #{error.key}"
       end
 
       def apply_entries!(plan)
@@ -610,23 +669,16 @@ class Hiiro
               row[:task_id] = task[:id]
             end
             if item[:tag_owner]
-              owner_table, _, name_key = item[:tag_owner]
-              candidates = connection[owner_table].where(name_key => item[:tag_identity]).all
+              owner_table, _, name_key, scope = item[:tag_owner]
+              candidates = connection[owner_table].where((scope || {}).merge(name_key => item[:tag_identity])).all
               raise ImportError, "Unresolved or ambiguous tag identity: #{item[:tag_identity]}" unless candidates.length == 1
               row[:taggable_id] = item[:tag_by_natural] ? candidates.first[:id].to_s : item[:tag_identity]
             end
             validate_row!(table, row)
-            existing = natural_match(table, row)
+            existing = natural_match(table, row, natural_by: item[:natural_by])
             by_id = row[:id] && connection[table].where(id: row[:id]).first
             raise ImportError, "ID/natural identity collision: #{table}/#{row[:id]}" if by_id && existing && by_id[:id] != existing[:id]
             existing ||= by_id
-            if existing && table == :pins && existing[:value_format] == 'legacy'
-              typed = ::JSON.parse(row[:value_json])
-              old_encoding = typed.nil? ? nil : (typed.is_a?(String) ? typed : ::JSON.generate(typed))
-              raise ImportError, "Ambiguous legacy pin: #{row[:command]}/#{row[:key]}" unless existing[:value_json] == old_encoding
-              connection[:pins].where(id: existing[:id]).update(value_json: row[:value_json], value_format: 'json')
-              existing = connection[:pins].where(id: existing[:id]).first
-            end
             if existing
               mismatch = row.keys.reject { |key| field_equal?(key, existing[key], row[key]) }
               raise ImportError, "Canonical conflict: #{table}/#{existing[:id]} fields #{mismatch.join(', ')}" unless mismatch.empty?
@@ -655,22 +707,19 @@ class Hiiro
           mappings.each { |mapping| connection[:migration_rows].insert(mapping.merge(source_id: source_id)) }
           plan[:report] << {source: entry[:path], status: 'verified', rows: mappings.length}
         end
-        if plan[:stores].include?(:pins)
-          ambiguous = Hiiro::PinRecord.where(value_format: 'legacy').all.select(&:legacy_ambiguous?)
-          unless ambiguous.empty?
-            raise ImportError, "Ambiguous legacy pins lack reliable typed source: #{ambiguous.map { |pin| "#{pin.command}/#{pin.key}" }.join(', ')}"
-          end
-        end
       rescue Sequel::Error => error
         raise ImportError, "Import rejected: #{error.message}"
       end
 
-      def natural_match(table, row)
+      def natural_match(table, row, natural_by: nil)
         keys = NATURAL_KEYS[table]
         return nil unless keys && keys.all? { |key| row.key?(key) }
         candidates = if table == :prs
           identity = Hiiro::RepositoryIdentity.parse(row[:repo] || row[:url])
           connection[:prs].where(number: row[:number]).all.select { |candidate| Hiiro::RepositoryIdentity.parse(candidate[:repo] || candidate[:url]) == identity }
+        elsif table == :registry && row[:resource_type] == 'link' && natural_by == :value
+          by_url = connection[:registry].where(resource_type: 'link', value: row[:value]).all
+          by_url.empty? ? connection[:registry].where(row.slice(*keys)).all : by_url
         else
           connection[table].where(row.slice(*keys)).all
         end
@@ -696,7 +745,7 @@ class Hiiro
           else false
           end
           raise ImportError, "#{table}/#{key}: invalid #{info[:type]} value" unless valid
-          if key.to_s.end_with?('_json') && !(table == :pins && row[:value_format] == 'legacy')
+          if key.to_s.end_with?('_json')
             decoded = ::JSON.parse(value)
             shape = case key
             when :tags_json, :depends_on_json, :check_runs_json, :review_nodes_json then Array
@@ -737,11 +786,84 @@ class Hiiro
         if model && identity.key?(:id)
           loaded = model[identity[:id]]
           raise ImportError, "Owner reload mismatch: #{table}/#{identity}" unless loaded && loaded.values == actual
-          if table == :pins && actual[:value_format] == 'json'
-            raise ImportError, 'Pin typed reload mismatch' unless loaded.value == ::JSON.parse(actual[:value_json])
-          end
         end
         actual
+      end
+
+      def insert_registry_row(resource_type, name, value)
+        rows = connection[:registry]
+        return if rows.where(resource_type: resource_type, name: name).count > 0
+
+        rows.insert(resource_type: resource_type, name: name, value: value, created_at: Time.now.iso8601)
+      end
+
+      def import_legacy_pins_table
+        return unless connection.table_exists?(:pins)
+
+        connection[:pins].each do |row|
+          insert_registry_row(row[:command].to_s.delete_prefix('h-'), row[:key], row[:value_json])
+        end
+      rescue Sequel::Error => e
+        warn "Hiiro::DB: failed to import pins table: #{e}"
+      end
+
+      def import_legacy_links_table
+        return unless connection.table_exists?(:links)
+
+        new_ids = connection[:links].order(:id).each_with_object({}) do |row, ids|
+          id = insert_link_row(row[:url], row[:shorthand], row[:description], row[:created_at])
+          ids[row[:id].to_s] = id if id
+        end
+        copy_link_tags(new_ids)
+      rescue Sequel::Error => e
+        warn "Hiiro::DB: failed to import links table: #{e}"
+      end
+
+      def import_legacy_projects_table
+        return unless connection.table_exists?(:projects)
+
+        connection[:projects].order(:name).each do |row|
+          insert_registry_row('project', row[:name].to_s, row[:path].to_s)
+        end
+      rescue Sequel::Error => e
+        warn "Hiiro::DB: failed to import projects table: #{e}"
+      end
+
+      # Returns the id of the row holding url (new or already present), or nil.
+      def insert_link_row(url, shorthand, description, created_at)
+        url = url.to_s
+        return if url.empty?
+
+        rows = connection[:registry].where(resource_type: 'link')
+        existing = rows.where(value: url).get(:id)
+        return existing if existing
+
+        name = link_name(url, shorthand, description)
+        return if rows.where(name: name).count > 0
+
+        created_at = created_at.iso8601 if created_at.respond_to?(:iso8601)
+        connection[:registry].insert(
+          resource_type: 'link',
+          name:          name,
+          value:         url,
+          short_name:    shorthand.to_s.empty? ? nil : shorthand.to_s,
+          description:   description,
+          created_at:    created_at&.to_s || Time.now.iso8601
+        )
+      end
+
+      # Copies rather than moves the 'Link' tags so the retired table stays intact.
+      def copy_link_tags(new_ids)
+        return unless connection.table_exists?(:tags)
+
+        tags = connection[:tags]
+        tags.where(taggable_type: 'Link').order(:id).all.each do |t|
+          new_id = new_ids[t[:taggable_id].to_s] or next
+          target = { name: t[:name], taggable_type: 'RegistryEntry', taggable_id: new_id.to_s }
+          next if tags.where(target).count > 0
+
+          tags.insert(target.merge(created_at: t[:created_at]))
+        end
       end
 
       def validate_relations!

@@ -57,12 +57,14 @@ class Hiiro
     'task_cli' => %i[TaskCli], 'task_location' => %i[TaskLocation], 'task_sessions' => %i[TaskSessions],
     'tasks' => %i[TaskManager SparseGroups Tree Task App Environment],
     'time_input' => %i[TimeInput], 'tui' => %i[Tui], 'tuios' => %i[Tuios],
+    'link' => %i[URLTemplate], 'completions' => %i[Completions], 'table_screen' => %i[TableScreen], 'task_screen' => %i[TaskScreen],
+    'project_catalog' => %i[ProjectCatalog], 'project_screen' => %i[ProjectScreen], 'tuios_listing' => %i[TuiosListing], 'tuios_screen' => %i[TuiosScreen],
     'profile' => %i[Profile], 'time_commands' => %i[TimeCommands], 'codec' => %i[Codec],
     'environment_assignment' => %i[EnvironmentAssignment], 'text_inspection' => %i[TextInspection],
     'media' => %i[Media], 'cast' => %i[Cast], 'screen_capture' => %i[ScreenCapture],
     'directory_profile' => %i[DirectoryProfile], 'commit_log' => %i[CommitLog],
-    'persistence' => %i[DB AppRecord Assignment Branch Capture CheckRun Invocation InvocationResolution Link
-                        URLTemplate PaneHome PinRecord PinnedPr PrMonitorCheckpoint Project RegistryEntry Reminder Tag Tags
+    'persistence' => %i[DB AppRecord Assignment Branch Capture CheckRun Invocation InvocationResolution
+                        PaneHome PinnedPr PrMonitorCheckpoint RegistryEntry Reminder Tag Tags
                         TaskRecord TaskResource TodoItem TodoManager Job JobClaim JobOutcome Schedule ScheduleCheckpoint
                         PickerExclusion]
   }.freeze
@@ -367,8 +369,8 @@ class Hiiro
 
   def tuios = @tuios ||= Hiiro::Tuios.new
 
-  def add_cmd(*names, args: [], opts: [], passthrough: false, &block)
-    cmd_opts = options.select(opts)
+  def add_cmd(*names, args: [], opts: [], flags: [], mopts: [], passthrough: false, &block)
+    cmd_opts = options.select(opts, flags: flags, mopts: mopts)
 
     wrapper = lambda do |*raw_args|
       next instance_eval(&block) if passthrough

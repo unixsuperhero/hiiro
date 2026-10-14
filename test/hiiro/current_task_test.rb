@@ -4,7 +4,7 @@ class CurrentTaskTest < Minitest::Test
   def setup
     Hiiro::TaskResource.dataset.delete
     Hiiro::TaskRecord.dataset.delete
-    Hiiro::PinRecord.dataset.delete
+    Hiiro::RegistryEntry.dataset.delete
     @dir = File.realpath(Dir.mktmpdir("hiiro-current-task-"))
   end
 
@@ -12,7 +12,7 @@ class CurrentTaskTest < Minitest::Test
     FileUtils.remove_entry(@dir)
     Hiiro::TaskResource.dataset.delete
     Hiiro::TaskRecord.dataset.delete
-    Hiiro::PinRecord.dataset.delete
+    Hiiro::RegistryEntry.dataset.delete
   end
 
   def test_resolves_task_from_working_directory_inside_code_or_registered_directory
@@ -41,7 +41,7 @@ class CurrentTaskTest < Minitest::Test
 
   def test_saved_pin_is_used_only_when_enabled
     task = Hiiro::TaskRecord.create(name: "pinned")
-    Hiiro::PinRecord.create(command: "t", key: "current_task", value_json: task.id.to_s)
+    Hiiro::Table.named("t").add("current_task", value: task.id.to_s)
 
     assert_nil Hiiro::CurrentTask.new(cwd: @dir, pin: false).resolve
     assert_equal "pinned", Hiiro::CurrentTask.new(cwd: @dir, pin: true).resolve!.name
@@ -66,7 +66,7 @@ class CurrentTaskTest < Minitest::Test
 
   def test_stale_pin_is_an_error_but_explicit_task_bypasses_it
     task = Hiiro::TaskRecord.create(name: 'selected')
-    Hiiro::PinRecord.set('t', 'current_task', 999999)
+    Hiiro::Table.named('t').add('current_task', value: '999999')
     assert_raises(Hiiro::Error) { Hiiro::CurrentTask.new(cwd: @dir, env: {}).resolve }
     context = Hiiro::CurrentTask.new(task: 'selected', cwd: @dir, env: {}).context
     assert_equal [task.id, :explicit], [context.task.id, context.task_source]

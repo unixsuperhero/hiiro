@@ -1,5 +1,7 @@
 class Hiiro
   class Projects
+    TABLE = 'project'
+
     def self.add_resolvers(hiiro)
       projects = new
       hiiro.add_resolver(:project, -> { projects.context(selection: projects.pick(chooser: chooser(hiiro))).start_directory }) do |name|
@@ -18,17 +20,28 @@ class Hiiro
       }.to_h
     end
 
+    # Saved aliases: registry table `project`, name => path.
     def from_config
-      Project.all_as_hash
+      table.entries.to_h { |entry| [entry.name, entry.value] }
     end
 
+    def alias_entry(name) = RegistryEntry.where(resource_type: TABLE, name: name.to_s).first
+
     def save_project(name, path)
-      existing = Project.find_by_name(name)
+      existing = alias_entry(name)
       if existing
-        existing.update(path: path.to_s)
+        existing.update(value: path.to_s)
       else
-        Project.create(name: name.to_s, path: path.to_s)
+        table.add(name.to_s, value: path.to_s)
       end
+    end
+
+    def remove_project(name)
+      entry = alias_entry(name)
+      return false unless entry
+      Tag.where(taggable_type: 'RegistryEntry', taggable_id: entry.id.to_s).delete
+      entry.destroy
+      true
     end
 
     def from_config?(name)
@@ -71,12 +84,17 @@ class Hiiro
       File.expand_path(path)
     end
 
+    # The project identity is the saved alias row when one exists, else the name.
     def context(name = nil, chooser: Projects.chooser, tty: $stdin.tty?, invocation_directory: Dir.pwd,
                 terminal: Herdr::Location.from_env, selection: nil)
       project_name, path = selection || resolve(name, chooser: chooser, tty: tty)
-      identity = Project.find_by_name(project_name) || project_name
+      identity = alias_entry(project_name) || project_name
       TaskLocation.for(nil, root: path, root_source: :project, project: identity,
                        invocation_directory: invocation_directory, terminal: terminal)
     end
+
+    private
+
+    def table = Table.named(TABLE)
   end
 end

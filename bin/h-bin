@@ -44,7 +44,7 @@ Hiiro.run do
     puts root.call.catalog.complete(word)
   end
 
-  add_cmd :docs, opts: %i[json] do
+  add_cmd :docs, flags: %i[json] do
     catalog = root.call.catalog
     puts opts.json ? catalog.to_json : catalog.to_markdown
   end
