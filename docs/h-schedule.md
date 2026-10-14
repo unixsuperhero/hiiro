@@ -111,6 +111,8 @@ Notifications (`notify: failures|always`) are sent after the outcome is recorded
 
 `enable` writes `~/Library/LaunchAgents/LABEL.plist` and runs `launchctl bootstrap gui/UID PLIST`; the label is `com.hiiro.schedule.NAME` (`HIIRO_LAUNCHD_PREFIX` changes the prefix). The plist runs `ruby -I LIB …/bin/h-schedule run NAME --scheduled` with absolute paths, the definition's `cwd`, and only `HOME`, `LANG`, `PATH` plus the definition's `env`. launchd wakes it every `every` seconds (every 60 seconds for wall-clock schedules, which then run only when an occurrence is due); its own output goes to `~/.local/share/hiiro/schedules/NAME.launchd.log`. If bootstrap fails the plist is removed, the error is printed, and the schedule stays disabled. `disable` runs `launchctl bootout gui/UID/LABEL` and removes that plist. No other file in LaunchAgents and no other label is read or changed.
 
+The plist names the interpreter that ran `enable` (`RbConfig.ruby`), so the job runs whatever Ruby you enabled it with. If launchd starts the job but `h schedule status NAME` stays at `state=running … (never exited)` with no new outcome, that Ruby did not finish loading under launchd. On a machine whose Ruby lives on an external volume this was seen once (the process waited in the dynamic loader) and did not recur; a Ruby on the internal disk ran scheduled jobs normally. `enable` from such a Ruby (passing any `GEM_HOME`/`GEM_PATH`/`RUBYLIB` it needs through the definition's `env:`) is the workaround.
+
 `run NAME --scheduled` does nothing unless the schedule is enabled, so a leftover plist cannot run a disabled schedule. `run NAME` without it is a manual run of the current occurrence.
 
 ```text
