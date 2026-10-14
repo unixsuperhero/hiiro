@@ -19,6 +19,8 @@
 ## Unreleased
 
 ### Added
+- `script/acceptance [-o OUT] [NN ...]`: rerunnable isolated end-to-end acceptance (scenarios in `script/acceptance.d/`): each scenario gets a disposable HOME with the default file database, data roots, gem home, a recording-fixture PATH, and `env -i`; every check prints its literal expected value before the command and records `pass`/`FAIL`/`incomplete` in `OUT/results.tsv`. Covers migration and reload, task context, owned launches, artifacts and recurring jobs, commit planning and PR snapshots, the picker in real terminal windows, the installed gem, and an unchanged live home. See README "End-to-end acceptance".
+- Tests wait for or kill every child process (`test/support/child_guard.rb`): an `Open3`/`PTY.spawn` child running past `HIIRO_TEST_CHILD_LIMIT` seconds (default 300) is killed with its tree and fails its test, a test that leaves a descendant running fails, and the end of a run kills any left.
 - `h encode` / `h decode` (clone-owned, from the installed filters): one `Hiiro::Codec` table for `base64`/`b64`, `base64url`/`b64url` (unpadded), `hex`/`base16`/`b16`, `uri`/`url`/`percent`, `form`/`query`, `html`/`html-entities`, `json`/`json-string`, `rot13`; input from a file, `-`, piped stdin, or the clipboard; binary-safe, no added newline; malformed input prints `Decode failed: ...` and exits 1 with no output.
 - `h ruby iface` / `h iface rb` (clone-owned): one `Hiiro::TextInspection` over the groups `class`, `attributes`, `methods`, `accessmodifiers`, `tests`, `lets`, `hiiro`, and the aliases `all` and `iface` (the default); exact or unique-prefix group names, in-process patterns (no `rg`, no `/tmp/patterns`).
 - `h audio` (`clips` over the `clip_to` preset, `length` with the old `*_length` names as aliases, `transcribe`/`xscribe` as a profile-configured adapter), `h screencap`, `h crop` (the amber-border Python adapter), and `h asciinema` (dated casts through `Hiiro::Cast`) are clone-owned recipes. The installed `audio map`/`times` debugger bodies are not ported.
@@ -76,6 +78,11 @@
 - The ISC code freeze is applied as a policy when checks are counted; GitHub's raw contexts are stored unchanged and `ls -C` shows both. When `isc` is unavailable GitHub's state stands (it was previously forced to success).
 
 ### Fixed
+- `h pr track` records the task (and its worktree) of the directory it runs in, and `h pr for-task` with no name lists the current directory's task; both named an undefined top-level `Environment`, so `track` stored no task and `for-task` always asked for a name.
+- `h save` inbox names stop at `-1000`: the candidate list was endless, so a write error mistaken for a taken name could spin forever (an orphaned `h save` from a test once ran at 80% CPU for hours). All names taken now fails with `PATH already exists`.
+- A detached owned launch (`h bg run`, a detached `h service start`) no longer keeps the caller's stdout and stderr open: the supervisor and child write `~/.local/share/hiiro/runs/RUN_ID.log`, so `out=$(h service start web)` or `h bg run ... | cat` returns once the child has started instead of waiting for it to exit.
+- `t sh TASK CMD` with a CMD that cannot start prints `ERROR: Could not run CMD: REASON` and exits 1 instead of a Ruby backtrace.
+- `test/bin/asciinema_test.rb` no longer depends on asciinema replaying the recorded event (asciinema 3.2.1 sometimes prints only its banners); it asserts the cast bytes and which cast `play` chose.
 - `h html vids` (missing `require "digest"`) and the spurious Tmux plugin warning in `h jsonl`.
 - `h note save FILE TEXT...` saves TEXT (it always read the clipboard) and no longer leaves an empty temp file in the system temp directory.
 - `h context rm 0` no longer removes the last bundle entry.

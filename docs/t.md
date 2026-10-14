@@ -96,7 +96,7 @@ t doc open [TASK] [NAME]
 | `t tree resume [TASK] [TREE]` | Attaches an unassigned worktree by name, or via fuzzy finder |
 | `t path [TASK] [APP] [--directory PATH]`, `t abspath ...` | Print the absolute effective directory from the resolved context |
 | `t branch [TASK]` | Worktree branch or `(detached)` |
-| `t sh [TASK] [CMD...]` | Changes to the start directory and execs a shell or CMD |
+| `t sh [TASK] [CMD...]` | Changes to the start directory and execs a shell or CMD; a CMD that cannot start prints `ERROR: Could not run CMD: REASON` and exits 1 |
 | `t cd [TASK] [APP] [--directory PATH]` | Send `cd` to the captured calling Herdr pane after validating its IDs |
 
 Worktree creation is `Hiiro::TaskManager#create_tree`: it reuses a worktree no task is assigned to (renaming it) before adding a new detached one.

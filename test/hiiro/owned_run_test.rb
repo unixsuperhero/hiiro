@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'open3'
 
 class OwnedRunTest < Minitest::Test
   include OwnedRunHelpers
@@ -50,6 +51,30 @@ class OwnedRunTest < Minitest::Test
 
     bad = @launcher.detached(request('/bin/sh', '-c', 'exit 7'))
     assert_equal 'failed exit 7', wait_for_run(@store, bad.id).summary
+  end
+
+  def test_a_detached_child_never_holds_the_callers_output_open
+    gate = File.join(@dir, 'gate')
+    code = <<~RUBY
+      require 'hiiro'
+      launcher = Hiiro::OwnedRun::Launcher.new(store: Hiiro::OwnedRun::Store.new(#{File.join(@dir, 'runs').inspect}))
+      request = Hiiro::OwnedRun::LaunchRequest.new(owner: { kind: 'test' }, placement: { kind: 'detached' },
+        command: Hiiro::CommandSpecification.new('/bin/sh', '-c', 'echo to-log; echo err-log >&2; while [ ! -f gate ]; do sleep 0.05; done', cwd: #{@dir.inspect}))
+      puts launcher.detached(request).id
+    RUBY
+    started = Time.now
+    out, err, status = Open3.capture3(RbConfig.ruby, '-I', File.expand_path('../../lib', __dir__), '-e', code)
+    assert status.success?, err
+    assert_operator Time.now - started, :<, 15
+    id = out.chomp
+    log = File.join(@dir, 'runs', "#{id}.log")
+    deadline = Time.now + 10
+    sleep 0.05 until (File.exist?(log) && File.read(log).lines.size == 2) || Time.now > deadline
+    assert_equal ["err-log\n", "to-log\n"], File.readlines(log).sort
+    assert_equal 'started', @store.find(id).state
+  ensure
+    File.write(gate, '') if gate
+    wait_for_run(@store, id) if id
   end
 
   def test_missing_directory_fails_without_starting_the_command

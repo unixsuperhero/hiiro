@@ -149,7 +149,7 @@ saved path. Images (via `pngpaste`) are saved as PNG; otherwise the text from
 clipboard: `h save hello world` saves `hello world`.
 
 Files are named `<timestamp>-<slug>.txt` or `<timestamp>-image.png`, where the
-slug is the first few words of the text. Collisions get a `-2`, `-3` suffix.
+slug is the first few words of the text. Collisions get a `-2`, `-3` suffix (up to `-1000`).
 
 Saved files can be listed, printed, copied back to the clipboard, opened,
 edited, or removed with `h save ls|show|copy|open|edit|rm`. See
@@ -665,6 +665,30 @@ Run the test suite:
 ```sh
 bundle exec rake test
 ```
+
+Every child process a test starts is waited for or killed (`test/support/child_guard.rb`): an `Open3` or `PTY.spawn` child still running after `HIIRO_TEST_CHILD_LIMIT` seconds (default 300) is killed with its process tree and fails the test, a test that leaves a descendant running fails and the descendant is killed, and the end of a run (even by Ctrl-C) kills any that remain.
+
+### End-to-end acceptance
+
+`script/acceptance` runs the redesigned workflows against real commands in disposable sandboxes:
+
+```sh
+script/acceptance -o /tmp/hiiro-acceptance          # every scenario
+script/acceptance -o /tmp/hiiro-acceptance 02 06    # selected ones
+```
+
+Each scenario in `script/acceptance.d/NN-*.sh` gets its own HOME (with the default file database under it), data roots, empty `GEM_HOME`, `GEM_PATH` set to the runtime gems (`HIIRO_ACCEPTANCE_GEMS`), PATH of recording fixtures, a link to one Ruby (`HIIRO_ACCEPTANCE_RUBY`), the checkout, and `/usr/bin:/bin`, and `TERM=dumb` with no multiplexer identity; it runs under `env -i`, with every command killed with its process group after a time limit. The clipboard, `open`, `osascript`, `say`, `terminal-notifier`, and `launchctl` are always recorders. Every check prints its literal expected value before the command runs; `OUT/NN-name.out` holds expected and observed text, `OUT/results.tsv` one row per check (`pass`, `FAIL`, `incomplete`), and the script exits 1 if any check failed.
+
+| Scenario | Proves |
+|---|---|
+| `00-procedure` | the sandbox itself: PATH resolution, environment, checkout load path, database location; snapshots the caller's real home (metadata only) |
+| `02-migration` | `h db plan`/`migrate` of synthetic legacy stores, conflicts, repeat, reload, export/restore, concurrent writers, registry task scope, tags, and table actions |
+| `03-context` | `t`/`tt`/`h task` with explicit, inferred, pane, ambiguous, and missing tasks; path and execution cwd agree; read-only help writes nothing |
+| `04-execution`, `04-artifacts-jobs` | owned launches through capture, run, queue, service, and background; validation failure artifacts, clipboard bytes, attachments, and recurring-job outcomes under a fixed clock |
+| `05-git-pr` | index-preserving commit planning and qualified PR snapshots, actions, and monitoring through a controlled `gh` |
+| `06-picker` | the picker and a refreshing screen driven in real terminal windows (needs a tuios session and `HIIRO_ACCEPTANCE_TUIOS`; otherwise `incomplete`) |
+| `07-package` | the built gem installed into a disposable gem home: installed entrypoints, setup, provenance, MCP over stdio, utilities |
+| `99-live-untouched` | the caller's `~/bin`, `~/.config/hiiro`, `~/.local/share/hiiro`, LaunchAgents, and installed gems are unchanged |
 
 ## License
 

@@ -177,6 +177,29 @@ class PrSnapshotCliTest < Minitest::Test
     assert_equal ["team/one#42\none\nopen\n250 success\nsnapshot stale: head changed during refresh (aaaaaaa → bbbbbbb at checks page 2)\nhttps://github.com/team/one/pull/42\n", 1], [out, code]
   end
 
+  def test_track_inside_a_task_directory_records_the_task_and_for_task_lists_it
+    gh_state
+    work = File.join(@dir, 'alpha work')
+    FileUtils.mkdir_p(File.join(work, 'sub'))
+    _, err, status = Open3.capture3(env, RbConfig.ruby, '-I', File.join(ROOT, 'lib'), '-e',
+      "require 'hiiro'; Hiiro::DB.setup!; Hiiro::TaskRecord.create(name: 'alpha', tree: #{work.inspect})", unsetenv_others: true)
+    assert status.success?, err
+    run_in = ->(dir, *args) { Open3.capture2e(env, *hpr_command, *args, chdir: dir, unsetenv_others: true).then { |o, st| [o.gsub(/\e\[[0-9;]*m/, ''), st.exitstatus] } }
+
+    out, code = run_in.(File.join(work, 'sub'), 'track', 'team/one#42')
+    assert_equal ['Now tracking team/one#42: one', 0], [out.lines.first.chomp, code]
+    assert_equal [['team/one', 42, 'alpha', work]], rows('select repo, number, task, worktree from prs').map(&:values)
+    pr('track', 'team/two#42')
+    assert_equal [['team/two', nil, nil]], rows("select repo, task, worktree from prs where repo = 'team/two'").map(&:values)
+
+    out, code = run_in.(work, 'for-task')
+    assert_equal 0, code
+    assert_equal ["PRs for task 'alpha':", '', '1. team/one#42 [o 　✅ 250/250] 130a/-cr branch-42', '   one',
+                  '   https://github.com/team/one/pull/42'], out.lines.map(&:chomp).first(5)
+    assert_match(/\A   snapshot fresh · head aaaaaaa · fetched \S+ · checks complete · reviews complete\n\z/, out.lines[5..].join)
+    assert_equal ["Not in a task context. Pass a task name: h pr for-task <name>\n", 0], pr('for-task')
+  end
+
   def test_local_changes_made_during_a_refresh_survive_its_write
     gh_state
     pr('track', 'team/one#42')

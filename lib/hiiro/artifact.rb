@@ -92,11 +92,15 @@ class Hiiro
       File.unlink(staging) if staging && File.exist?(staging)
     end
 
-    # Candidate inbox names: base.ext, base-2.ext, base-3.ext, ...
+    # Candidate inbox names: base.ext, base-2.ext, ... base-1000.ext. The list
+    # is finite so a write error mistaken for a taken name can never spin
+    # (an unbounded list once kept an orphaned h save at 80% CPU for hours).
+    NUMBERED_LIMIT = 1000
+
     def self.numbered(dir, base, ext)
       Enumerator.new do |yielder|
         yielder << File.join(dir, "#{base}.#{ext}")
-        (2..).each { |n| yielder << File.join(dir, "#{base}-#{n}.#{ext}") }
+        (2..NUMBERED_LIMIT).each { |n| yielder << File.join(dir, "#{base}-#{n}.#{ext}") }
       end
     end
 

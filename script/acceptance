@@ -1,0 +1,46 @@
+#!/bin/bash
+# Isolated end-to-end acceptance for the checkout (prompts/reimagine step 16).
+#
+#   script/acceptance [-o OUT_DIR] [SCENARIO ...]     e.g. script/acceptance 02 05
+#
+# Each scenario in script/acceptance.d/NN-*.sh runs in its own disposable
+# sandbox (HOME, config/data roots, file database, gem home, fixture PATH,
+# synthetic terminal context) under `env -i`. Every check names its literal
+# expected value before the command runs; OUT_DIR/NN-name.out holds the
+# expected and observed text and OUT_DIR/results.tsv one row per check.
+# Exit 0 only when no check failed; a check that cannot run is `incomplete`.
+#
+# Environment: HIIRO_ACCEPTANCE_RUBY (interpreter), HIIRO_ACCEPTANCE_GEMS
+# (GEM_PATH holding the runtime gems and their .gem cache).
+set -u
+REPO=$(cd "$(dirname "$0")/.." && pwd -P)
+OUT=
+while getopts o: opt; do
+  case $opt in
+    o) OUT=$OPTARG ;;
+    *) echo "usage: script/acceptance [-o OUT_DIR] [SCENARIO ...]" >&2; exit 2 ;;
+  esac
+done
+shift $((OPTIND - 1))
+OUT=${OUT:-${TMPDIR:-/tmp}/hiiro-acceptance-$(date +%Y%m%d%H%M%S)}
+mkdir -p "$OUT"
+OUT=$(cd "$OUT" && pwd -P)
+: > "$OUT/results.tsv"
+
+scenarios=()
+for file in "$REPO"/script/acceptance.d/[0-9][0-9]-*.sh; do
+  name=$(basename "$file" .sh)
+  if [ $# -eq 0 ]; then scenarios+=("$file"); continue; fi
+  for want in "$@"; do [ "${name%%-*}" = "$want" ] && scenarios+=("$file"); done
+done
+
+for file in "${scenarios[@]}"; do
+  name=$(basename "$file" .sh)
+  echo "== $name"
+  REPO=$REPO OUT=$OUT SCENARIO=$name /bin/bash "$file" > "$OUT/$name.out" 2>&1
+  echo "   exit $? -> $OUT/$name.out"
+done
+
+/usr/bin/awk -F'\t' '{ n[$2]++ } END { printf "pass %d  FAIL %d  incomplete %d\n", n["pass"], n["FAIL"], n["incomplete"] }' "$OUT/results.tsv" | tee "$OUT/summary.txt"
+/usr/bin/awk -F'\t' '$2 != "pass" { print "  " $2 "  " $1 "  " $3 }' "$OUT/results.tsv" | tee -a "$OUT/summary.txt"
+! /usr/bin/grep -q $'\tFAIL\t' "$OUT/results.tsv"

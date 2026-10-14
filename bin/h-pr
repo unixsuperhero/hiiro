@@ -209,7 +209,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
 
     local = {}
-    env = Environment.current rescue nil
+    env = Hiiro::Environment.current rescue nil
     if env
       task = env.task
       local[:task]            = task.name      if task
@@ -751,7 +751,7 @@ Hiiro.run(*ARGV, plugins: [:Pins]) do
     end
 
     task_name ||= begin
-      env = Environment.current rescue nil
+      env = Hiiro::Environment.current rescue nil
       env&.task&.name
     end
 

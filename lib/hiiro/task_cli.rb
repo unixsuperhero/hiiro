@@ -726,7 +726,12 @@ class Hiiro
 
       def run_shell(task, command)
         Dir.chdir(start_directory(task))
-        command.empty? ? exec(ENV['SHELL'] || 'zsh') : exec(*command)
+        command = [ENV['SHELL'] || 'zsh'] if command.empty?
+        begin
+          exec(*command)
+        rescue SystemCallError => e
+          raise Error, "Could not run #{command.first}: #{e.message}"
+        end
       end
 
       def cd_to(task, app: nil)

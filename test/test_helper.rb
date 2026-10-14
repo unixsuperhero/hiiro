@@ -4,6 +4,7 @@ require "minitest/autorun"
 require "fileutils"
 require "tmpdir"
 require "ostruct"
+require_relative "support/child_guard"
 
 # Use in-memory SQLite for tests so model files load cleanly and no real DB is touched
 ENV['HIIRO_TEST_DB'] = 'sqlite::memory:'

@@ -50,6 +50,13 @@ class QueueHerdrTest < Minitest::Test
     FileUtils.chmod(0755, File.join(@bin, 'omp'))
   end
 
+  # The supervisor records the outcome, then settles (moves) the entry; wait
+  # for the move, which lags the record under load.
+  def wait_for_entry(status, name = 'review', timeout: 10)
+    deadline = Time.now + timeout
+    sleep 0.02 until File.exist?(File.join(@dirs[status], "#{name}.md")) || Time.now > deadline
+  end
+
   def run_id_in(status, name = 'review')
     YAML.safe_load_file(File.join(@dirs[status], "#{name}.meta"))['run_id']
   end
@@ -77,6 +84,7 @@ class QueueHerdrTest < Minitest::Test
     run = @queue.launch_task('review')
     refute File.exist?(path)
     assert_equal 'completed exit 0', wait_for_run(@store, run.id).summary
+    wait_for_entry(:done)
     meta = YAML.safe_load_file(File.join(@dirs[:done], 'review.meta'))
     assert_equal expected, meta['working_dir']
     assert_equal 'w1:p2', meta['herdr_pane']
@@ -94,6 +102,7 @@ class QueueHerdrTest < Minitest::Test
     prompt({ 'task_name' => 'review' })
     run = @queue.launch_task('review')
     assert_equal 'failed exit 7', wait_for_run(@store, run.id).summary
+    wait_for_entry(:failed)
     assert_equal %w[review.md review.meta], Dir.children(@dirs[:failed]).sort
     assert_equal [], Dir.children(@dirs[:running])
     assert_equal run.id, run_id_in(:failed)
@@ -112,6 +121,7 @@ class QueueHerdrTest < Minitest::Test
     fake_omp(0)
     retried = @queue.launch_task('review')
     assert_equal 'completed exit 0', wait_for_run(@store, retried.id).summary
+    wait_for_entry(:done)
     assert File.exist?(File.join(@dirs[:done], 'review.md'))
   end
 

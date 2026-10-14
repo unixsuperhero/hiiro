@@ -24,6 +24,10 @@ Tests are organized under `test/`:
 
 The `Hiiro::TestHarness` class (in `test/test_helper.rb`) enables testing bin files by capturing the block passed to `Hiiro.run` and evaluating it in a test context with stubbed `system` calls.
 
+`test/support/child_guard.rb` (loaded by `test_helper`) fails any test whose `Open3`/`PTY.spawn` child outlives `HIIRO_TEST_CHILD_LIMIT` seconds or that leaves a descendant process running, and kills those processes. Wait for every child you start.
+
+`script/acceptance [-o OUT] [NN ...]` is the isolated end-to-end acceptance (scenarios in `script/acceptance.d/`, helpers in `script/acceptance.d/lib.sh`); see README "End-to-end acceptance".
+
 
 ## Making Changes
 

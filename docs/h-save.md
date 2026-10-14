@@ -16,7 +16,7 @@ Saves the clipboard and prints the new file's path.
 - If the clipboard holds an image (detected with `pngpaste`), its exact PNG bytes are saved as `<timestamp>-image.png`.
 - Otherwise the text from `pbpaste` is saved byte for byte as `<timestamp>-<slug>.txt`, where the slug is the first few words of the text, lowercased, with non-alphanumerics collapsed to `-`. Without `pngpaste` installed the clipboard text is saved.
 - If arguments are given, they are joined with spaces and saved as text instead of reading the clipboard (the clipboard is not read). Put `--` before text that starts with `-`.
-- Name collisions get a `-2`, `-3`, ... suffix before the extension. Existing files are never overwritten: each name is created exclusively.
+- Name collisions get a `-2`, `-3`, ... suffix before the extension, up to `-1000`. Existing files are never overwritten: each name is created exclusively. When all 1,000 names for that second are taken, `h save` fails with `PATH already exists` (exit 1).
 - The path is printed only after the file is written.
 
 Failures print one line on stderr, exit 1, and leave nothing behind:

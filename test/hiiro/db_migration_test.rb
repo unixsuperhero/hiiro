@@ -6,6 +6,7 @@ require 'yaml'
 require 'json'
 require 'rbconfig'
 require 'timeout'
+require_relative '../support/child_guard'
 
 class DBMigrationTest < Minitest::Test
   ROOT = File.expand_path('../..', __dir__)

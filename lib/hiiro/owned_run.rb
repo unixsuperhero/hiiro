@@ -326,11 +326,14 @@ class Hiiro
         raise
       end
 
-      # With log:, the supervisor and the child it spawns write stdout and stderr there.
+      # The supervisor and the child it spawns write stdout and stderr to log:,
+      # by default RUN_ID.log beside the run record. They never inherit the
+      # caller's stdio: `out=$(h bg run ...)` or `h service start x | cat` would
+      # otherwise wait for the detached child to exit.
       def detached(request, on_allocated: nil, log: nil)
         run = allocate(request, nil, on_allocated)
-        output = log ? { out: [log, 'a'], err: [:child, :out] } : {}
-        pid = Process.spawn(*supervisor_argv(run.id), in: File::NULL, pgroup: true, **output)
+        log ||= File.join(store.dir, "#{run.id}.log")
+        pid = Process.spawn(*supervisor_argv(run.id), in: File::NULL, out: [log, 'a'], err: [:child, :out], pgroup: true)
         Process.detach(pid)
         wait_started(run)
       end

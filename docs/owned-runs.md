@@ -60,4 +60,4 @@ Stopping uses the recorded identity: a pid is signalled only while `ps` still re
 
 ## Storage
 
-Run records are runtime files under `~/.local/share/hiiro/runs/` (`RUN_ID.json` plus a `RUN_ID.lock`). They are not domain records and are not part of `h db` export. Remove old ones by hand when they are no longer useful.
+Run records are runtime files under `~/.local/share/hiiro/runs/` (`RUN_ID.json` plus a `RUN_ID.lock`, and for a detached launch without its own log, such as `h bg run` or a detached service, `RUN_ID.log` holding the child's stdout and stderr; a detached launch never keeps the caller's stdout or stderr open). They are not domain records and are not part of `h db` export. Remove old ones by hand when they are no longer useful.

@@ -113,6 +113,8 @@ class CommandContextTest < Minitest::Test
     failure('t', 'current', /No current task/)
     failure('t', 'sh', '-t', 'missing', RbConfig.ruby, @program, /Task not found/)
     failure('t', 'sh', '-t', 'al', RbConfig.ruby, @program, /Ambiguous task/)
+    _, stderr, status = ruby(File.join(ROOT, 'exe/t'), 'sh', '-t', 'alpha', 'no-such-program', cwd: @git_root)
+    assert_equal ["ERROR: Could not run no-such-program: No such file or directory - no-such-program\n", 1], [stderr, status.exitstatus]
     failure('h-app', 'run', '--app', 'missing', 'all', /App.*not found|No app matches/i, cwd: @git_root)
     failure('h-app', 'run', '--app', 'ap', 'all', /Ambiguous app/i, cwd: @git_root)
     failure('h-project', 'path', 'missing', /not found/i)

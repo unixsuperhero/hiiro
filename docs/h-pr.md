@@ -12,7 +12,7 @@ h pr <subcommand> [args]
 
 | Subcommand | Description |
 |------------|-------------|
-| `track [ref]` | Start tracking a PR |
+| `track [ref]` | Start tracking a PR; inside a task's directory it records that task (and its worktree) |
 | `ls [filters]` | List tracked PRs |
 | `update [filters]` | Refresh PR statuses and list |
 | `status [refs]` | Show check status for a PR |
@@ -40,7 +40,7 @@ h pr <subcommand> [args]
 | `fwatch [ref]` | Watch PR checks with `--fail-fast` |
 | `tag <ref> <tags>` | Tag a tracked PR |
 | `untag <ref> [tags]` | Remove tags from a tracked PR |
-| `for-task [task]` | List tracked PRs for a task |
+| `for-task [task]` | List tracked PRs for a task (default: the task of the current directory) |
 | `branch [ref]` | Get the head branch for a tracked PR |
 | `attach [ref]` | Open a tab in the PR's task directory and Herdr workspace (no Git changes) |
 | `assigned` | List PRs assigned to you |
