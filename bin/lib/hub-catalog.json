@@ -1,0 +1,308 @@
+{
+  "version": 1,
+  "description": "Central filesystem hub: one symlink per registered location. Symlinks only; the tool never moves originals. Applications reached through a link can modify the originals.",
+  "directories": {
+    "docs": "Human-facing documents and AI-authored notes you read and write.",
+    "ai": "Full AI workspaces: the whole ~/ai and ~/claude trees (documents, prompts, hooks and anything else kept there).",
+    "config": "Configuration: files you edit by hand. Not application data and not cache.",
+    "config/shell": "Zsh startup files and their drop-in directories. Drop-ins such as zshenv.d and zshrc.d may contain secrets; shell history, completion dumps and backup copies are not linked.",
+    "tools": "Tool installs, per-user data, caches and source. Each child says whether it is data, cache or code.",
+    "harnesses": "PRIVATE agent harness roots. Each can hold credentials, tokens and full conversation transcripts. Never commit, publish, sync or back up through these links.",
+    "sessions": "Agent session transcripts and history, one link per real location. Private: transcripts can contain secrets.",
+    "skills": "Agent skill collections, one link per real location. Several harnesses share one directory; see each description.",
+    "prompts": "Reusable prompt and slash-command definitions.",
+    "hooks": "Agent hook scripts and hook configuration."
+  },
+  "links": [
+    {
+      "name": "notes",
+      "target": "~/notes",
+      "description": "Personal notes."
+    },
+    {
+      "name": "projects",
+      "target": "~/proj",
+      "description": "Source projects and checkouts."
+    },
+    {
+      "name": "vaults",
+      "target": "~/ovault",
+      "description": "Obsidian vault(s)."
+    },
+    {
+      "name": "downloads",
+      "target": "~/Downloads",
+      "description": "Downloaded files. Treat contents as untrusted."
+    },
+    {
+      "name": "desktop",
+      "target": "~/Desktop",
+      "description": "The macOS Desktop folder (registered once, here only)."
+    },
+    {
+      "name": "recordings",
+      "target": "~/Movies",
+      "description": "Screen and video recordings (macOS Movies folder)."
+    },
+    {
+      "name": "ai/workspace",
+      "target": "~/ai",
+      "description": "Full AI workspace (~/ai)."
+    },
+    {
+      "name": "ai/claude",
+      "target": "~/claude",
+      "description": "Full Claude workspace (~/claude)."
+    },
+    {
+      "name": "docs/ai",
+      "target": "~/ai/docs",
+      "description": "AI documents: HTML and Markdown docs in ~/ai/docs."
+    },
+    {
+      "name": "docs/claude",
+      "target": "~/claude/docs",
+      "description": "Claude-authored HTML and Markdown docs in ~/claude/docs."
+    },
+    {
+      "name": "config/apps",
+      "target": "~/.config",
+      "description": "XDG application configuration (~/.config). Configuration, but some apps keep tokens or state here."
+    },
+    {
+      "name": "config/shell/zshrc",
+      "target": "~/.zshrc",
+      "description": "Interactive zsh startup file."
+    },
+    {
+      "name": "config/shell/zshenv",
+      "target": "~/.zshenv",
+      "description": "Zsh environment file, read by every zsh."
+    },
+    {
+      "name": "config/shell/zprofile",
+      "target": "~/.zprofile",
+      "description": "Zsh login-shell startup file."
+    },
+    {
+      "name": "config/shell/zshrc.d",
+      "target": "~/.zshrc.d",
+      "description": "Drop-in directory for interactive zsh configuration; may include secrets."
+    },
+    {
+      "name": "config/shell/zshenv.d",
+      "target": "~/.zshenv.d",
+      "description": "Drop-in directory for zsh environment variables; may include secrets."
+    },
+    {
+      "name": "tools/local",
+      "target": "~/.local",
+      "description": "User-local persistent app data (bin, share, state). Not cache: deleting parts loses data."
+    },
+    {
+      "name": "tools/cache",
+      "target": "~/.cache",
+      "description": "Disposable-ish caches (models, tool caches). Rebuildable but often slow or costly to rebuild; review before deleting, never blanket-delete."
+    },
+    {
+      "name": "tools/pandoc",
+      "target": "~/.pandoc",
+      "description": "Pandoc user data (itself a symlink into proj/home)."
+    },
+    {
+      "name": "tools/bin",
+      "target": "~/bin",
+      "description": "Personal executables on PATH."
+    },
+    {
+      "name": "tools/hiiro",
+      "target": "~/proj/hiiro",
+      "description": "Hiiro source checkout."
+    },
+    {
+      "name": "harnesses/claude",
+      "target": "~/.claude",
+      "description": "Claude Code root: settings, history, projects, skills, plugins. Private."
+    },
+    {
+      "name": "harnesses/omp",
+      "target": "~/.omp",
+      "description": "OMP root: agent databases, sessions, skills, browser profiles. Private."
+    },
+    {
+      "name": "harnesses/codex",
+      "target": "~/.codex",
+      "description": "Codex root: contains auth.json, sqlite databases, sessions. Private."
+    },
+    {
+      "name": "harnesses/pi",
+      "target": "~/.pi",
+      "description": "Pi root: agent settings, auth.json, prompts, sessions. Private."
+    },
+    {
+      "name": "harnesses/agents",
+      "target": "~/.agents",
+      "description": "Shared agents root: skills, agent definitions, tasks. Private."
+    },
+    {
+      "name": "harnesses/grok",
+      "target": "~/.grok",
+      "description": "Grok root: sessions, hooks, skills. Private."
+    },
+    {
+      "name": "harnesses/gemini",
+      "target": "~/.gemini",
+      "description": "Gemini root: settings, accounts, history. Private."
+    },
+    {
+      "name": "harnesses/cursor",
+      "target": "~/.cursor",
+      "description": "Cursor root: hooks, skills, projects. Private."
+    },
+    {
+      "name": "harnesses/prime",
+      "target": "~/.prime",
+      "description": "Prime root: agent config. Private."
+    },
+    {
+      "name": "harnesses/opencode-config",
+      "target": "~/.config/opencode",
+      "description": "opencode configuration. Private."
+    },
+    {
+      "name": "harnesses/opencode-data",
+      "target": "~/.local/share/opencode",
+      "description": "opencode persistent data (sessions, auth). Private."
+    },
+    {
+      "name": "sessions/claude",
+      "target": "~/.claude/projects",
+      "description": "Claude Code per-project transcripts."
+    },
+    {
+      "name": "sessions/omp",
+      "target": "~/.omp/agent/sessions",
+      "description": "OMP session transcripts."
+    },
+    {
+      "name": "sessions/omp-history",
+      "target": "~/.omp/agent/history.db",
+      "description": "OMP prompt history (SQLite). The -wal and -shm companion files stay next to the real file at the source; this is a symlink to the main file only, never a hardlink or copy."
+    },
+    {
+      "name": "sessions/pi",
+      "target": "~/.pi/agent/sessions",
+      "description": "Pi session transcripts."
+    },
+    {
+      "name": "sessions/codex",
+      "target": "~/.codex/sessions",
+      "description": "Codex session transcripts."
+    },
+    {
+      "name": "sessions/codex-archived",
+      "target": "~/.codex/archived_sessions",
+      "description": "Archived Codex sessions."
+    },
+    {
+      "name": "sessions/grok",
+      "target": "~/.grok/sessions",
+      "description": "Grok session transcripts."
+    },
+    {
+      "name": "sessions/gemini",
+      "target": "~/.gemini/history",
+      "description": "Gemini history."
+    },
+    {
+      "name": "sessions/cursor",
+      "target": "~/.cursor/projects",
+      "description": "Cursor per-project data and transcripts."
+    },
+    {
+      "name": "skills/claude",
+      "target": "~/.claude/skills",
+      "description": "Claude Code skills."
+    },
+    {
+      "name": "skills/shared",
+      "target": "~/.agents/skills",
+      "description": "Shared skills directory; ~/.gemini/skills is a symlink to this same directory."
+    },
+    {
+      "name": "skills/codex",
+      "target": "~/.codex/skills",
+      "description": "Codex skills."
+    },
+    {
+      "name": "skills/omp",
+      "target": "~/.omp/agent/skills",
+      "description": "OMP skills."
+    },
+    {
+      "name": "skills/pi",
+      "target": "~/.pi/agent/skills",
+      "description": "Pi skills."
+    },
+    {
+      "name": "skills/grok",
+      "target": "~/.grok/skills",
+      "description": "Grok skills."
+    },
+    {
+      "name": "skills/cursor",
+      "target": "~/.cursor/skills",
+      "description": "Cursor skills."
+    },
+    {
+      "name": "skills/cursor-builtin",
+      "target": "~/.cursor/skills-cursor",
+      "description": "Cursor bundled skills."
+    },
+    {
+      "name": "prompts/pi",
+      "target": "~/.pi/agent/prompts",
+      "description": "Pi prompt templates."
+    },
+    {
+      "name": "prompts/ai",
+      "target": "~/ai/prompts",
+      "description": "AI prompts in ~/ai/prompts."
+    },
+    {
+      "name": "prompts/claude",
+      "target": "~/claude/prompts",
+      "description": "Claude prompts in ~/claude/prompts."
+    },
+    {
+      "name": "prompts/claude-commands",
+      "target": "~/.claude/commands",
+      "description": "Claude Code slash commands."
+    },
+    {
+      "name": "hooks/claude",
+      "target": "~/.claude/hooks",
+      "description": "Claude Code hook scripts."
+    },
+    {
+      "name": "hooks/workspace",
+      "target": "~/claude/hooks",
+      "description": "Hook scripts in the Claude workspace (~/claude/hooks)."
+    },
+    {
+      "name": "hooks/grok",
+      "target": "~/.grok/hooks",
+      "description": "Grok hook scripts."
+    },
+    {
+      "name": "hooks/codex",
+      "target": "~/.codex/hooks.json",
+      "description": "Codex hook configuration file."
+    },
+    {
+      "name": "hooks/cursor",
+      "target": "~/.cursor/hooks.json",
+      "description": "Cursor hook configuration file."
+    }
+  ]
+}

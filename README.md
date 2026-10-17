@@ -359,6 +359,7 @@ See the [task command reference](docs/t.md) for all commands and the [workflow i
 | [`h ruby iface` / `h iface rb`](docs/h-ruby.md) | Ruby declaration lines by pattern group |
 | [`h git commit`](docs/h-commit.md#h-git-commit) | Plan logical commits for all pending changes with `claude`; `-n` previews without touching the index, and invalid plans or failures stop before or at the failing commit |
 | [`h extract`](#extract-files-directories-and-links) | Extract file paths, directories, and HTTP(S) links from text |
+| [`h hub`](docs/h-hub.md) | Central `~/hub` of symlinks to notes, projects, config, harness sessions and skills; `init`, `sync`, `doctor`, `list`, `path`, `open`, `find`, `add` (originals never changed) |
 | `h link` | Manage saved links with URL, description, and shorthand |
 | [`h loop`](docs/h-loop.md) | Recurring loop recipes run as schedules; status and `render` read recorded cycle outcomes |
 | [`h mcp`](docs/h-mcp.md) | Local MCP registrations, saved tool schemas, direct tool calls, and HTTP-only client sync (`require 'hiiro/mcp'`) |
