@@ -12,10 +12,52 @@ h hub list [QUERY]            # alias: ls
 h hub path [NAME]             # no NAME: hub root; otherwise a registered link or group path
 h hub open [NAME]             # open in Finder (macOS `open`)
 h hub find NAME QUERY [--limit N]
+h hub recent NAME [--limit N] [--json|--paths] [--repo OWNER/REPO]   # newest first, default 20
+h hub latest NAME [--json] [--repo OWNER/REPO]                       # the single newest item
 h hub add NAME TARGET DESCRIPTION
 ```
 
 `--root PATH` or `H_HUB_ROOT` selects a base other than `~/hub`. Help never reads or creates the hub.
+
+## Recent and latest
+
+`recent` and `latest` answer "what changed last" for any registered link, or for a group (all leaf links under it, deduplicated by real path). They are computed live from the filesystem on every call: no file contents are read, and there is no daemon, cache, or generated "recent" link.
+
+```bash
+h hub recent notes --limit 5          # newest first, one per line
+h hub recent downloads --paths        # paths only
+open "$(h hub latest downloads)"      # open the newest finished download
+cd "$(h hub latest projects)"         # enter the most recently changed project
+h hub recent docs --json              # [] when empty, exit 0
+h hub latest notes --json             # one object; nonzero and no stdout when nothing is found
+h hub recent prs --repo owner/name    # your authored PRs, newest update first
+```
+
+`latest` prints only the path or PR URL on stdout. Quote command substitutions to preserve spaces. `--limit` is supported by `recent` (default 20) and `find` (default 100), never `latest`. `--repo` is valid only for `prs`, which reads GitHub through `gh` and works without an initialized hub. `--json` and `--paths` are exclusive.
+
+JSON records have string keys; `recent` is an array of them, `latest` one object:
+
+```js
+const record = {
+  name: "Weekly Plan v2.md",                       // readable name
+  path: "/Users/me/hub/notes/plans/Weekly Plan v2.md",   // hub path (a PR: its URL)
+  timestamp: "2026-01-05T12:00:00.000Z",           // UTC ISO 8601
+  basis: "modified"                                // created | modified | updated
+};
+```
+
+Order is newest first, ties broken by path, and the whole tree is scanned before `--limit` applies. The basis is what the timestamp means, by category:
+
+| Category | One item is | Timestamp |
+|----------|-------------|-----------|
+| Downloads | each direct, non-hidden, finished file or directory (not `.part`, `.crdownload`, `.download`, `.partial`, `.tmp`) | creation time (`created`) where the OS reports it, since a download is new when it arrives and a later touch should not reorder it; `modified` otherwise |
+| Notes, docs, any other link | every file, recursively (any extension) | file mtime; a directory's own mtime changes on rename and is ignored |
+| Projects | each immediate project directory | newest source-file or surviving directory mtime, including uncommitted changes and additions/deletions; Git projects enumerate tracked and nonignored untracked files, while non-Git projects use a pruned walk |
+| PRs | each PR authored by the active `gh` account, open or closed | GitHub last-update time (`updated`); at most 1000 results |
+
+Interior symlinked directories and cycles are not entered. Symlinked files are never followed outside the link. `.git`, `node_modules`, `.cache`, `.obsidian`, `__pycache__`, `.venv`, `venv`, `dist`, `build`, `target`, `.next`, `vendor`, `.DS_Store`, and `.localized` are skipped. A registered root may itself be a symlink. An unavailable root or unreadable directory is an error, never an empty success.
+
+The special download and project rules apply to the registered names `downloads` and `projects`. Download creation time is a filesystem timestamp, not browser download history or Finder date-added metadata; copying files while preserving timestamps can affect the order. These are metadata queries, not a history of edits. Project directory timestamps help detect additions and deletions but can also reflect generated files added in the same directory. Large project collections take longer because every candidate is checked before selecting the newest results.
 
 ## Changing directory
 
