@@ -22,7 +22,7 @@ class Hiiro
 
     attr_reader :listing, :scope, :current, :runner, :own, :clipboard, :captures
 
-    def initialize(listing:, scope: :global, current: nil, runner: nil, own: ENV.slice('TUIOS_SESSION', 'TUIOS_PANE_ID'),
+    def initialize(listing:, scope: :global, current: nil, runner: nil, own: ENV,
                    clipboard: ->(text) { Hiiro::Shell.pipe(text, 'pbcopy') })
       @listing = listing
       @current = current
@@ -100,7 +100,7 @@ class Hiiro
 
     def ws_cell(row) = row.kind == :window ? "ws#{row.workspace}" : '-  '
 
-    def own_mark(row) = row.kind == :window && row.session == own['TUIOS_SESSION'] ? '*' : ' '
+    def own_mark(row) = row.kind == :window && row.session == Hiiro::Tuios.env('SESSION', own) ? '*' : ' '
 
     def label_width = [filtered_items.map { |row| row.label.length }.max || 0, LABEL_WIDTH].min
 
@@ -233,7 +233,7 @@ class Hiiro
       row = window_row
       return unless row
 
-      from = own['TUIOS_PANE_ID'].to_s
+      from = Hiiro::Tuios.env('PANE_ID', own).to_s
       if from.empty?
         self.message = 'no own pane'
         return

@@ -53,9 +53,9 @@ class Hiiro
     # `h project open` makes.
     class Opener
       def command(row)
-        return nil unless ENV['TUIOS_ENV'] == '1'
+        return nil unless Hiiro::Tuios.env('ENV') == '1'
 
-        ['tuios', 'new-window', name_for(row), '-s', ENV['TUIOS_SESSION'].to_s, '--cwd', row.path]
+        ['tuios', 'new-window', name_for(row), '-s', Hiiro::Tuios.env('SESSION').to_s, '--cwd', row.path]
       end
 
       def open(row)

@@ -72,7 +72,7 @@ if $PROGRAM_NAME == __FILE__
       add_cmd(:instructions) { puts Hiiro::Tuios::INSTRUCTIONS }
       add_cmd(:env) { puts JSON.pretty_generate(tuios.pane) }
       add_cmd(:bootstrap) do
-        next unless ENV['TUIOS_ENV'] == '1'
+        next unless Hiiro::Tuios.env('ENV') == '1'
         tuios.require_pane!
         puts JSON.pretty_generate(tuios.pane)
         puts Hiiro::Tuios::INSTRUCTIONS
@@ -81,7 +81,7 @@ if $PROGRAM_NAME == __FILE__
       end
       add_cmd(:mail) do
         tuios.require_pane!
-        tuios.native('read-agent-messages', '-s', ENV.fetch('TUIOS_SESSION'), '-w', ENV.fetch('TUIOS_PANE_ID'), '--unread')
+        tuios.native('read-agent-messages', '-s', Hiiro::Tuios.env('SESSION'), '-w', Hiiro::Tuios.env('PANE_ID'), '--unread')
       end
       add_cmd(:ui, opts: [:hosts]) do
         raise Hiiro::Error, 'Use ui [--hosts]' unless opts.args.empty?

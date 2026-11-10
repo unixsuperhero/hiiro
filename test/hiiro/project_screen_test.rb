@@ -7,7 +7,7 @@ class ProjectScreenTest < Minitest::Test
     "GIT_AUTHOR_NAME" => "t", "GIT_AUTHOR_EMAIL" => "t@t", "GIT_COMMITTER_NAME" => "t", "GIT_COMMITTER_EMAIL" => "t@t",
     "GIT_AUTHOR_DATE" => "2026-01-01T00:00:00Z", "GIT_COMMITTER_DATE" => "2026-01-01T00:00:00Z",
   }.freeze
-  TUIOS_KEYS = %w[TUIOS_ENV TUIOS_SESSION].freeze
+  TUIOS_KEYS = %w[TUIOS_ENV TUIOS_SESSION MTM_ENV MTM_SESSION].freeze
   HEADER = "projects  scope:global  5 rows".freeze
   HINT = "[enter]open [/]search [g]scope [s]tatus [b]ranches [p]rs [a]dd tree [d]rop tree [y]ank pa…".freeze
   BLANK = " " * 44

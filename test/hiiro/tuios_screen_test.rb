@@ -43,6 +43,14 @@ class TuiosScreenTest < Minitest::Test
   # The detail pane is 55 columns wide.
   def right(text) = text.length > 55 ? "#{text[0, 54]}…" : text
 
+  def test_env_reads_mtm_names_first_and_tuios_names_as_fallback
+    both = { "MTM_SESSION" => "new", "TUIOS_SESSION" => "old" }
+    assert_equal "new", Hiiro::Tuios.env("SESSION", both)
+    assert_equal "old", Hiiro::Tuios.env("SESSION", { "TUIOS_SESSION" => "old" })
+    assert_equal "old", Hiiro::Tuios.env("SESSION", { "MTM_SESSION" => "", "TUIOS_SESSION" => "old" })
+    assert_nil Hiiro::Tuios.env("SESSION", {})
+  end
+
   def test_initial_list_shows_one_row_per_window_with_the_own_session_marked
     assert_equal [
       HEADER,
