@@ -1,12 +1,12 @@
 # 6. The in-process picker and a background-refreshing screen in a real
-# terminal: tuios windows of $TUIOS_SESSION (HIIRO_ACCEPTANCE_TUIOS names the
+# terminal: tuios windows of $MTM_SESSION (HIIRO_ACCEPTANCE_TUIOS names the
 # tuios binary). Every window opened here is closed on exit.
 source "$(dirname "$0")/lib.sh"
 sandbox
 TUIOS=${HIIRO_ACCEPTANCE_TUIOS:-}
-TS=${TUIOS_SESSION:-}
-if [ -z "$TUIOS" ] || [ "${TUIOS_ENV:-}" != 1 ] || [ -z "$TS" ]; then
-  incomplete "picker in a real terminal" "no tuios session (set TUIOS_ENV/TUIOS_SESSION and HIIRO_ACCEPTANCE_TUIOS)"
+TS=${MTM_SESSION:-${TUIOS_SESSION:-}}
+if [ -z "$TUIOS" ] || [ "${MTM_ENV:-${TUIOS_ENV:-}}" != 1 ] || [ -z "$TS" ]; then
+  incomplete "picker in a real terminal" "no tuios session (set MTM_ENV/MTM_SESSION and HIIRO_ACCEPTANCE_TUIOS)"
   exit 0
 fi
 

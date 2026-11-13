@@ -146,7 +146,7 @@ Open the projects screen: one flat list with a row per git worktree found under 
 
 **Scope.** The current task is resolved like `t` does (Herdr workspace, working directory, then the `t use` pin). `g` scopes to it only when its tree (`TaskLocation#worktree_path`) is a row in the catalog; otherwise the status line says `no current task to scope to`.
 
-**Open backend.** With `TUIOS_ENV=1` the row opens as `tuios new-window NAME -s $TUIOS_SESSION --cwd PATH`; otherwise it opens the Herdr workspace `NAME` rooted at the path, the same call `h project open` makes. NAME is the row name with `.` and spaces replaced by `_` and the `▸` marker dropped. A failed open shows in the status line and the screen stays open. Fetch errors (`gh` not logged in, a directory that is not a repo) show the same way.
+**Open backend.** With `MTM_ENV=1` (or `TUIOS_ENV=1`) the row opens as `tuios new-window NAME -s $MTM_SESSION --cwd PATH`; otherwise it opens the Herdr workspace `NAME` rooted at the path, the same call `h project open` makes. NAME is the row name with `.` and spaces replaced by `_` and the `▸` marker dropped. A failed open shows in the status line and the screen stays open. Fetch errors (`gh` not logged in, a directory that is not a repo) show the same way.
 
 **Examples**
 

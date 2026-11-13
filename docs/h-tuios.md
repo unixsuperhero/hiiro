@@ -37,7 +37,7 @@ To check the five local copies for drift, run `ruby script/sync-tuios --check` f
 | `skill [TOPIC]` | Print the live skill from the selected TUIOS binary (`all`, `mail`, `state`, ...) |
 | `instructions` | Print the startup/mail rule text for manual insertion |
 | `bootstrap` | Inside TUIOS, print pane identity, the startup instructions, and the core and mail skills |
-| `env` | Print the available `TUIOS_ENV`, `TUIOS_SESSION`, and `TUIOS_PANE_ID` as JSON |
+| `env` | Print the available `MTM_ENV`, `MTM_SESSION`, and `MTM_PANE_ID` (TUIOS_* as fallback) as JSON |
 | `mail` | Read unread mail addressed to the session and pane in your environment |
 | `help` | Print the complete guide |
 
@@ -47,7 +47,7 @@ To check the five local copies for drift, run `ruby script/sync-tuios --check` f
 
 `h tuios ui` opens a `Hiiro::Tui` screen over every tuios window on this machine, read through the tuios command line (`ls --json`, then `list-windows -s SESSION --json` per session for the directory and layout, and `list-attention --json` for the header counts). Nothing is read from another pane's mailbox.
 
-**A row** is one window: `SESSION  wsN  MARK TITLE  HARNESS`, with `*` before the session of the pane the screen runs in (`TUIOS_SESSION`) and `(min)` after the title of a minimized window. Rows sort by host, session, workspace, then window index. The header reads `tuios  host:local  scope:global  7 windows in 4 sessions  attention: 2 finished`; only nonzero attention counts are shown, `none` otherwise.
+**A row** is one window: `SESSION  wsN  MARK TITLE  HARNESS`, with `*` before the session of the pane the screen runs in (`MTM_SESSION`) and `(min)` after the title of a minimized window. Rows sort by host, session, workspace, then window index. The header reads `tuios  host:local  scope:global  7 windows in 4 sessions  attention: 2 finished`; only nonzero attention counts are shown, `none` otherwise.
 
 ```text
 tuios  host:local  scope:global  4 windows in 3 sessions  attention: 1 ask, 2 finished
@@ -85,7 +85,7 @@ tuios  host:local  scope:global  4 windows in 3 sessions  attention: 1 ask, 2 fi
 | `n` | Prompt for a name (prefilled with the title) and run `tuios set-window --name` |
 | `M` | `tuios set-window --minimize` or `--restore`, by the row's state |
 | `N` | Prompt for a name and run `tuios new-window NAME -s SESSION --cwd CWD --print-id --no-focus`; the cursor lands on the new window |
-| `m` | Prompt for a message and run `tuios send-agent-message TEXT -s SESSION -w ID --from $TUIOS_PANE_ID` |
+| `m` | Prompt for a message and run `tuios send-agent-message TEXT -s SESSION -w ID --from $MTM_PANE_ID` |
 | `y` | Copy the window id to the clipboard |
 | `j` / `k`, `h` / `l` | Move, scroll long rows |
 | `q`, `Esc` | Quit |
@@ -94,7 +94,7 @@ Every verb runs through the tuios binary; a failure becomes the status message a
 
 **Scope.** `g` keeps the windows whose `cwd` is under one of the current task's directories: its primary directory or worktree (`TaskLocation#code_directory`, `#worktree_path`) or its notes home. The current task resolves like `h project ui` (Herdr environment, directory, or the pinned task). Remote rows have no `cwd` and drop out of task scope. When no task resolves, or none of its directories holds a window, `g` reports `no current task to scope to`. The header shows `scope:task(@NAME)`.
 
-**Mail.** `m` needs the pane the screen runs in: `TUIOS_PANE_ID` is the `--from` sender. Outside a tuios pane it reports `no own pane`. Listing, jumping, capturing, and the other keys work from any terminal that can reach the daemon.
+**Mail.** `m` needs the pane the screen runs in: `MTM_PANE_ID` is the `--from` sender. Outside a tuios pane it reports `no own pane`. Listing, jumping, capturing, and the other keys work from any terminal that can reach the daemon.
 
 **Editing in a prompt.** Left, Right, Home, End, Delete, and Ctrl-U (clear) edit the text; while choices show after `▸`, Up and Down move the `[ ]` selection, Tab accepts it, and Enter accepts it before a second Enter submits. In the `message` prompt a word starting with `@` completes project names; the `name` and `new window` prompts do not complete.
 
